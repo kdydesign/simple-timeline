@@ -17,6 +17,11 @@ jobs:
           node-version: '24.22.1'
           cache: npm
       - run: npm ci
+      - name: Prepare Electron sandbox on the disposable Linux runner
+        if: runner.os == 'Linux'
+        run: |
+          sudo chown root:root node_modules/electron/dist/chrome-sandbox
+          sudo chmod 4755 node_modules/electron/dist/chrome-sandbox
       - if: runner.os == 'Linux'
         run: xvfb-run -a npm run verify:app
       - if: runner.os == 'Windows'

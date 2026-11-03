@@ -33,16 +33,23 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
   })
   expect(child).toBe('undefined')
   const old = d.page.url()
-  const attempt = d.app.evaluate(
+  const attempt = await d.app.evaluate(
     ({ BrowserWindow }) =>
-      new Promise((resolve) =>
-        BrowserWindow.getAllWindows()[0].webContents.once(
-          'will-navigate',
-          (_event, url) => resolve(url),
-        ),
-      ),
+      new Promise<string>((resolve, reject) => {
+        const contents = BrowserWindow.getAllWindows()[0].webContents
+        const timer = setTimeout(
+          () => reject(Error('Navigation guard event missing')),
+          10000,
+        )
+        contents.once('will-navigate', (_event, url) => {
+          clearTimeout(timer)
+          resolve(url)
+        })
+        void contents
+          .executeJavaScript("location.assign('https://example.com/')")
+          .catch(reject)
+      }),
   )
-  await d.page.evaluate(() => location.assign('https://example.com/'))
-  await attempt
+  expect(attempt).toBe('https://example.com/')
   expect(d.page.url()).toBe(old)
 })
