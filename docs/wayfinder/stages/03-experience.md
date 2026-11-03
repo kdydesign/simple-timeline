@@ -3,8 +3,8 @@
 id: 03-experience
 parent: ../MAP.md
 labels: wayfinder:grilling
-status: open
-assignee: null
+status: closed
+assignee: codex-2026-11-03-stage-03
 blocked_by: 02-architecture
 
 ## Question
@@ -40,19 +40,25 @@ blocked_by: 02-architecture
 
 ## 해결 기록
 
-아직 해결하지 않음. 완료 시 사용자 승인 내용·결과·근거·산출물 링크를 여기에 기록한다.
-결정의 상세는 산출물 한 곳에 두고 여기에는 요약과 링크만 남긴다.
+2026-11-03 사용자가 화면 구성·월요일 시작·3줄 더 보기와 탐색·월 경계·편집 동작을 선택했다.
+목업 확인과 builder check 후 ‘설계 승인, 스테이지 3 마무리’로 문서 전체를 승인했다.
+[화면·상호작용](../../design/experience.md), [간트·달력 계약](../../design/visualization.md),
+[설계용 목업](../../design/mockups/stage-03.html)을 작성했다.
+검증·한계·다음 작업은 [인수인계](../handoffs/03-experience.md)를 따른다.
+제품 구현·스테이지 4 이후는 시작하지 않았다. 최종 검증 후 main 직접 commit·push한다.
 
 ## 다음 채팅
 
 ```text
-https://github.com/kdydesign/simple-timeline
-Superpowers와 Wayfinder로 스테이지 4을 진행해줘.
-최신 main에서 README.md, docs/wayfinder/MAP.md, docs/wayfinder/STATUS.md,
-docs/superpowers/specs/2026-11-03-simple-timeline-design.md,
-docs/wayfinder/handoffs/03-experience.md,
-docs/wayfinder/stages/04-implementation-plan.md와 해당 문서의 선행 산출물을 먼저 읽어줘.
-선행 단계 완료와 승인을 확인하고 이 스테이지만 진행해줘.
-확정한 사항은 다시 묻지 말고, 결과·검증·미결정 사항·다음 채팅 문구를
-저장소에 남기고 최신 커밋을 알려줘.
+저장소: https://github.com/kdydesign/simple-timeline
+Superpowers와 Wayfinder로 스테이지 4만 진행해줘.
+최신 main의 AGENTS.md를 읽고 node scripts/harness/run.mjs context 04-implementation-plan
+결과의 문서와 docs/wayfinder/handoffs/03-experience.md,
+docs/design/domain-rules.md, docs/design/architecture.md, docs/design/storage.md,
+docs/design/experience.md, docs/design/visualization.md를 확인해줘.
+승인된 요구사항·도메인·저장·화면 설계는 다시 묻지 마.
+승인 설계를 파일·작업·검증 명령 수준의 구현 계획으로 나와 확정하고 앱 구현은 시작하지 마.
+목업은 설계 자료이며 제품 코드로 재사용하지 마.
+완료하면 검증 후 PR 없이 main에 직접 커밋·push하고,
+다음 채팅용 인수인계와 최종 커밋을 알려줘.
 ```

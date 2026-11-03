@@ -2,8 +2,9 @@
 
 오프라인 Windows 프로젝트 일정 관리 프로그램. Electron + React + SQLite.
 
-현재 상태: 스테이지 2 Electron·SQLite 구조 설계 승인 완료. 다음은 스테이지 3 화면 설계다.
-앱 코드와 설치 파일은 아직 없다. [스테이지 2 인수인계](docs/wayfinder/handoffs/02-architecture.md)를 확인한다.
+현재 상태: 스테이지 3 화면·간트·달력 설계 승인 완료. 다음은 스테이지 4 구현 계획 확정이다.
+앱 코드와 설치 파일은 아직 없다. [스테이지 3 인수인계](docs/wayfinder/handoffs/03-experience.md)를 확인한다.
+[HTML 목업](docs/design/mockups/stage-03.html)은 설계용 고정 예시이며 제품 구현이 아니다.
 
 ## Codex 프로젝트 시작
 
@@ -27,16 +28,18 @@ GitHub Actions의 Repository harness가 Ubuntu·Windows에서 동일한 하네�
 2. [Codex 안내](AGENTS.md), [진행 상태](docs/wayfinder/STATUS.md), [진행 지도](docs/wayfinder/MAP.md)를 읽는다.
 3. 해당 스테이지 문서와 직전 인수인계 문서를 읽고 한 스테이지만 진행한다.
 
-스테이지 3 시작 문구:
+스테이지 4 시작 문구:
 
 ```text
 저장소: https://github.com/kdydesign/simple-timeline
-Superpowers와 Wayfinder로 스테이지 3만 진행해줘.
-최신 main의 AGENTS.md를 읽고 node scripts/harness/run.mjs context 03-experience
-결과의 문서와 docs/wayfinder/handoffs/02-architecture.md,
-docs/design/domain-rules.md, docs/design/architecture.md, docs/design/storage.md를 확인해줘.
-승인된 요구사항·도메인·저장 구조는 다시 묻지 마.
-화면·간트·달력 설계만 나와 확정하고 앱 구현은 시작하지 마.
+Superpowers와 Wayfinder로 스테이지 4만 진행해줘.
+최신 main의 AGENTS.md를 읽고 node scripts/harness/run.mjs context 04-implementation-plan
+결과의 문서와 docs/wayfinder/handoffs/03-experience.md,
+docs/design/domain-rules.md, docs/design/architecture.md, docs/design/storage.md,
+docs/design/experience.md, docs/design/visualization.md를 확인해줘.
+승인된 요구사항·도메인·저장·화면 설계는 다시 묻지 마.
+승인 설계를 파일·작업·검증 명령 수준의 구현 계획으로 나와 확정하고 앱 구현은 시작하지 마.
+목업은 설계 자료이며 제품 코드로 재사용하지 마.
 완료하면 검증 후 PR 없이 main에 직접 커밋·push하고,
 다음 채팅용 인수인계와 최종 커밋을 알려줘.
 ```
