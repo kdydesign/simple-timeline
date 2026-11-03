@@ -10,7 +10,10 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.domain.json --noEmit",
     "test:unit": "vitest run --config vitest.config.ts",
-    "test:tz": "node scripts/testing/run-unit-tz.mjs"
+    "test:tz": "node scripts/testing/run-unit-tz.mjs",
+    "rebuild:native": "electron-builder install-app-deps",
+    "postinstall": "node --use-env-proxy node_modules/electron/install.js && electron-builder install-app-deps",
+    "test:native": "tsc -p tsconfig.native.json && node scripts/testing/run-native.mjs"
   },
   "dependencies": {
     "react": "19.3.1",
