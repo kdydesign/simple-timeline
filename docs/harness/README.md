@@ -43,7 +43,7 @@ verify는 실패해도 나머지 검사를 실행하고 보고서와 로그를 `
 
 ## 앱 검증과 구분
 
-스테이지 5에서 실제 typecheck·unit·native SQLite·UI·Electron E2E·build를 `npm run verify:app`과 별도 Application CI로 연결한다.
+스테이지 5부터 실제 typecheck·unit·native SQLite·UI·Electron E2E·build를 `npm run verify:app`과 별도 Application CI로 검증한다. 스테이지 6의 간트·달력·1만 개 일정 검증도 같은 명령에 포함된다.
 명령과 환경은 [개발 안내](../../README.md)의 앱 개발·검증을 따른다.
 하네스의 `repository-harness-only` 범위를 바꾸거나 앱 검증 성공으로 혼동하지 않는다.
 앱 보고서는 `artifacts/app/`, 상세 로그는 `artifacts/native/`·`artifacts/e2e/`다.

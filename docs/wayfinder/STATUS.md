@@ -1,9 +1,9 @@
 # 진행 상태
 
-현재: 스테이지 6 간트·달력 구현(Task 6~8) 진행 중.
+현재: 스테이지 6 간트·달력 구현(Task 6~8)·검증 완료.
 다음: 스테이지 7 Windows 설치·오프라인 검증. 이번 채팅에서는 착수하지 않는다.
-[실행 기록](../implementation/stage-05.md)과 [인수인계](handoffs/05-foundation-crud.md)를 참조한다.
-실제 Electron·SQLite CRUD와 앱 CI가 있으며, 시각화·설치 파일은 아직 없다.
+[실행 기록](../implementation/stage-06.md)과 [인수인계](handoffs/06-visualizations.md)를 참조한다.
+실제 Electron·SQLite CRUD·간트·달력과 앱 CI가 있다. Windows 설치 파일은 아직 없다.
 최종 문서 commit·push 및 CI 결과와 SHA는 종료 메시지에서 확인한다.
 
 프로젝트 설정과 실행 명령: [Codex 하네스](../harness/README.md).
@@ -18,7 +18,7 @@
 | 3 | [화면·간트·달력 설계](stages/03-experience.md) | 완료 |
 | 4 | [구현 계획 확정](stages/04-implementation-plan.md) | 완료 |
 | 5 | [기본 앱·저장·CRUD 구현](stages/05-foundation-crud.md) | 완료 |
-| 6 | [간트·달력 구현](stages/06-visualizations.md) | 진행 중 |
+| 6 | [간트·달력 구현](stages/06-visualizations.md) | 완료 |
 | 7 | [Windows 설치·오프라인 검증](stages/07-windows-release.md) | 미착수 |
 
 상태: 미착수 → 진행 중 → 사용자 확인 대기 → 완료. 진행 불가이면 차단됨.

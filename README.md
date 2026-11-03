@@ -2,10 +2,10 @@
 
 오프라인 Windows 프로젝트 일정 관리 프로그램. Electron + React + SQLite.
 
-현재 상태: 스테이지 5 기본 앱·저장·CRUD 구현·검증 완료. 다음은 스테이지 6 간트·달력 구현이다.
-[승인 계획](docs/superpowers/plans/2026-11-03-simple-timeline-implementation.md)과
-[스테이지 5 인수인계](docs/wayfinder/handoffs/05-foundation-crud.md)와 [실행 기록](docs/implementation/stage-05.md)을 확인한다.
-기본 앱·SQLite·CRUD와 앱 CI가 있다. 시각화·설치 파일은 아직 없다. [HTML 목업](docs/design/mockups/stage-03.html)은 설계 자료다.
+현재 상태: 스테이지 6 간트·달력 구현·검증 완료. 다음은 스테이지 7 Windows 설치·오프라인 검증이다.
+[승인 계획](docs/superpowers/plans/2026-11-03-simple-timeline-implementation.md),
+[스테이지 6 인수인계](docs/wayfinder/handoffs/06-visualizations.md), [실행 기록](docs/implementation/stage-06.md)을 확인한다.
+Electron·SQLite CRUD와 간트·달력이 있다. 설치 파일은 아직 없다. [HTML 목업](docs/design/mockups/stage-03.html)은 설계 자료다.
 
 ## Codex 프로젝트 시작
 
@@ -43,7 +43,10 @@ Linux headless는 GUI 라이브러리·Xvfb를 준비하고 `xvfb-run -a npm run
 앱 검증은 타입 검사 → 3개 TZ의 unit → UI → build → 실제 Electron native DB → E2E 순서다.
 테스트는 매번 임시 DB·Chromium 프로필을 만들며 운영 DB를 사용하지 않는다. sandbox를 끄지 않는다.
 `artifacts/app/latest.json`, `artifacts/native/`, `artifacts/e2e/`에서 결과·로그를 확인한다.
-빌드 산출물은 `out/`이고, UI는 현재 CRUD 검증용 목록이다. 간트·달력은 스테이지 6, Windows 설치본은 스테이지 7 범위다.
+빌드 산출물은 `out/`이다. 간트는 전체 일정 범위를 일당 28px로 조회하고 월간 달력은 3줄과 날짜별 전체 목록을 제공한다.
+가로 손잡이는 좌우 하루·PageUp/Down 화면 폭·Home/End 처음/끝 이동을 지원한다.
+간트 이름 버튼과 날짜 전체 목록에서는 위아래 키로 화면 밖 항목에도 접근한다. Windows 설치본은 스테이지 7 범위다.
+10000개 fixture의 지연·프로세스 CPU/메모리와 화면 이미지는 E2E artifact에 남는다. 성능 SLA는 아니다.
 
 ## 새 채팅에서 시작하기
 
@@ -51,23 +54,23 @@ Linux headless는 GUI 라이브러리·Xvfb를 준비하고 `xvfb-run -a npm run
 2. [Codex 안내](AGENTS.md), [진행 상태](docs/wayfinder/STATUS.md), [진행 지도](docs/wayfinder/MAP.md)를 읽는다.
 3. 해당 스테이지 문서와 직전 인수인계 문서를 읽고 한 스테이지만 진행한다.
 
-스테이지 6 시작 문구:
+스테이지 7 시작 문구:
 
-```text
+~~~text
 저장소: https://github.com/kdydesign/simple-timeline
-Superpowers와 Wayfinder로 스테이지 6만 진행해줘.
-최신 main의 AGENTS.md를 읽고 node scripts/harness/run.mjs context 06-visualizations
-결과의 문서와 docs/wayfinder/handoffs/05-foundation-crud.md,
-docs/implementation/stage-05.md,
+Superpowers와 Wayfinder로 스테이지 7만 진행해줘.
+최신 main의 AGENTS.md를 읽고 node scripts/harness/run.mjs context 07-windows-release
+결과의 문서와 docs/wayfinder/handoffs/06-visualizations.md,
+docs/implementation/stage-06.md,
 docs/superpowers/plans/2026-11-03-simple-timeline-implementation.md,
 docs/design/domain-rules.md, docs/design/architecture.md, docs/design/storage.md,
 docs/design/experience.md, docs/design/visualization.md를 확인해줘.
-기존 승인 사항은 다시 묻지 말고 Task 1~5의 실제 코드를 이어서 Task 6~8만 구현해줘.
-운영 DB 대신 임시 테스트 프로필을 쓰고 실제 앱·CI로 두 모드와 CRUD 통합을 검증해줘.
-목업을 제품으로 재사용하지 말고 스테이지 7에는 착수하지 마.
-완료하면 검증 후 PR 없이 main에 직접 커밋·push하고,
-다음 채팅용 인수인계와 최종 커밋을 알려줘.
-```
+기존 승인 사항은 다시 묻지 말고 Task 1~8의 실제 코드를 이어서 Task 9만 진행해줘.
+아직 미확정인 Windows 지원 OS/CPU·설치 범위·서명/배포·제거 정책은 나와 확정해줘.
+운영 DB 대신 격리된 프로필을 쓰고 실제 Windows 설치·오프라인·업데이트 보존을 검증해줘.
+실행할 수 없는 검증은 완료로 추정하지 말고 필요한 사용자 확인과 결과를 기록해줘.
+완료하면 검증 후 PR 없이 main에 직접 커밋·push하고 최종 결과·인수인계·커밋을 알려줘.
+~~~
 
 새 채팅이 이전 채팅의 대화나 작업 폴더를 기억한다고 가정하지 않는다.
 GitHub에 반영된 커밋과 문서가 다음 채팅의 기준이다.

@@ -38,13 +38,16 @@ status: open
 
 - [스테이지 5 — 기본 앱·저장·CRUD 구현](stages/05-foundation-crud.md): 실제 Electron·SQLite CRUD·보존·오류 처리를 구현하고 독립 검토 수정과 두 OS 앱 CI를 통과했다.
 
+- [스테이지 6 — 간트·달력 구현](stages/06-visualizations.md): 전체 범위 가상 간트·월간 달력·날짜 전체 목록을 CRUD와 통합하고 독립 검토 수정·극단 연도/1만 개 일정·두 OS 앱 CI를 검증했다.
+
 지도 이전에 사용자가 선택한 요구사항·기술은
 [전체 설계 기준](../superpowers/specs/2026-11-03-simple-timeline-design.md)에 기록한다.
 
 ## Not yet specified
 
-- 설계에서 날짜 범위와 일정 개수를 줄이는 제약은 추가하지 않았다. 가상 렌더링의 실제 성능은 구현 후 검증하며,
-  제약 변경이 필요하다고 드러나면 사용자와 별도 범위 결정을 한다.
+- 날짜 범위와 일정 개수를 줄이는 제약은 추가하지 않았다. 1만 개 fixture의 관측은
+  [스테이지 6 실행 기록](../implementation/stage-06.md)에 있다. 실제 사용자 Windows 성능이나 임의 규모의 보장은 없으며,
+  제약 변경이 필요하면 사용자와 별도로 결정한다.
 
 ## Out of scope
 

@@ -17,7 +17,8 @@ Vitest 5.1.0, Playwright 1.64.1. 전체 고정 버전과 문서상 확인 범위
 
 상태: 스테이지 4 사용자 승인 계획. Task 1~5는 스테이지 5에서 구현·검증했다.
 [실행 기록](../../implementation/stage-05.md)과 [인수인계](../../wayfinder/handoffs/05-foundation-crud.md)를 따른다.
-Task 6~9의 시각화·설치 관련 파일/명령은 **후속 구현 대상**이며 미실행 상태다.
+Task 6~8도 스테이지 6에서 구현·검증했다. [실행 기록](../../implementation/stage-06.md)과
+[인수인계](../../wayfinder/handoffs/06-visualizations.md)를 따른다. Task 9 설치 관련 파일/명령만 **후속 구현 대상**이다.
 
 ## Global Constraints
 
@@ -69,7 +70,7 @@ Windows x64는 최초 CI 빌드 축이며 최종 지원 OS/CPU를 임의 확정�
 
 ## 파일·인터페이스 지도
 
-아래 경로는 아직 만들지 않은 구현 계획이며 링크 검사의 대상 파일로 가장하지 않는다.
+Task 1~8 경로는 실제 구현되었다. Task 9의 패키징/설치 경로는 아직 만들지 않은 계획이다.
 
 | 위치 | 책임·소유 작업 |
 | --- | --- |
@@ -278,19 +279,19 @@ first는 포함, lastExclusive는 제외, origin은 첫 렌더 구간의 논리 
 `visibleRows(prefix:readonly number[],offset:number,height:number,overscanRows:number):{first:number;lastExclusive:number}`로 구한다.
 React 뷰는 `GanttView({snapshot,selectedMonth,onEditProject,onEditSchedule,onAddSchedule})`.
 
-- [ ] **Step 1 — RED:** `ganttRect` 개발/QA/배포 x=280/1148/1316, 폭=868/168/28,
+- [x] **Step 1 — RED:** `ganttRect` 개발/QA/배포 x=280/1148/1316, 폭=868/168/28,
   빈 일정 선택 월·빈 프로젝트·중간 빈 월·극단 3652059일 범위와 clamp를 검사한다.
   동일 1000px viewport에서 전체 범위 크기와 무관하게 날짜 DOM 수가 제한되고 CSS 좌표가 거대해지지 않아야 한다.
-- [ ] **Step 2 — RED 확인:** unit의 gantt, UI의 gantt를 각각 실행해 미구현 좌표/이동 동작 실패 확인.
-- [ ] **Step 3 — GREEN:** 월/일 header·이름 열 고정, 프로젝트 56px·일정 44px 행, 이름/막대 편집,
+- [x] **Step 2 — RED 확인:** unit의 gantt, UI의 gantt를 각각 실행해 미구현 좌표/이동 동작 실패 확인.
+- [x] **Step 3 — GREEN:** 월/일 header·이름 열 고정, 프로젝트 56px·일정 44px 행, 이름/막대 편집,
   일당 28px, viewport 양쪽 31일 overscan의 날짜/월만 렌더한다. 행은 높이 누적합과 이진 검색으로 창을 구한다.
   가로 논리 offset와 물리 좌표를 분리하고 전체 논리 범위 스크롤 손잡이·wheel·키보드를 연결한다.
   긴 막대도 렌더 구간과 교차한 x/width만 CSS에 넣고, 전체 기간은 데이터/설명에 유지한다.
   물리 DOM 너비를 전체 약 1억 px로 두지 않는다. 포커스 행은 유지하거나 명시적으로 복귀시킨다.
-- [ ] **Step 4 — 검증:** `npm run test:unit -- tests/unit/gantt.test.ts`, `npm run test:ui -- tests/ui/gantt.test.tsx`.
+- [x] **Step 4 — 검증:** `npm run test:unit -- tests/unit/gantt.test.ts`, `npm run test:ui -- tests/ui/gantt.test.tsx`.
   범위 밖 선택 안내, 연월 직접 이동, Home/End/일 단위 이동, 모드 왕복의 위치, CRUD 후 anchor clamp,
   마지막 일정 삭제와 짧은 막대의 이름 경로·포커스 유지·색상 외 구분을 검증한다.
-- [ ] **Step 5 — Commit:** verify:app·하네스 통과 후 `feat: render full-range virtual gantt with calendar-date navigation`.
+- [x] **Step 5 — Commit:** verify:app·하네스 통과 후 `feat: render full-range virtual gantt with calendar-date navigation`.
 
 ## Task 7: 월간 달력·주 분할·3줄과 전체 목록 (스테이지 6)
 
@@ -303,16 +304,16 @@ React 뷰는 `GanttView({snapshot,selectedMonth,onEditProject,onEditSchedule,onA
 `Segment={scheduleId,projectId,weekStart,column,span,continuesLeft,continuesRight,startDate,endDate}`;
 PlacedSegment에 `lane:number`를 더한다. `CalendarView`는 Gantt와 같은 선택/편집 콜백을 사용한다.
 
-- [ ] **Step 1 — RED:** 2021-02/2026-11/12의 4/6/5주, 일~월·월/연도·윤년 경계 분할,
+- [x] **Step 1 — RED:** 2021-02/2026-11/12의 4/6/5주, 일~월·월/연도·윤년 경계 분할,
   9999-12 빈 비활성 칸·계속 방향, 같은 기간 5개에서 +2와 전체 목록 5개,
   B/C/A/D 줄 재사용 사례·이름 중복 ID 보존을 검사한다.
-- [ ] **Step 2 — RED 확인:** `npm run test:unit -- tests/unit/calendar.test.ts`, UI 달력 테스트에서 미구현 assertion 실패 확인.
-- [ ] **Step 3 — GREEN:** 선택 월과 교차 후 주별 분할, 승인 정렬과 최소 빈 줄 배치.
+- [x] **Step 2 — RED 확인:** `npm run test:unit -- tests/unit/calendar.test.ts`, UI 달력 테스트에서 미구현 assertion 실패 확인.
+- [x] **Step 3 — GREEN:** 선택 월과 교차 후 주별 분할, 승인 정렬과 최소 빈 줄 배치.
   인접 월은 숫자만 표시하고 3줄 초과는 날짜별 숨김 수를 계산한다. 더 보기는 원본에서 그날 전체 목록을 조회한다.
   일정 ID로 편집하며 긴 목록은 내부 스크롤, 닫기/편집 후 포커스 복귀와 전문 레이블을 제공한다.
-- [ ] **Step 4 — 검증:** `npm run test:ui -- tests/ui/calendar.test.tsx`, unit.
+- [x] **Step 4 — 검증:** `npm run test:ui -- tests/ui/calendar.test.tsx`, unit.
   선택 월 바깥 일정 누락/유입 없음, 각 주별 lane이 달라도 같은 ID 연결, 색상/전체 기간 표시·키보드 진입을 확인한다.
-- [ ] **Step 5 — Commit:** verify:app·하네스 통과 후 `feat: render monthly calendar with accessible overlapping schedules`.
+- [x] **Step 5 — Commit:** verify:app·하네스 통과 후 `feat: render monthly calendar with accessible overlapping schedules`.
 
 ## Task 8: 두 모드·CRUD·극단 범위 통합 (스테이지 6)
 
@@ -322,16 +323,16 @@ PlacedSegment에 `lane:number`를 더한다. `CalendarView`는 Gantt와 같은 �
 불가피한 오류 주입은 별도 test main의 bootstrap 의존성으로만 하며 production main/bundle에는 포함하지 않는다.
 오류 모드는 test fixture가 생성한 설정으로 정하고, renderer에는 실제 승인 bridge만 존재한다.
 
-- [ ] **Step 1 — RED:** e2e에 핫픽스→모드 전환→선택 월 유지→수정/삭제 양쪽 반영→재실행 현재 월 복귀,
+- [x] **Step 1 — RED:** e2e에 핫픽스→모드 전환→선택 월 유지→수정/삭제 양쪽 반영→재실행 현재 월 복귀,
   저장 실패/응답 소실/조회 실패와 중복 create 0회, 범위 밖 월·마지막 일정 삭제를 먼저 작성한다.
-- [ ] **Step 2 — RED 확인:** build/e2e를 실행하고 새 시나리오의 실제 실패를 기록한다. 기존 구현이 이미 만족하면
+- [x] **Step 2 — RED 확인:** build/e2e를 실행하고 새 시나리오의 실제 실패를 기록한다. 기존 구현이 이미 만족하면
   같은 assertion을 중복시키지 않고 빠진 실패 경로를 검증한다. 임의로 정상 기능을 망가뜨려 RED를 만들지 않는다.
-- [ ] **Step 3 — GREEN:** 부족한 연결/포커스·캐시만 수정한다. 0001~9999 양 끝 이동과 10000개 일정 fixture에서
+- [x] **Step 3 — GREEN:** 부족한 연결/포커스·캐시만 수정한다. 0001~9999 양 끝 이동과 10000개 일정 fixture에서
   전체 데이터 접근·선택·더 보기·현재 viewport 렌더량을 검사한다. fixture 크기는 검증 부하이며 제품 한도가 아니다.
-- [ ] **Step 4 — 검증:** `npm run verify:app`, 하네스, 두 OS app CI. 1280×800 및 200% 확대 상당 레이아웃,
+- [x] **Step 4 — 검증:** `npm run verify:app`, 하네스, 두 OS app CI. 1280×800 및 200% 확대 상당 레이아웃,
   긴 Unicode 이름·키보드만으로 추가/편집/삭제·가상 행 밖 포커스 이동을 확인한다.
   CPU/메모리/첫 렌더·스크롤 지연과 환경을 기록하고 프리즈/행 누락을 해결한다. 측정 전 성능 SLA를 만들지 않는다.
-- [ ] **Step 5 — Commit:** `test: verify timeline persistence and visualization end to end`.
+- [x] **Step 5 — Commit:** `test: verify timeline persistence and visualization end to end`.
   스테이지 6 결과·테스트·미실행 설치 검증을 인수인계하고 Windows 배포는 시작하지 않는다.
 
 ## Task 9: Windows 설치·업데이트·오프라인 실제 검증 (스테이지 7)
