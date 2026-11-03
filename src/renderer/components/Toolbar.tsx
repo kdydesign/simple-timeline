@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
-import type { YearMonth } from '../../shared/types'
-import { shiftMonth, validateYearMonth } from '../../domain/date'
+import { useState, useEffect } from "react";
+import type { YearMonth } from "../../shared/types";
+import { shiftMonth, validateYearMonth } from "../../domain/date";
 const label = (v: YearMonth) =>
-  `${String(v.year).padStart(4, '0')}-${String(v.month).padStart(2, '0')}`
+  `${String(v.year).padStart(4, "0")}-${String(v.month).padStart(2, "0")}`;
 export function Toolbar({
   month,
   onMonth,
@@ -11,33 +11,37 @@ export function Toolbar({
   hasProjects,
   onProject,
   onSchedule,
+  onProjects,
+  projectsOpen,
 }: {
-  month: YearMonth
-  onMonth: (m: YearMonth) => void
-  onInvalid: () => void
-  canEdit: boolean
-  hasProjects: boolean
-  onProject: () => void
-  onSchedule: () => void
+  month: YearMonth;
+  onMonth: (m: YearMonth) => void;
+  onInvalid: () => void;
+  canEdit: boolean;
+  hasProjects: boolean;
+  onProject: () => void;
+  onSchedule: () => void;
+  onProjects: () => void;
+  projectsOpen: boolean;
 }) {
-  const [text, setText] = useState(label(month))
-  useEffect(() => setText(label(month)), [month])
+  const [text, setText] = useState(label(month));
+  useEffect(() => setText(label(month)), [month]);
   const apply = () => {
     try {
-      if (!/^\d{4}-\d{2}$/.test(text)) throw Error()
-      const [year, m] = text.split('-').map(Number),
-        ym = { year, month: m }
-      validateYearMonth(ym)
-      onMonth(ym)
+      if (!/^\d{4}-\d{2}$/.test(text)) throw Error();
+      const [year, m] = text.split("-").map(Number),
+        ym = { year, month: m };
+      validateYearMonth(ym);
+      onMonth(ym);
     } catch {
-      setText(label(month))
-      onInvalid()
+      setText(label(month));
+      onInvalid();
     }
-  }
+  };
   const current = () => {
-    const d = new Date()
-    onMonth({ year: d.getFullYear(), month: d.getMonth() + 1 })
-  }
+    const d = new Date();
+    onMonth({ year: d.getFullYear(), month: d.getMonth() + 1 });
+  };
   return (
     <header>
       <div className="brand">
@@ -61,7 +65,7 @@ export function Toolbar({
             onChange={(e) => setText(e.target.value)}
             onBlur={apply}
             onKeyDown={(e) => {
-              if (e.key === 'Enter') apply()
+              if (e.key === "Enter") apply();
             }}
           />
         </label>
@@ -75,6 +79,9 @@ export function Toolbar({
         <button onClick={current}>현재 월</button>
       </nav>
       <div className="header-actions">
+        <button aria-expanded={projectsOpen} onClick={onProjects}>
+          프로젝트 목록
+        </button>
         <button
           data-focus="project-add"
           disabled={!canEdit}
@@ -82,10 +89,14 @@ export function Toolbar({
         >
           프로젝트 추가
         </button>
-        <button disabled={!canEdit || !hasProjects} onClick={onSchedule}>
+        <button
+          data-focus="schedule-add"
+          disabled={!canEdit || !hasProjects}
+          onClick={onSchedule}
+        >
           일정 추가
         </button>
       </div>
     </header>
-  )
+  );
 }

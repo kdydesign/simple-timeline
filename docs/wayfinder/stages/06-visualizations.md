@@ -3,8 +3,8 @@
 id: 06-visualizations
 parent: ../MAP.md
 labels: wayfinder:task
-status: open
-assignee: null
+status: in_progress
+assignee: codex-stage06
 blocked_by: 05-foundation-crud
 
 ## Question
