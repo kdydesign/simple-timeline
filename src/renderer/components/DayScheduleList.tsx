@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { useMemo, useState, useRef, useEffect } from "react";
 import type { Project, Schedule } from "../../shared/types";
 import {
@@ -58,7 +59,7 @@ export function DayScheduleList({
       el.querySelector<HTMLElement>(`[data-list-index="${i}"]`)?.focus(),
     );
   };
-  return (
+  return createPortal(
     <div className="scrim">
       <section
         className="day-dialog"
@@ -144,6 +145,7 @@ export function DayScheduleList({
           </div>
         </div>
       </section>
-    </div>
+    </div>,
+    document.body,
   );
 }

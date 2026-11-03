@@ -49,6 +49,10 @@ export function App({
   const gantt = useRef<GanttHandle>(null);
   const focusTarget = useRef<string | null>(null),
     dialogCaller = useRef<HTMLElement | null>(null);
+  const completionView = useRef({ mode, month });
+  useLayoutEffect(() => {
+    completionView.current = { mode, month };
+  }, [mode, month]);
   const model = editor.editor,
     canEdit = timeline.phase === "ready",
     saving = timeline.phase === "saving";
@@ -152,6 +156,7 @@ export function App({
   };
   async function save() {
     if (!model || !canEdit || model.saved) return;
+    setNotice("");
     setFormError(null);
     let result: Result<{ id: Id }>;
     try {
@@ -185,15 +190,18 @@ export function App({
     if (result.ok) {
       focusTarget.current =
         model.caller?.dataset.returnFocus ?? `${model.kind}:${result.data.id}`;
-      const bounds = monthBounds(month),
+      const bounds = monthBounds(completionView.current.month),
         outside =
-          mode === "calendar" &&
+          completionView.current.mode === "calendar" &&
           model.kind === "schedule" &&
           (model.draft.endDate < bounds.start ||
             model.draft.startDate > bounds.end);
       setNotice(outside ? "저장됨 · 현재 월 표시 대상 아님" : "저장했습니다.");
       if (outside) focusTarget.current = "schedule-add";
-      if (model.kind === "project" && mode === "calendar")
+      if (
+        model.kind === "project" &&
+        completionView.current.mode === "calendar"
+      )
         setProjectsOpen(true);
       editor.markSaved();
     } else if (result.error.field)
@@ -224,6 +232,7 @@ export function App({
       confirmLabel: kind === "project" ? "함께 삭제" : "일정 삭제",
       run: () => {
         setConfirmation(null);
+        setNotice("");
         void (async () => {
           const result =
             kind === "project"

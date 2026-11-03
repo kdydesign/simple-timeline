@@ -3,7 +3,7 @@ import { resolve, relative, isAbsolute, dirname, join } from "node:path";
 import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { bootstrap } from "../../src/main/bootstrap";
-import { hotfix, schedule, project } from "../fixtures/timeline";
+import { hotfix, schedule, project, overlaps } from "../fixtures/timeline";
 import type { Result } from "../../src/shared/types";
 const requested = process.env.SIMPLE_TIMELINE_TEST_PROFILE;
 if (!requested) throw Error("Test profile required");
@@ -82,7 +82,20 @@ void bootstrap({
             }
           : seed === "single"
             ? { projects: [project()], schedules: [schedule()] }
-            : hotfix;
+            : seed === "focus"
+              ? {
+                  projects: hotfix.projects,
+                  schedules: [
+                    ...hotfix.schedules,
+                    {
+                      ...schedule("4", "1", "2030-01-01", "2030-01-01"),
+                      name: "먼 일정",
+                    },
+                  ],
+                }
+              : seed === "overlaps"
+                ? { projects: [project()], schedules: overlaps }
+                : hotfix;
       storage.db.transaction(() => {
         for (const p of data.projects)
           repo.createProject({

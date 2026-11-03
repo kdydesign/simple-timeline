@@ -1,13 +1,13 @@
-import { useEffect, useRef, type ReactNode } from 'react'
-import type { Editor } from '../state/useEditor'
+import { useEffect, useRef, type ReactNode } from "react";
+import type { Editor } from "../state/useEditor";
 import type {
   ApiError,
   Project,
   ProjectInput,
   ScheduleInput,
-} from '../../shared/types'
-import { inclusiveDays } from '../../domain/date'
-import { trapTab } from './ConfirmDialog'
+} from "../../shared/types";
+import { inclusiveDays } from "../../domain/date";
+import { trapTab } from "./ConfirmDialog";
 export function EditorPanel({
   editor,
   projects,
@@ -22,31 +22,35 @@ export function EditorPanel({
   error,
   status,
 }: {
-  editor: Editor
-  projects: Project[]
-  patch: (p: Partial<ProjectInput & ScheduleInput>) => void
-  onSave: () => void
-  onDelete: () => void
-  onClose: () => void
-  disabled: boolean
-  busy: boolean
-  narrow: boolean
-  covered: boolean
-  error: ApiError | null
-  status?: ReactNode
+  editor: Editor;
+  projects: Project[];
+  patch: (p: Partial<ProjectInput & ScheduleInput>) => void;
+  onSave: () => void;
+  onDelete: () => void;
+  onClose: () => void;
+  disabled: boolean;
+  busy: boolean;
+  narrow: boolean;
+  covered: boolean;
+  error: ApiError | null;
+  status?: ReactNode;
 }) {
-  const panel = useRef<HTMLElement>(null)
+  const panel = useRef<HTMLElement>(null);
   useEffect(() => {
-    panel.current?.querySelector<HTMLInputElement>('#editor-name')?.focus()
-  }, [editor.kind, editor.id])
+    panel.current?.querySelector<HTMLInputElement>("#editor-name")?.focus();
+  }, [editor.kind, editor.id]);
+  useEffect(() => {
+    if (narrow && !covered && !panel.current?.contains(document.activeElement))
+      panel.current?.querySelector<HTMLInputElement>("#editor-name")?.focus();
+  }, [narrow, covered]);
   const invalid = (field: string) =>
     error?.field === field
-      ? { 'aria-invalid': true as const, 'aria-describedby': 'form-error' }
-      : {}
-  let period = ''
-  if (editor.kind === 'schedule') {
+      ? { "aria-invalid": true as const, "aria-describedby": "form-error" }
+      : {};
+  let period = "";
+  if (editor.kind === "schedule") {
     try {
-      period = `기간 ${inclusiveDays(editor.draft.startDate, editor.draft.endDate)}일`
+      period = `기간 ${inclusiveDays(editor.draft.startDate, editor.draft.endDate)}일`;
     } catch {}
   }
   return (
@@ -57,18 +61,18 @@ export function EditorPanel({
       aria-labelledby="editor-title"
       aria-hidden={covered}
       inert={covered}
-      className={`editor ${narrow ? 'overlay' : ''}`}
+      className={`editor ${narrow ? "overlay" : ""}`}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation()
-          onClose()
-        } else if (narrow) trapTab(e, e.currentTarget)
+        if (e.key === "Escape") {
+          e.stopPropagation();
+          onClose();
+        } else if (narrow) trapTab(e, e.currentTarget);
       }}
     >
       <div className="editor-title">
         <h2 id="editor-title">
-          {editor.kind === 'project' ? '프로젝트' : '일정'}{' '}
-          {editor.id ? '편집' : '추가'}
+          {editor.kind === "project" ? "프로젝트" : "일정"}{" "}
+          {editor.id ? "편집" : "추가"}
         </h2>
         <button aria-label="편집 닫기" disabled={busy} onClick={onClose}>
           ×
@@ -77,21 +81,21 @@ export function EditorPanel({
       {status}
       <form
         onSubmit={(e) => {
-          e.preventDefault()
-          onSave()
+          e.preventDefault();
+          onSave();
         }}
       >
         <fieldset disabled={disabled}>
           <label htmlFor="editor-name">
-            {editor.kind === 'project' ? '프로젝트 이름' : '일정 이름'}
+            {editor.kind === "project" ? "프로젝트 이름" : "일정 이름"}
           </label>
           <input
             id="editor-name"
             value={editor.draft.name}
-            {...invalid('name')}
+            {...invalid("name")}
             onChange={(e) => patch({ name: e.target.value })}
           />
-          {editor.kind === 'project' ? (
+          {editor.kind === "project" ? (
             <>
               <label htmlFor="editor-color">표시 색상</label>
               <div className="color-input">
@@ -102,7 +106,7 @@ export function EditorPanel({
                   value={
                     /^#[a-fA-F0-9]{6}$/.test(editor.draft.color)
                       ? editor.draft.color
-                      : '#2563EB'
+                      : "#2563EB"
                   }
                   onChange={(e) =>
                     patch({ color: e.target.value.toUpperCase() })
@@ -112,7 +116,7 @@ export function EditorPanel({
                   id="editor-color-code"
                   aria-label="색상 코드"
                   value={editor.draft.color}
-                  {...invalid('color')}
+                  {...invalid("color")}
                   onChange={(e) => patch({ color: e.target.value })}
                 />
               </div>
@@ -128,9 +132,9 @@ export function EditorPanel({
                     id={`participant-${i}`}
                     value={name}
                     onChange={(e) => {
-                      const names = [...editor.draft.participants]
-                      names[i] = e.target.value
-                      patch({ participants: names })
+                      const names = [...editor.draft.participants];
+                      names[i] = e.target.value;
+                      patch({ participants: names });
                     }}
                   />
                   <button
@@ -151,7 +155,7 @@ export function EditorPanel({
               <button
                 type="button"
                 onClick={() =>
-                  patch({ participants: [...editor.draft.participants, ''] })
+                  patch({ participants: [...editor.draft.participants, ""] })
                 }
               >
                 참여자 이름 추가
@@ -186,7 +190,7 @@ export function EditorPanel({
                 id="editor-startDate"
                 placeholder="YYYY-MM-DD"
                 value={editor.draft.startDate}
-                {...invalid('startDate')}
+                {...invalid("startDate")}
                 onChange={(e) => patch({ startDate: e.target.value })}
               />
               <label htmlFor="editor-endDate">종료일</label>
@@ -194,7 +198,7 @@ export function EditorPanel({
                 id="editor-endDate"
                 placeholder="YYYY-MM-DD"
                 value={editor.draft.endDate}
-                {...invalid('endDate')}
+                {...invalid("endDate")}
                 onChange={(e) => patch({ endDate: e.target.value })}
               />
               <p className="help">
@@ -224,5 +228,5 @@ export function EditorPanel({
         </div>
       </form>
     </aside>
-  )
+  );
 }

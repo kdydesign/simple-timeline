@@ -468,7 +468,7 @@ fieldset > select {
   position: relative;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
   background-image: linear-gradient(to right, #e7edf5 1px, transparent 1px);
   background-size: 28px 100%;
 }

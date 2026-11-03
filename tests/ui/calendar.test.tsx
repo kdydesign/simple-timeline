@@ -1,5 +1,5 @@
 import { it, expect } from "vitest";
-import { render, screen, within, waitFor } from "@testing-library/react";
+import { render, screen, within, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CalendarView } from "../../src/renderer/components/CalendarView";
 import { overlaps, hotfix, project } from "../fixtures/timeline";
@@ -152,4 +152,42 @@ it("keeps reverse tab from the initially focused day title inside the modal", as
   const dialog = screen.getByRole("dialog");
   await u.tab({ shift: true });
   expect(dialog.contains(document.activeElement)).toBe(true);
+});
+it("uses the current mode and month when an outstanding save completes", async () => {
+  Object.defineProperty(window, "innerWidth", {
+    value: 1280,
+    writable: true,
+    configurable: true,
+  });
+  const u = userEvent.setup(),
+    m = memoryApi({ projects: [project()], schedules: [] }),
+    original = m.api.createSchedule;
+  let finish: () => Promise<void> = async () => {};
+  m.api.createSchedule = (input) =>
+    new Promise((resolve) => {
+      finish = async () => resolve(await original(input));
+    });
+  render(<App api={m.api} today={new Date(2026, 10, 3)} />);
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "프로젝트 추가" })).toBeEnabled(),
+  );
+  await u.click(
+    document.querySelector<HTMLElement>('[data-focus="schedule-add"]')!,
+  );
+  await u.type(screen.getByLabelText("일정 이름"), "저장 대기 중");
+  await u.click(screen.getByRole("button", { name: "저장" }));
+  await u.click(screen.getByRole("button", { name: "달력" }));
+  const month = screen.getByLabelText("선택 연월");
+  await u.clear(month);
+  await u.type(month, "2027-03{Enter}");
+  await act(async () => {
+    await finish();
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "현재 월 표시 대상 아님",
+    ),
+  );
+  expect(month).toHaveValue("2027-03");
+  expect(document.querySelector('[data-focus="schedule-add"]')).toHaveFocus();
 });

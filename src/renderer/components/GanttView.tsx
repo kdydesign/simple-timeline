@@ -196,7 +196,24 @@ export function GanttView({
     prefix,
     size.height,
   ]);
-  const move = (n: number) => setOffset(Math.min(max, Math.max(0, n)));
+  const move = (n: number) => {
+    const next = Math.min(max, Math.max(0, n)),
+      activeElement = document.activeElement as HTMLElement | null;
+    if (activeElement?.dataset.bar) {
+      const row = rows.find(
+        (r) => r.schedule?.id === activeElement.dataset.bar,
+      );
+      if (row?.schedule) {
+        const rect = ganttRect(row.schedule, range);
+        if (rect.x + rect.width <= next || rect.x >= next + size.width) {
+          scroller.current
+            ?.querySelector<HTMLElement>(`[data-focus="${row.key}"]`)
+            ?.focus({ preventScroll: true });
+        }
+      }
+    }
+    setOffset(next);
+  };
   const keyboard = (e: React.KeyboardEvent) => {
     const shifts: Record<string, number> = {
       ArrowLeft: -P,
@@ -315,9 +332,9 @@ export function GanttView({
               const r = rows[i],
                 s = r.schedule,
                 rect = s ? ganttRect(s, range) : null;
-              const left = rect ? Math.max(rect.x, x - 31 * P) : 0,
+              const left = rect ? Math.max(rect.x, x) : 0,
                 right = rect
-                  ? Math.min(rect.x + rect.width, x + size.width + 31 * P)
+                  ? Math.min(rect.x + rect.width, x + size.width)
                   : 0;
               return (
                 <div

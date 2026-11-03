@@ -60,7 +60,8 @@ export function CalendarView({
       const button =
         document.querySelector<HTMLElement>(`[data-focus="more:${old}"]`) ??
         document.querySelector<HTMLElement>('[data-focus="schedule-add"]');
-      button?.focus();
+      if (button && !button.closest("[inert],[hidden]")) button.focus();
+      else document.getElementById("editor-name")?.focus();
     });
   };
   return (
