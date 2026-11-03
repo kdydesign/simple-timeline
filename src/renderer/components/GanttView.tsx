@@ -270,15 +270,22 @@ export function GanttView({
       <div className="gantt-heading">
         <div className="gantt-name-heading">프로젝트 / 일정</div>
         <div className="gantt-date-heading" ref={dateArea}>
-          {months.map((m) => (
-            <span
-              className="month-tick"
-              key={m.label}
-              style={{ left: m.left, width: m.width }}
-            >
-              {m.label}
-            </span>
-          ))}
+          {months
+            .filter((m) => m.left < size.width && m.left + m.width > 0)
+            .map((m) => (
+              <span
+                className="month-tick"
+                key={m.label}
+                style={{
+                  left: Math.max(0, m.left),
+                  width:
+                    Math.min(size.width, m.left + m.width) -
+                    Math.max(0, m.left),
+                }}
+              >
+                {m.label}
+              </span>
+            ))}
           {dates.map((d) => (
             <span
               className="day-tick"

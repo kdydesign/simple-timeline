@@ -133,3 +133,18 @@ it("retains a focused bar or add button when scrolling the row out of view", () 
   });
   expect(bar).toHaveFocus();
 });
+it("keeps the visible portion of a month heading readable at a viewport edge", () => {
+  const { container } = render(
+    <GanttView
+      snapshot={hotfix}
+      selectedMonth={{ year: 2026, month: 11 }}
+      {...callbacks}
+    />,
+  );
+  const december = [
+    ...container.querySelectorAll<HTMLElement>(".month-tick"),
+  ].find((el) => el.textContent === "2026-12")!;
+  expect(
+    parseFloat(december.style.left) + parseFloat(december.style.width),
+  ).toBeLessThanOrEqual(1000);
+});
