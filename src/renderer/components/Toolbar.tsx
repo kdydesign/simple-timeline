@@ -13,6 +13,8 @@ export function Toolbar({
   onSchedule,
   onProjects,
   projectsOpen,
+  mode,
+  onMode,
 }: {
   month: YearMonth;
   onMonth: (m: YearMonth) => void;
@@ -23,6 +25,8 @@ export function Toolbar({
   onSchedule: () => void;
   onProjects: () => void;
   projectsOpen: boolean;
+  mode: "gantt" | "calendar";
+  onMode: (mode: "gantt" | "calendar") => void;
 }) {
   const [text, setText] = useState(label(month));
   useEffect(() => setText(label(month)), [month]);
@@ -48,6 +52,17 @@ export function Toolbar({
         <h1>Simple Timeline</h1>
         <span>오프라인 일정 관리</span>
       </div>
+      <nav aria-label="조회 모드">
+        <button aria-pressed={mode === "gantt"} onClick={() => onMode("gantt")}>
+          간트
+        </button>
+        <button
+          aria-pressed={mode === "calendar"}
+          onClick={() => onMode("calendar")}
+        >
+          달력
+        </button>
+      </nav>
       <nav aria-label="조회 연월">
         <button
           aria-label="이전 달"

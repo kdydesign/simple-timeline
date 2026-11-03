@@ -14,6 +14,7 @@ import { useEditor } from "./state/useEditor";
 import { Toolbar } from "./components/Toolbar";
 import { ProjectList } from "./components/ProjectList";
 import { GanttView, type GanttHandle } from "./components/GanttView";
+import { CalendarView } from "./components/CalendarView";
 import { EditorPanel } from "./components/EditorPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { StatusNotice } from "./components/StatusNotice";
@@ -42,6 +43,8 @@ export function App({
     [formError, setFormError] = useState<ApiError | null>(null),
     [notice, setNotice] = useState(""),
     [projectsOpen, setProjectsOpen] = useState(false),
+    [mode, setMode] = useState<"gantt" | "calendar">("gantt"),
+    [dayModalOpen, setDayModalOpen] = useState(false),
     [narrow, setNarrow] = useState(window.innerWidth < 1100);
   const gantt = useRef<GanttHandle>(null);
   const focusTarget = useRef<string | null>(null),
@@ -74,17 +77,20 @@ export function App({
   useEffect(() => {
     if (!model && focusTarget.current) {
       const key = focusTarget.current;
-      const found = document.querySelector<HTMLElement>(
-        `[data-focus="${key}"]`,
-      );
-      if (!found && gantt.current?.focusItem(key)) {
+      const found = [
+        ...document.querySelectorAll<HTMLElement>(`[data-focus="${key}"]`),
+      ].find((el) => !el.closest("[hidden],[inert]"));
+      if (!found && mode === "gantt" && gantt.current?.focusItem(key)) {
         focusTarget.current = null;
         return;
       }
       const target =
+        found ??
         document.querySelector<HTMLElement>(
-          `[data-focus="${focusTarget.current}"]`,
-        ) ?? document.querySelector<HTMLElement>('[data-focus="project-add"]');
+          key.startsWith("schedule:") || key.startsWith("more:")
+            ? '[data-focus="schedule-add"]'
+            : '[data-focus="project-add"]',
+        );
       focusTarget.current = null;
       if (target && !target.matches(":disabled")) target.focus();
       else document.querySelector<HTMLElement>("[data-focus=refresh]")?.focus();
@@ -99,7 +105,10 @@ export function App({
     requestAnimationFrame(() => dialogCaller.current?.focus());
   };
   const close = () => {
-    focusTarget.current = model?.caller?.dataset.focus ?? "project-add";
+    focusTarget.current =
+      model?.caller?.dataset.returnFocus ??
+      model?.caller?.dataset.focus ??
+      "project-add";
     editor.close();
     setFormError(null);
   };
@@ -170,7 +179,8 @@ export function App({
       return;
     }
     if (result.ok) {
-      focusTarget.current = `${model.kind}:${result.data.id}`;
+      focusTarget.current =
+        model.caller?.dataset.returnFocus ?? `${model.kind}:${result.data.id}`;
       setNotice("저장했습니다.");
       editor.markSaved();
     } else if (result.error.field)
@@ -230,11 +240,13 @@ export function App({
     <>
       <div
         className="app-shell"
-        aria-hidden={!!confirmation || (narrow && !!model)}
-        inert={!!confirmation || (narrow && !!model)}
+        aria-hidden={!!confirmation || dayModalOpen || (narrow && !!model)}
+        inert={!!confirmation || dayModalOpen || (narrow && !!model)}
       >
         <Toolbar
           month={month}
+          mode={mode}
+          onMode={setMode}
           onMonth={setMonth}
           onInvalid={() =>
             setFormError({
@@ -274,10 +286,9 @@ export function App({
                     목록 닫기
                   </button>
                   <ProjectList
-                    snapshot={{ ...timeline.snapshot, schedules: [] }}
+                    snapshot={timeline.snapshot}
                     disabled={!canEdit}
                     onProject={(p) => request(() => editor.openProject(p))}
-                    onSchedule={() => {}}
                     onAdd={(p) =>
                       request(() => editor.openSchedule(month, p.id))
                     }
@@ -286,9 +297,24 @@ export function App({
               )}
               <GanttView
                 ref={gantt}
+                active={mode === "gantt"}
                 snapshot={timeline.snapshot}
                 selectedMonth={month}
                 disabled={!canEdit}
+                onEditProject={(p) => request(() => editor.openProject(p))}
+                onEditSchedule={(s) =>
+                  request(() => editor.openSchedule(month, s.projectId, s))
+                }
+                onAddSchedule={(p) =>
+                  request(() => editor.openSchedule(month, p.id))
+                }
+              />
+              <CalendarView
+                snapshot={timeline.snapshot}
+                selectedMonth={month}
+                active={mode === "calendar"}
+                disabled={!canEdit}
+                onModalChange={setDayModalOpen}
                 onEditProject={(p) => request(() => editor.openProject(p))}
                 onEditSchedule={(s) =>
                   request(() => editor.openSchedule(month, s.projectId, s))
@@ -317,7 +343,7 @@ export function App({
             disabled={!canEdit || model.saved}
             busy={saving}
             narrow={narrow}
-            covered={!!confirmation}
+            covered={!!confirmation || dayModalOpen}
             error={formError ?? timeline.error}
             status={narrow ? statusView : null}
           />
