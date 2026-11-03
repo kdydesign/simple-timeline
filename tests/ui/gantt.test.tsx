@@ -114,3 +114,22 @@ it("clamps an anchor when deleting the last schedule without changing selected m
     screen.queryByText("선택 월은 전체 일정 범위 밖입니다"),
   ).not.toBeInTheDocument();
 });
+it("retains a focused bar or add button when scrolling the row out of view", () => {
+  const schedules = Array.from({ length: 120 }, (_, i) => ({
+    ...schedule(String(i + 1)),
+    name: `다른 일정 ${i + 1}`,
+  }));
+  const { container } = render(
+    <GanttView
+      snapshot={{ projects: [project()], schedules }}
+      selectedMonth={{ year: 2026, month: 11 }}
+      {...callbacks}
+    />,
+  );
+  const bar = container.querySelector<HTMLElement>('[data-bar="1"]')!;
+  bar.focus();
+  fireEvent.scroll(container.querySelector(".gantt-body")!, {
+    target: { scrollTop: 4000 },
+  });
+  expect(bar).toHaveFocus();
+});

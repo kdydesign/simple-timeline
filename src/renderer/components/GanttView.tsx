@@ -316,6 +316,11 @@ export function GanttView({
                 <div
                   key={r.key}
                   data-row={r.key}
+                  onFocus={() => setFocused(r.key)}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.contains(e.relatedTarget as Node))
+                      setFocused(null);
+                  }}
                   role={s ? undefined : "region"}
                   aria-label={s ? undefined : r.label}
                   className={
@@ -339,15 +344,6 @@ export function GanttView({
                             : `${r.project.name} · #${r.project.id} · ${r.project.participants.join(" · ")}`
                         }
                         aria-label={`${r.label} 편집`}
-                        onFocus={() => setFocused(r.key)}
-                        onBlur={(e) => {
-                          if (
-                            !e.currentTarget.parentElement?.parentElement?.contains(
-                              e.relatedTarget as Node,
-                            )
-                          )
-                            setFocused(null);
-                        }}
                         onKeyDown={(e) => {
                           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
                             e.preventDefault();

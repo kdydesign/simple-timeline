@@ -7,7 +7,7 @@ import {
   normalizeParticipants,
   validateId,
 } from "../domain/normalize";
-import { parseBusinessDate, inclusiveDays } from "../domain/date";
+import { parseBusinessDate, inclusiveDays, monthBounds } from "../domain/date";
 import { DomainValidationError } from "../domain/error";
 import { useTimeline } from "./state/useTimeline";
 import { useEditor } from "./state/useEditor";
@@ -102,7 +102,10 @@ export function App({
   };
   const cancelConfirm = () => {
     setConfirmation(null);
-    requestAnimationFrame(() => dialogCaller.current?.focus());
+    requestAnimationFrame(() => {
+      if (dialogCaller.current?.isConnected) dialogCaller.current.focus();
+      else document.getElementById("editor-name")?.focus();
+    });
   };
   const close = () => {
     focusTarget.current =
@@ -112,7 +115,8 @@ export function App({
     editor.close();
     setFormError(null);
   };
-  const request = (action: () => void) => {
+  const request = (action: (caller: HTMLElement | null) => void) => {
+    const caller = document.activeElement as HTMLElement | null;
     if (saving) return;
     if (editor.dirty)
       confirm({
@@ -123,12 +127,12 @@ export function App({
         run: () => {
           setConfirmation(null);
           setFormError(null);
-          action();
+          action(caller);
         },
       });
     else {
       setFormError(null);
-      action();
+      action(caller);
     }
   };
   const showValidation = (e: unknown) => {
@@ -181,7 +185,16 @@ export function App({
     if (result.ok) {
       focusTarget.current =
         model.caller?.dataset.returnFocus ?? `${model.kind}:${result.data.id}`;
-      setNotice("저장했습니다.");
+      const bounds = monthBounds(month),
+        outside =
+          mode === "calendar" &&
+          model.kind === "schedule" &&
+          (model.draft.endDate < bounds.start ||
+            model.draft.startDate > bounds.end);
+      setNotice(outside ? "저장됨 · 현재 월 표시 대상 아님" : "저장했습니다.");
+      if (outside) focusTarget.current = "schedule-add";
+      if (model.kind === "project" && mode === "calendar")
+        setProjectsOpen(true);
       editor.markSaved();
     } else if (result.error.field)
       document.getElementById(`editor-${result.error.field}`)?.focus();
@@ -259,10 +272,17 @@ export function App({
           hasProjects={!!timeline.snapshot?.projects.length}
           projectsOpen={projectsOpen}
           onProjects={() => setProjectsOpen((v) => !v)}
-          onProject={() => request(() => editor.openProject())}
+          onProject={() =>
+            request((caller) => editor.openProject(undefined, caller))
+          }
           onSchedule={() =>
-            request(() =>
-              editor.openSchedule(month, timeline.snapshot!.projects[0].id),
+            request((caller) =>
+              editor.openSchedule(
+                month,
+                timeline.snapshot!.projects[0].id,
+                undefined,
+                caller,
+              ),
             )
           }
         />
@@ -288,9 +308,13 @@ export function App({
                   <ProjectList
                     snapshot={timeline.snapshot}
                     disabled={!canEdit}
-                    onProject={(p) => request(() => editor.openProject(p))}
+                    onProject={(p) =>
+                      request((caller) => editor.openProject(p, caller))
+                    }
                     onAdd={(p) =>
-                      request(() => editor.openSchedule(month, p.id))
+                      request((caller) =>
+                        editor.openSchedule(month, p.id, undefined, caller),
+                      )
                     }
                   />
                 </section>
@@ -301,12 +325,18 @@ export function App({
                 snapshot={timeline.snapshot}
                 selectedMonth={month}
                 disabled={!canEdit}
-                onEditProject={(p) => request(() => editor.openProject(p))}
+                onEditProject={(p) =>
+                  request((caller) => editor.openProject(p, caller))
+                }
                 onEditSchedule={(s) =>
-                  request(() => editor.openSchedule(month, s.projectId, s))
+                  request((caller) =>
+                    editor.openSchedule(month, s.projectId, s, caller),
+                  )
                 }
                 onAddSchedule={(p) =>
-                  request(() => editor.openSchedule(month, p.id))
+                  request((caller) =>
+                    editor.openSchedule(month, p.id, undefined, caller),
+                  )
                 }
               />
               <CalendarView
@@ -315,12 +345,18 @@ export function App({
                 active={mode === "calendar"}
                 disabled={!canEdit}
                 onModalChange={setDayModalOpen}
-                onEditProject={(p) => request(() => editor.openProject(p))}
+                onEditProject={(p) =>
+                  request((caller) => editor.openProject(p, caller))
+                }
                 onEditSchedule={(s) =>
-                  request(() => editor.openSchedule(month, s.projectId, s))
+                  request((caller) =>
+                    editor.openSchedule(month, s.projectId, s, caller),
+                  )
                 }
                 onAddSchedule={(p) =>
-                  request(() => editor.openSchedule(month, p.id))
+                  request((caller) =>
+                    editor.openSchedule(month, p.id, undefined, caller),
+                  )
                 }
               />
             </>

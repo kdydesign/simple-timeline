@@ -104,3 +104,52 @@ it("keeps all overflow items reachable without creating a DOM node per schedule"
   );
   expect(within(dialog).getAllByRole("button").length).toBeLessThan(15);
 });
+it("keeps a usable focus path when day selection meets an unsaved editor", async () => {
+  Object.defineProperty(window, "innerWidth", {
+    value: 1280,
+    writable: true,
+    configurable: true,
+  });
+  const u = userEvent.setup(),
+    m = memoryApi({ projects: [project()], schedules: overlaps });
+  render(<App api={m.api} today={new Date(2026, 11, 3)} />);
+  await u.click(
+    await screen.findByRole("button", { name: "1.1.1 핫픽스 편집" }),
+  );
+  await u.type(screen.getByLabelText("프로젝트 이름"), " 변경");
+  await u.click(screen.getByRole("button", { name: "달력" }));
+  const more = screen.getByRole("button", { name: "2026-12-15 +2 더 보기" });
+  await u.click(more);
+  await u.click(
+    within(screen.getByRole("dialog")).getAllByRole("button", {
+      name: /개발/,
+    })[4],
+  );
+  await u.click(screen.getByRole("button", { name: "계속 편집" }));
+  await waitFor(() =>
+    expect(screen.getByLabelText("프로젝트 이름")).toHaveFocus(),
+  );
+  await u.click(more);
+  await u.click(
+    within(screen.getByRole("dialog")).getAllByRole("button", {
+      name: /개발/,
+    })[4],
+  );
+  await u.click(screen.getByRole("button", { name: "변경 버리기" }));
+  await u.click(screen.getByRole("button", { name: "편집 닫기" }));
+  await waitFor(() => expect(more).toHaveFocus());
+});
+it("keeps reverse tab from the initially focused day title inside the modal", async () => {
+  const u = userEvent.setup();
+  render(
+    <CalendarView
+      snapshot={{ projects: [project()], schedules: overlaps }}
+      selectedMonth={{ year: 2026, month: 12 }}
+      {...callbacks}
+    />,
+  );
+  await u.click(screen.getByRole("button", { name: "2026-12-15 +2 더 보기" }));
+  const dialog = screen.getByRole("dialog");
+  await u.tab({ shift: true });
+  expect(dialog.contains(document.activeElement)).toBe(true);
+});
