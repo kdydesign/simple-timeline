@@ -1,0 +1,17 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": [
+      "node"
+    ]
+  },
+  "include": [
+    "src/main",
+    "src/preload",
+    "src/shared",
+    "src/domain",
+    "electron.vite.config.mts"
+  ]
+}
