@@ -7,8 +7,8 @@
 
 | 검증 | 현재 상태 | 근거·경계 |
 | --- | --- | --- |
-| 기존 앱 회귀 | 로컬 통과 | unit 31×3TZ·UI 23·native 11·E2E 19, 타입·빌드. Task 1~8 재구현 없음 |
-| ASAR/실행 파일/native preflight | 로컬 통과 | 5개 Node 테스트에서 binding 누락·다른 CPU·test entry·preload 누락을 RED→GREEN 검증 |
+| 기존 앱 회귀 | 로컬 통과 | unit 31×3TZ·UI 23·native 12·E2E 19, 타입·빌드. Task 1~8 재구현 없음 |
+| ASAR/실행 파일/native preflight | 로컬 통과 | 9개 Node 테스트에서 binding 누락·다른 CPU·test entry·preload 누락·Windows 경로·dirty SHA·기존 출력물을 RED→GREEN 검증 |
 | Windows 설치 파일 생성 | CI 실행 대기 | 버전·x64·소스 SHA 이름과 SHA256 manifest 생성 구성 |
 | unpacked 제품 앱 실제 SQLite | CI 실행 대기 | 테스트 진입점 없이 실제 main·정상 OS 프로필·재실행 검사 |
 | NSIS 설치·오프라인·업데이트·제거 보존 | CI 실행 대기 | 격리된 Windows runner VM에서 실제 설치/방화벽 확인. Windows 11 지원 확인과 구분 |
@@ -30,7 +30,7 @@ packaged 테스트는 새 GitHub-hosted Windows VM과 비어 있는 OS 사용자
 방화벽이 꺼져 있거나 차단이 확인되지 않으면 오프라인 통과로 보이지 않고 실패한다.
 
 0.1.0 설치본과 동일 소스의 가상 다음 버전 설치본으로 실제 NSIS 업데이트를 확인한다.
-가상 다음 버전은 테스트 전용이며 배포 artifact에 포함하지 않는다. 앱·DB ID·경로·내용을 대조한다.
+가상 다음 버전은 테스트 전용이며 일반 배포 artifact에 포함하지 않는다. Windows 11 수동 업데이트 검증이 필요할 때만 별도의 UPDATE-TEST-ONLY 비공개 artifact를 쓴다. 앱·DB ID·경로·내용을 대조한다.
 제거 후 DB SHA256이 같고 재설치 후 snapshot이 같은지 검사한다. 소유한 새 테스트 프로필만 마지막에 정리한다.
 서버 runner의 OS/CPU/앱 버전/설치 SHA256·단계 결과는 `windows-validation.json`에 남긴다.
 

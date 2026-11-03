@@ -10,7 +10,7 @@ GitHub 저장소의 Application Actions에서 해당 커밋의
 설치 파일은 `SimpleTimeline-<버전>-win-x64-<소스 SHA>.exe`다.
 `release-manifest.json`의 버전·소스 SHA·SHA256과 함께 제공한 `.sha256` 파일을 확인한다.
 PowerShell의 `Get-FileHash -Algorithm SHA256 <설치파일>` 결과가 일치해야 한다.
-CI의 가상 다음 버전 설치 파일은 업데이트 검증 fixture이며 사용자 배포본이 아니다.
+CI의 가상 다음 버전 설치 파일은 UPDATE-TEST-ONLY라는 별도 비공개 artifact다. 업데이트 검증용 Windows 사용자/VM에서만 사용하며 일반 사용자 배포본이 아니다.
 
 ## 설치와 제거
 

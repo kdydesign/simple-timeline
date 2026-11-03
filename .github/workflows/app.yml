@@ -46,6 +46,15 @@ jobs:
             release/USER-GUIDE.ko.md
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows' && success()
+        with:
+          name: SimpleTimeline-UPDATE-TEST-ONLY-${{ github.sha }}
+          path: |
+            artifacts/windows-update/*.exe
+            artifacts/windows-update/*.sha256
+            artifacts/windows-update/release-manifest.json
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: app-${{ matrix.os }}-${{ github.sha }}

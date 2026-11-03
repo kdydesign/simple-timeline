@@ -1,3 +1,4 @@
+import { probeNetwork } from "./network-probe";
 import { test, expect } from "@playwright/test";
 import { _electron, type ElectronApplication, type Page } from "playwright";
 import { execFileSync, spawnSync } from "node:child_process";
@@ -121,16 +122,7 @@ test("real production package installs, works offline, updates and retains DB af
     }
   };
   const canConnect = async () =>
-    app!.evaluate(async ({ net }) => {
-      try {
-        await net.fetch("https://example.com", {
-          signal: AbortSignal.timeout(5000),
-        });
-        return true;
-      } catch {
-        return false;
-      }
-    });
+    app!.evaluate(probeNetwork, "https://example.com");
   const offline = async (exe: string) => {
     expect(await canConnect()).toBe(true);
     const name = "SimpleTimeline-offline-" + Date.now();
@@ -145,6 +137,9 @@ test("real production package installs, works offline, updates and retains DB af
       name,
     ]);
     rules.push({ name, exe });
+    await app!.evaluate(({ session }) =>
+      session.defaultSession.closeAllConnections(),
+    );
     expect(await canConnect()).toBe(false);
   };
   const snapshot = async (page: Page) => {

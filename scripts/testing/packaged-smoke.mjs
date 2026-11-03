@@ -21,6 +21,8 @@ async function requireX64(path, label) {
   )
     throw Error(`${label} architecture must be x64`);
 }
+export const normalizeArchivePath = (value) =>
+  value.replaceAll("\\", "/").replace(/^\/+/, "");
 export async function inspectPackage(directory, { sourceSha, version } = {}) {
   const root = resolve(directory),
     archive = join(root, "resources/app.asar"),
@@ -32,7 +34,7 @@ export async function inspectPackage(directory, { sourceSha, version } = {}) {
   await stat(archive);
   await requireX64(exe, "Executable");
   await requireX64(native, "Native binding");
-  const files = asar.listPackage(archive).map((s) => s.replace(/^\//, "")),
+  const files = asar.listPackage(archive).map(normalizeArchivePath),
     has = new Set(files),
     pkg = JSON.parse(asar.extractFile(archive, "package.json").toString());
   if (pkg.main !== "out/main/index.cjs" || !has.has(pkg.main))

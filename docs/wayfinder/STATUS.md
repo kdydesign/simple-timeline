@@ -1,7 +1,7 @@
 # 진행 상태
 
 현재: 스테이지 7 Windows 설치·오프라인 검증(Task 9) 진행 중.
-다음: 미확정 배포 정책 확인 후 설치본 생성·실제 Windows 검증.
+다음: 승인된 정책에 따른 Windows CI 결과 확인과 Windows 11 실기 검증.
 [실행 기록](../implementation/stage-06.md)과 [인수인계](handoffs/06-visualizations.md)를 참조한다.
 실제 Electron·SQLite CRUD·간트·달력과 앱 CI가 있다. Windows 설치 파일은 아직 없다.
 최종 문서 commit·push 및 CI 결과와 SHA는 종료 메시지에서 확인한다.
