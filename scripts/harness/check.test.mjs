@@ -71,8 +71,24 @@ test('closed stage needs a handoff and matching status index', (t) => {
   assert.ok(result.errors.some((error) => /STATUS.md/.test(error)));
   write('docs/wayfinder/handoffs/01-first.md', '# Finished\nActual outcome and evidence.\n');
   write('docs/wayfinder/STATUS.md', '| 1 | [첫 단계](stages/01-first.md) | 완료 |\n| 2 | [두 번째](stages/02-second.md) | 미착수 |\n');
+  write('docs/wayfinder/MAP.md', '## Decisions so far\n\n- [첫 단계](stages/01-first.md): 완료\n');
   result = checkRepository(root);
   assert.deepEqual(result, { errors: [], frontier: ['02-second'] });
+});
+
+test('closed stage missing from the decisions index cannot be handed off as complete', (t) => {
+  const { root, stage, write } = fixture(t);
+  stage('01-first', 'none', 'closed');
+  write('docs/wayfinder/handoffs/01-first.md', '# Finished\nEvidence.\n');
+  write('docs/wayfinder/STATUS.md', '| 1 | [첫 단계](stages/01-first.md) | 완료 |\n| 2 | [두 번째](stages/02-second.md) | 미착수 |\n');
+  const result = checkRepository(root);
+  assert.ok(result.errors.some((error) => /MAP.md.*01-first/.test(error)));
+});
+
+test('an open stage with an assignee is rejected instead of disappearing from the frontier', (t) => {
+  const { root, write } = fixture(t);
+  write('docs/wayfinder/stages/01-first.md', '# First\nid: 01-first\nparent: ../MAP.md\nlabels: wayfinder:grilling\nstatus: open\nassignee: session\nblocked_by: none\n');
+  assert.ok(checkRepository(root).errors.some((error) => /01-first.*assignee/.test(error)));
 });
 
 test('invalid status cannot silently remove a stage from the frontier', (t) => {

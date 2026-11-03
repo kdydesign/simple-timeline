@@ -75,6 +75,7 @@ export function checkRepository(root) {
     if (fields.parent !== '../MAP.md') errors.push(`${id}: parent must reference ../MAP.md`);
     if (!/^wayfinder:(grilling|research|prototype|task)$/.test(fields.labels ?? '')) errors.push(`${id}: invalid label`);
     if (fields.status === 'in_progress' && fields.assignee === 'null') errors.push(`${id}: in_progress requires assignee`);
+    if (fields.status === 'open' && fields.assignee && fields.assignee !== 'null') errors.push(`${id}: open stage must have null assignee`);
     const dependencies = fields.blocked_by === 'none' ? [] : (fields.blocked_by ?? '').split(',').map((value) => value.trim());
     stages.set(id, { ...fields, dependencies });
   }
@@ -103,6 +104,18 @@ export function checkRepository(root) {
     if (stage.status === 'closed' && !existsSync(join(root, `docs/wayfinder/handoffs/${id}.md`))) {
       errors.push(`${id}: closed stage requires handoff docs/wayfinder/handoffs/${id}.md`);
     }
+  }
+
+  const mapFile = join(root, 'docs/wayfinder/MAP.md');
+  const mapText = existsSync(mapFile) ? prose(readFileSync(mapFile, 'utf8')) : '';
+  const decisions = mapText.split(/^## Decisions so far\s*$/m)[1]?.split(/^##\s/m)[0] ?? '';
+  const indexed = new Set([...decisions.matchAll(/\]\(stages\/([^/)]+)\.md(?:#[^)]*)?\)/g)].map((match) => match[1]));
+  for (const [id, stage] of stages) {
+    if (stage.status === 'closed' && !indexed.has(id)) errors.push(`MAP.md: closed stage ${id} missing from Decisions so far`);
+    if (stage.status !== 'closed' && indexed.has(id)) errors.push(`MAP.md: stage ${id} is indexed as a decision but is not closed`);
+  }
+  for (const id of indexed) {
+    if (!stages.has(id)) errors.push(`MAP.md: unknown decision stage ${id}`);
   }
 
   const statusFile = join(root, 'docs/wayfinder/STATUS.md');

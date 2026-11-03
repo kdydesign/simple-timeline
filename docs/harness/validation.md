@@ -4,9 +4,10 @@
 
 | 명령 | 검사 범위 |
 | --- | --- |
-| `node scripts/harness/check.mjs` | 필수 진입 문서, Markdown 파일 상대 링크, 스테이지 메타데이터·선행 관계·완료 인수인계 |
+| `node scripts/harness/check.mjs` | 필수 진입 문서, Markdown 파일 상대 링크, 스테이지 메타데이터·선행 관계·완료 인수인계와 지도 색인 |
 | `node --test scripts/harness/check.test.mjs` | 검사기가 끊어진 링크·잘못된 단계 상태를 실제로 거부하는지 확인 |
 | `git diff --check` | 미커밋 변경의 공백 오류 |
+| `git log -1 -m --check --format= HEAD` | 최근 커밋의 공백 오류. CI는 체크아웃 깊이 2로 실행한다. |
 
 체커는 실패 시 파일과 문제를 출력하고 종료 코드 1을 반환한다.
 읽기 전용이며 날짜·상태·승인 내용을 자동으로 수정하지 않는다.
