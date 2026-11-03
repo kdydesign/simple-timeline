@@ -6,6 +6,7 @@
 프로젝트 설정과 실행 명령: [Codex 하네스](../harness/README.md).
 새 세션은 루트 [AGENTS.md](../../AGENTS.md)에서 시작한다.
 이번 하네스 설정의 기록: [설정 인수인계](handoffs/00-harness.md).
+이후 실행 도구·검증 보완: [하네스 재점검 기록](../harness/review.md).
 
 | 스테이지 | 이름 | 상태 |
 | --- | --- | --- |

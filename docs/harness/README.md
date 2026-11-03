@@ -30,13 +30,16 @@
 개발 도구·패키지를 다운로드하는 개발 환경과 완성 앱의 오프라인 사용 요구는 구분한다.
 
 ```sh
-node scripts/harness/check.mjs
-node --test scripts/harness/check.test.mjs
-git diff --check
+node scripts/harness/run.mjs context
+node scripts/harness/run.mjs verify
 ```
 
 CI는 Ubuntu·Windows에서 같은 하네스 명령을 실행한다.
 CI 결과는 실행된 GitHub Actions에서 확인하며, 파일을 작성한 사실만으로 통과라고 말하지 않는다.
+context는 진행 중인 단계의 재개를 우선하고, 없다면 착수 가능한 첫 단계를 제시한다.
+verify는 실패해도 나머지 검사를 실행하고 보고서와 로그를 `artifacts/harness/`에 남긴다.
+보고서에는 실행 시각·OS·Node 버전·커밋·작업 트리 상태·각 검사 결과가 포함된다.
+이 폴더는 Git에서 제외하며, CI가 OS별 보고서를 14일 보관한다.
 
 ## 코드가 생기면 확장할 것
 

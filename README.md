@@ -12,13 +12,13 @@
 필요 도구는 Node.js 24 LTS와 Git이다. 현재 npm 패키지 설치는 필요 없다.
 
 ```sh
-node scripts/harness/check.mjs
-node --test scripts/harness/check.test.mjs
-git diff --check
+node scripts/harness/run.mjs context
+node scripts/harness/run.mjs verify
 ```
 
 앱 테스트·빌드·실행 명령은 스테이지 4~5에서 추가한다.
 GitHub Actions의 Repository harness가 Ubuntu·Windows에서 동일한 하네스 검사를 실행한다.
+실패한 검사까지 포함한 보고서와 로그는 `artifacts/harness/`에 저장하며 CI 실행에도 첨부한다.
 
 ## 새 채팅에서 시작하기
 

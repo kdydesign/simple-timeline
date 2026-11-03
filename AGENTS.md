@@ -12,7 +12,8 @@
 3. 요청받은 스테이지 문서와 직전 인수인계를 읽는다. 문서 위치는 [README](README.md)에 있다.
 4. 필요한 부분만 [전체 설계](docs/superpowers/specs/2026-11-03-simple-timeline-design.md)와
    [용어](CONTEXT.md)에서 찾아본다. 모든 문서를 한꺼번에 읽지 않는다.
-5. `node scripts/harness/check.mjs`로 문서·선행 관계와 현재 착수 가능한 단계를 확인한다.
+5. `node scripts/harness/run.mjs context`로 재개할 단계·담당자·읽을 문서를 확인한다.
+   특정 단계는 `context 01-domain`처럼 지정한다. 이 명령은 단계나 승인을 자동 변경하지 않는다.
 
 ## 작업 원칙
 
@@ -27,13 +28,14 @@
 
 ## 검증과 종료
 
-- 변경 후 `node scripts/harness/check.mjs`, `node --test scripts/harness/check.test.mjs`,
-  `git diff --check`를 실행한다. 도구 범위와 한계는 [검증 안내](docs/harness/validation.md)를 따른다.
+- 변경 후 `node scripts/harness/run.mjs verify`를 실행한다. 로컬과 CI가 같은 명령을 사용한다.
+  결과는 `artifacts/harness/latest.json`과 `latest.log`에 남는다. [검증 안내](docs/harness/validation.md)를 따른다.
 - 앱 테스트·빌드 명령은 아직 없다. 앱 코드 도입 시 실제 명령과 CI를 함께 추가한다.
 - 실패하면 원인을 확인하고 수정한 뒤 해당 검사를 재실행한다. 실패를 숨기거나 검사를 비활성화하지 않는다.
 - Windows 설치·오프라인 실행은 실제 Windows에서 검증해야 한다.
 - 종료 시 [인수인계 양식](docs/wayfinder/handoffs/TEMPLATE.md)에 결과·근거·미검증 항목을 기록한다.
 - 티켓·STATUS·지도는 함께 갱신한다. 미승인·미검증 작업을 완료 처리하지 않는다.
+- 인수인계에는 결과·승인 사항·산출물 링크·검증·다음 작업을 채운다. 빈 양식은 완료 근거가 아니다.
 - 요청 범위의 변경만 커밋한다. 원격 반영이 요청·승인된 경우 push하고 성공 여부를 보고한다.
   자동 merge, 강제 push, 사용자 변경 폐기는 하지 않는다.
 

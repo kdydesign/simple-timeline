@@ -27,7 +27,7 @@ function prose(text) {
   }).join('\n').replace(/(`+)[\s\S]*?\1/g, '');
 }
 
-export function checkRepository(root) {
+export function inspectRepository(root) {
   root = resolve(root);
   const errors = [];
   for (const path of required) {
@@ -77,7 +77,7 @@ export function checkRepository(root) {
     if (fields.status === 'in_progress' && fields.assignee === 'null') errors.push(`${id}: in_progress requires assignee`);
     if (fields.status === 'open' && fields.assignee && fields.assignee !== 'null') errors.push(`${id}: open stage must have null assignee`);
     const dependencies = fields.blocked_by === 'none' ? [] : (fields.blocked_by ?? '').split(',').map((value) => value.trim());
-    stages.set(id, { ...fields, dependencies });
+    stages.set(id, { ...fields, dependencies, title: text.match(/^# (.+)$/m)?.[1] ?? id });
   }
   if (!stages.size) errors.push('docs/wayfinder/stages: no stage tickets found');
 
@@ -101,8 +101,18 @@ export function checkRepository(root) {
         if (stages.get(dependency)?.status !== 'closed') errors.push(`${id}: dependency ${dependency} is not closed`);
       }
     }
-    if (stage.status === 'closed' && !existsSync(join(root, `docs/wayfinder/handoffs/${id}.md`))) {
-      errors.push(`${id}: closed stage requires handoff docs/wayfinder/handoffs/${id}.md`);
+    if (stage.status === 'closed') {
+      const handoff = join(root, `docs/wayfinder/handoffs/${id}.md`);
+      if (!existsSync(handoff)) errors.push(`${id}: closed stage requires handoff docs/wayfinder/handoffs/${id}.md`);
+      else {
+        const content = readFileSync(handoff, 'utf8').replace(/<!--[\s\S]*?-->/g, '');
+        const sections = new Map([...content.matchAll(/^## ([^\r\n]+)\r?\n([\s\S]*?)(?=^## |$(?![\s\S]))/gm)]
+          .map((match) => [match[1].trim(), match[2].trim()]));
+        for (const heading of ['이번 단계의 목표와 실제 결과', '사용자가 승인한 사항', '산출물', '검증', '다음 단계와 시작 문구']) {
+          if (!sections.get(heading)) errors.push(`${id}: handoff requires filled section '${heading}'`);
+        }
+        if (!/\]\([^)]+\)/.test(prose(sections.get('산출물') ?? ''))) errors.push(`${id}: handoff 산출물 requires a link to its deliverable`);
+      }
     }
   }
 
@@ -136,7 +146,13 @@ export function checkRepository(root) {
     && stage.assignee === 'null'
     && stage.dependencies.every((id) => stages.get(id)?.status === 'closed'))
     .map(([id]) => id);
-  return { errors, frontier: errors.length ? [] : frontier };
+  return { errors, frontier: errors.length ? [] : frontier,
+    stages: [...stages.values()].map((stage) => ({ ...stage, displayStatus: rows.get(stage.id) })) };
+}
+
+export function checkRepository(root) {
+  const { errors, frontier } = inspectRepository(root);
+  return { errors, frontier };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

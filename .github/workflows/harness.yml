@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   harness:
+    timeout-minutes: 5
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
@@ -21,6 +22,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - run: node scripts/harness/check.mjs
-      - run: node --test scripts/harness/check.test.mjs
-      - run: git log -1 -m --check --format= HEAD
+      - run: node scripts/harness/run.mjs verify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: harness-${{ matrix.os }}-${{ github.sha }}
+          path: artifacts/harness/
+          retention-days: 14
+          if-no-files-found: ignore

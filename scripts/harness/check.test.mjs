@@ -1,30 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, dirname } from 'node:path';
+import { rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { fixture, completeFirst } from './test-fixture.mjs';
 import { checkRepository } from './check.mjs';
 
-function fixture(t) {
-  const root = mkdtempSync(join(tmpdir(), 'timeline-harness-'));
-  t.after(() => rmSync(root, { recursive: true, force: true }));
-  const write = (path, text) => {
-    const file = join(root, path);
-    mkdirSync(dirname(file), { recursive: true });
-    writeFileSync(file, text);
-  };
-  const stage = (id, dependency, status = 'open') => write(
-    `docs/wayfinder/stages/${id}.md`,
-    `# ${id}\nid: ${id}\nparent: ../MAP.md\nlabels: wayfinder:grilling\nstatus: ${status}\nassignee: null\nblocked_by: ${dependency}\n`,
-  );
-  for (const path of ['AGENTS.md', 'README.md', 'CONTEXT.md', 'docs/wayfinder/MAP.md']) {
-    write(path, '# Fixture\n');
-  }
-  write('docs/wayfinder/STATUS.md', '| 1 | [첫 단계](stages/01-first.md) | 미착수 |\n| 2 | [두 번째](stages/02-second.md) | 미착수 |\n');
-  stage('01-first', 'none');
-  stage('02-second', '01-first');
-  return { root, write, stage };
-}
 
 test('valid map exposes only unclaimed stages whose dependencies are closed', (t) => {
   const { root } = fixture(t);
@@ -69,7 +49,7 @@ test('closed stage needs a handoff and matching status index', (t) => {
   let result = checkRepository(root);
   assert.ok(result.errors.some((error) => /handoff/.test(error)));
   assert.ok(result.errors.some((error) => /STATUS.md/.test(error)));
-  write('docs/wayfinder/handoffs/01-first.md', '# Finished\nActual outcome and evidence.\n');
+  completeFirst({ stage, write });
   write('docs/wayfinder/STATUS.md', '| 1 | [첫 단계](stages/01-first.md) | 완료 |\n| 2 | [두 번째](stages/02-second.md) | 미착수 |\n');
   write('docs/wayfinder/MAP.md', '## Decisions so far\n\n- [첫 단계](stages/01-first.md): 완료\n');
   result = checkRepository(root);
@@ -113,4 +93,14 @@ test('single-quoted link titles do not hide broken local file targets', (t) => {
   const { root, write } = fixture(t);
   write('README.md', "[broken](missing-real.md 'title')\n");
   assert.ok(checkRepository(root).errors.some((error) => /missing-real.md/.test(error)));
+});
+
+
+test('empty handoff cannot unlock the next stage', (t) => {
+  const f = fixture(t);
+  completeFirst(f);
+  f.write('docs/wayfinder/handoffs/01-first.md', '# Handoff\n');
+  const result = checkRepository(f.root);
+  assert.ok(result.errors.some((error) => error.includes('handoff')));
+  assert.deepEqual(result.frontier, []);
 });

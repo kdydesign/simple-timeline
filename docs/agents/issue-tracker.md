@@ -13,7 +13,8 @@ GitHub 이슈·라벨·댓글을 생성하지 않는다. 문서는 Git 커밋으
 - Blocking: `blocked_by`의 선행 티켓이 모두 `closed`인 경우에만 해제된다.
   로컬 Markdown에는 네이티브 의존성 기능이 없으므로 이 파일 필드를 사용한다.
 - Frontier: `status: open`, `assignee: null`, 모든 선행 티켓이 `closed`인 파일.
-- Resolution: 해당 파일의 `해결 기록`에 근거와 산출물 링크를 추가하고 `status: closed`로 변경한다.
+- Resolution: 인수인계 양식의 결과·승인 사항·산출물 링크·검증·다음 작업을 채우고,
+  해당 티켓의 `해결 기록`에 근거와 링크를 추가한 뒤 `status: closed`로 변경한다.
 - Context pointer: 지도 `Decisions so far`에 완료한 티켓 제목 링크와 요약을 추가한다.
 - `STATUS.md`는 사람이 보는 상태 인덱스다. 티켓 상태와 함께 갱신한다.
 - 착수 후 중단·미승인·검증 대기는 `in_progress`를 유지하고 STATUS와 인수인계에 이유를 기록한다. 재개 시 이전 세션 claim을 확인한다.
