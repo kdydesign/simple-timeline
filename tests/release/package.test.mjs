@@ -20,7 +20,14 @@ function pe(machine = 0x8664) {
 }
 async function fixture(
   t,
-  { addon = true, machine = 0x8664, testEntry = false, preload = true } = {},
+  {
+    addon = true,
+    machine = 0x8664,
+    testEntry = false,
+    preload = true,
+    layout = "prebuild",
+    unpack = true,
+  } = {},
 ) {
   const root = await mkdtemp(join(tmpdir(), "simple-timeline-package-check-")),
     source = join(root, "source"),
@@ -46,17 +53,33 @@ async function fixture(
     await mkdir(join(source, "tests/e2e"), { recursive: true });
     await writeFile(join(source, "tests/e2e/main.js"), "test");
   }
-  await mkdir(join(unpacked, "resources"), { recursive: true });
-  await asar.createPackage(source, join(unpacked, "resources/app.asar"));
-  await writeFile(join(unpacked, "Simple Timeline.exe"), pe());
+  const module = join(source, "node_modules/better-sqlite3");
+  await mkdir(join(module, "lib"), { recursive: true });
+  await writeFile(
+    join(module, "package.json"),
+    JSON.stringify({
+      name: "better-sqlite3",
+      version: "13.0.3",
+      main: "lib/index.js",
+    }),
+  );
+  await writeFile(join(module, "lib/index.js"), "module.exports={}");
   if (addon) {
-    const path = join(
-      unpacked,
-      "resources/app.asar.unpacked/node_modules/better-sqlite3/build/Release",
-    );
-    await mkdir(path, { recursive: true });
-    await writeFile(join(path, "better_sqlite3.node"), pe(machine));
+    const member =
+      layout === "prebuild"
+        ? "prebuilds/win32-x64.node"
+        : "build/Release/better_sqlite3.node";
+    const parts = member.split("/");
+    await mkdir(join(module, ...parts.slice(0, -1)), { recursive: true });
+    await writeFile(join(module, ...parts), pe(machine));
   }
+  await mkdir(join(unpacked, "resources"), { recursive: true });
+  await asar.createPackageWithOptions(
+    source,
+    join(unpacked, "resources/app.asar"),
+    unpack ? { unpack: "**/*.node" } : {},
+  );
+  await writeFile(join(unpacked, "Simple Timeline.exe"), pe());
   return unpacked;
 }
 test("recognizes an x64 native addon outside ASAR and the production entry", async (t) => {
@@ -98,5 +121,17 @@ test("normalizes ASAR members returned with native Windows separators", () => {
   assert.equal(
     normalizeArchivePath("/out/preload/index.cjs"),
     "out/preload/index.cjs",
+  );
+});
+
+test("accepts a loader-compatible Release build when no prebuild is present", async (t) => {
+  const result = await inspectPackage(await fixture(t, { layout: "release" }));
+  assert.equal(result.arch, "x64");
+  assert.match(result.nativeBinding, /better_sqlite3\.node$/);
+});
+test("rejects a selected native binding that is still packed inside ASAR", async (t) => {
+  await assert.rejects(
+    () => fixture(t, { unpack: false }).then(inspectPackage),
+    /native/i,
   );
 });

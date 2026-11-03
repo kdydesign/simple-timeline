@@ -26,14 +26,9 @@ export const normalizeArchivePath = (value) =>
 export async function inspectPackage(directory, { sourceSha, version } = {}) {
   const root = resolve(directory),
     archive = join(root, "resources/app.asar"),
-    exe = join(root, "Simple Timeline.exe"),
-    native = join(
-      root,
-      "resources/app.asar.unpacked/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
-    );
+    exe = join(root, "Simple Timeline.exe");
   await stat(archive);
   await requireX64(exe, "Executable");
-  await requireX64(native, "Native binding");
   const files = asar.listPackage(archive).map(normalizeArchivePath),
     has = new Set(files),
     pkg = JSON.parse(asar.extractFile(archive, "package.json").toString());
@@ -50,7 +45,25 @@ export async function inspectPackage(directory, { sourceSha, version } = {}) {
     )
   )
     throw Error("Test entry/file or database bundled in production");
-  const main = asar.extractFile(archive, join(...pkg.main.split("/"))).toString();
+  // Match the pinned driver's binding.js priority: target prebuild, Debug, then Release.
+  const member = [
+    "node_modules/better-sqlite3/prebuilds/win32-x64.node",
+    "node_modules/better-sqlite3/build/Debug/better_sqlite3.node",
+    "node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+  ].find((path) => has.has(path));
+  if (!member) throw Error("Native binding missing from archive");
+  const nativeInfo = asar.statFile(archive, join(...member.split("/")));
+  if (!nativeInfo.unpacked)
+    throw Error("Native binding must be unpacked outside ASAR");
+  const native = join(
+    root,
+    "resources/app.asar.unpacked",
+    ...member.split("/"),
+  );
+  await requireX64(native, "Native binding");
+  const main = asar
+    .extractFile(archive, join(...pkg.main.split("/")))
+    .toString();
   if (
     /SIMPLE_TIMELINE_TEST_|Test profile required|artifacts\/test-app/.test(main)
   )
