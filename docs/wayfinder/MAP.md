@@ -45,6 +45,10 @@ status: open
 
 ## Not yet specified
 
+- 스테이지 7은 [진행 중인 티켓](stages/07-windows-release.md)과 [인수인계](handoffs/07-windows-release.md)를 따른다.
+  Windows 11 x64·사용자별 설치·제거 후 DB 보존·서명 없는 비공개 CI 배포는 확정했다.
+  Windows Server 설치 lifecycle과 두 OS 앱 CI는 통과했으나 Windows 11 실기 결과가 없어 완료는 차단됐다.
+
 - 날짜 범위와 일정 개수를 줄이는 제약은 추가하지 않았다. 1만 개 fixture의 관측은
   [스테이지 6 실행 기록](../implementation/stage-06.md)에 있다. 실제 사용자 Windows 성능이나 임의 규모의 보장은 없으며,
   제약 변경이 필요하면 사용자와 별도로 결정한다.

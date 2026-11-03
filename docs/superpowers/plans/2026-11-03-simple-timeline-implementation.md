@@ -344,9 +344,9 @@ PlacedSegment에 `lane:number`를 더한다. `CalendarView`는 Gantt와 같은 �
 Windows 지원 버전·CPU, 사용자별/전체 설치, 설치 경로/권한, 서명·배포·제거 데이터 정책은 **이 단계 사용자 결정**이다.
 그 결정 전 공개 release나 설치 기본 정책을 임의 확정하지 않는다.
 
-- [ ] **Step 1 — 준비·RED:** 승인된 대상의 Windows runner에서 unpacked 앱 launch/DB 쓰기·재실행 smoke를 먼저 구성한다.
+- [x] **Step 1 — 준비·RED:** 승인된 대상의 Windows runner에서 unpacked 앱 launch/DB 쓰기·재실행 smoke를 먼저 구성한다.
   native binding 미포함/잘못된 경로를 실제 검출하는 검사가 있어야 한다. Node용 addon으로 대체해 성공시키지 않는다.
-- [ ] **Step 2 — GREEN:** ASAR와 native `.node` unpack, 재빌드, 고정 appId/profile, NSIS 대상·서명 옵션을 구성한다.
+- [x] **Step 2 — GREEN:** ASAR와 native `.node` unpack, 재빌드, 고정 appId/profile, NSIS 대상·서명 옵션을 구성한다.
   `npm ci`, `npm run verify:app`, `npm run dist:win` 후 `npm run test:packaged`로 unpacked 앱을 실제 실행한다.
   production main/bundle에 테스트 진입점·프로필 override가 없다는 것도 별도 Windows 사용자/VM에서 확인한다.
 - [ ] **Step 3 — 실제 설치 검증:** 지원 Windows/CPU·앱 버전·설치 파일 SHA256·네트워크 차단 방법을 기록한다.
@@ -360,6 +360,12 @@ Windows 지원 버전·CPU, 사용자별/전체 설치, 설치 경로/권한, �
   CI 빌드나 unpacked smoke만으로 설치/오프라인/업데이트 성공을 선언하지 않는다.
   미실행이 남으면 스테이지 7은 진행 중/차단됨이며 전체 MVP 완료가 아니다.
   확인된 결과만 커밋하고 일반 push한다. 공개 배포는 사용자가 정한 범위에서만 한다.
+
+Task 9 현재 근거: Windows 11 x64·사용자별 설치·제거 후 DB 보존·서명 없는 비공개 CI는 사용자 확정이다.
+소스 `036ee00`에서 두 OS 앱 CI와 Windows Server 실제 설치 lifecycle이 통과해 Step 1~2를 확인했다.
+Step 3~4의 지원 Windows 11 실기·물리 실패·배율/Narrator는 미실행이다.
+Step 5의 안내서·설치본·정확한 해시·중간 인수인계는 준비했으나 실기 결과 대기이므로 전체 완료 체크는 하지 않는다.
+실제 근거와 남은 항목은 [Windows 검증 기록](../../release/windows-validation.md)을 따른다.
 
 ## 요구사항과 검증 소유권
 

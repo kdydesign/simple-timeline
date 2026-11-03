@@ -1,0 +1,54 @@
+{
+  "sourceSha": "036ee001e664904eaf964677798451d9c52f6b57",
+  "version": "0.1.0",
+  "updateVersion": "0.1.1",
+  "arch": "x64",
+  "osRelease": "10.0.26100",
+  "platform": "win32",
+  "profile": "C:\\Users\\runneradmin\\AppData\\Roaming\\SimpleTimeline",
+  "installerSha256": "f92c90f9732aa9b84432132b7f807a1adf37f9c8cc98e3ba90da69393b582e3c",
+  "updateInstallerSha256": "4cd4690de40a087c77aca495a34c119535515b415ef6deafa4b12d7f766318ee",
+  "installed": true,
+  "offline": true,
+  "updated": true,
+  "uninstallPreserved": true,
+  "reinstalled": true,
+  "runtime": {
+    "packaged": true,
+    "version": "0.1.1",
+    "profile": "C:\\Users\\runneradmin\\AppData\\Roaming\\SimpleTimeline",
+    "appPath": "D:\\a\\_temp\\SimpleTimeline-installed-1793745965740\\resources\\app.asar",
+    "modules": "150"
+  },
+  "system": {
+    "machineInstallCount": 0,
+    "osVersion": "10.0.26100",
+    "osCaption": "Microsoft Windows Server 2025 Datacenter",
+    "osBuild": "26100",
+    "powershellVersion": "7.6.9",
+    "powershellEdition": "Core",
+    "installerSignature": "NotSigned",
+    "userInstalls": [
+      {
+        "DisplayVersion": "0.1.0",
+        "InstallLocation": null
+      }
+    ],
+    "firewallProfiles": [
+      {
+        "Name": "Domain",
+        "Enabled": 1
+      },
+      {
+        "Name": "Private",
+        "Enabled": 1
+      },
+      {
+        "Name": "Public",
+        "Enabled": 1
+      }
+    ]
+  },
+  "dbBytes": 32768,
+  "pass": true
+}
