@@ -1,12 +1,10 @@
 # 진행 상태
 
-현재: 스테이지 1 [도메인·날짜 규칙](../design/domain-rules.md) 승인·설계 완료.
-다음: 스테이지 2 Electron·SQLite 구조 설계. 이번 채팅에서는 착수하지 않는다.
-제품 코드·앱 테스트·설치 파일은 아직 없다.
-[스테이지 1 인수인계](handoffs/01-domain.md)와
-[GitHub PR](https://github.com/kdydesign/simple-timeline/pull/1)을 참조한다.
-스테이지 1은 main에 병합됐다. 다음 채팅은 최신 main에서 시작하고, 검증 후 PR 없이 main에 직접 커밋·push한다.
-최종 커밋과 CI 결과는 종료 메시지에서 확인한다.
+현재: 스테이지 2 Electron·SQLite 구조 설계 승인 완료.
+다음: 스테이지 3 화면·간트·달력 설계. 이 채팅에서는 착수하지 않는다.
+[구조](../design/architecture.md)·[저장](../design/storage.md)과 [스테이지 2 인수인계](handoffs/02-architecture.md)를 참조한다.
+제품 코드·앱 테스트·설치 파일은 아직 없다. 검증 후 PR 없이 main에 직접 커밋·push한다.
+최종 SHA·원격 반영·CI 결과는 종료 메시지에서 확인한다.
 
 프로젝트 설정과 실행 명령: [Codex 하네스](../harness/README.md).
 새 세션은 루트 [AGENTS.md](../../AGENTS.md)에서 시작한다.
@@ -16,7 +14,7 @@
 | 스테이지 | 이름 | 상태 |
 | --- | --- | --- |
 | 1 | [도메인·날짜 규칙 설계](stages/01-domain.md) | 완료 |
-| 2 | [Electron·SQLite 구조 설계](stages/02-architecture.md) | 미착수 |
+| 2 | [Electron·SQLite 구조 설계](stages/02-architecture.md) | 완료 |
 | 3 | [화면·간트·달력 설계](stages/03-experience.md) | 미착수 |
 | 4 | [구현 계획 확정](stages/04-implementation-plan.md) | 미착수 |
 | 5 | [기본 앱·저장·CRUD 구현](stages/05-foundation-crud.md) | 미착수 |
