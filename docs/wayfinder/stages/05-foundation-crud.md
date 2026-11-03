@@ -3,8 +3,8 @@
 id: 05-foundation-crud
 parent: ../MAP.md
 labels: wayfinder:task
-status: open
-assignee: null
+status: in_progress
+assignee: codex-2026-11-03-stage-05
 blocked_by: 04-implementation-plan
 
 ## Question
