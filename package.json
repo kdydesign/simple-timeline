@@ -8,14 +8,18 @@
     "node": ">=24.22.1 <25"
   },
   "scripts": {
-    "typecheck": "tsc -p tsconfig.domain.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "typecheck": "tsc -p tsconfig.domain.json --noEmit && tsc -p tsconfig.node.json --noEmit && tsc -p tsconfig.web.json --noEmit && tsc -p tsconfig.test.json --noEmit",
     "test:unit": "vitest run --config vitest.config.mts",
     "test:tz": "node scripts/testing/run-unit-tz.mjs",
     "rebuild:native": "electron-builder install-app-deps",
     "postinstall": "node --use-env-proxy node_modules/electron/install.js && electron-builder install-app-deps",
     "test:native": "tsc -p tsconfig.native.json && node scripts/testing/run-native.mjs",
     "build": "npm run typecheck && electron-vite build --config electron.vite.config.mts",
-    "dev": "electron-vite dev --config electron.vite.config.mts"
+    "dev": "electron-vite dev --config electron.vite.config.mts",
+    "test:ui": "vitest run --config vitest.ui.config.mts",
+    "build:test": "electron-vite build --config electron.vite.test.config.mts",
+    "test:e2e": "npm run build:test && playwright test --config playwright.config.mts",
+    "verify:app": "node scripts/testing/verify-app.mjs"
   },
   "dependencies": {
     "react": "19.3.1",

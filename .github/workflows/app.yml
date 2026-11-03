@@ -17,15 +17,16 @@ jobs:
           node-version: '24.22.1'
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
-      - run: npm run test:tz
       - if: runner.os == 'Linux'
-        run: xvfb-run -a npm run test:native
+        run: xvfb-run -a npm run verify:app
       - if: runner.os == 'Windows'
-        run: npm run test:native
+        run: npm run verify:app
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: app-${{ matrix.os }}-${{ github.sha }}
-          path: artifacts/native/
+          path: |
+            artifacts/app/
+            artifacts/native/
+            artifacts/e2e/
           if-no-files-found: error

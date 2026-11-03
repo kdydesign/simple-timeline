@@ -1,0 +1,225 @@
+import { useEffect, useRef } from 'react'
+import type { Editor } from '../state/useEditor'
+import type {
+  ApiError,
+  Project,
+  ProjectInput,
+  ScheduleInput,
+} from '../../shared/types'
+import { inclusiveDays } from '../../domain/date'
+import { trapTab } from './ConfirmDialog'
+export function EditorPanel({
+  editor,
+  projects,
+  patch,
+  onSave,
+  onDelete,
+  onClose,
+  disabled,
+  busy,
+  narrow,
+  covered,
+  error,
+}: {
+  editor: Editor
+  projects: Project[]
+  patch: (p: Partial<ProjectInput & ScheduleInput>) => void
+  onSave: () => void
+  onDelete: () => void
+  onClose: () => void
+  disabled: boolean
+  busy: boolean
+  narrow: boolean
+  covered: boolean
+  error: ApiError | null
+}) {
+  const panel = useRef<HTMLElement>(null)
+  useEffect(() => {
+    panel.current?.querySelector<HTMLInputElement>('#editor-name')?.focus()
+  }, [editor.kind, editor.id])
+  const invalid = (field: string) =>
+    error?.field === field
+      ? { 'aria-invalid': true as const, 'aria-describedby': 'form-error' }
+      : {}
+  let period = ''
+  if (editor.kind === 'schedule') {
+    try {
+      period = `기간 ${inclusiveDays(editor.draft.startDate, editor.draft.endDate)}일`
+    } catch {}
+  }
+  return (
+    <aside
+      ref={panel}
+      role="dialog"
+      aria-modal={narrow || undefined}
+      aria-labelledby="editor-title"
+      aria-hidden={covered}
+      inert={covered}
+      className={`editor ${narrow ? 'overlay' : ''}`}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.stopPropagation()
+          onClose()
+        } else if (narrow) trapTab(e, e.currentTarget)
+      }}
+    >
+      <div className="editor-title">
+        <h2 id="editor-title">
+          {editor.kind === 'project' ? '프로젝트' : '일정'}{' '}
+          {editor.id ? '편집' : '추가'}
+        </h2>
+        <button aria-label="편집 닫기" disabled={busy} onClick={onClose}>
+          ×
+        </button>
+      </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault()
+          onSave()
+        }}
+      >
+        <fieldset disabled={disabled}>
+          <label htmlFor="editor-name">
+            {editor.kind === 'project' ? '프로젝트 이름' : '일정 이름'}
+          </label>
+          <input
+            id="editor-name"
+            value={editor.draft.name}
+            {...invalid('name')}
+            onChange={(e) => patch({ name: e.target.value })}
+          />
+          {editor.kind === 'project' ? (
+            <>
+              <label htmlFor="editor-color">표시 색상</label>
+              <div className="color-input">
+                <input
+                  id="editor-color"
+                  type="color"
+                  aria-label="색상 선택"
+                  value={
+                    /^#[a-fA-F0-9]{6}$/.test(editor.draft.color)
+                      ? editor.draft.color
+                      : '#2563EB'
+                  }
+                  onChange={(e) =>
+                    patch({ color: e.target.value.toUpperCase() })
+                  }
+                />
+                <input
+                  id="editor-color-code"
+                  aria-label="색상 코드"
+                  value={editor.draft.color}
+                  {...invalid('color')}
+                  onChange={(e) => patch({ color: e.target.value })}
+                />
+              </div>
+              <label>
+                참여자 <small>(선택)</small>
+              </label>
+              {editor.draft.participants.map((name, i) => (
+                <div className="participant" key={i}>
+                  <label className="sr-only" htmlFor={`participant-${i}`}>
+                    참여자 {i + 1}
+                  </label>
+                  <input
+                    id={`participant-${i}`}
+                    value={name}
+                    onChange={(e) => {
+                      const names = [...editor.draft.participants]
+                      names[i] = e.target.value
+                      patch({ participants: names })
+                    }}
+                  />
+                  <button
+                    type="button"
+                    aria-label={`참여자 ${i + 1} 삭제`}
+                    onClick={() =>
+                      patch({
+                        participants: editor.draft.participants.filter(
+                          (_, j) => i !== j,
+                        ),
+                      })
+                    }
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={() =>
+                  patch({ participants: [...editor.draft.participants, ''] })
+                }
+              >
+                참여자 이름 추가
+              </button>
+              <p className="help">
+                입력 순서를 유지하고 같은 이름은 저장할 때 한 번만 남깁니다.
+              </p>
+            </>
+          ) : (
+            <>
+              <label htmlFor="editor-project">소속 프로젝트</label>
+              {editor.id ? (
+                <p aria-label="소속 프로젝트">
+                  {projects.find((p) => p.id === editor.draft.projectId)?.name}
+                </p>
+              ) : (
+                <select
+                  id="editor-project"
+                  aria-label="소속 프로젝트"
+                  value={editor.draft.projectId}
+                  onChange={(e) => patch({ projectId: e.target.value })}
+                >
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} · #{p.id}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <label htmlFor="editor-startDate">시작일</label>
+              <input
+                id="editor-startDate"
+                placeholder="YYYY-MM-DD"
+                value={editor.draft.startDate}
+                {...invalid('startDate')}
+                onChange={(e) => patch({ startDate: e.target.value })}
+              />
+              <label htmlFor="editor-endDate">종료일</label>
+              <input
+                id="editor-endDate"
+                placeholder="YYYY-MM-DD"
+                value={editor.draft.endDate}
+                {...invalid('endDate')}
+                onChange={(e) => patch({ endDate: e.target.value })}
+              />
+              <p className="help">
+                YYYY-MM-DD · 시작일과 종료일을 모두 포함합니다.
+              </p>
+              <p className="period">{period}</p>
+            </>
+          )}
+        </fieldset>
+        <div className="editor-actions">
+          {editor.id && (
+            <button
+              type="button"
+              className="danger"
+              disabled={disabled}
+              onClick={onDelete}
+            >
+              삭제
+            </button>
+          )}
+          <button type="button" disabled={busy} onClick={onClose}>
+            취소
+          </button>
+          <button className="primary" disabled={disabled} type="submit">
+            저장
+          </button>
+        </div>
+      </form>
+    </aside>
+  )
+}

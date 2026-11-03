@@ -3,16 +3,9 @@
   "compilerOptions": {
     "module": "Node16",
     "moduleResolution": "Node16",
-    "types": [
-      "node"
-    ],
+    "types": ["node"],
     "rootDir": ".",
     "outDir": "artifacts/native"
   },
-  "include": [
-    "src/domain",
-    "src/shared",
-    "src/main/db",
-    "tests/native/**/*.ts"
-  ]
+  "include": ["src/domain", "src/shared", "src/main/db", "tests/native/**/*.ts"]
 }

@@ -1,0 +1,18 @@
+{
+  "extends": "./tsconfig.web.json",
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vitest/globals",
+      "@testing-library/jest-dom",
+      "vite/client"
+    ]
+  },
+  "include": [
+    "tests/ui",
+    "tests/e2e",
+    "tests/fixtures",
+    "src/renderer/global.d.ts",
+    "playwright.config.mts"
+  ]
+}
