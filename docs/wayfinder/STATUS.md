@@ -1,7 +1,12 @@
 # 진행 상태
 
-현재: 스테이지 0 설계 지도와 Codex 하네스 구성. 전체 설계 초안은 검토용이며 사용자 최종 승인 전이다.
-다음: 스테이지 1. 앱 코드·테스트·설치 파일은 아직 없다.
+현재: 스테이지 1 [도메인·날짜 규칙](../design/domain-rules.md) 승인·설계 완료.
+다음: 스테이지 2 Electron·SQLite 구조 설계. 이번 채팅에서는 착수하지 않는다.
+제품 코드·앱 테스트·설치 파일은 아직 없다.
+[스테이지 1 인수인계](handoffs/01-domain.md)와
+[GitHub PR](https://github.com/kdydesign/simple-timeline/pull/1)을 참조한다.
+GitHub 작업 브랜치 반영과 main 병합은 별개다. PR 미병합 시 `docs/stage-01-domain`에서 재개한다.
+최종 커밋과 CI 결과는 종료 메시지에서 확인한다.
 
 프로젝트 설정과 실행 명령: [Codex 하네스](../harness/README.md).
 새 세션은 루트 [AGENTS.md](../../AGENTS.md)에서 시작한다.
@@ -10,7 +15,7 @@
 
 | 스테이지 | 이름 | 상태 |
 | --- | --- | --- |
-| 1 | [도메인·날짜 규칙 설계](stages/01-domain.md) | 미착수 |
+| 1 | [도메인·날짜 규칙 설계](stages/01-domain.md) | 완료 |
 | 2 | [Electron·SQLite 구조 설계](stages/02-architecture.md) | 미착수 |
 | 3 | [화면·간트·달력 설계](stages/03-experience.md) | 미착수 |
 | 4 | [구현 계획 확정](stages/04-implementation-plan.md) | 미착수 |
