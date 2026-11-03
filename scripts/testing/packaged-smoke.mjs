@@ -50,7 +50,7 @@ export async function inspectPackage(directory, { sourceSha, version } = {}) {
     )
   )
     throw Error("Test entry/file or database bundled in production");
-  const main = asar.extractFile(archive, pkg.main).toString();
+  const main = asar.extractFile(archive, join(...pkg.main.split("/"))).toString();
   if (
     /SIMPLE_TIMELINE_TEST_|Test profile required|artifacts\/test-app/.test(main)
   )
