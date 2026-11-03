@@ -52,3 +52,10 @@ CI는 커밋 부모를 읽도록 fetch-depth 2를 사용한다.
 빠른 문서 검사만 필요하면 `node scripts/harness/check.mjs`, 테스트만 보면
 `node --test --test-isolation=none scripts/harness/*.test.mjs`를 사용할 수 있다.
 완료 보고 전에는 통합 verify를 실행한다.
+
+## 제품 코드 검증
+
+스테이지 5부터 `npm run verify:app`을 별도로 사용한다. CI의 Application workflow도 같은 명령을 실행한다.
+Linux headless는 Xvfb가 필요하다. 모든 DB·Chromium 테스트 프로필은 임시 폴더에 격리한다.
+보고서는 `artifacts/app/latest.json`의 `application-tests` 범위이며, 명령별 실패·미실행·SHA·dirty 상태를 기록한다.
+이는 Repository harness의 7종 검사와 별개다. 어느 보고서도 실제 Windows 설치·오프라인·업데이트 검증을 대신하지 않는다.

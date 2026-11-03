@@ -46,6 +46,27 @@ it('lets the user explicitly discard an uncertain draft after a lost response', 
     expect(screen.getByRole('button', { name: '다시 조회' })).toHaveFocus(),
   )
 })
+it('keeps uncertain-draft reconciliation inside the active narrow modal', async () => {
+  const u = userEvent.setup(),
+    m = memoryApi()
+  m.api.createProject = async () => {
+    throw Error('lost')
+  }
+  render(<App api={m.api} />)
+  const add = await screen.findByRole('button', { name: '프로젝트 추가' })
+  await waitFor(() => expect(add).toBeEnabled())
+  await u.click(add)
+  await u.type(screen.getByLabelText('프로젝트 이름'), '입력을 보존')
+  await u.click(screen.getByRole('button', { name: '저장' }))
+  const dialog = screen.getByRole('dialog')
+  const retry = await within(dialog).findByRole('button', { name: '다시 조회' })
+  retry.focus()
+  await u.keyboard('{Enter}')
+  await waitFor(() =>
+    expect(screen.getByLabelText('프로젝트 이름')).toBeEnabled(),
+  )
+  expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('입력을 보존')
+})
 it('creates a project with defaults and participant rows, then restores focus', async () => {
   const u = userEvent.setup(),
     m = memoryApi()

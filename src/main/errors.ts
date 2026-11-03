@@ -31,7 +31,7 @@ export function toPublicError(error: unknown): ApiError {
   else if (/SQLITE_(CORRUPT|NOTADB)/.test(raw)) code = 'DB_CORRUPT'
   else if (
     /SQLITE_(IOERR|CANTOPEN|READONLY)/.test(raw) ||
-    ['EACCES', 'EPERM', 'ENOENT', 'ENOTDIR', 'EISDIR'].includes(raw)
+    ['EACCES', 'EPERM', 'ENOENT', 'ENOTDIR', 'EISDIR', 'EEXIST'].includes(raw)
   )
     code = 'STORAGE_IO'
   return { code, message: messages[code] }

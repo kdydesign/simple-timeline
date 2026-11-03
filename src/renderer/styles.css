@@ -278,6 +278,8 @@ fieldset > select {
   padding: 24px;
 }
 .confirm {
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 20px 60px #11233b50;
@@ -294,6 +296,8 @@ fieldset > select {
   line-height: 1.8;
 }
 .overlay {
+  min-height: 0;
+  max-height: 100vh;
   position: fixed;
   z-index: 20;
   right: 0;

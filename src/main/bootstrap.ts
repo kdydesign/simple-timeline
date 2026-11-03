@@ -8,6 +8,7 @@ import { createWindow } from './window'
 import { registerTimelineIpc } from './ipc'
 import { resolveRendererUrl } from './ipc-core'
 import { installCloseGuard } from './close'
+import { toPublicError } from './errors'
 import type { Result } from '../shared/types'
 export interface BootstrapOptions {
   profileDir?: string
@@ -22,9 +23,24 @@ export interface BootstrapOptions {
 }
 export async function bootstrap(options: BootstrapOptions = {}) {
   const profile = options.profileDir ?? profileDirectory(app.getPath('appData'))
-  mkdirSync(profile, { recursive: true })
-  app.setName('Simple Timeline')
-  app.setPath('userData', profile)
+  try {
+    mkdirSync(profile, { recursive: true })
+    app.setName('Simple Timeline')
+    app.setPath('userData', profile)
+  } catch (error) {
+    const blocked: StorageState = {
+      state: 'blocked',
+      error: toPublicError(error),
+    }
+    if (options.notifyBlocked) options.notifyBlocked(blocked)
+    else
+      dialog.showErrorBox(
+        '앱 데이터 폴더를 준비하지 못했습니다',
+        `${blocked.error.message}\n기존 파일은 보존합니다. 경로를 확인하고 앱을 다시 실행해 주세요.\n${profile}`,
+      )
+    app.exit(1)
+    return null
+  }
   if (!app.requestSingleInstanceLock()) {
     app.quit()
     return null

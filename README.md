@@ -2,26 +2,48 @@
 
 오프라인 Windows 프로젝트 일정 관리 프로그램. Electron + React + SQLite.
 
-현재 상태: 스테이지 4 구현 계획 승인 완료. 다음은 스테이지 5 기본 앱·저장·CRUD 구현이다.
+현재 상태: 스테이지 5 기본 앱·저장·CRUD 구현 진행 중. 로컬 앱 검증을 마쳤으며 원격 CI를 확인한다.
 [승인 계획](docs/superpowers/plans/2026-11-03-simple-timeline-implementation.md)과
 [스테이지 4 인수인계](docs/wayfinder/handoffs/04-implementation-plan.md)를 확인한다.
-앱 코드·의존성·설치 파일은 아직 없다. [HTML 목업](docs/design/mockups/stage-03.html)은 설계 자료다.
+기본 앱·SQLite·CRUD 구현을 진행 중이다. 설치 파일은 아직 없다. [HTML 목업](docs/design/mockups/stage-03.html)은 설계 자료다.
 
 ## Codex 프로젝트 시작
 
 이 저장소 루트를 Codex 작업 디렉터리로 연다. [AGENTS.md](AGENTS.md)가 작업 진입점이다.
 프로젝트의 운영·검증 설정은 [하네스 안내](docs/harness/README.md)를 참조한다.
 
-필요 도구는 Node.js 24 LTS와 Git이다. 현재 npm 패키지 설치는 필요 없다.
+하네스만 실행하려면 Node.js 24 이상과 Git이 필요하다. 앱 개발은 `.node-version`의 Node 24.22.1과 npm을 사용한다.
 
 ```sh
 node scripts/harness/run.mjs context
 node scripts/harness/run.mjs verify
 ```
 
-앱 테스트·빌드·실행 명령은 승인 계획에 따라 스테이지 5부터 추가한다. 계획 문서의 앱 명령은 아직 실행 가능한 명령이 아니다.
-GitHub Actions의 Repository harness가 Ubuntu·Windows에서 동일한 하네스 검사를 실행한다.
-실패한 검사까지 포함한 보고서와 로그는 `artifacts/harness/`에 저장하며 CI 실행에도 첨부한다.
+하네스는 npm 설치 없이 실행되며, GitHub Actions의 Repository harness가 Ubuntu·Windows에서 검사한다.
+앱은 별도 Application workflow에서 아래와 같은 명령으로 검증한다.
+
+## 앱 개발·검증
+
+```sh
+npm ci
+npm run dev
+```
+
+설치는 Electron 바이너리와 네이티브 모듈을 다운로드/재빌드하므로 네트워크가 필요하다.
+완성 앱의 오프라인 실행 요구와 개발 도구 설치는 구분한다. prebuilt를 사용할 수 없으면 대상 플랫폼의 C++ 빌드 도구가 필요하다.
+기본 저장 위치는 사용자 앱 데이터의 `SimpleTimeline/data/timeline.sqlite3`이며, 일반 실행은 이 경로를 사용한다.
+자동 초기화·수동 백업/복원 기능은 없다.
+
+```sh
+npm run verify:app
+npm run build
+```
+
+Linux headless는 GUI 라이브러리·Xvfb를 준비하고 `xvfb-run -a npm run verify:app`로 실행한다.
+앱 검증은 타입 검사 → 3개 TZ의 unit → UI → build → 실제 Electron native DB → E2E 순서다.
+테스트는 매번 임시 DB·Chromium 프로필을 만들며 운영 DB를 사용하지 않는다. sandbox를 끄지 않는다.
+`artifacts/app/latest.json`, `artifacts/native/`, `artifacts/e2e/`에서 결과·로그를 확인한다.
+빌드 산출물은 `out/`이고, UI는 현재 CRUD 검증용 목록이다. 간트·달력은 스테이지 6, Windows 설치본은 스테이지 7 범위다.
 
 ## 새 채팅에서 시작하기
 

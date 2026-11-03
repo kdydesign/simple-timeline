@@ -1,5 +1,12 @@
 import assert from 'node:assert/strict'
-import { readFileSync, writeFileSync, readdirSync } from 'node:fs'
+import {
+  readFileSync,
+  writeFileSync,
+  readdirSync,
+  existsSync,
+  unlinkSync,
+} from 'node:fs'
+import { spawn } from 'node:child_process'
 import { join } from 'node:path'
 import { initializeStorage } from '../../src/main/db/lifecycle'
 import { migrations } from '../../src/main/db/migrations'
@@ -18,6 +25,73 @@ const ready = async (
   return s
 }
 export const cases: NativeCase[] = [
+  {
+    name: 'recovers a recognized hot rollback journal without losing committed data or the raw recovery pair',
+    async run(ctx) {
+      const original = await ready(ctx)
+      original.repository.createProject({
+        name: 'committed',
+        color: '#2563EB',
+        participants: [],
+      })
+      original.db.close()
+      const file = join(ctx.tempDir, 'data', 'timeline.sqlite3'),
+        script = join(ctx.tempDir, 'interrupt.cjs')
+      writeFileSync(
+        script,
+        `const DB=require(${JSON.stringify(require.resolve('better-sqlite3'))});const fs=require('node:fs');const db=new DB(${JSON.stringify(file)});db.pragma('cache_size=4');db.exec('BEGIN IMMEDIATE');db.prepare('UPDATE projects SET name=? WHERE id=1').run('uncommitted');const q=db.prepare("INSERT INTO projects(name,color,created_at,updated_at) VALUES(?, '#2563EB', 't','t')");for(let i=0;i<100;i++)q.run('x'.repeat(5000));fs.writeSync(1,'HOT_READY');setInterval(()=>{},1000);`,
+      )
+      const child = spawn(process.execPath, [script], {
+        env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          child.kill('SIGKILL')
+          reject(Error('Hot journal fixture timeout'))
+        }, 15000)
+        let errors = ''
+        child.stderr.on('data', (v) => (errors += String(v)))
+        child.once('error', reject)
+        child.once('exit', () =>
+          reject(Error(errors || 'Hot fixture exited early')),
+        )
+        child.stdout.on('data', (v) => {
+          if (String(v).includes('HOT_READY')) {
+            clearTimeout(timer)
+            resolve()
+          }
+        })
+      })
+      await new Promise<void>((resolve) => {
+        child.once('exit', () => resolve())
+        child.kill('SIGKILL')
+      })
+      assert.ok(existsSync(file + '-journal'))
+      const raw = readFileSync(file),
+        journal = readFileSync(file + '-journal')
+      assert.ok(journal.length > 512)
+      writeFileSync(join(ctx.tempDir, 'recovery-backups'), 'occupied')
+      assert.equal((await initializeStorage(ctx.tempDir)).state, 'blocked')
+      assert.deepEqual(readFileSync(file), raw)
+      assert.deepEqual(readFileSync(file + '-journal'), journal)
+      unlinkSync(join(ctx.tempDir, 'recovery-backups'))
+      const recovered = await ready(ctx)
+      assert.equal(
+        recovered.repository.getSnapshot().projects[0].name,
+        'committed',
+      )
+      assert.equal(recovered.repository.getSnapshot().projects.length, 1)
+      const roots = readdirSync(join(ctx.tempDir, 'recovery-backups'))
+      assert.equal(roots.length, 1)
+      const backup = join(ctx.tempDir, 'recovery-backups', roots[0])
+      assert.deepEqual(readFileSync(join(backup, 'timeline.sqlite3')), raw)
+      assert.deepEqual(
+        readFileSync(join(backup, 'timeline.sqlite3-journal')),
+        journal,
+      )
+    },
+  },
   {
     name: 'creates only missing database and preserves rows across reopen',
     async run(ctx) {

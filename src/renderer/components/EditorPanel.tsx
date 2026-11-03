@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { Editor } from '../state/useEditor'
 import type {
   ApiError,
@@ -20,6 +20,7 @@ export function EditorPanel({
   narrow,
   covered,
   error,
+  status,
 }: {
   editor: Editor
   projects: Project[]
@@ -32,6 +33,7 @@ export function EditorPanel({
   narrow: boolean
   covered: boolean
   error: ApiError | null
+  status?: ReactNode
 }) {
   const panel = useRef<HTMLElement>(null)
   useEffect(() => {
@@ -72,6 +74,7 @@ export function EditorPanel({
           ×
         </button>
       </div>
+      {status}
       <form
         onSubmit={(e) => {
           e.preventDefault()

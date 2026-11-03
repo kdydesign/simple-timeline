@@ -204,6 +204,17 @@ export function App({
       },
     })
   }
+  const statusView = (
+    <StatusNotice
+      phase={timeline.phase}
+      error={formError ?? timeline.error}
+      notice={notice}
+      onRefresh={() => {
+        setFormError(null)
+        void timeline.refresh()
+      }}
+    />
+  )
   return (
     <>
       <div
@@ -231,15 +242,7 @@ export function App({
           }
         />
       </div>
-      <StatusNotice
-        phase={timeline.phase}
-        error={formError ?? timeline.error}
-        notice={notice}
-        onRefresh={() => {
-          setFormError(null)
-          void timeline.refresh()
-        }}
-      />
+      {!(narrow && model) && statusView}
       <div className="workspace">
         <main
           aria-hidden={!!confirmation || (narrow && !!model)}
@@ -277,6 +280,7 @@ export function App({
             narrow={narrow}
             covered={!!confirmation}
             error={formError ?? timeline.error}
+            status={narrow ? statusView : null}
           />
         )}
       </div>

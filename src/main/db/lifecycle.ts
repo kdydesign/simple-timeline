@@ -6,6 +6,8 @@ import {
   readSync,
   closeSync,
   renameSync,
+  copyFileSync,
+  constants,
 } from 'node:fs'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
@@ -22,18 +24,22 @@ export type StorageState =
   | { state: 'ready'; db: DatabaseHandle; repository: Repository }
   | { state: 'blocked'; error: ApiError }
 const APP_ID = 1398033486
-function inspect(file: string): { version: number } {
+function readApplicationHeader(file: string): Buffer {
   const fd = openSync(file, 'r'),
-    header = Buffer.alloc(16)
+    header = Buffer.alloc(100)
   try {
     if (
-      readSync(fd, header, 0, 16, 0) !== 16 ||
-      header.toString() !== 'SQLite format 3\0'
+      readSync(fd, header, 0, 100, 0) < 72 ||
+      header.subarray(0, 16).toString() !== 'SQLite format 3\0'
     )
       throw failure('DB_CORRUPT')
+    return header
   } finally {
     closeSync(fd)
   }
+}
+function inspect(file: string): { version: number } {
+  readApplicationHeader(file)
   const db = new Database(file, { readonly: true, fileMustExist: true })
   try {
     if (db.pragma('application_id', { simple: true }) !== APP_ID)
@@ -68,10 +74,34 @@ export async function initializeStorage(
     mkdirSync(dir, { recursive: true })
     const existed = existsSync(file),
       target = list.at(-1)!.version
-    const version = existed ? inspect(file).version : 0
+    let version = 0
+    if (existed) {
+      const header = readApplicationHeader(file)
+      if (header.readUInt32BE(68) !== APP_ID) throw failure('DB_CORRUPT')
+      if (existsSync(file + '-journal')) {
+        // A readonly connection cannot recover a hot rollback journal. Preserve
+        // the recognized application's raw pair before allowing SQLite recovery.
+        const root = join(
+          profile,
+          'recovery-backups',
+          `${new Date().toISOString().replace(/[:.]/g, '-')}-${randomUUID()}`,
+        )
+        mkdirSync(root, { recursive: true })
+        for (const suffix of ['', '-journal', '-wal', '-shm'])
+          if (existsSync(file + suffix))
+            copyFileSync(
+              file + suffix,
+              join(root, 'timeline.sqlite3' + suffix),
+              constants.COPYFILE_EXCL,
+            )
+        console.info('Preserved SQLite recovery files:', root)
+        db = openDatabase(file, true)
+      }
+      version = inspect(file).version
+    }
     if (existed && version < 1) throw failure('DB_CORRUPT')
     if (version > target) throw failure('SCHEMA_TOO_NEW')
-    db = openDatabase(file, existed)
+    db ??= openDatabase(file, existed)
     if (existed && version < target) {
       const backupDir = join(profile, 'migration-backups')
       mkdirSync(backupDir, { recursive: true })

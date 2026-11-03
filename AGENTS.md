@@ -30,7 +30,9 @@
 
 - 변경 후 `node scripts/harness/run.mjs verify`를 실행한다. 로컬과 CI가 같은 명령을 사용한다.
   결과는 `artifacts/harness/latest.json`과 `latest.log`에 남는다. [검증 안내](docs/harness/validation.md)를 따른다.
-- 앱 테스트·빌드 명령은 아직 없다. 앱 코드 도입 시 실제 명령과 CI를 함께 추가한다.
+- 제품 변경은 `npm run verify:app`도 실행한다. Linux headless는 Xvfb 환경에서 실행한다.
+  `npm ci`는 Electron 다운로드·native 재빌드를 수행하며, DB 테스트는 Electron 런타임과 임시 프로필을 사용한다.
+  앱 보고서는 `artifacts/app/`, native/E2E 로그는 각 하위 artifact에 남는다. 하네스 검증과 실제 앱 검증을 구분한다.
 - 실패하면 원인을 확인하고 수정한 뒤 해당 검사를 재실행한다. 실패를 숨기거나 검사를 비활성화하지 않는다.
 - Windows 설치·오프라인 실행은 실제 Windows에서 검증해야 한다.
 - 종료 시 [인수인계 양식](docs/wayfinder/handoffs/TEMPLATE.md)에 결과·근거·미검증 항목을 기록한다.

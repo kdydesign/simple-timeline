@@ -1,5 +1,6 @@
 import { app } from 'electron'
-import { resolve, relative, isAbsolute } from 'node:path'
+import { resolve, relative, isAbsolute, dirname, join } from 'node:path'
+import { writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { bootstrap } from '../../src/main/bootstrap'
 import type { Result } from '../../src/shared/types'
@@ -18,7 +19,13 @@ let changed = false,
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT
 void bootstrap({
   profileDir: profile,
-  notifyBlocked() {},
+  notifyBlocked(storage) {
+    if (fault === 'startup' && storage.state === 'blocked')
+      writeFileSync(
+        join(dirname(profile), 'startup-error.json'),
+        JSON.stringify(storage.error),
+      )
+  },
   confirmClose: async () => true,
   afterDispatch(method, result): Result<unknown> {
     if (method === 'createProject' && result.ok) {
