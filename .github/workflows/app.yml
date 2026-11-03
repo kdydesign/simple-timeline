@@ -4,7 +4,7 @@ permissions:
   contents: read
 jobs:
   app:
-    timeout-minutes: 15
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '24.22.1'
+          node-version: "24.22.1"
           cache: npm
       - run: npm ci
       - name: Prepare Electron sandbox on the disposable Linux runner
@@ -26,6 +26,25 @@ jobs:
         run: xvfb-run -a npm run verify:app
       - if: runner.os == 'Windows'
         run: npm run verify:app
+      - name: Build unsigned current-user Windows installer
+        if: runner.os == 'Windows'
+        run: npm run dist:win
+      - name: Build a synthetic next-version installer for update verification
+        if: runner.os == 'Windows'
+        run: npm run dist:win:test-update
+      - name: Verify production package and actual NSIS lifecycle on the disposable VM
+        if: runner.os == 'Windows'
+        run: npm run test:packaged
+      - uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows' && success()
+        with:
+          name: SimpleTimeline-Windows11-x64-unsigned-${{ github.sha }}
+          path: |
+            release/*.exe
+            release/*.sha256
+            release/release-manifest.json
+            release/USER-GUIDE.ko.md
+          if-no-files-found: error
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -34,4 +53,5 @@ jobs:
             artifacts/app/
             artifacts/native/
             artifacts/e2e/
+            artifacts/packaged/
           if-no-files-found: error

@@ -19,7 +19,11 @@
     "test:ui": "vitest run --config vitest.ui.config.mts",
     "build:test": "electron-vite build --config electron.vite.test.config.mts",
     "test:e2e": "npm run build:test && playwright test --config playwright.config.mts",
-    "verify:app": "node scripts/testing/verify-app.mjs"
+    "verify:app": "node scripts/testing/verify-app.mjs",
+    "test:release": "node --test tests/release/*.test.mjs",
+    "dist:win": "npm run build && node scripts/release/build-windows.mjs",
+    "dist:win:test-update": "node scripts/release/build-windows.mjs --validation-update",
+    "test:packaged": "node scripts/testing/packaged-smoke.mjs && playwright test --config playwright.packaged.config.mts"
   },
   "dependencies": {
     "react": "19.3.1",
@@ -45,5 +49,6 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@types/better-sqlite3": "9.6.0"
-  }
+  },
+  "author": "kdydesign"
 }

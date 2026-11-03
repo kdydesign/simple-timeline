@@ -1,0 +1,29 @@
+appId: com.kdydesign.simpletimeline
+productName: Simple Timeline
+directories:
+  output: release
+files:
+  - out/**/*
+  - package.json
+asar: true
+asarUnpack:
+  - node_modules/better-sqlite3/**/*.node
+npmRebuild: true
+forceCodeSigning: false
+publish: null
+artifactName: SimpleTimeline-${version}-win-${arch}-${env.ST_SOURCE_SHA}.${ext}
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  executableName: Simple Timeline
+  requestedExecutionLevel: asInvoker
+  signExecutable: false
+nsis:
+  oneClick: true
+  perMachine: false
+  deleteAppDataOnUninstall: false
+  packElevateHelper: false
+  runAfterFinish: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true

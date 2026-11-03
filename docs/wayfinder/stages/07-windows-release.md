@@ -3,8 +3,8 @@
 id: 07-windows-release
 parent: ../MAP.md
 labels: wayfinder:task
-status: open
-assignee: null
+status: in_progress
+assignee: codex-stage07
 blocked_by: 06-visualizations
 
 ## Question

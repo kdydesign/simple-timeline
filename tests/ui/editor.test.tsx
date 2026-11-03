@@ -12,10 +12,9 @@ it("traps keyboard focus in a narrow editor and confirms Escape with a long draf
   await waitFor(() => expect(add).toBeEnabled());
   await u.click(add);
   expect(screen.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
-  await u.type(
-    screen.getByLabelText("프로젝트 이름"),
-    "아주 긴 프로젝트 이름 ".repeat(12),
-  );
+  const longName = "아주 긴 프로젝트 이름 ".repeat(12);
+  await u.paste(longName);
+  expect(screen.getByLabelText("프로젝트 이름")).toHaveValue(longName);
   screen.getByRole("button", { name: "편집 닫기" }).focus();
   await u.tab({ shift: true });
   expect(screen.getByRole("button", { name: "저장" })).toHaveFocus();
