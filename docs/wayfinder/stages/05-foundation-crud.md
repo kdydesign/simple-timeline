@@ -3,7 +3,7 @@
 id: 05-foundation-crud
 parent: ../MAP.md
 labels: wayfinder:task
-status: in_progress
+status: closed
 assignee: codex-2026-11-03-stage-05
 blocked_by: 04-implementation-plan
 
@@ -29,7 +29,7 @@ blocked_by: 04-implementation-plan
 [스테이지 4 구현 계획](../../superpowers/plans/2026-11-03-simple-timeline-implementation.md)의 **Task 1~5**가 이 단계 범위다.
 계획은 스테이지 4에서 사용자 전체 승인을 받았다. 이번 채팅의 해당 단계 실행 요청을 확인한 뒤 착수한다.
 계획의 파일·인터페이스·검증 명령·종료 경계를 따른다.
-명령은 아직 구현되지 않았으며 실행한 테스트 결과로 취급하지 않는다.
+Task 1~5의 앱 명령·테스트·CI를 구현하고 실제 실행했다. 설치본과 시각화 검증은 포함하지 않는다.
 
 ## 산출물
 
@@ -46,19 +46,28 @@ blocked_by: 04-implementation-plan
 
 ## 해결 기록
 
-아직 해결하지 않음. 완료 시 사용자 승인 내용·결과·근거·산출물 링크를 여기에 기록한다.
-결정의 상세는 산출물 한 곳에 두고 여기에는 요약과 링크만 남긴다.
+2026-11-03 사용자의 스테이지 5 실행 요청에 따라 Task 1~5를 구현했다.
+순수 도메인·실제 SQLite CRUD/보존·안전한 IPC·React 편집/오류 처리를 연결하고,
+독립 검토 중요 문제 5개의 회귀를 RED→GREEN으로 수정했다.
+로컬 앱 전체 검증과 Ubuntu·Windows Application CI가 통과했다.
+[실행 기록](../../implementation/stage-05.md)과 [인수인계](../handoffs/05-foundation-crud.md)에
+근거·검증 한계·남은 작은 항목·다음 작업을 기록했다.
+간트·달력·Windows 설치 파일은 만들지 않았다. 최종 문서 검증 후 main 직접 commit·push로 마무리한다.
 
 ## 다음 채팅
 
 ```text
-https://github.com/kdydesign/simple-timeline
-Superpowers와 Wayfinder로 스테이지 6을 진행해줘.
-최신 main에서 README.md, docs/wayfinder/MAP.md, docs/wayfinder/STATUS.md,
-docs/superpowers/specs/2026-11-03-simple-timeline-design.md,
-docs/wayfinder/handoffs/05-foundation-crud.md,
-docs/wayfinder/stages/06-visualizations.md와 해당 문서의 선행 산출물을 먼저 읽어줘.
-선행 단계 완료와 승인을 확인하고 이 스테이지만 진행해줘.
-확정한 사항은 다시 묻지 말고, 결과·검증·미결정 사항·다음 채팅 문구를
-저장소에 남기고 최신 커밋을 알려줘.
+저장소: https://github.com/kdydesign/simple-timeline
+Superpowers와 Wayfinder로 스테이지 6만 진행해줘.
+최신 main의 AGENTS.md를 읽고 node scripts/harness/run.mjs context 06-visualizations
+결과의 문서와 docs/wayfinder/handoffs/05-foundation-crud.md,
+docs/implementation/stage-05.md,
+docs/superpowers/plans/2026-11-03-simple-timeline-implementation.md,
+docs/design/domain-rules.md, docs/design/architecture.md, docs/design/storage.md,
+docs/design/experience.md, docs/design/visualization.md를 확인해줘.
+기존 승인 사항은 다시 묻지 말고 Task 1~5의 실제 코드를 이어서 Task 6~8만 구현해줘.
+운영 DB 대신 임시 테스트 프로필을 쓰고 실제 앱·CI로 두 모드와 CRUD 통합을 검증해줘.
+목업을 제품으로 재사용하지 말고 스테이지 7에는 착수하지 마.
+완료하면 검증 후 PR 없이 main에 직접 커밋·push하고,
+다음 채팅용 인수인계와 최종 커밋을 알려줘.
 ```

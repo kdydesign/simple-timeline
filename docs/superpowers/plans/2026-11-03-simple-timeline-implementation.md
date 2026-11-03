@@ -15,8 +15,9 @@ Vitest 5.1.0, Playwright 1.64.1. 전체 고정 버전과 문서상 확인 범위
 [저장](../../design/storage.md), [화면](../../design/experience.md), [시각화](../../design/visualization.md).
 이 다섯 승인 문서를 읽고 실행한다. [전체 설계](../specs/2026-11-03-simple-timeline-design.md)는 요구사항 인덱스다.
 
-상태: 스테이지 4 사용자 승인 계획. 이 문서의 명령·테스트·파일은 **후속 구현 대상**이다.
-현재 실행 가능한 제품 명령이나 통과한 앱 테스트가 아니다. 모든 체크박스는 실행 전 상태로 둔다.
+상태: 스테이지 4 사용자 승인 계획. Task 1~5는 스테이지 5에서 구현·검증했다.
+[실행 기록](../../implementation/stage-05.md)과 [인수인계](../../wayfinder/handoffs/05-foundation-crud.md)를 따른다.
+Task 6~9의 시각화·설치 관련 파일/명령은 **후속 구현 대상**이며 미실행 상태다.
 
 ## Global Constraints
 
@@ -72,7 +73,7 @@ Windows x64는 최초 CI 빌드 축이며 최종 지원 OS/CPU를 임의 확정�
 
 | 위치 | 책임·소유 작업 |
 | --- | --- |
-| `package.json`, `package-lock.json`, `.node-version`, `tsconfig*.json`, `electron.vite.config.ts`, `vitest*.config.ts` | 정확 버전·컴파일·테스트 경계, Task 1부터 필요한 항목만 추가 |
+| `package.json`, `package-lock.json`, `.node-version`, `tsconfig*.json`, `electron.vite.config.mts`, `vitest*.config.mts` | 정확 버전·컴파일·테스트 경계, Task 1부터 필요한 항목만 추가 |
 | `src/shared/types.ts`, `src/shared/api.ts` | DTO·Result·ErrorCode·8개 메서드와 채널 상수, Task 1 |
 | `src/domain/date.ts`, `normalize.ts`, `sort.ts` | 순수 업무 날짜·입력 정리·수치 ID 비교, Task 1 |
 | `src/main/db/schema.ts`, `repository.ts`, `lifecycle.ts`, `migrations.ts` | 실제 DB·트랜잭션·무결성·버전·보존 사본, Task 2~3 |
@@ -81,7 +82,7 @@ Windows x64는 최초 CI 빌드 축이며 최종 지원 OS/CPU를 임의 확정�
 | `src/renderer/state/useTimeline.ts`, `useEditor.ts`; `components/Toolbar.tsx`, `ProjectList.tsx`, `EditorPanel.tsx`, `ConfirmDialog.tsx`, `StatusNotice.tsx` | 단일 snapshot·편집·포커스·오류, Task 5 |
 | `src/visualization/gantt.ts`, `viewport.ts`, `calendar.ts`; `src/renderer/components/GanttView.tsx`, `CalendarView.tsx`, `DayScheduleList.tsx` | 순수 배치와 실제 조회, Task 6~7 |
 | `tests/fixtures/timeline.ts`; `tests/unit/*.test.ts`, `tests/ui/*.test.tsx`, `tests/native/*.case.ts`, `tests/e2e/*.spec.ts` | 업무·DB·UI·Electron 경로의 독립 검증 |
-| `tests/native/runner.cjs`, `scripts/testing/run-native.mjs`, `tests/e2e/{fixture,main}.ts`, `electron.vite.test.config.ts`, `playwright.config.ts` | Electron ABI로 실행·프로필 격리·실패/시간 제한·artifact |
+| `tests/native/runner.cjs`, `scripts/testing/run-native.mjs`, `tests/e2e/{fixture,main}.ts`, `electron.vite.test.config.mts`, `playwright.config.mts` | Electron ABI로 실행·프로필 격리·실패/시간 제한·artifact |
 | `.github/workflows/app.yml`, `electron-builder.yml`, `docs/release/windows-validation.md`, `user-guide.md` | 앱 CI와 설치 결과, Task 1~9 단계별 확장 |
 
 공유 DTO는 승인 IPC 문서의 필드를 그대로 갖는다. `Id=string`은 양의 64비트 정수 정규 십진수,
@@ -95,21 +96,21 @@ main 내부 BigInt는 DTO 변환 전에 십진 문자열로 바꾼다. 채널·�
 
 직접 의존성은 조사 표 22종 중 별도 `@electron/rebuild`를 제외한 21종이다. 재빌드는 builder가 lockfile에 고정한 내부 경로를 쓴다.
 Task 1에서 정확 버전(범위 기호 없이)과 npm lockfile을 생성한다. 이후 설치는 `npm ci`다.
-현재 이 명령들은 아직 실행하면 안 된다. 스테이지 4에서는 의존성 설치도 제품 파일 생성도 하지 않는다.
+스테이지 4에서는 설치하지 않았다. 스테이지 5부터 도입한 명령은 실제로 사용하며, Task 9의 패키징 명령은 아직 없다.
 
 | 후속 명령 | 도입 작업·내용 |
 | --- | --- |
 | `npm run typecheck` | Task 1: domain tsconfig를 `tsc --noEmit`으로 검사, Task 4부터 node/web tsconfig도 별도 검사. renderer는 Node 타입/DB import 금지 |
-| `npm run test:unit` | Task 1: `vitest run --config vitest.config.ts`, `tests/unit`만. native addon import 금지 |
+| `npm run test:unit` | Task 1: `vitest run --config vitest.config.mts`, `tests/unit`만. native addon import 금지 |
 | `npm run test:tz` | Task 1: Node launcher로 3개 TZ의 동일 unit 검사 실행 |
 | `npm run test:native` | Task 2: `tsc -p tsconfig.native.json && node scripts/testing/run-native.mjs` |
 | `npm run rebuild:native` | Task 2: `electron-builder install-app-deps`, postinstall에도 같은 명령. Electron target 고정 |
 | `npm run dev` / `npm run build` | Task 4: `electron-vite dev` / typecheck 후 `electron-vite build` |
-| `npm run test:ui` | Task 5: `vitest run --config vitest.ui.config.ts`, jsdom·bridge fake |
-| `npm run build:test` | Task 5: `electron-vite build --config electron.vite.test.config.ts`, 별도 테스트 진입점과 `artifacts/test-app` 출력 |
-| `npm run test:e2e` | Task 5: build:test 후 `playwright test --config playwright.config.ts`. 제품 bootstrap·preload·renderer를 실제 Electron에서 실행 |
-| `npm run verify:app` | Task 5: `node scripts/testing/verify-app.mjs`, typecheck → test:tz(unit 포함) → native → UI → build → e2e 순서, 어느 실패도 비정상 종료 |
-| `npm run test:packaged` | Task 9: `node scripts/testing/packaged-smoke.mjs`로 산출물 확인 후 `playwright test --config playwright.packaged.config.ts`, 임시 Windows 사용자/VM에서만 실행 |
+| `npm run test:ui` | Task 5: `vitest run --config vitest.ui.config.mts`, jsdom·bridge fake |
+| `npm run build:test` | Task 5: `electron-vite build --config electron.vite.test.config.mts`, 별도 테스트 진입점과 `artifacts/test-app` 출력 |
+| `npm run test:e2e` | Task 5: build:test 후 `playwright test --config playwright.config.mts`. 제품 bootstrap·preload·renderer를 실제 Electron에서 실행 |
+| `npm run verify:app` | Task 5: `node scripts/testing/verify-app.mjs`, typecheck → test:tz(unit 포함) → UI → build → native → e2e 순서, 어느 실패도 비정상 종료 |
+| `npm run test:packaged` | Task 9: `node scripts/testing/packaged-smoke.mjs`로 산출물 확인 후 `playwright test --config playwright.packaged.config.mts`, 임시 Windows 사용자/VM에서만 실행 |
 | `npm run dist:win` | Task 9: build 후 `electron-builder --win nsis --x64`; 승인 지원 CPU가 달라지면 그 대상도 별도 명시·검증 |
 
 Node용 better-sqlite3 테스트를 Vitest에서 실행하지 않는다. npm postinstall로 Electron ABI로 맞춘 addon을
@@ -130,7 +131,7 @@ verify:app은 `artifacts/app/`에 SHA·OS·런타임·명령·실패/미실행�
 
 ## Task 1: 순수 도메인·공유 계약 (스테이지 5)
 
-**Files:** Create `package.json`, `package-lock.json`, `.node-version`, `tsconfig.json`, `vitest.config.ts`,
+**Files:** Create `package.json`, `package-lock.json`, `.node-version`, `tsconfig.json`, `vitest.config.mts`,
 `src/shared/{types,api}.ts`, `src/domain/{date,normalize,sort}.ts`, `tests/fixtures/timeline.ts`,
 `tests/unit/{date,normalize,sort}.test.ts`, `scripts/testing/run-unit-tz.mjs`, `tsconfig.domain.json`, `.github/workflows/app.yml`.
 
@@ -140,7 +141,7 @@ verify:app은 `artifacts/app/`에 SHA·OS·런타임·명령·실패/미실행�
 `normalizeColor(unknown):string`, `compareIds(a:Id,b:Id):number`, `sortSnapshot(snapshot):TimelineSnapshot`.
 잘못된 입력은 `DomainValidationError(field:string,message:string)`를 던진다. 공유형은 위 인터페이스 지도를 따른다.
 
-- [ ] **Step 1 — RED:** 날짜·입력·순서 테스트를 먼저 만들고 아래 기대값을 고정한다.
+- [x] **Step 1 — RED:** 날짜·입력·순서 테스트를 먼저 만들고 아래 기대값을 고정한다.
 
   ```ts
   expect(inclusiveDays('2028-02-28', '2028-03-01')).toBe(3);
@@ -152,13 +153,13 @@ verify:app은 `artifacts/app/`에 SHA·OS·런타임·명령·실패/미실행�
 
   1900-02-29/0000/고정 자릿수 위반/시각 포함/역전 기간을 거부하고 2000-02-29와 0001년을 허용한다.
   Unicode 앞뒤 공백을 정리하고 내부 공백/대소문자/중복 이름은 유지한다. 색상은 대문자 `#RRGGBB`다.
-- [ ] **Step 2 — RED確認:** `npm run test:unit -- tests/unit/date.test.ts tests/unit/normalize.test.ts tests/unit/sort.test.ts`。
+- [x] **Step 2 — RED確認:** `npm run test:unit -- tests/unit/date.test.ts tests/unit/normalize.test.ts tests/unit/sort.test.ts`。
   대상 함수 미구현에 따른 실패를 확인한다. 설정/테스트 발견 실패는 먼저 수정한다.
-- [ ] **Step 3 — GREEN:** 위 함수와 DTO만 구현한다. fixture는 핫픽스 3건·빈 프로젝트·동명/동기간 일정 5건을 포함한다.
+- [x] **Step 3 — GREEN:** 위 함수와 DTO만 구현한다. fixture는 핫픽스 3건·빈 프로젝트·동명/동기간 일정 5건을 포함한다.
   renderer/DB 의존성을 넣지 않고 다른 TZ에서도 같은 결과가 나오는 fixture를 준비한다.
-- [ ] **Step 4 — 검증:** typecheck와 `npm run test:tz`로 UTC / America/New_York / Asia/Seoul의 unit 자식 프로세스를 실행한다.
+- [x] **Step 4 — 검증:** typecheck와 `npm run test:tz`로 UTC / America/New_York / Asia/Seoul의 unit 자식 프로세스를 실행한다.
   cross-platform Node launcher가 환경변수를 설정하며 Windows shell의 `TZ=...` 구문에 의존하지 않는다. CI도 같은 검사를 실행한다.
-- [ ] **Step 5 — Commit:** `node scripts/harness/run.mjs verify` 후 이 작업 파일만 커밋. 메시지 `feat: add date-only domain and shared contracts`.
+- [x] **Step 5 — Commit:** `node scripts/harness/run.mjs verify` 후 이 작업 파일만 커밋. 메시지 `feat: add date-only domain and shared contracts`.
 
 ## Task 2: 실제 SQLite 스키마·CRUD·원자 삭제 (스테이지 5)
 
@@ -170,18 +171,18 @@ verify:app은 `artifacts/app/`에 SHA·OS·런타임·명령·실패/미실행�
 승인 API의 프로젝트/일정 CRUD에 대응하는 **동기** 메서드(성공 DTO 반환, 실패 예외)를 갖는다.
 DB 연결은 main에만 있고 `safeIntegers`로 읽어 ID를 변환한다. 오류→Result는 Task 4에서 한다.
 
-- [ ] **Step 1 — RED:** 임시 실제 DB에 대해 부모 없는 일정 거부, 참여자 순서·중복, 생성 정렬,
+- [x] **Step 1 — RED:** 임시 실제 DB에 대해 부모 없는 일정 거부, 참여자 순서·중복, 생성 정렬,
   `sqlite_sequence`를 이용한 ID `9007199254740993`의 문자열 왕복, 날짜 CHECK의 윤년/범위/역전을 검증한다.
   삭제 도중 하위 일정 DELETE를 ABORT하는 테스트 전용 trigger로 프로젝트·일정·참여자 전부 rollback을 확인한다.
-- [ ] **Step 2 — RED 확인:** `npm run rebuild:native`, `npm run test:native`를 실행해 미구현 저장소의 assertion 실패 확인.
+- [x] **Step 2 — RED 확인:** `npm run rebuild:native`, `npm run test:native`를 실행해 미구현 저장소의 assertion 실패 확인.
   로딩/ABI 실패는 검사 실패이며 업무 테스트 성공으로 취급하지 않는다.
-- [ ] **Step 3 — GREEN:** STRICT 세 테이블·FK cascade·인덱스·prepared statements, 한 트랜잭션 snapshot,
+- [x] **Step 3 — GREEN:** STRICT 세 테이블·FK cascade·인덱스·prepared statements, 한 트랜잭션 snapshot,
   쓰기/참여자 전체 교체 트랜잭션을 구현한다. 날짜 CHECK는 문자열/월 일수/윤년 산술을 쓰고 자동 보정 함수에 의존하지 않는다.
   main의 JS 정규화가 Unicode trim 기준이며 SQL 기본 trim만으로 대체하지 않는다.
-- [ ] **Step 4 — 검증:** `npm run test:native`에서 FK ON·DELETE journal·FULL·busy_timeout 3000, NOT_FOUND,
+- [x] **Step 4 — 검증:** `npm run test:native`에서 FK ON·DELETE journal·FULL·busy_timeout 3000, NOT_FOUND,
   중복 이름 허용·메타데이터 유지·재열기 데이터 일치를 확인. runner는 완료 후 연결·임시 경로를 정리한다.
   테스트용 schema trigger와 sequence 조작은 제품 경로에 넣지 않는다. Windows CI도 실행한다.
-- [ ] **Step 5 — Commit:** 하네스도 통과한 뒤 `feat: persist timeline with atomic SQLite transactions`.
+- [x] **Step 5 — Commit:** 하네스도 통과한 뒤 `feat: persist timeline with atomic SQLite transactions`.
 
 ## Task 3: DB 수명주기·마이그레이션·실패 시 보존 (스테이지 5)
 
@@ -191,50 +192,50 @@ DB 연결은 main에만 있고 `safeIntegers`로 읽어 ID를 변환한다. 오�
 `Migration={version:number;up(db:DatabaseHandle):void}`, `StorageState={state:'ready';db;repository}|{state:'blocked';error}`.
 프로필 생성·사본 I/O를 주입할 좁은 테스트 seam은 renderer로 노출하지 않는다.
 
-- [ ] **Step 1 — RED:** 없는 파일에서만 신규 생성, 기존 0바이트/손상/다른 앱 DB 보존, 고버전 거부,
+- [x] **Step 1 — RED:** 없는 파일에서만 신규 생성, 기존 0바이트/손상/다른 앱 DB 보존, 고버전 거부,
   테스트용 v1→v2 성공·실패·사본 실패·FK 위반·권한/I/O 오류를 검증한다.
   사본 생성 실패 때 user_version과 원본 바이트가 그대로인지 검사한다.
-- [ ] **Step 2 — RED 확인:** `npm run test:native`에서 lifecycle assertion 실패 확인.
-- [ ] **Step 3 — GREEN:** 파일 존재를 구분하고 기존 파일은 `fileMustExist`로 연다. 신규 파일에만
+- [x] **Step 2 — RED 확인:** `npm run test:native`에서 lifecycle assertion 실패 확인.
+- [x] **Step 3 — GREEN:** 파일 존재를 구분하고 기존 파일은 `fileMustExist`로 연다. 신규 파일에만
   앱 식별용 `application_id=1398033486`와 schema v1을 한 트랜잭션으로 기록한다.
   기존 파일의 header·application_id·quick_check·foreign_key_check·user_version을 확인하고 모르는 DB는 수정하지 않는다.
   기존 v0/잘못된 파일을 신규 데이터로 간주하지 않는다. 초기화 도중 끊긴 신규 파일도 다음 실행에 차단·보존한다.
-- [ ] **Step 4 — GREEN:** 업그레이드 전 `backup()` 완료→readonly 사본 검증→닫기, 이후 버전별 트랜잭션과 user_version 갱신.
+- [x] **Step 4 — GREEN:** 업그레이드 전 `backup()` 완료→readonly 사본 검증→닫기, 이후 버전별 트랜잭션과 user_version 갱신.
   각 실패 단계 rollback·DB 사용 차단, 사본과 원본 자동 삭제/교체 금지. 재실행/업데이트 경로는 고정 프로필을 사용한다.
-- [ ] **Step 5 — 검증·Commit:** native와 unit·하네스 통과 후 `feat: preserve database across startup and migrations`.
+- [x] **Step 5 — 검증·Commit:** native와 unit·하네스 통과 후 `feat: preserve database across startup and migrations`.
   Windows 실제 디스크 부족/비정상 종료는 Task 9에 남기고, 여기서는 seam의 오류 변환 및 실제 SQLite 잠금/rollback을 구분해 기록한다.
 
 ## Task 4: 안전한 Electron 실행·preload·IPC (스테이지 5)
 
-**Files:** Create `electron.vite.config.ts`, `src/main/{index,bootstrap,window,ipc,errors}.ts`,
+**Files:** Create `electron.vite.config.mts`, `src/main/{index,bootstrap,window,ipc,errors}.ts`,
 `tsconfig.node.json`, `tsconfig.web.json`, `src/preload/index.ts`,
 `src/renderer/{index.html,main.tsx,global.d.ts,App.tsx}` 초기 골격,
 `tests/unit/ipc.test.ts`, `tests/native/security.case.ts`; Modify build/typecheck 설정.
 
 **Interfaces:** Consumes `StorageState`, `Repository`, `TimelineApi`. Produces
 `bootstrap(options:BootstrapOptions):Promise<ApplicationHandle>`,
-`registerTimelineIpc(window:BrowserWindow, storage:StorageState):()=>void`,
+`registerTimelineIpc(window:BrowserWindow, storage:StorageState, allowedUrl:string):()=>void`,
 `isTrustedSender(event,window,allowedUrl):boolean`, `toPublicError(error:unknown):ApiError`.
 root package는 CommonJS 기본값을 유지하고 `main=out/main/index.cjs`로 둔다. production 출력은 `out/main/index.cjs`, `out/preload/index.cjs`(각 단일 CJS bundle), `out/renderer/index.html`.
 sandbox preload는 electron 외 require를 남기지 않고 공유 상수도 bundle에 포함한다.
 
-- [ ] **Step 1 — RED:** 미허용 sender/하위 frame/URL/닫힌 창, 추가 필드·잘못된 타입·confirmed 누락,
+- [x] **Step 1 — RED:** 미허용 sender/하위 frame/URL/닫힌 창, 추가 필드·잘못된 타입·confirmed 누락,
   BigInt/SQL/stack 유출 거부 테스트를 작성. 반환 성공은 commit 이후인지 검사한다.
-- [ ] **Step 2 — RED 확인:** `npm run test:unit -- tests/unit/ipc.test.ts`, build 후 `npm run test:native`.
+- [x] **Step 2 — RED 확인:** `npm run test:unit -- tests/unit/ipc.test.ts`, build 후 `npm run test:native`.
   초기 미구현 bridge/security assertion이 실패해야 한다.
-- [ ] **Step 3 — GREEN:** DB 열기 전 단일 인스턴스 lock, 고정 프로필, BrowserWindow 격리 세 옵션,
+- [x] **Step 3 — GREEN:** DB 열기 전 단일 인스턴스 lock, 고정 프로필, BrowserWindow 격리 세 옵션,
   production 로컬 index의 정확 URL/최상위 frame 확인, 개발 서버는 고정 origin만 허용한다.
   탐색·새 창·권한 요청 차단. 8채널만 handle하고 clone 가능한 DTO/정제 오류만 반환한다.
   DB 초기화 실패는 main 안내창에 경로·원인, renderer에는 승인 status/errorCode만 전달한다.
-- [ ] **Step 4 — 검증:** `npm run build`, unit/native. 실제 창에서 Node require 없음·preload API 키 8개,
+- [x] **Step 4 — 검증:** `npm run build`, unit/native. 실제 창에서 Node require 없음·preload API 키 8개,
   외부 탐색 거부·sandbox/contextIsolation/NodeIntegration 설정·두 번째 실행 시 DB 중복 열기 방지 확인.
   CSP는 production script-src self, 필요한 로컬 CSS/좌표 style만 허용. dev HMR 허용을 production에 복사하지 않는다.
-- [ ] **Step 5 — Commit:** 하네스 통과 후 `feat: connect isolated Electron UI through validated IPC`.
+- [x] **Step 5 — Commit:** 하네스 통과 후 `feat: connect isolated Electron UI through validated IPC`.
 
 ## Task 5: CRUD 패널·단일 캐시·실패·닫기 통합 (스테이지 5)
 
 **Files:** Create renderer의 state/hooks·Toolbar/ProjectList/EditorPanel/ConfirmDialog/StatusNotice·CSS,
-`src/main/close.ts`, `scripts/testing/verify-app.mjs`, `vitest.ui.config.ts`, `playwright.config.ts`, `tests/e2e/{fixture,main}.ts`, `electron.vite.test.config.ts`,
+`src/main/close.ts`, `scripts/testing/verify-app.mjs`, `vitest.ui.config.mts`, `playwright.config.mts`, `tests/e2e/{fixture,main}.ts`, `electron.vite.test.config.mts`,
 `tests/ui/{editor,state}.test.tsx`, `tests/e2e/{crud,security}.spec.ts`; Modify App·main·app workflow.
 
 **Interfaces:** Consumes `window.simpleTimeline`. Produces `useTimeline(api:TimelineApi)`의
@@ -245,21 +246,21 @@ MutationName은 공유 API 중 create/update/delete 여섯 메서드이며 입�
 `useEditor()`는 kind·원본 ID·draft·dirty·호출 요소를 유지한다. 시각화 컴포넌트는 이 공유 상태만 사용한다.
 시각화 도입 전에는 프로젝트/일정의 검증용 목록에서 CRUD를 확인한다. 별도의 영구 ‘목록 모드’를 제품 기능으로 추가하지 않는다.
 
-- [ ] **Step 1 — RED:** bridge fake UI 테스트에 앞뒤 공백·동명·참여자 입력 행·기본 색상/날짜·역전 오류·삭제 확인,
+- [x] **Step 1 — RED:** bridge fake UI 테스트에 앞뒤 공백·동명·참여자 입력 행·기본 색상/날짜·역전 오류·삭제 확인,
   저장 중 중복 클릭·실패 입력 보존·commit 후 refresh 실패·응답 소실 후 자동 create 재전송 0회를 고정한다.
   긴 이름과 overlay의 Tab/Escape·버리기/계속 편집·제출 후 포커스 복귀도 검사한다.
-- [ ] **Step 2 — RED 확인:** `npm run test:ui -- tests/ui/editor.test.tsx tests/ui/state.test.tsx`.
+- [x] **Step 2 — RED 확인:** `npm run test:ui -- tests/ui/editor.test.tsx tests/ui/state.test.tsx`.
   아직 없는 동작의 assertion으로 실패해야 한다.
-- [ ] **Step 3 — GREEN:** 승인 화면의 편집·로딩/오류 상태를 구현. stale/uncertain에서는 재조회 전 CRUD 차단,
+- [x] **Step 3 — GREEN:** 승인 화면의 편집·로딩/오류 상태를 구현. stale/uncertain에서는 재조회 전 CRUD 차단,
   결과 불명 create는 자동 매칭·재전송 금지. 저장·삭제 성공 후에만 snapshot을 갱신한다.
   beforeunload/main 닫기 확인으로 미저장과 저장 중 종료를 처리한다. 새 IPC를 임의 추가하지 않는다.
-- [ ] **Step 4 — E2E RED→GREEN:** `npm run build && npm run test:e2e -- tests/e2e/crud.spec.ts tests/e2e/security.spec.ts`.
+- [x] **Step 4 — E2E RED→GREEN:** `npm run build && npm run test:e2e -- tests/e2e/crud.spec.ts tests/e2e/security.spec.ts`.
   Playwright `_electron`으로 실제 앱을 열어 프로젝트·개발/QA/배포 생성→수정→재실행→동일 ID/날짜 확인→프로젝트 일괄 삭제를 검증한다.
   실제 renderer에서 require/파일/SQL/raw invoke 없음과 iframe의 bridge 없음·외부 탐색 거부도 검사한다.
   e2e는 별도 test main이 같은 bootstrap에 임시 프로필을 주입해 실제 userData에 접근하지 않는다.
   production main에는 이 override나 테스트 adapter가 없다. 테스트 편의용 API를 preload에 넣지 않는다.
   `BootstrapOptions`는 main 내부의 profileDir·저장소/오류 주입 의존성이며 renderer 입력이 아니다.
-- [ ] **Step 5 — 검증·Commit:** `npm run verify:app`, 하네스, Ubuntu·Windows app CI 통과 후
+- [x] **Step 5 — 검증·Commit:** `npm run verify:app`, 하네스, Ubuntu·Windows app CI 통과 후
   `feat: edit projects and schedules with persistent error-safe UI`.
   스테이지 5 인수인계에서 테스트 프로필·실제 DB·native ABI·미실행 Windows 설치를 구분하고 여기서 멈춘다.
 
@@ -336,7 +337,7 @@ PlacedSegment에 `lane:number`를 더한다. `CalendarView`는 Gantt와 같은 �
 ## Task 9: Windows 설치·업데이트·오프라인 실제 검증 (스테이지 7)
 
 **Files:** Create `electron-builder.yml`, `docs/release/{windows-validation,user-guide}.md`,
-`scripts/testing/packaged-smoke.mjs`, `tests/e2e/packaged.spec.ts`, `playwright.packaged.config.ts`; Modify package scripts·app CI.
+`scripts/testing/packaged-smoke.mjs`, `tests/e2e/packaged.spec.ts`, `playwright.packaged.config.mts`; Modify package scripts·app CI.
 
 **Interfaces:** Consumes 검증된 build·고정 프로필. 산출물은 정확 버전/CPU/SHA를 붙인 설치 파일과 검증 기록이다.
 Windows 지원 버전·CPU, 사용자별/전체 설치, 설치 경로/권한, 서명·배포·제거 데이터 정책은 **이 단계 사용자 결정**이다.
@@ -375,7 +376,8 @@ Windows 지원 버전·CPU, 사용자별/전체 설치, 설치 경로/권한, �
 
 - 도메인·저장·IPC·화면·시각화 요구를 Task 1~9에 대조하고, Review Focus 다섯 경로의 소유 테스트를 명시했다.
 - 타입·메서드명은 공유 지도에서 출발한다. 구현 시 승인 계약을 바꾸어야 하면 먼저 별도 결정으로 기록한다.
-- 현재 실행한 것은 저장소 하네스와 공식 자료 조사뿐이다. 위 앱 테스트/명령을 통과한 것으로 표현하지 않는다.
+- 계획 작성 당시에는 저장소 하네스와 공식 자료 조사만 실행했다. 이후 Task 1~5의 실제 검증은 스테이지 5 실행 기록을 따른다.
+  후속 시각화·설치 명령을 통과한 것으로 표현하지 않는다.
 - 사용자는 2026-11-03 ‘계획 승인, 스테이지 4 마무리’로 계획 전체를 승인했다.
   인수인계와 최종 검증 후 main에 직접 커밋·push한다.
-- 실행 방식은 다음 구현 채팅에서 정한다. 스테이지 4 완료는 스테이지 5 착수 승인을 대신하지 않는다.
+- 스테이지 5는 사용자 실행 요청 후 직접 구현·독립 검토로 진행했다. 후속 단계도 해당 단계 실행 요청을 확인한다.

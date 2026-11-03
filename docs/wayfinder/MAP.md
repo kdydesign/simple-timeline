@@ -36,6 +36,8 @@ status: open
 
 - [스테이지 4 — 구현 계획 확정](stages/04-implementation-plan.md): 파일·인터페이스·검증 명령과 9개 작업을 승인했으며, 후속 5~7단계의 실행 범위를 연결했다.
 
+- [스테이지 5 — 기본 앱·저장·CRUD 구현](stages/05-foundation-crud.md): 실제 Electron·SQLite CRUD·보존·오류 처리를 구현하고 독립 검토 수정과 두 OS 앱 CI를 통과했다.
+
 지도 이전에 사용자가 선택한 요구사항·기술은
 [전체 설계 기준](../superpowers/specs/2026-11-03-simple-timeline-design.md)에 기록한다.
 
