@@ -1,9 +1,9 @@
 # 진행 상태
 
-현재: 스테이지 3 화면·간트·달력 설계 승인 완료.
-다음: 스테이지 4 구현 계획 확정. 이 채팅에서는 착수하지 않는다.
-[화면](../design/experience.md)·[시각화](../design/visualization.md)와 [인수인계](handoffs/03-experience.md)를 참조한다.
-제품 코드·앱 테스트·설치 파일은 아직 없다. 설계용 HTML 목업만 추가했다.
+현재: 스테이지 4 구현 계획 승인 완료.
+다음: 스테이지 5 기본 앱·저장·CRUD 구현(Task 1~5). 이 채팅에서는 착수하지 않는다.
+[승인 계획](../superpowers/plans/2026-11-03-simple-timeline-implementation.md)과 [인수인계](handoffs/04-implementation-plan.md)를 참조한다.
+제품 코드·의존성·앱 테스트·설치 파일은 아직 없다. 계획의 앱 명령은 후속 구현 대상이다.
 최종 검증 후 main에 직접 커밋·push하며, 최종 SHA·원격 반영·CI 결과는 종료 메시지에서 확인한다.
 
 프로젝트 설정과 실행 명령: [Codex 하네스](../harness/README.md).
@@ -16,7 +16,7 @@
 | 1 | [도메인·날짜 규칙 설계](stages/01-domain.md) | 완료 |
 | 2 | [Electron·SQLite 구조 설계](stages/02-architecture.md) | 완료 |
 | 3 | [화면·간트·달력 설계](stages/03-experience.md) | 완료 |
-| 4 | [구현 계획 확정](stages/04-implementation-plan.md) | 미착수 |
+| 4 | [구현 계획 확정](stages/04-implementation-plan.md) | 완료 |
 | 5 | [기본 앱·저장·CRUD 구현](stages/05-foundation-crud.md) | 미착수 |
 | 6 | [간트·달력 구현](stages/06-visualizations.md) | 미착수 |
 | 7 | [Windows 설치·오프라인 검증](stages/07-windows-release.md) | 미착수 |

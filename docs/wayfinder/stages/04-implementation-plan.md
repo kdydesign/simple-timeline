@@ -3,8 +3,8 @@
 id: 04-implementation-plan
 parent: ../MAP.md
 labels: wayfinder:grilling
-status: open
-assignee: null
+status: closed
+assignee: codex-2026-11-03-stage-04
 blocked_by: 03-experience
 
 ## Question
@@ -40,19 +40,27 @@ blocked_by: 03-experience
 
 ## 해결 기록
 
-아직 해결하지 않음. 완료 시 사용자 승인 내용·결과·근거·산출물 링크를 여기에 기록한다.
-결정의 상세는 산출물 한 곳에 두고 여기에는 요약과 링크만 남긴다.
+2026-11-03 [구현 계획](../../superpowers/plans/2026-11-03-simple-timeline-implementation.md)과
+[도구·버전 조사](../../research/2026-11-03-implementation-tooling.md)를 작성했다.
+승인 설계 대조·자체 검토·독립 검토 후 사용자가 ‘계획 승인, 스테이지 4 마무리’로 전체 승인했다.
+후속 5~7단계에 Task 1~9 범위와 검증 경계를 연결했다. 실제 앱 명령은 아직 구현되지 않았다.
+[인수인계](../handoffs/04-implementation-plan.md)에 결과·근거·미검증 항목·다음 채팅 문구를 기록한다.
+제품 코드·의존성·앱 테스트를 추가하지 않았다. 최종 검증 후 main 직접 commit·push로 반영한다.
 
 ## 다음 채팅
 
 ```text
-https://github.com/kdydesign/simple-timeline
-Superpowers와 Wayfinder로 스테이지 5을 진행해줘.
-최신 main에서 README.md, docs/wayfinder/MAP.md, docs/wayfinder/STATUS.md,
-docs/superpowers/specs/2026-11-03-simple-timeline-design.md,
-docs/wayfinder/handoffs/04-implementation-plan.md,
-docs/wayfinder/stages/05-foundation-crud.md와 해당 문서의 선행 산출물을 먼저 읽어줘.
-선행 단계 완료와 승인을 확인하고 이 스테이지만 진행해줘.
-확정한 사항은 다시 묻지 말고, 결과·검증·미결정 사항·다음 채팅 문구를
-저장소에 남기고 최신 커밋을 알려줘.
+저장소: https://github.com/kdydesign/simple-timeline
+Superpowers와 Wayfinder로 스테이지 5만 진행해줘.
+최신 main의 AGENTS.md를 읽고 node scripts/harness/run.mjs context 05-foundation-crud
+결과의 문서와 docs/wayfinder/handoffs/04-implementation-plan.md,
+docs/superpowers/plans/2026-11-03-simple-timeline-implementation.md,
+docs/design/domain-rules.md, docs/design/architecture.md, docs/design/storage.md,
+docs/design/experience.md, docs/design/visualization.md를 확인해줘.
+기존 승인 사항은 다시 묻지 말고 승인 계획의 Task 1~5만 구현해줘.
+운영 DB 대신 임시 테스트 프로필로 실제 Electron·SQLite 경로를 검증하고,
+앱 명령과 CI를 함께 추가해줘. 목업 코드는 제품으로 재사용하지 마.
+스테이지 6~7에는 착수하지 말고, 미실행 검증을 통과로 표시하지 마.
+완료하면 검증 후 PR 없이 main에 직접 커밋·push하고,
+다음 채팅용 인수인계와 최종 커밋을 알려줘.
 ```

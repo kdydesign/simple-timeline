@@ -34,6 +34,8 @@ status: open
 
 - [스테이지 3 — 화면·간트·달력 설계](stages/03-experience.md): 오른쪽 편집 패널·간트 탐색·월요일 달력·3줄과 더 보기·경계 계산을 목업과 문서로 확정했다.
 
+- [스테이지 4 — 구현 계획 확정](stages/04-implementation-plan.md): 파일·인터페이스·검증 명령과 9개 작업을 승인했으며, 후속 5~7단계의 실행 범위를 연결했다.
+
 지도 이전에 사용자가 선택한 요구사항·기술은
 [전체 설계 기준](../superpowers/specs/2026-11-03-simple-timeline-design.md)에 기록한다.
 

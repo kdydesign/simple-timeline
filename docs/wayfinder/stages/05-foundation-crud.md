@@ -18,10 +18,18 @@ blocked_by: 04-implementation-plan
 
 ## 논의 또는 수행 범위
 
-- Electron + React 기반 구성, main/preload/renderer 분리
+- 순수 도메인·공유 계약·검증 기반, Electron + React 구성과 main/preload/renderer 분리
 - SQLite 초기화·마이그레이션·프로젝트/일정 저장소와 IPC 연결
 - 프로젝트와 일정 입력·수정·삭제·목록, 삭제 확인과 입력 검증
-- 저장 실패·재실행 보존 검증; 운영 DB 대신 임시 테스트 DB 사용
+- 저장 실패·재실행 보존·DB 원본 보존·실제 Electron ABI 검증; 운영 DB 대신 임시 테스트 DB 사용
+- 시각화 전의 검증용 목록으로 CRUD를 확인하되 영구 목록 모드를 추가하지 않음
+
+## 구현 계획 연결
+
+[스테이지 4 구현 계획](../../superpowers/plans/2026-11-03-simple-timeline-implementation.md)의 **Task 1~5**가 이 단계 범위다.
+계획은 스테이지 4에서 사용자 전체 승인을 받았다. 이번 채팅의 해당 단계 실행 요청을 확인한 뒤 착수한다.
+계획의 파일·인터페이스·검증 명령·종료 경계를 따른다.
+명령은 아직 구현되지 않았으며 실행한 테스트 결과로 취급하지 않는다.
 
 ## 산출물
 
