@@ -28,10 +28,10 @@ status: open
 
 ## Decisions so far
 
-아직 해결한 스테이지 티켓은 없다.
+- [스테이지 1 — 도메인·날짜 규칙 설계](stages/01-domain.md): 업무 날짜·입력 정리·기본 정렬·선택 연월 규칙과 경계 사례를 사용자 승인으로 확정했다.
+
 지도 이전에 사용자가 선택한 요구사항·기술은
 [전체 설계 기준](../superpowers/specs/2026-11-03-simple-timeline-design.md)에 기록한다.
-완료 후에는 아래에 완료 티켓 제목의 링크와 한 줄 요약만 추가한다.
 
 ## Not yet specified
 

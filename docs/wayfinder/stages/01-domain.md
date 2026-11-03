@@ -3,8 +3,8 @@
 id: 01-domain
 parent: ../MAP.md
 labels: wayfinder:grilling
-status: open
-assignee: null
+status: closed
+assignee: codex-stage-01-domain-2026-11-03
 blocked_by: none
 
 ## Question
@@ -38,19 +38,25 @@ blocked_by: none
 
 ## 해결 기록
 
-아직 해결하지 않음. 완료 시 사용자 승인 내용·결과·근거·산출물 링크를 여기에 기록한다.
-결정의 상세는 산출물 한 곳에 두고 여기에는 요약과 링크만 남긴다.
+사용자는 2026-11-03 다섯 추천안을 선택했고 문서 확인 요청에 ‘구현 진행해’라고 답해 설계를 승인했다.
+[도메인·날짜 규칙](../../design/domain-rules.md)에 규칙·사례·승인 근거를 기록했다.
+설계 검토에서 중요한 추가 질문은 없었고 저장소 하네스 검사를 통과했다.
+설계 커밋 `23af2c427d65905896433649bd91266f8c3a8363`은 GitHub 작업 브랜치에 반영됐다.
+[스테이지 1 인수인계](../handoffs/01-domain.md),
+[GitHub PR](https://github.com/kdydesign/simple-timeline/pull/1)을 참조한다.
+제품 구현과 자동 병합은 수행하지 않는다. 최종 커밋과 CI 결과는 종료 메시지로 전달한다.
 
 ## 다음 채팅
 
 ```text
-https://github.com/kdydesign/simple-timeline
-Superpowers와 Wayfinder로 스테이지 2을 진행해줘.
-최신 main에서 README.md, docs/wayfinder/MAP.md, docs/wayfinder/STATUS.md,
-docs/superpowers/specs/2026-11-03-simple-timeline-design.md,
-docs/wayfinder/handoffs/01-domain.md,
-docs/wayfinder/stages/02-architecture.md와 해당 문서의 선행 산출물을 먼저 읽어줘.
-선행 단계 완료와 승인을 확인하고 이 스테이지만 진행해줘.
-확정한 사항은 다시 묻지 말고, 결과·검증·미결정 사항·다음 채팅 문구를
-저장소에 남기고 최신 커밋을 알려줘.
+저장소: https://github.com/kdydesign/simple-timeline
+Superpowers와 Wayfinder로 스테이지 2만 진행해줘.
+PR https://github.com/kdydesign/simple-timeline/pull/1 이 병합됐으면 최신 main에서,
+아직 미병합이면 docs/stage-01-domain 브랜치에서 시작해줘. 자동 병합하지 마.
+AGENTS.md를 읽고 node scripts/harness/run.mjs context 02-architecture 결과의 문서와
+직전 인수인계 docs/wayfinder/handoffs/01-domain.md,
+확정 설계 docs/design/domain-rules.md를 확인해줘.
+선행 단계 완료와 승인을 확인하고 확정된 요구사항은 다시 묻지 마.
+Electron·SQLite 구조만 나와 설계하고 앱 구현은 시작하지 마.
+검증·GitHub 반영·다음 채팅용 인수인계를 남겨줘.
 ```
