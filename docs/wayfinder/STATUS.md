@@ -5,7 +5,7 @@
 제품 코드·앱 테스트·설치 파일은 아직 없다.
 [스테이지 1 인수인계](handoffs/01-domain.md)와
 [GitHub PR](https://github.com/kdydesign/simple-timeline/pull/1)을 참조한다.
-GitHub 작업 브랜치 반영과 main 병합은 별개다. PR 미병합 시 `docs/stage-01-domain`에서 재개한다.
+스테이지 1은 main에 병합됐다. 다음 채팅은 최신 main에서 시작하고, 검증 후 PR 없이 main에 직접 커밋·push한다.
 최종 커밋과 CI 결과는 종료 메시지에서 확인한다.
 
 프로젝트 설정과 실행 명령: [Codex 하네스](../harness/README.md).

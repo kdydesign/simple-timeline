@@ -3,7 +3,8 @@
 - 상태: 승인·설계 완료. 후속 스테이지는 미착수.
 - 기준: main `4c2c6f4ba60b4b54ed066b21cc2b91e2a5f4d500`에서 작업 브랜치 `docs/stage-01-domain` 생성.
 - 원격 반영: 승인 설계 커밋 `23af2c427d65905896433649bd91266f8c3a8363` push 성공.
-  [스테이지 1 PR](https://github.com/kdydesign/simple-timeline/pull/1)로 전달한다. 자동 병합하지 않는다.
+  [스테이지 1 PR](https://github.com/kdydesign/simple-timeline/pull/1)은 main에 병합됐다.
+  확인한 main 커밋은 `c17c591`이다. 이후 원격 반영은 사용자 지시에 따라 PR 없이 main 직접 push를 사용한다.
 - 이 인수인계를 포함하는 최종 커밋 SHA·원격 확인·CI 실행 URL은 채팅 종료 메시지에서 전달한다.
 
 ## 이번 단계의 목표와 실제 결과
@@ -55,7 +56,8 @@ Windows CI 하네스 성공도 Windows 앱 검증을 뜻하지 않는다.
 스테이지 2는 미착수이며 SQLite·IPC·DB 수명주기·백업 방침 등을 사용자와 정해야 한다.
 서기 0001~9999년은 날짜 유효 범위다. 극단적으로 긴 간트의 성능·축 밀도는 스테이지 3에서 검토하되
 임의로 날짜 허용 범위를 축소하거나 표시 제한을 승인된 규칙으로 추정하지 않는다.
-PR이 미병합인 동안 최신 main만 읽으면 이 단계의 결과가 없다. 브랜치와 커밋을 먼저 확인한다.
+스테이지 1 PR은 main에 병합됐다. 다음 채팅은 최신 main에서 시작한다.
+사용자의 후속 지시에 따라 앞으로는 PR 없이 검증 후 main에 직접 커밋·push한다.
 
 ## 다음 단계와 시작 문구
 
@@ -66,8 +68,7 @@ PR이 미병합인 동안 최신 main만 읽으면 이 단계의 결과가 없�
 ```text
 저장소: https://github.com/kdydesign/simple-timeline
 Superpowers와 Wayfinder로 스테이지 2만 진행해줘.
-PR https://github.com/kdydesign/simple-timeline/pull/1 이 병합됐으면 최신 main에서,
-아직 미병합이면 docs/stage-01-domain 브랜치에서 시작해줘. 자동 병합하지 마.
+최신 main에서 시작하고, 검증 후 PR 없이 main에 직접 커밋·push해줘.
 AGENTS.md를 읽고 node scripts/harness/run.mjs context 02-architecture 결과의 문서와
 docs/wayfinder/handoffs/01-domain.md, docs/design/domain-rules.md를 확인해줘.
 선행 단계 완료와 승인을 확인하고 확정된 요구사항은 다시 묻지 마.
