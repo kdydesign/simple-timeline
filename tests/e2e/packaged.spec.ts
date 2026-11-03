@@ -15,7 +15,7 @@ import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { release, arch } from "node:os";
 const ps = (args: string[]) =>
-  execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", ...args], {
+  execFileSync("pwsh.exe", ["-NoProfile", "-NonInteractive", ...args], {
     encoding: "utf8",
     timeout: 30000,
   }).trim();
@@ -201,6 +201,7 @@ test("real production package installs, works offline, updates and retains DB af
     expect(system.userInstalls[0].DisplayVersion).toBe(base.version);
     expect(system.machineInstallCount).toBe(0);
     evidence.system = system;
+    console.log("Packaged Windows environment: "+JSON.stringify(system));
 
     page = await launch(installed, base.version);
     expect(await snapshot(page)).toEqual(before);
