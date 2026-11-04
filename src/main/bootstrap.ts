@@ -1,4 +1,7 @@
+/// <reference types="electron-vite/node" />
 import { app, dialog } from 'electron'
+import icon from '../../resources/icon.png?asset'
+import { startupRecorder } from './startup'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -45,8 +48,13 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     app.quit()
     return null
   }
+  const startup = startupRecorder(profile, app.getVersion())
+  startup.mark('bootstrap')
   await app.whenReady()
+  startup.mark('app-ready')
+  if (process.platform === 'win32') app.setAppUserModelId('com.kdydesign.simpletimeline')
   const storage = await initializeStorage(profile)
+  startup.mark('storage-' + storage.state)
   const rendererUrl =
     options.rendererUrl ??
     resolveRendererUrl(
@@ -60,13 +68,31 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const window = createWindow(
     options.preloadPath ?? join(__dirname, '../preload/index.cjs'),
     rendererUrl,
+    () => startup.mark('window-shown'),
+    icon,
   )
   const unregister = registerTimelineIpc(
     window,
     storage,
     rendererUrl,
-    options.afterDispatch,
+    async (method, result) => {
+      const response = options.afterDispatch ? await options.afterDispatch(method, result) : result
+      if (method === 'getSnapshot' && response.ok) startup.mark('snapshot-served')
+      return response
+    },
   )
+  window.webContents.once('did-finish-load', () => {
+    startup.mark('renderer-loaded')
+    // A fixed trusted renderer probe observes the ready UI without expanding the preload API.
+    void window.webContents.executeJavaScript(`new Promise(resolve => {
+      const deadline = performance.now() + 60000;
+      const check = () => {
+        if (document.documentElement.dataset.timelinePhase === 'ready') resolve(true);
+        else if (performance.now() >= deadline) resolve(false);
+        else setTimeout(check, 20);
+      }; check();
+    })`).then(ready => { if (ready) startup.mark('ui-ready') }).catch(() => {})
+  })
   if (storage.state === 'blocked') {
     if (options.notifyBlocked) options.notifyBlocked(storage)
     else

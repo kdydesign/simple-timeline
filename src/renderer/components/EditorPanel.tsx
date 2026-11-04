@@ -7,6 +7,7 @@ import type {
   ScheduleInput,
 } from "../../shared/types";
 import { inclusiveDays } from "../../domain/date";
+import { DatePicker } from "./DatePicker";
 import { trapTab } from "./ConfirmDialog";
 export function EditorPanel({
   editor,
@@ -186,21 +187,11 @@ export function EditorPanel({
                 </select>
               )}
               <label htmlFor="editor-startDate">시작일</label>
-              <input
-                id="editor-startDate"
-                placeholder="YYYY-MM-DD"
-                value={editor.draft.startDate}
-                {...invalid("startDate")}
-                onChange={(e) => patch({ startDate: e.target.value })}
-              />
+              <DatePicker id="editor-startDate" label="시작일" value={editor.draft.startDate}
+                invalid={error?.field === "startDate"} onChange={value => patch({ startDate: value })} />
               <label htmlFor="editor-endDate">종료일</label>
-              <input
-                id="editor-endDate"
-                placeholder="YYYY-MM-DD"
-                value={editor.draft.endDate}
-                {...invalid("endDate")}
-                onChange={(e) => patch({ endDate: e.target.value })}
-              />
+              <DatePicker id="editor-endDate" label="종료일" value={editor.draft.endDate}
+                invalid={error?.field === "endDate"} onChange={value => patch({ endDate: value })} />
               <p className="help">
                 YYYY-MM-DD · 시작일과 종료일을 모두 포함합니다.
               </p>

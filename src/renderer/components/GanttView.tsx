@@ -12,7 +12,7 @@ import type {
   TimelineSnapshot,
   YearMonth,
 } from "../../shared/types";
-import { fromOrdinal, inclusiveDays, toOrdinal } from "../../domain/date";
+import { fromOrdinal, inclusiveDays, toOrdinal, monthBounds } from "../../domain/date";
 import {
   ganttRange,
   ganttRect,
@@ -28,7 +28,12 @@ import {
 export interface GanttHandle {
   focusItem(key: string): boolean;
 }
-export interface GanttProps {
+import { useScheduleDrag, type DragActions } from "../state/useScheduleDrag";
+export interface GanttProps extends DragActions {
+  onAddDate?: (date: string, projectId?: string) => void;
+  collapsed?: string[];
+  onToggleProject?: (id:string) => void;
+  todayRequest?: {date:string;token:number} | null;
   snapshot: TimelineSnapshot;
   selectedMonth: YearMonth;
   onEditProject: (p: Project) => void;
@@ -38,6 +43,7 @@ export interface GanttProps {
   active?: boolean;
   ref?: Ref<GanttHandle>;
 }
+const EXPANDED: string[] = [];
 type Row = {
   key: string;
   project: Project;
@@ -47,6 +53,8 @@ type Row = {
 };
 export function GanttView({
   snapshot,
+  onAddDate, collapsed = EXPANDED, onToggleProject, todayRequest,
+  onDragStart, onDragCommit, onDragEnd,
   selectedMonth,
   onEditProject,
   onEditSchedule,
@@ -55,9 +63,16 @@ export function GanttView({
   active = true,
   ref,
 }: GanttProps) {
+  const [extension,setExtension] = useState<{start:number;end:number}|null>(null);
   const range = useMemo(
-      () => ganttRange(snapshot, selectedMonth),
-      [snapshot, selectedMonth],
+      () => {
+        const original = ganttRange(snapshot, selectedMonth);
+        const base = extension ? {start:fromOrdinal(Math.min(toOrdinal(original.start),extension.start)),end:fromOrdinal(Math.max(toOrdinal(original.end),extension.end))} : original;
+        if (!todayRequest) return base;
+        const b=monthBounds({year:Number(todayRequest.date.slice(0,4)), month:Number(todayRequest.date.slice(5,7))});
+        return {start:base.start < b.start ? base.start : b.start, end:base.end > b.end ? base.end : b.end};
+      },
+      [snapshot, selectedMonth, todayRequest, extension],
     ),
     index = useMemo(() => indexSnapshot(snapshot), [snapshot]);
   const rows = useMemo(
@@ -69,7 +84,7 @@ export function GanttView({
           label: index.projectLabel(p),
           height: 56,
         } as Row,
-        ...(index.byProject.get(p.id) ?? []).map((s) => ({
+        ...(collapsed.includes(p.id) ? [] : index.byProject.get(p.id) ?? []).map((s) => ({
           key: `schedule:${s.id}`,
           project: p,
           schedule: s,
@@ -77,7 +92,7 @@ export function GanttView({
           height: 44,
         })),
       ]),
-    [index],
+    [index, collapsed],
   );
   const prefix = useMemo(() => {
     const a = [0];
@@ -86,14 +101,16 @@ export function GanttView({
   }, [rows]);
   const scroller = useRef<HTMLDivElement>(null),
     dateArea = useRef<HTMLDivElement>(null);
-  const [size, setSize] = useState({ width: 1000, height: 440 }),
+  const [size, setSize] = useState({ width: 1000, height: 440, gutter: 0 }),
     [offset, setOffset] = useState(0),
     [top, setTop] = useState(0),
     [focused, setFocused] = useState<string | null>(null);
   const start = toOrdinal(range.start),
     days = inclusiveDays(range.start, range.end),
-    max = Math.max(0, days * P - size.width);
-  const x = Math.min(max, Math.max(0, offset)),
+    padding = todayRequest ? Math.max(0,(size.width-P)/2) : 0,
+    min = -padding,
+    max = Math.max(min, days * P - size.width + padding);
+  const x = Math.min(max, Math.max(min, offset)),
     monthKey = `${selectedMonth.year}-${selectedMonth.month}`;
   const previous = useRef<{
     start: number;
@@ -106,10 +123,11 @@ export function GanttView({
   useLayoutEffect(() => {
     const measure = () => {
       const w = dateArea.current?.clientWidth,
-        h = scroller.current?.clientHeight;
+        h = scroller.current?.clientHeight,
+        gutter = scroller.current ? scroller.current.offsetWidth-scroller.current.clientWidth : 0;
       if (w && h)
         setSize((v) =>
-          v.width === w && v.height === h ? v : { width: w, height: h },
+          v.width === w && v.height === h && v.gutter === gutter ? v : { width: w, height: h, gutter },
         );
     };
     measure();
@@ -131,7 +149,7 @@ export function GanttView({
     if (!old || old.monthKey !== monthKey)
       next = monthOffset(selectedMonth, range, size.width).offset;
     else if (old.start !== start)
-      next = Math.min(max, Math.max(0, (old.start - start) * P + old.x));
+      next = Math.min(max, Math.max(min, (old.start - start) * P + old.x));
     if (next !== offset) setOffset(next);
     if (old && old.rows !== rows && scroller.current) {
       const oldIndex = visibleRows(old.prefix, old.top, 1, 0).first,
@@ -176,8 +194,16 @@ export function GanttView({
     offset,
     x,
     max,
+    min,
     top,
   ]);
+  const appliedToday = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (todayRequest && active && appliedToday.current !== todayRequest.token) {
+      appliedToday.current = todayRequest.token;
+      setOffset(Math.max(min, Math.min(max, (toOrdinal(todayRequest.date)-start+0.5)*P-size.width/2)));
+    }
+  }, [todayRequest, active, start, min, max, size.width]);
   const reveal = (key: string) => {
     const i = rows.findIndex((r) => r.key === key);
     if (i < 0) return false;
@@ -197,7 +223,7 @@ export function GanttView({
     size.height,
   ]);
   const move = (n: number) => {
-    const next = Math.min(max, Math.max(0, n)),
+    const next = Math.min(max, Math.max(min, n)),
       activeElement = document.activeElement as HTMLElement | null;
     if (activeElement?.dataset.bar) {
       const row = rows.find(
@@ -226,9 +252,31 @@ export function GanttView({
       move(x + shifts[e.key]);
     } else if (e.key === "Home" || e.key === "End") {
       e.preventDefault();
-      move(e.key === "Home" ? 0 : max);
+      move(e.key === "Home" ? min : max);
     }
   };
+  const drag = useScheduleDrag({
+    enabled:active && !disabled, onDragStart, onDragCommit, onDragEnd,
+    reset:()=>setExtension(null),
+    dateAt:(clientX,clientY)=>{
+      const area=dateArea.current?.getBoundingClientRect(), body=scroller.current?.getBoundingClientRect();
+      if(!area || !body || clientX<area.left || clientX>=area.right || clientY<area.top || clientY>=body.bottom) return null;
+      const ordinal=start+Math.floor((clientX-area.left+x)/P);
+      return ordinal >= start && ordinal < start+days ? ordinal : null;
+    },
+    navigate:(clientX,clientY)=>{
+      const area=dateArea.current?.getBoundingClientRect(), body=scroller.current?.getBoundingClientRect();
+      if(!area || !body || clientY<area.top || clientY>body.bottom || clientX<area.left || clientX>area.right) return;
+      const direction=clientX<area.left+32 ? -1 : clientX>area.right-32 ? 1 : 0;
+      if(!direction)return;
+      if(direction<0 && x<=min+P && start>1) {
+        const next=Math.max(1,start-31);
+        setExtension(v=>({start:next,end:v?.end ?? start+days-1}));
+      } else if(direction>0 && x>=max-P && start+days-1<3652059) {
+        setExtension(v=>({start:v?.start ?? start,end:Math.min(3652059,start+days-1+31)}));
+      } else move(x+direction*P);
+    },
+  });
   const w = viewportWindow({
       logicalOffset: x,
       viewportSize: size.width,
@@ -259,7 +307,8 @@ export function GanttView({
   if (focusIndex >= 0) visible.add(focusIndex);
   const outside = monthOffset(selectedMonth, range, size.width).outside;
   return (
-    <section className="gantt" aria-label="간트" hidden={!active}>
+    <section onClickCapture={e=>{if(drag.consumeClick()){e.preventDefault();e.stopPropagation()}}} className="gantt" aria-label="간트" hidden={!active}>
+      {drag.preview && <div className="drag-preview" role="status">{drag.preview.startDate} — {drag.preview.endDate} · 놓아서 저장 · Esc 취소</div>}
       <div className="view-heading">
         <div>
           <h2>전체 일정</h2>
@@ -267,13 +316,7 @@ export function GanttView({
             {range.start} — {range.end}
           </p>
         </div>
-        <button
-          onClick={() =>
-            move(monthOffset(selectedMonth, range, size.width).offset)
-          }
-        >
-          선택 월로 이동
-        </button>
+
       </div>
       {outside && (
         <p className="range-notice" role="status">
@@ -284,7 +327,7 @@ export function GanttView({
         가로 이동: 좌우 하루, PageUp/PageDown 한 화면, Home/End 처음과 끝. 이름
         버튼에서 위아래 키로 모든 행 이동.
       </p>
-      <div className="gantt-heading">
+      <div className="gantt-heading" style={{paddingRight:size.gutter}}>
         <div className="gantt-name-heading">프로젝트 / 일정</div>
         <div className="gantt-date-heading" ref={dateArea}>
           {months
@@ -304,14 +347,18 @@ export function GanttView({
               </span>
             ))}
           {dates.map((d) => (
-            <span
+            <button
+              disabled={disabled}
+              tabIndex={d.i*P-x >= 0 && (d.i+1)*P-x <= size.width ? 0 : -1}
+              aria-label={`${d.date} 일정 추가`}
+              onClick={() => onAddDate?.(d.date)}
               className="day-tick"
               data-day={d.date}
               key={d.date}
               style={{ left: d.i * P - x, width: P }}
             >
               {Number(d.date.slice(8))}
-            </span>
+            </button>
           ))}
         </div>
       </div>
@@ -331,7 +378,8 @@ export function GanttView({
             .map((i) => {
               const r = rows[i],
                 s = r.schedule,
-                rect = s ? ganttRect(s, range) : null;
+                shown = s && drag.preview?.id === s.id ? {...s,...drag.preview} : s,
+                rect = shown ? ganttRect(shown, range) : null;
               const left = rect ? Math.max(rect.x, x) : 0,
                 right = rect
                   ? Math.min(rect.x + rect.width, x + size.width)
@@ -353,6 +401,8 @@ export function GanttView({
                   style={{ top: prefix[i], height: r.height }}
                 >
                   <div className="gantt-name">
+                    {!s && <button className="collapse-project" aria-label={`${r.label} ${collapsed.includes(r.project.id) ? "펼치기" : "접기"}`}
+                      aria-expanded={!collapsed.includes(r.project.id)} onClick={() => onToggleProject?.(r.project.id)}>{collapsed.includes(r.project.id) ? "▸" : "▾"}</button>}
                     <span
                       className="color-dot"
                       style={{ backgroundColor: r.project.color }}
@@ -411,6 +461,11 @@ export function GanttView({
                   </div>
                   <div
                     className="gantt-track"
+                    onClick={e => {
+                      if (disabled || (e.target as HTMLElement).closest("button")) return;
+                      const ordinal=start+Math.floor((e.clientX-e.currentTarget.getBoundingClientRect().left+x)/P);
+                      if (ordinal >= start && ordinal < start+days) onAddDate?.(fromOrdinal(ordinal), r.project.id);
+                    }}
                     style={{ backgroundPositionX: -x % P }}
                   >
                     {!s && !index.byProject.get(r.project.id)?.length && (
@@ -425,6 +480,7 @@ export function GanttView({
                         disabled={disabled}
                         aria-label={scheduleDescription(s, r.project)}
                         title={scheduleDescription(s, r.project)}
+                        onPointerDown={e=>drag.begin(e,s)}
                         onClick={() => onEditSchedule(s)}
                         style={{
                           left: left - x,
@@ -433,7 +489,9 @@ export function GanttView({
                           color: colorText(r.project.color),
                         }}
                       >
+                        {left === rect!.x && <span className="resize-handle start" data-resize="start" aria-hidden="true" onPointerDown={e=>drag.begin(e,s,"start")}/>}
                         {r.label}
+                        {right === rect!.x+rect!.width && <span className="resize-handle end" data-resize="end" aria-hidden="true" onPointerDown={e=>drag.begin(e,s,"end")}/>}
                       </button>
                     )}
                   </div>
@@ -452,12 +510,12 @@ export function GanttView({
           type="range"
           aria-label="간트 가로 이동"
           aria-describedby="gantt-help"
-          min={0}
+          min={min}
           max={max}
           step="any"
           value={x}
           onChange={(e) => move(Number(e.target.value))}
-          aria-valuetext={`${fromOrdinal(start + Math.floor(x / P))} — ${fromOrdinal(Math.min(start + days - 1, start + Math.floor((x + size.width - 1) / P)))}`}
+          aria-valuetext={`${fromOrdinal(Math.max(start, start + Math.floor(x / P)))} — ${fromOrdinal(Math.max(start, Math.min(start + days - 1, start + Math.floor((x + size.width - 1) / P))))}`}
         />
       </div>
     </section>

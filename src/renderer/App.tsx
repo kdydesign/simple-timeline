@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import type { TimelineApi } from "../shared/api";
-import type { ApiError, YearMonth, Result, Id } from "../shared/types";
+import type { ApiError, YearMonth, Result, Id, Schedule } from "../shared/types";
 import {
   normalizeName,
   normalizeColor,
@@ -10,6 +10,7 @@ import {
 import { parseBusinessDate, inclusiveDays, monthBounds } from "../domain/date";
 import { DomainValidationError } from "../domain/error";
 import { useTimeline } from "./state/useTimeline";
+import { usePreferences } from "./state/usePreferences";
 import { useEditor } from "./state/useEditor";
 import { Toolbar } from "./components/Toolbar";
 import { ProjectList } from "./components/ProjectList";
@@ -46,6 +47,18 @@ export function App({
     [mode, setMode] = useState<"gantt" | "calendar">("gantt"),
     [dayModalOpen, setDayModalOpen] = useState(false),
     [narrow, setNarrow] = useState(window.innerWidth < 1100);
+  const preferences = usePreferences();
+  const recentProject = useRef<string | null>(null);
+  const [todayRequest, setTodayRequest] = useState<{date:string;token:number} | null>(null);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = window.setTimeout(() => setNotice(""), 2000);
+    return () => window.clearTimeout(timer);
+  }, [notice]);
+  useEffect(() => {
+    if (editor.editor?.kind === "schedule") recentProject.current = editor.editor.draft.projectId;
+    else if (editor.editor?.id) recentProject.current = editor.editor.id;
+  }, [editor.editor]);
   const gantt = useRef<GanttHandle>(null);
   const focusTarget = useRef<string | null>(null),
     dialogCaller = useRef<HTMLElement | null>(null);
@@ -64,7 +77,8 @@ export function App({
   useLayoutEffect(() => {
     document.documentElement.dataset.editorDirty = String(editor.dirty);
     document.documentElement.dataset.saving = String(saving);
-  }, [editor.dirty, saving]);
+    document.documentElement.dataset.timelinePhase = timeline.phase;
+  }, [editor.dirty, saving, timeline.phase]);
   useEffect(() => {
     const prevent = (event: BeforeUnloadEvent) => {
       if (editor.dirty || saving) {
@@ -74,7 +88,7 @@ export function App({
     };
     window.addEventListener("beforeunload", prevent);
     return () => window.removeEventListener("beforeunload", prevent);
-  }, [editor.dirty, saving]);
+  }, [editor.dirty, saving, timeline.phase]);
   useEffect(() => {
     if (model?.saved && timeline.phase === "ready") editor.close();
   }, [model?.saved, timeline.phase]);
@@ -100,6 +114,11 @@ export function App({
       else document.querySelector<HTMLElement>("[data-focus=refresh]")?.focus();
     }
   }, [model]);
+  useEffect(() => {
+    if (timeline.phase !== "ready" || model?.kind !== "schedule" || !model.id || editor.dirty) return;
+    const current = timeline.snapshot?.schedules.find(s => s.id === model.id);
+    if (current) editor.syncSchedule(current);
+  }, [timeline.phase, timeline.snapshot, model?.id, model?.kind, editor.dirty]);
   const confirm = (value: Confirmation) => {
     dialogCaller.current = document.activeElement as HTMLElement;
     setConfirmation(value);
@@ -196,7 +215,7 @@ export function App({
           model.kind === "schedule" &&
           (model.draft.endDate < bounds.start ||
             model.draft.startDate > bounds.end);
-      setNotice(outside ? "저장됨 · 현재 월 표시 대상 아님" : "저장했습니다.");
+      setNotice(outside ? "저장됨 · 현재 월 표시 대상 아님" : `${model.kind === "project" ? "프로젝트를" : "일정을"} ${model.id ? "수정" : "추가"}했습니다.`);
       if (outside) focusTarget.current = "schedule-add";
       if (
         model.kind === "project" &&
@@ -247,11 +266,34 @@ export function App({
       },
     });
   }
+  const dragActions = {
+    onDragStart: () => {
+      if (!canEdit || confirmation) return false;
+      if (editor.dirty) {
+        setFormError({code:"VALIDATION_ERROR",message:"먼저 저장하거나 변경을 버려주세요."});
+        return false;
+      }
+      setNotice(""); return true;
+    },
+    onDragCommit: (schedule: Schedule, dates: {startDate:string;endDate:string}) => {
+      void (async () => {
+        const result=await timeline.mutate("updateSchedule",{id:schedule.id,name:schedule.name,...dates});
+        if(result.ok) { editor.syncSchedule(result.data); setNotice("일정을 변경했습니다."); }
+      })();
+    },
+  };
+  const addDate = (date: string, projectId?: string) => {
+    if (!canEdit) return;
+    const projects = timeline.snapshot?.projects ?? [];
+    const project = projects.find(p => p.id === (projectId ?? recentProject.current)) ?? projects[0];
+    if (!project) { setFormError({code:"VALIDATION_ERROR", message:"먼저 프로젝트를 추가해 주세요."}); return; }
+    request(caller => editor.openSchedule(month, project.id, undefined, caller, date));
+  };
   const statusView = (
     <StatusNotice
       phase={timeline.phase}
       error={formError ?? timeline.error}
-      notice={notice}
+      notice=""
       onRefresh={() => {
         setFormError(null);
         void timeline.refresh();
@@ -269,6 +311,12 @@ export function App({
           month={month}
           mode={mode}
           onMode={setMode}
+          theme={preferences.theme} onTheme={preferences.toggleTheme}
+          onToday={() => {
+            const d = new Date(), ym = {year:d.getFullYear(),month:d.getMonth()+1};
+            const date = `${monthBounds(ym).start.slice(0,8)}${String(d.getDate()).padStart(2,"0")}`;
+            setMonth(ym); setTodayRequest(v => ({date, token:(v?.token ?? 0)+1}));
+          }}
           onMonth={setMonth}
           onInvalid={() =>
             setFormError({
@@ -288,7 +336,7 @@ export function App({
             request((caller) =>
               editor.openSchedule(
                 month,
-                timeline.snapshot!.projects[0].id,
+                (timeline.snapshot!.projects.find(p => p.id === recentProject.current) ?? timeline.snapshot!.projects[0]).id,
                 undefined,
                 caller,
               ),
@@ -329,7 +377,10 @@ export function App({
                 </section>
               )}
               <GanttView
+                {...dragActions}
                 ref={gantt}
+                collapsed={preferences.collapsed} onToggleProject={preferences.toggleProject}
+                todayRequest={todayRequest} onAddDate={addDate}
                 active={mode === "gantt"}
                 snapshot={timeline.snapshot}
                 selectedMonth={month}
@@ -349,6 +400,8 @@ export function App({
                 }
               />
               <CalendarView
+                {...dragActions} onMonth={setMonth}
+                onAddDate={addDate}
                 snapshot={timeline.snapshot}
                 selectedMonth={month}
                 active={mode === "calendar"}
@@ -394,6 +447,7 @@ export function App({
           />
         )}
       </div>
+      <div className="toast" role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
       {confirmation && (
         <ConfirmDialog
           title={confirmation.title}

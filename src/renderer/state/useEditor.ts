@@ -44,6 +44,7 @@ export function useEditor() {
     projectId: string,
     schedule?: Schedule,
     caller: HTMLElement | null = document.activeElement as HTMLElement,
+    date?: string,
   ) => {
     const draft: ScheduleInput = schedule
       ? {
@@ -55,8 +56,8 @@ export function useEditor() {
       : {
           projectId,
           name: "",
-          startDate: monthBounds(ym).start,
-          endDate: monthBounds(ym).start,
+          startDate: date ?? monthBounds(ym).start,
+          endDate: date ?? monthBounds(ym).start,
         };
     setEditor({
       kind: "schedule",
@@ -76,6 +77,11 @@ export function useEditor() {
     openProject,
     openSchedule,
     patch,
+    syncSchedule: (schedule: Schedule) => setEditor(e => {
+      if (!e || e.kind !== "schedule" || e.id !== schedule.id || JSON.stringify(e.draft) !== JSON.stringify(e.original)) return e;
+      const draft = {projectId:schedule.projectId, name:schedule.name, startDate:schedule.startDate, endDate:schedule.endDate};
+      return {...e, draft, original:{...draft}};
+    }),
     close: () => setEditor(null),
     markSaved: () => setEditor((e) => (e ? { ...e, saved: true } : null)),
     dirty:

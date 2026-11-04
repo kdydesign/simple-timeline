@@ -4,6 +4,7 @@ directories:
   output: release
 files:
   - out/**/*
+  - resources/icon.png
   - package.json
 asar: true
 asarUnpack:
@@ -13,6 +14,7 @@ forceCodeSigning: false
 publish: null
 artifactName: SimpleTimeline-${version}-win-${arch}-${env.ST_SOURCE_SHA}.${ext}
 win:
+  icon: resources/icon.ico
   target:
     - target: nsis
       arch: [x64]
@@ -20,10 +22,15 @@ win:
   requestedExecutionLevel: asInvoker
   signExecutable: false
 nsis:
-  oneClick: true
+  installerIcon: resources/icon.ico
+  uninstallerIcon: resources/icon.ico
+  oneClick: false
   perMachine: false
+  allowElevation: false
+  installerLanguages: [ko_KR]
+  language: "1042"
   deleteAppDataOnUninstall: false
   packElevateHelper: false
-  runAfterFinish: false
+  runAfterFinish: true
   createDesktopShortcut: true
   createStartMenuShortcut: true

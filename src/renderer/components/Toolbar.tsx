@@ -15,7 +15,11 @@ export function Toolbar({
   projectsOpen,
   mode,
   onMode,
+  onToday, theme, onTheme,
 }: {
+  onToday?: () => void;
+  theme?: "light" | "dark";
+  onTheme?: () => void;
   month: YearMonth;
   onMonth: (m: YearMonth) => void;
   onInvalid: () => void;
@@ -91,9 +95,10 @@ export function Toolbar({
         >
           ›
         </button>
-        <button onClick={current}>현재 월</button>
+        <button onClick={onToday ?? current}>오늘</button>
       </nav>
       <div className="header-actions">
+        <button onClick={onTheme} aria-label={theme === "dark" ? "라이트 모드" : "다크 모드"}>{theme === "dark" ? "☀ 라이트" : "☾ 다크"}</button>
         <button aria-expanded={projectsOpen} onClick={onProjects}>
           프로젝트 목록
         </button>

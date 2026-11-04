@@ -144,7 +144,7 @@ it("does not leave a previous save-success announcement next to a new save failu
     name: "성공한 프로젝트 편집",
   });
   await waitFor(() => expect(edit).toHaveFocus());
-  expect(screen.getByRole("status")).toHaveTextContent("저장했습니다.");
+  expect(screen.getByRole("status")).toHaveTextContent("프로젝트를 추가했습니다.");
   m.api.updateProject = async () => ({
     ok: false,
     error: { code: "STORAGE_FULL", message: "새 저장 실패" },
@@ -153,5 +153,5 @@ it("does not leave a previous save-success announcement next to a new save failu
   await u.type(screen.getByLabelText("프로젝트 이름"), " 변경");
   await u.click(screen.getByRole("button", { name: "저장" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("새 저장 실패");
-  expect(screen.getByRole("status")).not.toHaveTextContent("저장했습니다.");
+  expect(screen.getByRole("status")).not.toHaveTextContent("프로젝트를 추가했습니다.");
 });

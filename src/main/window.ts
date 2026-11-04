@@ -1,9 +1,11 @@
 import { BrowserWindow } from 'electron'
-export function createWindow(preload: string, url: string): BrowserWindow {
+export function createWindow(preload: string, url: string, onShown?: () => void, icon?: string): BrowserWindow {
   const window = new BrowserWindow({
+    icon,
     width: 1280,
     height: 820,
     show: false,
+    backgroundColor: '#f4f6fa',
     title: 'Simple Timeline',
     webPreferences: {
       preload,
@@ -13,6 +15,7 @@ export function createWindow(preload: string, url: string): BrowserWindow {
       webviewTag: false,
     },
   })
+  window.once('show', () => onShown?.())
   window.setMenu(null)
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.webContents.on('will-navigate', (event, next) => {
@@ -28,6 +31,7 @@ export function createWindow(preload: string, url: string): BrowserWindow {
   void window
     .loadURL(url)
     .catch((error) => console.error('UI load failed', String(error)))
-  window.once('ready-to-show', () => window.show())
+  // Make the window visible independently of the first renderer/GPU paint.
+  window.show()
   return window
 }

@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import type { GanttProps } from "./GanttView";
-import { monthBounds } from "../../domain/date";
+import { monthBounds, toOrdinal, shiftMonth } from "../../domain/date";
 import {
   calendarGrid,
   calendarSegments,
@@ -13,17 +13,42 @@ import {
   scheduleDescription,
   colorText,
 } from "../../visualization/presentation";
+import type { YearMonth } from "../../shared/types";
+import { useScheduleDrag } from "../state/useScheduleDrag";
 import { DayScheduleList } from "./DayScheduleList";
 export function CalendarView({
   snapshot,
+  onAddDate, onDragStart, onDragCommit, onDragEnd, onMonth,
   selectedMonth,
   onEditSchedule,
   disabled = false,
   active = true,
   onModalChange,
-}: { onModalChange?: (open: boolean) => void } & Omit<GanttProps, "ref">) {
-  const [day, setDay] = useState<string | null>(null),
-    bounds = monthBounds(selectedMonth);
+}: { onModalChange?: (open: boolean) => void; onMonth?: (m:YearMonth)=>void } & Omit<GanttProps, "ref">) {
+  const [day, setDay] = useState<string | null>(null);
+  const root = useRef<HTMLElement>(null), hover = useRef<{direction:number;since:number}|null>(null);
+  const drag = useScheduleDrag({
+    enabled:active && !disabled && !day, onDragStart, onDragCommit, onDragEnd,
+    dateAt:(x,y)=>{
+      // Geometry alone includes cells clipped under the toolbar or sticky headings.
+      const hit=document.elementFromPoint(x,y);
+      const week=hit?.closest(".calendar-week");
+      if(!week || !root.current?.contains(week)) return null;
+      for(const el of week.querySelectorAll<HTMLElement>("[data-date]")) {
+        const r=el.getBoundingClientRect();
+        if(x>=r.left && x<r.right && y>=r.top && y<r.bottom)return toOrdinal(el.dataset.date!);
+      } return null;
+    },
+    navigate:(x,y,time)=>{
+      const hit=document.elementFromPoint(x,y)?.closest<HTMLButtonElement>("[data-drag-month]");
+      const direction=hit && root.current?.contains(hit) && !hit.disabled ? Number(hit.dataset.dragMonth) : 0;
+      if(!direction){hover.current=null;return}
+      if(hover.current?.direction!==direction){hover.current={direction,since:time};return}
+      if(time-hover.current.since>=650){const m=shiftMonth(selectedMonth,direction as -1|1);if(m)onMonth?.(m);hover.current={direction,since:time}}
+    },reset:()=>{hover.current=null},
+  });
+  const now = new Date(), today = `${String(now.getFullYear()).padStart(4,"0")}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
+  const bounds = monthBounds(selectedMonth);
   const grid = useMemo(() => calendarGrid(selectedMonth), [selectedMonth]),
     index = useMemo(() => indexSnapshot(snapshot), [snapshot]),
     projectMap = useMemo(
@@ -70,11 +95,16 @@ export function CalendarView({
     });
   };
   return (
-    <section className="calendar" aria-label="월간 달력" hidden={!active}>
+    <section ref={root} onClickCapture={e=>{if(drag.consumeClick()){e.preventDefault();e.stopPropagation()}}} className="calendar" aria-label="월간 달력" hidden={!active}>
+      {drag.preview && <div className="drag-preview" role="status">{drag.preview.startDate} — {drag.preview.endDate} · 놓아서 저장 · Esc 취소</div>}
       <div inert={!!day} aria-hidden={!!day}>
         <div className="view-heading">
           <h2>{bounds.start.slice(0, 7)} 월간 달력</h2>
           <span>월요일 시작 · 최대 3줄</span>
+          <div className="drag-month-navigation">
+            <button data-drag-month="-1" disabled={!shiftMonth(selectedMonth,-1)} onClick={()=>onMonth?.(shiftMonth(selectedMonth,-1)!)}>‹ 이전 달</button>
+            <button data-drag-month="1" disabled={!shiftMonth(selectedMonth,1)} onClick={()=>onMonth?.(shiftMonth(selectedMonth,1)!)}>다음 달 ›</button>
+          </div>
         </div>
         <div className="weekdays">
           {["월", "화", "수", "목", "금", "토", "일"].map((d) => (
@@ -88,16 +118,20 @@ export function CalendarView({
                 const inMonth =
                   date && date >= bounds.start && date <= bounds.end;
                 return (
-                  <div
+                  <button
+                    type="button"
+                    disabled={disabled || !date}
+                    aria-label={date ? `${date} 일정 추가` : "날짜 없음"}
+                    aria-current={date === today ? "date" : undefined}
+                    onClick={() => date && onAddDate?.(date)}
                     data-date={date ?? undefined}
                     className={inMonth ? "month-date" : "adjacent-date"}
                     key={c}
-                    aria-disabled={!inMonth}
                   >
                     <time dateTime={date ?? undefined}>
                       {date ? Number(date.slice(8)) : ""}
                     </time>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -122,11 +156,14 @@ export function CalendarView({
                       }}
                       aria-label={scheduleDescription(item, p)}
                       title={scheduleDescription(item, p)}
+                      onPointerDown={e=>drag.begin(e,item)}
                       onClick={() => onEditSchedule(item)}
                     >
+                      {!s.continuesLeft && <span className="resize-handle start" data-resize="start" aria-hidden="true" onPointerDown={e=>drag.begin(e,item,"start")}/>}
                       {s.continuesLeft && <span aria-hidden="true">‹ </span>}
                       {index.scheduleLabel(item)}
                       {s.continuesRight && <span aria-hidden="true"> ›</span>}
+                      {!s.continuesRight && <span className="resize-handle end" data-resize="end" aria-hidden="true" onPointerDown={e=>drag.begin(e,item,"end")}/>}
                     </button>
                   );
                 })}

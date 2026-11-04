@@ -31,11 +31,12 @@ void bootstrap({
   afterDispatch(method, result): Result<unknown> {
     if (
       (method === "createProject" ||
-        (method === "createSchedule" && fault?.startsWith("schedule-"))) &&
+        (method === "createSchedule" && fault?.startsWith("schedule-")) ||
+        (method === "updateSchedule" && fault?.startsWith("drag-"))) &&
       result.ok
     ) {
       changed = true;
-      if ((fault === "lost" || fault === "schedule-lost") && !injected) {
+      if ((fault === "lost" || fault === "schedule-lost" || fault === "drag-lost") && !injected) {
         injected = true;
         throw Error("Test response lost after commit");
       }
