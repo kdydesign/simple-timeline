@@ -1,5 +1,5 @@
- :root { color-scheme: light; --text:#1b2840; --page:#f4f6fa; --surface:#fff; --hover:#edf3ff; --border:#d8e1ee; --muted:#62738b; --subtle:#f3f6fb; --error-bg:#fff5f5; --warning-bg:#fff8e8; --warning-text:#795b20; }
-:root[data-theme="dark"] { color-scheme:dark; --text:#e5edf9; --page:#101722; --surface:#192333; --hover:#293b56; --border:#3d4b61; --muted:#b2bfd2; --subtle:#202e41; --error-bg:#421f2a; --warning-bg:#3b3220; --warning-text:#f3d18b; }
+ :root { color-scheme: light; --text:#1b2840; --page:#f4f6fa; --surface:#fff; --hover:#eef2f7; --today:#e8f0ff; --date-hover:#64748b14; --border:#d8e1ee; --muted:#62738b; --subtle:#f3f6fb; --error-bg:#fff5f5; --warning-bg:#fff8e8; --warning-text:#795b20; }
+:root[data-theme="dark"] { color-scheme:dark; --text:#e5edf9; --page:#101722; --surface:#192333; --hover:#2b3545; --today:#243b60; --date-hover:#b2bfd21a; --border:#3d4b61; --muted:#b2bfd2; --subtle:#202e41; --error-bg:#421f2a; --warning-bg:#3b3220; --warning-text:#f3d18b; }
 * {
   box-sizing: border-box;
 }
@@ -53,15 +53,15 @@ input[aria-invalid="true"] {
 header {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 12px;
   flex-wrap: wrap;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 20px 24px;
+  padding: 10px 16px;
 }
 .brand h1 {
-  font-size: 22px;
-  margin: 0 0 4px;
+  font-size: 18px;
+  margin: 0;
 }
 .brand span,
 .help {
@@ -109,12 +109,15 @@ nav input {
 }
 .workspace {
   display: flex;
-  min-height: calc(100vh - 110px);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 main {
   flex: 1;
   min-width: 0;
-  padding: 24px;
+  --workspace-padding: 16px;
+  padding: var(--workspace-padding);
   overflow: auto;
 }
 .project {
@@ -328,7 +331,7 @@ fieldset > select {
     gap: 16px;
   }
   main {
-    padding: 14px;
+    --workspace-padding: 14px;
   }
   .dates {
     width: 100%;
@@ -343,7 +346,7 @@ fieldset > select {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   min-width: 0;
 }
 .view-heading {
@@ -351,12 +354,12 @@ fieldset > select {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  padding: 16px 20px;
+  padding: 16px;
   flex-wrap: wrap;
 }
 .view-heading h2 {
   font-size: 18px;
-  margin: 0 0 5px;
+  margin: 0 0 4px;
 }
 .view-heading p {
   margin: 0;
@@ -389,7 +392,7 @@ fieldset > select {
   position: relative;
   flex: 1;
   min-width: 0;
-  overflow: hidden;
+  overflow: clip;
 }
 .month-tick,
 .day-tick {
@@ -410,7 +413,7 @@ fieldset > select {
   height: 30px;
   line-height: 30px;
   border-right: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 12px;
 }
 .gantt-body {
   height: clamp(180px, calc(100vh - 290px), 620px);
@@ -456,7 +459,7 @@ fieldset > select {
 }
 .gantt-name small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -674,14 +677,12 @@ button[aria-pressed="true"] {
 html, body, #root { height:100%; }
 #root { display:flex; flex-direction:column; overflow:hidden; }
 .app-shell { flex-shrink:0; z-index:10; }
-header { padding:10px 16px; gap:12px; }
-.brand h1 { font-size:18px; margin:0; }
 .brand span { display:none; }
-.workspace { flex:1; min-height:0; overflow:hidden; }
-main { padding:16px; }
 .editor { min-height:0; overflow-y:auto; }
-.gantt,.calendar { overflow:visible; }
-.gantt-heading,.weekdays { position:sticky; top:-16px; z-index:5; }
+.gantt-heading,.calendar-top { position:sticky; top:calc(-1 * var(--workspace-padding)); z-index:5; }
+.calendar-top { background:var(--surface); border-radius:10px 10px 0 0; }
+.calendar-top h2 { margin:0; }
+.calendar-top .view-heading > span { color:var(--muted); font-size:12px; }
 .schedule-row .gantt-name { padding-left:36px; }
 .collapse-project { padding:2px 4px; border:0; background:transparent; }
 .day-tick { padding:0; border-radius:0; background:transparent; color:var(--text); }
@@ -702,7 +703,7 @@ main { padding:16px; }
 .calendar-dates > button[aria-current="date"] time { background:#2563eb; color:white; border-radius:50%; padding:2px 5px; }
 .calendar-lanes,.calendar-more { pointer-events:none; }
 .calendar-lanes button,.calendar-more button { pointer-events:auto; }
-@media(max-width:700px) { header {padding:8px;gap:8px;} .gantt-heading,.weekdays {top:-14px;} }
+@media(max-width:700px) { header {padding:8px;gap:8px;} }
 
 .gantt-bar,.calendar-bar { touch-action:none; user-select:none; padding-left:9px; padding-right:9px; }
 .calendar-bar { position:relative; }
@@ -711,3 +712,19 @@ main { padding:16px; }
 .resize-handle.end {right:0;}
 .drag-preview { position:fixed; bottom:20px; left:20px; padding:10px 14px; border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:8px; z-index:45; pointer-events:none; }
 .drag-month-navigation {display:flex;gap:6px;}
+
+/* Date emphasis sits beneath schedule bars and never consumes input. */
+.date-highlight { position:absolute; top:0; bottom:0; pointer-events:none; }
+.date-highlight.today { background:var(--today); border-inline:1px solid var(--border); }
+.date-highlight.hovered { background:var(--date-hover); }
+/* Neutralize native button hover here: one tint also covers pointer-over-bar. */
+.day-tick, .day-tick:hover:enabled { background:var(--date-base, transparent); }
+.calendar-dates > button, .calendar-dates > button:hover:enabled { background:var(--date-base, var(--surface)); }
+.calendar-dates > button.adjacent-date { --date-base:var(--subtle); }
+.day-tick[aria-current="date"], .calendar-dates > button[aria-current="date"] { --date-base:var(--today); }
+.day-tick[aria-current="date"] { font-weight:700; }
+.day-tick.date-hovered, .calendar-dates > button.date-hovered { box-shadow:inset 0 0 0 1000px var(--date-hover); }
+.project-row .text-button { font-weight:600; }
+.gantt-name .project-meta { display:flex; align-items:center; gap:8px; }
+.project-meta > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.gantt-name .empty-row { padding:0; flex-shrink:0; }

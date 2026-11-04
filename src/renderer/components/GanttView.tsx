@@ -1,5 +1,6 @@
 import {
   useMemo,
+  useEffect,
   useState,
   useRef,
   useLayoutEffect,
@@ -63,6 +64,11 @@ export function GanttView({
   active = true,
   ref,
 }: GanttProps) {
+  const root = useRef<HTMLElement>(null);
+  const now = new Date();
+  const today = `${String(now.getFullYear()).padStart(4, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const todayOrdinal = toOrdinal(today);
+  const [hoveredDate, setHoveredDate] = useState<number | null>(null);
   const [extension,setExtension] = useState<{start:number;end:number}|null>(null);
   const range = useMemo(
       () => {
@@ -112,6 +118,16 @@ export function GanttView({
     max = Math.max(min, days * P - size.width + padding);
   const x = Math.min(max, Math.max(min, offset)),
     monthKey = `${selectedMonth.year}-${selectedMonth.month}`;
+  useEffect(() => { setHoveredDate(null); }, [x, start, active]);
+  useEffect(() => {
+    const main = root.current?.closest("main");
+    const clear = (event: Event) => {
+      if (event.target === main || event.target === scroller.current) setHoveredDate(null);
+    };
+    // Includes scrolling the virtual rows or the surrounding workspace.
+    main?.addEventListener("scroll", clear, true);
+    return () => main?.removeEventListener("scroll", clear, true);
+  }, []);
   const previous = useRef<{
     start: number;
     x: number;
@@ -307,7 +323,15 @@ export function GanttView({
   if (focusIndex >= 0) visible.add(focusIndex);
   const outside = monthOffset(selectedMonth, range, size.width).outside;
   return (
-    <section onClickCapture={e=>{if(drag.consumeClick()){e.preventDefault();e.stopPropagation()}}} className="gantt" aria-label="간트" hidden={!active}>
+    <section ref={root} onClickCapture={e=>{if(drag.consumeClick()){e.preventDefault();e.stopPropagation()}}} className="gantt"
+      onPointerMove={e => {
+        const target = (e.target as HTMLElement).closest(".gantt-track, .day-tick");
+        const area = dateArea.current?.getBoundingClientRect();
+        const ordinal = target && area ? start + Math.floor((e.clientX - area.left + x) / P) : null;
+        setHoveredDate(ordinal !== null && ordinal >= start && ordinal < start + days ? ordinal : null);
+      }}
+      onPointerLeave={() => setHoveredDate(null)}
+      aria-label="간트" hidden={!active}>
       {drag.preview && <div className="drag-preview" role="status">{drag.preview.startDate} — {drag.preview.endDate} · 놓아서 저장 · Esc 취소</div>}
       <div className="view-heading">
         <div>
@@ -352,7 +376,8 @@ export function GanttView({
               tabIndex={d.i*P-x >= 0 && (d.i+1)*P-x <= size.width ? 0 : -1}
               aria-label={`${d.date} 일정 추가`}
               onClick={() => onAddDate?.(d.date)}
-              className="day-tick"
+              aria-current={d.date === today ? "date" : undefined}
+              className={"day-tick" + (hoveredDate === start + d.i ? " date-hovered" : "")}
               data-day={d.date}
               key={d.date}
               style={{ left: d.i * P - x, width: P }}
@@ -440,11 +465,12 @@ export function GanttView({
                       >
                         {r.label}
                       </button>
-                      <small>
-                        {s
-                          ? `${s.startDate} — ${s.endDate}`
-                          : r.project.participants.join(" · ") || "참여자 없음"}
-                      </small>
+                      {s ? <small>{s.startDate} — {s.endDate}</small> : (
+                        <small className="project-meta">
+                          <span title={r.project.participants.join(" · ") || "참여자 없음"}>{r.project.participants.join(" · ") || "참여자 없음"}</span>
+                          {!index.byProject.get(r.project.id)?.length && <span className="empty-row">일정 없음</span>}
+                        </small>
+                      )}
                     </div>
                     {!s && (
                       <button
@@ -468,8 +494,11 @@ export function GanttView({
                     }}
                     style={{ backgroundPositionX: -x % P }}
                   >
-                    {!s && !index.byProject.get(r.project.id)?.length && (
-                      <span className="empty-row">일정 없음</span>
+                    {todayOrdinal >= start && todayOrdinal < start + days && (
+                      <span aria-hidden="true" className="date-highlight today" style={{ left: (todayOrdinal - start) * P - x, width: P }} />
+                    )}
+                    {hoveredDate !== null && (
+                      <span aria-hidden="true" className="date-highlight hovered" style={{ left: (hoveredDate - start) * P - x, width: P }} />
                     )}
                     {s && right > left && (
                       <button

@@ -76,7 +76,6 @@ export function Toolbar({
           ‹
         </button>
         <label>
-          선택 연월
           <input
             aria-label="선택 연월"
             value={text}

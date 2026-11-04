@@ -25,8 +25,16 @@ export function CalendarView({
   active = true,
   onModalChange,
 }: { onModalChange?: (open: boolean) => void; onMonth?: (m:YearMonth)=>void } & Omit<GanttProps, "ref">) {
+  const [hoveredDate, setHoveredDate] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const root = useRef<HTMLElement>(null), hover = useRef<{direction:number;since:number}|null>(null);
+  useEffect(() => { setHoveredDate(null); }, [selectedMonth.year, selectedMonth.month, active]);
+  useEffect(() => {
+    const main = root.current?.closest("main");
+    const clear = (event: Event) => { if (event.target === main) setHoveredDate(null); };
+    main?.addEventListener("scroll", clear, true);
+    return () => main?.removeEventListener("scroll", clear, true);
+  }, []);
   const drag = useScheduleDrag({
     enabled:active && !disabled && !day, onDragStart, onDragCommit, onDragEnd,
     dateAt:(x,y)=>{
@@ -95,9 +103,21 @@ export function CalendarView({
     });
   };
   return (
-    <section ref={root} onClickCapture={e=>{if(drag.consumeClick()){e.preventDefault();e.stopPropagation()}}} className="calendar" aria-label="월간 달력" hidden={!active}>
+    <section ref={root} onClickCapture={e=>{if(drag.consumeClick()){e.preventDefault();e.stopPropagation()}}} className="calendar"
+      onPointerMove={e => {
+        const week = (e.target as HTMLElement).closest(".calendar-week");
+        const cells = week?.querySelectorAll<HTMLElement>("[data-date]");
+        const cell = cells && Array.from(cells).find(el => {
+          const bounds = el.getBoundingClientRect();
+          return e.clientX >= bounds.left && e.clientX < bounds.right;
+        });
+        setHoveredDate(cell?.dataset.date ?? null);
+      }}
+      onPointerLeave={() => setHoveredDate(null)}
+      aria-label="월간 달력" hidden={!active}>
       {drag.preview && <div className="drag-preview" role="status">{drag.preview.startDate} — {drag.preview.endDate} · 놓아서 저장 · Esc 취소</div>}
       <div inert={!!day} aria-hidden={!!day}>
+        <div className="calendar-top">
         <div className="view-heading">
           <h2>{bounds.start.slice(0, 7)} 월간 달력</h2>
           <span>월요일 시작 · 최대 3줄</span>
@@ -110,6 +130,7 @@ export function CalendarView({
           {["월", "화", "수", "목", "금", "토", "일"].map((d) => (
             <span key={d}>{d}</span>
           ))}
+        </div>
         </div>
         {grid.weeks.map((week, wi) => (
           <div className="calendar-week" key={wi}>
@@ -125,7 +146,7 @@ export function CalendarView({
                     aria-current={date === today ? "date" : undefined}
                     onClick={() => date && onAddDate?.(date)}
                     data-date={date ?? undefined}
-                    className={inMonth ? "month-date" : "adjacent-date"}
+                    className={(inMonth ? "month-date" : "adjacent-date") + (date && date === hoveredDate ? " date-hovered" : "")}
                     key={c}
                   >
                     <time dateTime={date ?? undefined}>
