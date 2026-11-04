@@ -1,0 +1,57 @@
+{
+  "skill": "grilling",
+  "repository": "https://github.com/mattpocock/skills",
+  "upstream_ref": "main",
+  "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+  "upstream_directory": "skills/productivity/grilling",
+  "retrieved_on": "2026-11-04",
+  "license": {
+    "spdx": "MIT",
+    "source_path": "LICENSE",
+    "local_path": "LICENSE"
+  },
+  "files": [
+    {
+      "source_path": "skills/productivity/grilling/SKILL.md",
+      "local_path": "SKILL.md",
+      "git_blob_sha1": "d2f09a18e6a6c65c55f1271ba08dfeaf06f0bed3",
+      "bytes": 2077,
+      "mode": "100644",
+      "sha256": "a146842ed93ca43d833550fa9adf02e58cb63c83fea9d4b4522995b82242d4e2"
+    },
+    {
+      "source_path": "skills/productivity/grilling/agents/openai.yaml",
+      "local_path": "agents/openai.yaml",
+      "git_blob_sha1": "ddbdb96139c0c1dfe6bca698f39d0465674b8a39",
+      "bytes": 113,
+      "mode": "100644",
+      "sha256": "1411d7df7d99b7e621a1ff8283c8133cc2464be63d064e52d8ce169c6800ee9b"
+    },
+    {
+      "source_path": "LICENSE",
+      "local_path": "LICENSE",
+      "git_blob_sha1": "f1dd2c09108dde1a5f56097cee8461b3ea834499",
+      "bytes": 1068,
+      "mode": "100644",
+      "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+    }
+  ],
+  "required_skills": [],
+  "review": {
+    "scripts_present": false,
+    "additional_reference_files_present": false,
+    "upstream_instructions_modified": false,
+    "interview_started": false,
+    "runtime_skill_dispatch_verified": false,
+    "existing_project_name_or_path_conflicts": [],
+    "related_plugin_skill": {
+      "name": "engineering-suite-wayfinder:grilling",
+      "source": "skill://plugins_6aa2fbfa71748191b96d8c4ffa873044/grilling/SKILL.md",
+      "overwritten": false,
+      "differences": [
+        "Plugin grilling has disable-model-invocation: true; Matt Pocock grilling does not.",
+        "Matt Pocock grilling adds yes-accepts-recommendation wording and explicitly requests a fresh sub-agent context window."
+      ]
+    }
+  }
+}

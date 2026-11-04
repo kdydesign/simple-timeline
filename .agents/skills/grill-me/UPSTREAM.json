@@ -1,0 +1,59 @@
+{
+  "skill": "grill-me",
+  "repository": "https://github.com/mattpocock/skills",
+  "upstream_ref": "main",
+  "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+  "upstream_directory": "skills/productivity/grill-me",
+  "retrieved_on": "2026-11-04",
+  "license": {
+    "spdx": "MIT",
+    "source_path": "LICENSE",
+    "local_path": "LICENSE"
+  },
+  "files": [
+    {
+      "source_path": "skills/productivity/grill-me/SKILL.md",
+      "local_path": "SKILL.md",
+      "git_blob_sha1": "3947ff9c4ad980d14fc07fccbf659d47c114e81d",
+      "bytes": 157,
+      "mode": "100644",
+      "sha256": "caaf8b8de1684f96e26b28f3c29189db5c89cce4b73e1c93d86164f66ef88637"
+    },
+    {
+      "source_path": "skills/productivity/grill-me/agents/openai.yaml",
+      "local_path": "agents/openai.yaml",
+      "git_blob_sha1": "4d6fb0c746c5d21364dce5d0cf8c51eab9712e7b",
+      "bytes": 137,
+      "mode": "100644",
+      "sha256": "c061e39c3e0f9d865fb1b97556d485704af2a8a58f4b8221a8917a5c2074a32b"
+    },
+    {
+      "source_path": "LICENSE",
+      "local_path": "LICENSE",
+      "git_blob_sha1": "f1dd2c09108dde1a5f56097cee8461b3ea834499",
+      "bytes": 1068,
+      "mode": "100644",
+      "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+    }
+  ],
+  "required_skills": [
+    "grilling"
+  ],
+  "review": {
+    "scripts_present": false,
+    "additional_reference_files_present": false,
+    "upstream_instructions_modified": false,
+    "interview_started": false,
+    "runtime_skill_dispatch_verified": false,
+    "existing_project_name_or_path_conflicts": [],
+    "related_plugin_skill": {
+      "name": "engineering-suite-wayfinder:grilling",
+      "source": "skill://plugins_6aa2fbfa71748191b96d8c4ffa873044/grilling/SKILL.md",
+      "overwritten": false,
+      "differences": [
+        "Plugin grilling has disable-model-invocation: true; Matt Pocock grilling does not.",
+        "Matt Pocock grilling adds yes-accepts-recommendation wording and explicitly requests a fresh sub-agent context window."
+      ]
+    }
+  }
+}
