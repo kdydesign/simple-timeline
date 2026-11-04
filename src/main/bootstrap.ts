@@ -1,7 +1,7 @@
 /// <reference types="electron-vite/node" />
 import { app, dialog } from 'electron'
 import icon from '../../resources/icon.png?asset'
-import { startupRecorder } from './startup'
+import { startupRecorder, rendererStartupProbe, observeStartupRequests } from './startup'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -65,11 +65,13 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         devUrl: process.env.ELECTRON_RENDERER_URL,
       },
     )
+  let stopRequestObservation = () => {}
   const window = createWindow(
     options.preloadPath ?? join(__dirname, '../preload/index.cjs'),
     rendererUrl,
     () => startup.mark('window-shown'),
     icon,
+    { mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
   const unregister = registerTimelineIpc(
     window,
@@ -83,6 +85,8 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   )
   window.webContents.once('did-finish-load', () => {
     startup.mark('renderer-loaded')
+    void window.webContents.executeJavaScript(rendererStartupProbe)
+      .then(timing => startup.renderer(timing)).catch(() => {}).finally(() => stopRequestObservation())
     // A fixed trusted renderer probe observes the ready UI without expanding the preload API.
     void window.webContents.executeJavaScript(`new Promise(resolve => {
       const deadline = performance.now() + 60000;

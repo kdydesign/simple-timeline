@@ -72,3 +72,47 @@ Ubuntu 검사는 통과했고 Windows의 편집 패널과 배경을 함께 조�
 - 해당 커밋의 Windows CI 설치 artifact로 완료 화면·체크/해제 실행·B 아이콘·업데이트 데이터 보존 확인.
 - 사용자 Windows PC의 정상 재실행 시간과 `startup-latest.json` 비교. 최초/복구/마이그레이션 별도 기록.
 - 기존 MVP 인수 기록은 소급 변경하지 않는다. 이번 새 기능은 [사용 안내](../release/user-guide.md)를 기준으로 확인한다.
+
+
+## 시작 지연 후속 진단 (0.2.1)
+
+사용자 PC의 0.2.0 반복 실행 기록(2026-11-04 UTC):
+
+| 단계(ms, Node uptime 기준) | 일반 실행 05:47 | `--disable-gpu` 실행 05:52 |
+| --- | ---: | ---: |
+| bootstrap | 49 | 31 |
+| app-ready | 123 | 85 |
+| storage-ready | 132 | 91 |
+| window-shown | 315 | 205 |
+| renderer-loaded | 16,645 | 19,432 |
+| snapshot-served | 16,701 | 19,474 |
+| ui-ready | 16,739 | 19,506 |
+
+사용자 관측은 창까지 약 20초, 검은 화면 뒤 UI까지 추가 약 20초였다. show 이벤트는 실제 모니터 표시를 보장하지
+않으며 위 uptime은 시작 메뉴 클릭부터의 전체 시간과 다르다. DB 준비는 9ms/6ms, 로딩 이후 snapshot·UI는
+94ms/74ms로 측정됐다. GPU 비활성의 개선 근거가 없어 기본 하드웨어 가속 설정을 유지한다.
+로컬 Linux 격리 프로필에서 일반/GPU-off 각 3회 실행은 전체 540~833ms였고 사용자 지연은 재현되지 않았다.
+
+0.2.1은 원인 분리를 위한 **진단 보강판**이며 성능 수정 완료판이 아니다.
+기존 파일에 schemaVersion 2로 생성·로드 요청·DOM 준비·첫 paint 준비와 로딩 실패 코드를 추가한다.
+`requests`는 main의 초기 파일 요청 종류와 시작/완료 시간, `renderer`는 별도의 navigation 기준 시간·module 준비·
+first-paint/first-contentful-paint를 기록한다. 시계가 다른 값은 직접 빼지 않는다. schema 1의 process-start 표현을
+schema 2에서 실제 `process.uptime()`에 맞게 node-start로 명확히 했다.
+
+Electron의 file:// Performance Resource Timing 목록이 비어 있는 것을 실제 프로세스에서 확인해 main webRequest로
+보완했다. 이 앱에는 기존 webRequest 정책 listener가 없으며 관찰 종료·창 종료·60초 한도에서 listener를 해제한다.
+향후 요청 정책을 추가할 때는 Electron의 이벤트당 단일 listener 제약에 맞춰 통합해야 한다.
+파일명·URL·로컬 경로·일정 내용·오류 문구는 수집하지 않고 원격으로 전송하지 않는다. preload의 8개 API와 DB는 유지한다.
+
+다음 확인: 0.2.1을 **옵션 없이** 정상 실행한 뒤 같은 startup-latest.json과 체감 시간을 비교한다.
+파일 요청 자체가 느린지, 요청 전 renderer 시작인지, module 평가/paint인지 확인한 뒤 해당 원인만 수정한다.
+
+
+통합 검사에서 JSON 재기록 중 읽기가 빈 파일을 보는 현상을 재현했다. 지연 쓰기를 강제로 주입하는 회귀 검사에서
+같은 실패를 확인한 뒤 `.partial`에 완전히 쓴 후 rename하도록 보정했다. 기존 단계별 순차 기록과 쓰기 실패 격리는 유지한다.
+독립 리뷰에서 중요한 구현 결함은 발견되지 않았다. 첫 쓰기 reject·renderer crash·blocked·관찰 중 종료에 대한
+진단 전용 강제 주입 검사는 남아 있으며, 해당 분기의 코드 검토와 기존 앱 회귀 검사를 별도로 구분한다.
+
+최종 로컬 검증: Linux x64 / Node24.22.1 / Electron45.2.1, 일회성 프로필에서 verify:app 7단계 통과.
+배포14, unit38×3시간대, UI34, native13, E2E35개 통과. 하네스7개 검사·22개 회귀 통과.
+Windows CI 결과·배포 소스 SHA는 완료 메시지에서 확인하며, 사용자 PC의 성능 목표 달성은 여전히 미검증이다.

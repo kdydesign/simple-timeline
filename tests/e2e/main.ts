@@ -1,6 +1,7 @@
 import { app } from "electron";
 import { resolve, relative, isAbsolute, dirname, join } from "node:path";
 import { writeFileSync } from "node:fs";
+import { pathToFileURL } from 'node:url';
 import { tmpdir } from "node:os";
 import { bootstrap } from "../../src/main/bootstrap";
 import { hotfix, schedule, project, overlaps } from "../fixtures/timeline";
@@ -20,6 +21,7 @@ let changed = false,
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT;
 void bootstrap({
   profileDir: profile,
+  rendererUrl: fault === "missing-renderer" ? pathToFileURL(join(profile, "missing.html")).href : undefined,
   notifyBlocked(storage) {
     if (fault === "startup" && storage.state === "blocked")
       writeFileSync(
