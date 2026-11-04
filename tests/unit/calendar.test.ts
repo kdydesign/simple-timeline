@@ -5,6 +5,7 @@ import {
   calendarSegments,
   placeWeek,
   hiddenCount,
+  hiddenCountsForWeek,
   schedulesOnDate,
 } from "../../src/visualization/calendar";
 it("builds Monday grids with only necessary weeks and no unsupported years", () => {
@@ -128,4 +129,17 @@ it("reuses the lowest free lane and compares large numeric IDs correctly", () =>
       (s) => s.scheduleId,
     ),
   ).toEqual(["9007199254740992", "9007199254740993"]);
+});
+
+it("counts hidden schedules independently for seven columns without counting duplicate IDs twice", () => {
+  const base = calendarSegments([schedule("1", "1", "2026-12-14", "2026-12-16")], { year: 2026, month: 12 })[0];
+  const placed = [
+    { ...base, lane: 3 },
+    { ...base, lane: 4 },
+    { ...base, scheduleId: "2", column: 2, span: 2, lane: 5 },
+    { ...base, scheduleId: "3", column: 6, span: 1, lane: 3 },
+    { ...base, scheduleId: "4", lane: 0 },
+  ];
+  expect(hiddenCountsForWeek(placed)).toEqual([1, 1, 2, 1, 0, 0, 1]);
+  expect(hiddenCountsForWeek([])).toEqual([0, 0, 0, 0, 0, 0, 0]);
 });

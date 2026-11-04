@@ -5,7 +5,7 @@ import {
   calendarGrid,
   calendarSegments,
   placeWeek,
-  hiddenCount,
+  hiddenCountsForWeek,
   schedulesOnDate,
 } from "../../visualization/calendar";
 import {
@@ -46,6 +46,11 @@ export function CalendarView({
       placeWeek(grouped.get(w.find(Boolean)!) ?? []),
     );
   }, [snapshot, selectedMonth, grid]);
+  const hiddenCounts = useMemo(() => weeks.map(hiddenCountsForWeek), [weeks]);
+  const daySchedules = useMemo(
+    () => day ? schedulesOnDate(snapshot, day) : [],
+    [snapshot, day],
+  );
   useEffect(() => {
     if (!active) setDay(null);
   }, [active]);
@@ -130,7 +135,7 @@ export function CalendarView({
               {week.map((date, c) => {
                 const count =
                   date && date >= bounds.start && date <= bounds.end
-                    ? hiddenCount(weeks[wi], date)
+                    ? hiddenCounts[wi][c]
                     : 0;
                 return (
                   <div key={c}>
@@ -156,7 +161,7 @@ export function CalendarView({
       {day && active && (
         <DayScheduleList
           date={day}
-          schedules={schedulesOnDate(snapshot, day)}
+          schedules={daySchedules}
           projects={snapshot.projects}
           disabled={disabled}
           onClose={close}

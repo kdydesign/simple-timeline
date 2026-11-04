@@ -119,6 +119,20 @@ export function placeWeek(segments: readonly Segment[]): PlacedSegment[] {
   }
   return result;
 }
+// The input is one placed week. Count each ID once per column, including overlapping duplicate segments.
+export function hiddenCountsForWeek(placed: readonly PlacedSegment[]): number[] {
+  const hidden = Array.from({ length: 7 }, () => new Set<string>());
+  for (const segment of placed) {
+    if (segment.lane < 3) continue;
+    for (
+      let column = segment.column;
+      column < segment.column + segment.span;
+      column++
+    )
+      hidden[column].add(segment.scheduleId);
+  }
+  return hidden.map((ids) => ids.size);
+}
 export function hiddenCount(
   placed: readonly PlacedSegment[],
   date: string,

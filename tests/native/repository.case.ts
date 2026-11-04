@@ -1,7 +1,32 @@
+import Database from 'better-sqlite3'
+import { createSchema } from '../../src/main/db/schema'
 import assert from 'node:assert/strict'
 import { setup, type NativeCase } from './helpers'
 import { createRepository, openDatabase } from '../../src/main/db/repository'
 export const cases: NativeCase[] = [
+  {
+    name: 'reads a snapshot with bounded queries while preserving participant order and empty projects',
+    run(ctx) {
+      const queries: string[] = []
+      const db = new Database(':memory:', { verbose: (sql) => queries.push(String(sql)) })
+      ctx.defer(() => db.close())
+      db.defaultSafeIntegers(true)
+      createSchema(db)
+      const repo = createRepository(db)
+      for (let i = 0; i < 200; i++)
+        repo.createProject({ name: `P${i}`, color: '#2563EB', participants: i % 2 ? [] : ['Z', 'A'] })
+      queries.length = 0
+      const snapshot = repo.getSnapshot()
+      assert.equal(snapshot.projects.length, 200)
+      assert.deepEqual(snapshot.projects[0].participants, ['Z', 'A'])
+      assert.deepEqual(snapshot.projects[1].participants, [])
+      assert.deepEqual(snapshot.schedules, [])
+      const reads = queries.filter((sql) => /^SELECT/i.test(sql))
+      assert.ok(reads.length <= 3, `snapshot issued ${reads.length} SELECTs for 200 projects`)
+      repo.updateProject({ ...snapshot.projects[0], participants: ['B'] })
+      assert.deepEqual(repo.getSnapshot().projects[0].participants, ['B'])
+    },
+  },
   {
     name: 'normalizes participants, allows duplicate names and preserves numeric ID order',
     run(ctx) {

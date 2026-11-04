@@ -13,6 +13,7 @@ Windows Server CI의 설치·오프라인·업데이트·제거 후 보존은 �
 프로젝트 설정과 실행 명령: [Codex 하네스](../harness/README.md).
 새 세션은 루트 [AGENTS.md](../../AGENTS.md)에서 시작한다.
 초기 하네스 설정의 기록: [설정 인수인계](handoffs/00-harness.md).
+MVP 이후 성능·코드 보정: [리팩토링 실행 기록](../implementation/2026-11-04-refactoring.md).
 현재 운영 문서·검증의 점검 결과: [하네스 재점검 기록](../harness/review.md).
 
 | 스테이지 | 이름 | 상태 |

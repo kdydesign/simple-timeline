@@ -55,11 +55,11 @@ export function createRepository(
         )
         .all(BigInt(id)) as Row[]
     ).map((r) => String(r.name))
-  const projectDto = (r: Row): Project => ({
+  const projectDto = (r: Row, names: string[]): Project => ({
     id: String(r.id),
     name: String(r.name),
     color: String(r.color),
-    participants: participants(String(r.id)),
+    participants: names,
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
   })
@@ -77,7 +77,7 @@ export function createRepository(
       .prepare('SELECT * FROM projects WHERE id=?')
       .get(BigInt(validateId(id))) as Row | undefined
     if (!r) throw new RepositoryError()
-    return projectDto(r)
+    return projectDto(r, participants(String(r.id)))
   }
   const getSchedule = (id: string): Schedule => {
     const r = db
@@ -106,19 +106,30 @@ export function createRepository(
     inclusiveDays(startDate, endDate)
     return { name: normalizeName(v.name), startDate, endDate }
   }
+  // Keep all three reads in one transaction; participant queries must not grow with project count.
+  const snapshotProjects = db.prepare('SELECT * FROM projects ORDER BY id')
+  const snapshotParticipants = db.prepare(
+    'SELECT project_id,name FROM project_participants ORDER BY project_id,position',
+  )
+  const snapshotSchedules = db.prepare(
+    'SELECT * FROM schedules ORDER BY project_id,start_date,end_date,id',
+  )
   return {
-    getSnapshot: db.transaction(() => ({
-      projects: (
-        db.prepare('SELECT * FROM projects ORDER BY id').all() as Row[]
-      ).map(projectDto),
-      schedules: (
-        db
-          .prepare(
-            'SELECT * FROM schedules ORDER BY project_id,start_date,end_date,id',
-          )
-          .all() as Row[]
-      ).map(scheduleDto),
-    })),
+    getSnapshot: db.transaction(() => {
+      const names = new Map<string, string[]>()
+      for (const row of snapshotParticipants.all() as Row[]) {
+        const id = String(row.project_id)
+        const list = names.get(id) ?? []
+        list.push(String(row.name))
+        names.set(id, list)
+      }
+      return {
+        projects: (snapshotProjects.all() as Row[]).map((row) =>
+          projectDto(row, names.get(String(row.id)) ?? []),
+        ),
+        schedules: (snapshotSchedules.all() as Row[]).map(scheduleDto),
+      }
+    }),
     createProject: db.transaction((input: ProjectInput) => {
       const v = projectValues(input),
         now = clock()
