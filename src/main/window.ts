@@ -5,6 +5,7 @@ export function createWindow(preload: string, url: string, onShown?: () => void,
     width: 1280,
     height: 820,
     show: false,
+    frame: false,
     backgroundColor: '#f4f6fa',
     title: 'Simple Timeline',
     webPreferences: {

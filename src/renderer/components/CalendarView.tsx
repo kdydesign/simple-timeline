@@ -1,3 +1,4 @@
+import {IconButton} from './Icon';
 import { useMemo, useState, useEffect, useRef } from "react";
 import type { GanttProps } from "./GanttView";
 import { monthBounds, toOrdinal, shiftMonth } from "../../domain/date";
@@ -11,7 +12,6 @@ import {
 import {
   indexSnapshot,
   scheduleDescription,
-  colorText,
 } from "../../visualization/presentation";
 import type { YearMonth } from "../../shared/types";
 import { useScheduleDrag } from "../state/useScheduleDrag";
@@ -122,8 +122,8 @@ export function CalendarView({
           <h2>{bounds.start.slice(0, 7)} 월간 달력</h2>
           <span>월요일 시작 · 최대 3줄</span>
           <div className="drag-month-navigation">
-            <button data-drag-month="-1" disabled={!shiftMonth(selectedMonth,-1)} onClick={()=>onMonth?.(shiftMonth(selectedMonth,-1)!)}>‹ 이전 달</button>
-            <button data-drag-month="1" disabled={!shiftMonth(selectedMonth,1)} onClick={()=>onMonth?.(shiftMonth(selectedMonth,1)!)}>다음 달 ›</button>
+            <IconButton icon="left" label="달력 이전 달" data-drag-month="-1" disabled={!shiftMonth(selectedMonth,-1)} onClick={()=>onMonth?.(shiftMonth(selectedMonth,-1)!)}/>
+            <IconButton icon="right" label="달력 다음 달" data-drag-month="1" disabled={!shiftMonth(selectedMonth,1)} onClick={()=>onMonth?.(shiftMonth(selectedMonth,1)!)}/>
           </div>
         </div>
         <div className="weekdays">
@@ -172,8 +172,9 @@ export function CalendarView({
                       style={{
                         gridColumn: `${s.column + 1} / span ${s.span}`,
                         gridRow: s.lane + 1,
-                        backgroundColor: p.color,
-                        color: colorText(p.color),
+                        backgroundColor: `color-mix(in srgb, ${p.color} 16%, var(--surface))`,
+                        borderLeftColor: p.color,
+                        color: "var(--text)",
                       }}
                       aria-label={scheduleDescription(item, p)}
                       title={scheduleDescription(item, p)}

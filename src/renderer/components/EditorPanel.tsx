@@ -7,6 +7,8 @@ import type {
   ScheduleInput,
 } from "../../shared/types";
 import { inclusiveDays } from "../../domain/date";
+import {Select} from "./Select";
+import {IconButton} from "./Icon";
 import { DatePicker } from "./DatePicker";
 import { trapTab } from "./ConfirmDialog";
 export function EditorPanel({
@@ -75,9 +77,7 @@ export function EditorPanel({
           {editor.kind === "project" ? "프로젝트" : "일정"}{" "}
           {editor.id ? "편집" : "추가"}
         </h2>
-        <button aria-label="편집 닫기" disabled={busy} onClick={onClose}>
-          ×
-        </button>
+        <IconButton icon="close" label="편집 닫기" disabled={busy} onClick={onClose}/>
       </div>
       {status}
       <form
@@ -173,18 +173,10 @@ export function EditorPanel({
                   {projects.find((p) => p.id === editor.draft.projectId)?.name}
                 </p>
               ) : (
-                <select
-                  id="editor-project"
-                  aria-label="소속 프로젝트"
-                  value={editor.draft.projectId}
-                  onChange={(e) => patch({ projectId: e.target.value })}
-                >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} · #{p.id}
-                    </option>
-                  ))}
-                </select>
+                <Select id="editor-project" label="소속 프로젝트" value={editor.draft.projectId}
+                  onChange={projectId=>patch({projectId})} disabled={disabled}
+                  options={projects.map(p=>({value:p.id,label:`${p.name} · #${p.id}`,color:p.color}))}/>
+
               )}
               <label htmlFor="editor-startDate">시작일</label>
               <DatePicker id="editor-startDate" label="시작일" value={editor.draft.startDate}

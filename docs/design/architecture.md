@@ -40,7 +40,7 @@ SQL은 준비된 문장에 값을 바인딩하고 renderer 문자열을 SQL 구�
 
 ## 제한된 API
 
-메서드와 채널은 아래의 일대일 대응만 허용한다. 모두 `invoke/handle` 요청·응답이다.
+업무 메서드와 채널은 아래의 일대일 대응만 허용한다. 모두 `invoke/handle` 요청·응답이다.
 조회 데이터가 두 모드에 함께 필요하므로 MVP는 전체 snapshot을 한 읽기 트랜잭션으로 제공한다.
 프로젝트별 조회는 이 snapshot을 `projectId`로 선택한다. 불필요한 범용 조회 API는 두지 않는다.
 
@@ -65,6 +65,17 @@ SQL은 준비된 문장에 값을 바인딩하고 renderer 문자열을 SQL 구�
 - 일정의 소속 프로젝트 변경 기능은 추가하지 않는다. update는 전체 편집 필드를 받아 검증한다.
   없는 ID는 생성으로 대체하지 않는다. 생성 시 식별자·시각은 main에서만 부여한다.
 - 삭제 확인 UI는 [화면 설계](experience.md)를 따른다. `confirmed`는 UI 실수 방지 계약이며 보안 인증 수단이 아니다.
+
+## 커스텀 창 제어 (C안 후속 구현)
+
+[승인된 C안](flat-glass-redesign.md)의 기본 제목 표시줄 제거에 따라,
+업무 API와 분리된 `window.timelineWindow.command(action)`을 제공한다.
+`window:command` 채널은 `minimize`, `toggle-maximize`, `close`, `state` 문자열 한 개만 받으며
+동일한 최상위 frame·소유 창·URL 검증을 적용한다. 알 수 없는 명령·잘못된 인수는 거부한다.
+결과는 `{ok: boolean, maximized?: boolean}`이며 창 객체·범용 IPC는 노출하지 않는다.
+닫기는 `BrowserWindow.close()`를 호출해 기존 저장 대기·미저장 변경 확인을 거친다.
+구현은 [창 IPC](../../src/main/window-ipc.ts), [타입](../../src/shared/window-api.ts)에 있다.
+아래 오류 DTO와 저장 계약은 기존 8개 업무 API의 계약이다.
 
 ## 응답·오류와 화면 상태
 

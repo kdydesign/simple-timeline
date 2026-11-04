@@ -63,6 +63,6 @@ test('calendar title, navigation and weekdays stick together and navigation stil
   const weekdays = (await p.locator('.weekdays').boundingBox())!;
   expect(heading.y).toBeGreaterThanOrEqual(main.y);
   expect(weekdays.y).toBeGreaterThanOrEqual(heading.y + heading.height - 1);
-  await p.locator('.calendar').getByRole('button', { name: '다음 달 ›', exact: true }).click();
+  await p.locator('.calendar').getByRole('button', { name: '달력 다음 달', exact: true }).click();
   await expect(p.locator('.calendar h2')).toHaveText('2026-12 월간 달력');
 });

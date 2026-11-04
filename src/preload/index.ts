@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { channels, type TimelineApi } from '../shared/api'
+import { windowChannel, type WindowCommand, type WindowApi } from '../shared/window-api'
 const api = Object.fromEntries(
   Object.entries(channels).map(([method, channel]) => [
     method,
@@ -19,3 +20,10 @@ const api = Object.fromEntries(
   ]),
 ) as unknown as TimelineApi
 contextBridge.exposeInMainWorld('simpleTimeline', api)
+
+contextBridge.exposeInMainWorld('timelineWindow', {
+  command: async (command: WindowCommand) => {
+    try { return await ipcRenderer.invoke(windowChannel, command) }
+    catch { return {ok:false} }
+  },
+} satisfies WindowApi)

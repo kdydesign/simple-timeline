@@ -12,6 +12,8 @@ import { DomainValidationError } from "../domain/error";
 import { useTimeline } from "./state/useTimeline";
 import { usePreferences } from "./state/usePreferences";
 import { useEditor } from "./state/useEditor";
+import {Titlebar} from "./components/Titlebar";
+import {TooltipLayer} from "./components/TooltipLayer";
 import { Toolbar } from "./components/Toolbar";
 import { ProjectList } from "./components/ProjectList";
 import { GanttView, type GanttHandle } from "./components/GanttView";
@@ -20,6 +22,7 @@ import { EditorPanel } from "./components/EditorPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { StatusNotice } from "./components/StatusNotice";
 import "./styles.css";
+import "./flat-glass.css";
 interface Confirmation {
   title: string;
   message: string;
@@ -66,6 +69,7 @@ export function App({
   useLayoutEffect(() => {
     completionView.current = { mode, month };
   }, [mode, month]);
+  useEffect(()=>{if(confirmation||dayModalOpen)setProjectsOpen(false)},[confirmation,dayModalOpen]);
   const model = editor.editor,
     canEdit = timeline.phase === "ready",
     saving = timeline.phase === "saving";
@@ -302,6 +306,8 @@ export function App({
   );
   return (
     <>
+      <Titlebar/>
+      <TooltipLayer/>
       <div
         className="app-shell"
         aria-hidden={!!confirmation || dayModalOpen || (narrow && !!model)}
@@ -327,8 +333,11 @@ export function App({
           }
           canEdit={canEdit}
           hasProjects={!!timeline.snapshot?.projects.length}
+          projectList={timeline.snapshot&&<ProjectList snapshot={timeline.snapshot} disabled={!canEdit}
+            onProject={p=>{setProjectsOpen(false);request(caller=>editor.openProject(p,caller))}}
+            onAdd={p=>{setProjectsOpen(false);request(caller=>editor.openSchedule(month,p.id,undefined,caller))}}/>}
           projectsOpen={projectsOpen}
-          onProjects={() => setProjectsOpen((v) => !v)}
+          onProjects={setProjectsOpen}
           onProject={() =>
             request((caller) => editor.openProject(undefined, caller))
           }
@@ -353,29 +362,6 @@ export function App({
         >
           {timeline.snapshot ? (
             <>
-              {projectsOpen && (
-                <section
-                  className="project-inventory"
-                  aria-label="프로젝트 목록"
-                >
-                  <h2>프로젝트 목록</h2>
-                  <button onClick={() => setProjectsOpen(false)}>
-                    목록 닫기
-                  </button>
-                  <ProjectList
-                    snapshot={timeline.snapshot}
-                    disabled={!canEdit}
-                    onProject={(p) =>
-                      request((caller) => editor.openProject(p, caller))
-                    }
-                    onAdd={(p) =>
-                      request((caller) =>
-                        editor.openSchedule(month, p.id, undefined, caller),
-                      )
-                    }
-                  />
-                </section>
-              )}
               <GanttView
                 {...dragActions}
                 ref={gantt}

@@ -9,6 +9,7 @@ import { initializeStorage, type StorageState } from './db/lifecycle'
 import { profileDirectory } from './profile'
 import { createWindow } from './window'
 import { registerTimelineIpc } from './ipc'
+import { registerWindowIpc } from './window-ipc'
 import { resolveRendererUrl } from './ipc-core'
 import { installCloseGuard } from './close'
 import { toPublicError } from './errors'
@@ -73,6 +74,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     icon,
     { mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
+  const unregisterWindow = registerWindowIpc(window, rendererUrl)
   const unregister = registerTimelineIpc(
     window,
     storage,
@@ -128,6 +130,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   app.on('window-all-closed', () => app.quit())
   app.on('will-quit', () => {
     unregister()
+    unregisterWindow()
     if (storage.state === 'ready' && storage.db.open) storage.db.close()
   })
   return { window, storage, profile }

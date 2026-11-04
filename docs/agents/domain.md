@@ -10,7 +10,7 @@
 | 승인된 MVP 후속 변경 | [개선·오류 대응 확정 설계](../design/post-mvp-improvements.md). 명시된 변경 항목에서는 기존 MVP 설계보다 우선하며, [구현·검증 기록](../implementation/2026-11-04-post-mvp-improvements.md)과 구분 |
 | 승인된 업무 규칙 | [도메인·날짜](../design/domain-rules.md), 실제 계산은 [domain](../../src/domain/) |
 | 승인된 권한·저장 계약 | [구조](../design/architecture.md), [저장](../design/storage.md); 현재 코드는 [main](../../src/main/), [preload](../../src/preload/), [API 타입](../../src/shared/api.ts) |
-| 승인된 화면·날짜 배치 | [화면](../design/experience.md), [시각화](../design/visualization.md); 현재 코드는 [renderer](../../src/renderer/), [계산 함수](../../src/visualization/) |
+| 승인된 화면·날짜 배치 | 후속 [C안 화면](../design/flat-glass-redesign.md)과 [구현 기록](../implementation/2026-11-04-flat-glass.md), [화면](../design/experience.md), [시각화](../design/visualization.md); 현재 코드는 [renderer](../../src/renderer/), [계산 함수](../../src/visualization/) |
 | 도구·명령·검증 범위 | [package.json](../../package.json), [CI](../../.github/workflows/), [검증 안내](../harness/validation.md) |
 | 설치·사용·보존 정책 | [배포 정책](../release/policy.md), [사용 안내](../release/user-guide.md) |
 | 당시 실행 증거 | [구현 기록](../implementation/), [Windows 검증](../release/windows-validation.md), [단계 인수인계](../wayfinder/handoffs/)의 SHA·환경·한계 |

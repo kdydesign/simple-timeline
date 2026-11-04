@@ -29,7 +29,13 @@ void bootstrap({
         JSON.stringify(storage.error),
       );
   },
-  confirmClose: async () => true,
+  confirmClose: async () => {
+    if (fault === "close-denied") {
+      writeFileSync(join(profile, "close-confirmed.txt"), "requested");
+      return false;
+    }
+    return true;
+  },
   afterDispatch(method, result): Result<unknown> {
     if (
       (method === "createProject" ||

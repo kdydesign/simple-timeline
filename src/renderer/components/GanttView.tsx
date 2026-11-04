@@ -23,7 +23,6 @@ import {
 import { viewportWindow, visibleRows } from "../../visualization/viewport";
 import {
   indexSnapshot,
-  colorText,
   scheduleDescription,
 } from "../../visualization/presentation";
 export interface GanttHandle {
@@ -514,8 +513,9 @@ export function GanttView({
                         style={{
                           left: left - x,
                           width: right - left,
-                          backgroundColor: r.project.color,
-                          color: colorText(r.project.color),
+                          backgroundColor: `color-mix(in srgb, ${r.project.color} 16%, var(--surface))`,
+                          borderLeftColor: r.project.color,
+                          color: "var(--text)",
                         }}
                       >
                         {left === rect!.x && <span className="resize-handle start" data-resize="start" aria-hidden="true" onPointerDown={e=>drag.begin(e,s,"start")}/>}
