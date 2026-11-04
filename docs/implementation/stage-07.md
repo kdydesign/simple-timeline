@@ -1,14 +1,20 @@
-# 스테이지 7 실행 기록 — Windows 설치 준비·검증 진행 중
+# 스테이지 7 실행 기록 — Windows 기본 설치 인수 완료
 
 기준 main: `5a502e25ad3e1a1baf988549d2cc71cb2ec54678`. 범위는 승인 계획 Task 9다.
 사용자가 스테이지 7을 요청했다. 이전 offline 문서 초안은 named git stash로 보존한 뒤 최신 main으로 fast-forward했다.
-Task 1~8은 다시 만들지 않는다. Windows CI는 통과했으나 Windows 11 실기 확인이 남아 있어 MVP 완료 상태가 아니다.
+Task 1~8은 다시 만들지 않았다. Windows CI와 사용자 기본 설치 인수 결과를 기록했고,
+2026-11-04 사용자의 인수 범위 조정으로 이번 MVP를 마무리했다. 상세 검증 미실행은 후속에 남긴다.
 
 ## 사용자 결정
 
 Q1~Q3에서 Windows 11 x64, 사용자별 설치·제거 후 DB 보존, 서명 없는 비공개 CI 설치본을 선택했다.
 [정책](../release/policy.md)에 기록했다. 기존 날짜·도메인·저장·화면 승인은 유지한다.
 공개 release·인증서 구매/서명 서비스·다른 CPU/OS·자동 업데이트·수동 백업은 승인 범위 밖이다.
+2026-11-04 사용자는 두 설치본의 해시 일치·관리자 요청/보안 경고 없는 설치/실행·업데이트 후 데이터 유지·
+정상 제거·제거 후 재설치/재실행의 데이터 유지를 보고했다.
+기본 설치 관련 검증만 진행했으며 상세 개선·오류 사항은 별도로 진행한다고 밝혔다.
+관측의 경계와 정확한 인수 범위는 [사용자 인수 기록](../release/user-acceptance.md)에 기록했다.
+이번 종료 변경은 문서뿐이며 제품 코드·설치본·자동 검증 기준을 바꾸지 않는다.
 
 ## 구현과 로컬 근거
 
@@ -50,7 +56,7 @@ HKCU 1/HKLM 0·서명 없음, 설치본 실행·exe outbound 차단 후 통신 �
    정규화 assertion을 실제 RED→GREEN으로 확인했다. 처음 회귀 작성의 import setup 오류는 valid RED로 세지 않았다.
 3. Windows CI `b05837c`은 목록 검사를 지나 실제 main 추출에서 같은 라이브러리의 native separator 요구로 실패했다.
    getNode가 dirname 결과를 native separator로 분리하는 실제 source를 확인해 extractFile에 join한 경로를 넘겼다.
-   Windows positive-fixture RED의 GREEN은 실제 Windows CI로 재확인해야 한다.
+   Windows positive-fixture RED의 GREEN은 이후 소스 036ee00의 실제 Windows CI에서 확인했다.
 4. 독립 reviewer는 캐시된 응답 때문에 올바른 방화벽 차단도 온라인으로 보이는 문제를 재현했다.
    같은 helper를 사용하는 실제 Electron 회귀에서 warm cache→서버 종료 후 true!==false RED를 확인하고,
    no-store·고유 URL·response 취소로 GREEN을 확인했다.
@@ -65,7 +71,7 @@ HKCU 1/HKLM 0·서명 없음, 설치본 실행·exe outbound 차단 후 통신 �
    CI 보조 스크립트 호출을 runner와 같은 `pwsh.exe`로 맞추고 OS·PowerShell·방화벽 진단을 기록했다.
    앱·설치본에 PowerShell 의존성을 추가한 것이 아니다. 이 시점의 설치 후 오프라인·업데이트는 통과로 세지 않았다.
 
-## 독립 검토와 남은 게이트
+## 독립 검토와 후속 보완
 
 `5a502e2..531ef96`를 독립 reviewer가 읽기 전용으로 검토했다. 검토는 한 번만 했다.
 중요 cache probe와 추가로 확인한 source/output 귀속은 테스트로 고쳤다. 실제 NSIS CI는 이후 소스 036ee00에서 통과했다.
@@ -81,6 +87,9 @@ Task 1~8은 전체 회귀를 실행했지만 독립 전체 재감사는 하지 �
 uninstaller 프로세스 완료와 exe 제거 사이의 race는 아직 재현되지 않았으며 실제 uninstall/reinstall 검사가 게이트다.
 공개 배포·코드 서명·다른 OS/CPU·자동 업데이트·수동 백업은 승인 범위 밖이다.
 
-Windows 11의 실제 설치·오프라인 최초 실행/신규 생성·업데이트·제거·100%/200%·Narrator와
-격리된 실제 오류 시나리오 결과가 미실행이면 스테이지 7은 진행 중/차단 상태다.
-완성 설치본·해시·정확한 절차를 전달한 뒤 필요한 사용자 결과를 요청한다. 실행하지 않은 검증은 완료로 추정하지 않는다.
+사용자 결과 전에는 Windows 11 실기·접근성·격리 오류 결과 대기로 완료를 차단했다.
+2026-11-04 기본 설치 인수 결과와 상세 검증을 별도로 진행하겠다는 사용자 결정을 받아 이 경계를 조정했다.
+사용자 PC의 네트워크 차단 여부·오프라인 최초 실행/신규 생성 전체·실제 배율/Narrator·물리 오류는 통과로 추정하지 않는다.
+이들은 후속 목록에 유지하며 이번 인수를 다시 차단하거나 별도 요청 없이 구현을 시작하지 않는다.
+문서 커밋 47000d6의 두 OS Application CI와 Repository harness CI도 통과했다.
+이 종료 기록은 하네스로 검증하고 PR 없이 main에 직접 반영한다. 최종 SHA·원격 확인은 종료 메시지에서 전달한다.

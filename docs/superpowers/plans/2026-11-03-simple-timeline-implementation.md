@@ -18,7 +18,9 @@ Vitest 5.1.0, Playwright 1.64.1. 전체 고정 버전과 문서상 확인 범위
 상태: 스테이지 4 사용자 승인 계획. Task 1~5는 스테이지 5에서 구현·검증했다.
 [실행 기록](../../implementation/stage-05.md)과 [인수인계](../../wayfinder/handoffs/05-foundation-crud.md)를 따른다.
 Task 6~8도 스테이지 6에서 구현·검증했다. [실행 기록](../../implementation/stage-06.md)과
-[인수인계](../../wayfinder/handoffs/06-visualizations.md)를 따른다. Task 9 설치 관련 파일/명령만 **후속 구현 대상**이다.
+[인수인계](../../wayfinder/handoffs/06-visualizations.md)를 따른다. Task 9도 스테이지 7에서 구현·자동 검증했다.
+2026-11-04 사용자 기본 설치 인수와 범위 조정으로 이번 MVP를 마무리했다.
+[스테이지 7 인수인계](../../wayfinder/handoffs/07-windows-release.md)와 [사용자 기록](../../release/user-acceptance.md)을 따른다.
 
 ## Global Constraints
 
@@ -52,7 +54,7 @@ Task 6~8도 스테이지 6에서 구현·검증했다. [실행 기록](../../imp
 | --- | --- | --- |
 | 5 기본 앱·저장·CRUD | Task 1~5 | UI → preload → main → 실제 SQLite의 CRUD·오류·재실행 보존. 시각화는 아직 미구현 |
 | 6 간트·달력 | Task 6~8 | 승인된 두 모드·연월·가상 이동·겹침·키보드·CRUD 통합 |
-| 7 Windows | Task 9 | 지원 환경·배포 조건 결정 후 실제 설치·업데이트·오프라인 결과. 미실행 시 차단 |
+| 7 Windows | Task 9 | Windows Server 설치 lifecycle + 사용자 기본 설치 인수. 사용자 결정으로 상세 미실행 항목은 별도 후속 |
 
 스테이지 안에서는 작업 순서대로 검증·커밋한다. 다른 채팅으로 넘겨야 하면 완료한 작업 번호와 실패/미실행을
 인수인계에 남기고 현재 스테이지를 진행 중으로 유지한다. 작업 체크는 실제 완료 후에만 바꾼다.
@@ -70,7 +72,7 @@ Windows x64는 최초 CI 빌드 축이며 최종 지원 OS/CPU를 임의 확정�
 
 ## 파일·인터페이스 지도
 
-Task 1~8 경로는 실제 구현되었다. Task 9의 패키징/설치 경로는 아직 만들지 않은 계획이다.
+Task 1~9 경로는 실제 구현되었다. Task 9의 실제 결과와 사용자 인수 범위는 아래와 검증 기록을 따른다.
 
 | 위치 | 책임·소유 작업 |
 | --- | --- |
@@ -97,7 +99,7 @@ main 내부 BigInt는 DTO 변환 전에 십진 문자열로 바꾼다. 채널·�
 
 직접 의존성은 조사 표 22종 중 별도 `@electron/rebuild`를 제외한 21종이다. 재빌드는 builder가 lockfile에 고정한 내부 경로를 쓴다.
 Task 1에서 정확 버전(범위 기호 없이)과 npm lockfile을 생성한다. 이후 설치는 `npm ci`다.
-스테이지 4에서는 설치하지 않았다. 스테이지 5부터 도입한 명령은 실제로 사용하며, Task 9의 패키징 명령은 아직 없다.
+스테이지 4에서는 설치하지 않았다. 스테이지 5~7에서 아래 명령을 구현·실행했다.
 
 | 후속 명령 | 도입 작업·내용 |
 | --- | --- |
@@ -110,9 +112,9 @@ Task 1에서 정확 버전(범위 기호 없이)과 npm lockfile을 생성한다
 | `npm run test:ui` | Task 5: `vitest run --config vitest.ui.config.mts`, jsdom·bridge fake |
 | `npm run build:test` | Task 5: `electron-vite build --config electron.vite.test.config.mts`, 별도 테스트 진입점과 `artifacts/test-app` 출력 |
 | `npm run test:e2e` | Task 5: build:test 후 `playwright test --config playwright.config.mts`. 제품 bootstrap·preload·renderer를 실제 Electron에서 실행 |
-| `npm run verify:app` | Task 5: `node scripts/testing/verify-app.mjs`, typecheck → test:tz(unit 포함) → UI → build → native → e2e 순서, 어느 실패도 비정상 종료 |
+| `npm run verify:app` | Task 5부터 `node scripts/testing/verify-app.mjs`, 현재 typecheck → test:release → test:tz(unit 포함) → UI → build → native → e2e 순서, 어느 실패도 비정상 종료 |
 | `npm run test:packaged` | Task 9: `node scripts/testing/packaged-smoke.mjs`로 산출물 확인 후 `playwright test --config playwright.packaged.config.mts`, 임시 Windows 사용자/VM에서만 실행 |
-| `npm run dist:win` | Task 9: build 후 `electron-builder --win nsis --x64`; 승인 지원 CPU가 달라지면 그 대상도 별도 명시·검증 |
+| `npm run dist:win` | Task 9: build 후 `node scripts/release/build-windows.mjs`가 clean SHA·기존 출력 검사, Windows x64 NSIS·패키지 검사·manifest 생성 |
 
 Node용 better-sqlite3 테스트를 Vitest에서 실행하지 않는다. npm postinstall로 Electron ABI로 맞춘 addon을
 Electron runner가 로드한다. Node와 Electron의 Node 버전이 같아도 ABI가 다르다.
@@ -349,22 +351,23 @@ Windows 지원 버전·CPU, 사용자별/전체 설치, 설치 경로/권한, �
 - [x] **Step 2 — GREEN:** ASAR와 native `.node` unpack, 재빌드, 고정 appId/profile, NSIS 대상·서명 옵션을 구성한다.
   `npm ci`, `npm run verify:app`, `npm run dist:win` 후 `npm run test:packaged`로 unpacked 앱을 실제 실행한다.
   production main/bundle에 테스트 진입점·프로필 override가 없다는 것도 별도 Windows 사용자/VM에서 확인한다.
-- [ ] **Step 3 — 실제 설치 검증:** 지원 Windows/CPU·앱 버전·설치 파일 SHA256·네트워크 차단 방법을 기록한다.
-  설치→첫 실행→핫픽스 CRUD→두 모드→종료/재실행→데이터 보존을 인터넷 없이 수행한다.
-  빌드 시 다운로드와 사용자 실행 시 오프라인을 구별한다. 수동 설치 파일로 업데이트/재설치 후 같은 ID·데이터 경로를 대조한다.
-- [ ] **Step 4 — 실패·사용성 검증:** 잠금·권한·용량 부족·강제 종료·손상·고버전·마이그레이션 실패,
+- [x] **Step 3 — 실제 설치 인수(2026-11-04 사용자 범위 조정):** 각 설치본 해시 일치·관리자 요청/보안 경고 없는
+  설치/실행·업데이트 후 데이터 보존·정상 제거·재설치/재실행 후 데이터 보존을 사용자 보고로 확인했다.
+  Windows Server CI는 별도로 실제 오프라인 수정/삭제·재실행과 snapshot/ID/경로·제거 전후 DB hash를 확인했다.
+  원래 계획의 사용자 PC 오프라인 최초 설치/신규 생성·핫픽스 CRUD/두 모드 전체와 상세 환경 정보는 미확인으로 후속에 남긴다.
+- [ ] **Step 4 — 상세 후속으로 분리(미실행):** 잠금·권한·용량 부족·강제 종료·손상·고버전·마이그레이션 실패,
   실제 100%/200% Windows 배율과 키보드/보조기술, 사용자가 정한 제거 정책을 확인한다.
   운영 데이터로 손상 실험하지 않는다. 복제한 임시 Windows 사용자/VM을 사용한다.
-- [ ] **Step 5 — 결과·Commit:** 설치·데이터 위치·오류·백업 제외 한계를 안내서에 기록한다.
-  Windows를 실행할 수 없으면 사용자에게 완성한 설치본과 정확한 검증 절차를 전달하고 결과를 기다린다.
-  CI 빌드나 unpacked smoke만으로 설치/오프라인/업데이트 성공을 선언하지 않는다.
-  미실행이 남으면 스테이지 7은 진행 중/차단됨이며 전체 MVP 완료가 아니다.
-  확인된 결과만 커밋하고 일반 push한다. 공개 배포는 사용자가 정한 범위에서만 한다.
+- [x] **Step 5 — 결과·Commit:** 설치·데이터 위치·오류·백업 제외 한계를 안내서에 기록하고 실제 설치본·해시·절차를 전달했다.
+  사용자 기본 설치 인수 결과와 상세 개선/오류 검증의 별도 진행 결정을 기록해 스테이지 7을 마무리한다.
+  CI 빌드나 unpacked smoke만으로 설치/오프라인/업데이트 성공을 선언하지 않는다. 미실행을 통과로 처리하지 않는다.
+  확인한 결과와 인수 범위 조정만 검증 후 일반 commit·push한다. 공개 배포는 사용자가 정한 범위에서만 한다.
 
 Task 9 현재 근거: Windows 11 x64·사용자별 설치·제거 후 DB 보존·서명 없는 비공개 CI는 사용자 확정이다.
 소스 `036ee00`에서 두 OS 앱 CI와 Windows Server 실제 설치 lifecycle이 통과해 Step 1~2를 확인했다.
-Step 3~4의 지원 Windows 11 실기·물리 실패·배율/Narrator는 미실행이다.
-Step 5의 안내서·설치본·정확한 해시·중간 인수인계는 준비했으나 실기 결과 대기이므로 전체 완료 체크는 하지 않는다.
+2026-11-04 사용자 보고로 조정된 Step 3 기본 설치 인수를 확인했다.
+원래 Step 3의 상세 오프라인 실기와 Step 4 물리 실패·배율/Narrator는 미확인/미실행인 후속 작업이다.
+사용자가 이 항목들을 이번 MVP 인수 범위에서 분리했으며 제품 요구나 미실행 결과를 소급 변경하지 않는다.
 실제 근거와 남은 항목은 [Windows 검증 기록](../../release/windows-validation.md)을 따른다.
 
 ## 요구사항과 검증 소유권

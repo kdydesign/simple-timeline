@@ -2,12 +2,15 @@
 
 오프라인 Windows 프로젝트 일정 관리 프로그램. Electron + React + SQLite.
 
-현재 상태: 스테이지 7 Windows 설치·오프라인 검증 진행 중. Windows 11 실기 확인이 남아 있다.
+현재 상태: 스테이지 7 완료. 사용자 기본 설치 인수 범위의 MVP를 마무리했다.
 [승인 계획](docs/superpowers/plans/2026-11-03-simple-timeline-implementation.md),
 [스테이지 7 인수인계](docs/wayfinder/handoffs/07-windows-release.md), [실행 기록](docs/implementation/stage-07.md)을 확인한다.
 Electron·SQLite CRUD와 간트·달력, Windows x64 NSIS 빌드가 있다.
 설치본·정확한 소스·해시·실행 결과는 [Windows 검증 기록](docs/release/windows-validation.md),
 설치 방법은 [사용 안내](docs/release/user-guide.md)를 따른다. [HTML 목업](docs/design/mockups/stage-03.html)은 설계 자료다.
+사용자는 설치본 해시·설치/실행·업데이트·제거/재설치의 데이터 보존을 확인했다.
+상세 개선·오류 검증은 별도로 진행하며 미실행 항목을 통과로 표시하지 않았다.
+[사용자 결과와 후속 범위](docs/release/user-acceptance.md)를 확인한다.
 
 ## Codex 프로젝트 시작
 
@@ -54,27 +57,25 @@ Windows x64의 clean checkout에서 `npm run dist:win`으로 서명 없는 사�
 이전 `release/` 출력물이 있으면 보존·이동한 뒤 실행한다. 소스 SHA 귀속을 위해 dirty checkout은 거부한다.
 `npm run dist:win:test-update`는 가상 다음 버전의 검증 전용 파일이며 일반 배포본이 아니다.
 `npm run test:packaged`는 방화벽과 실제 AppData를 쓰므로 기존 프로필이 없는 일회성 GitHub-hosted Windows VM에서만 실행한다.
-Windows 11 일반 PC 검증은 [실기 기록 양식](docs/release/manual-checklist.md)을 따른다.
+Windows 11의 상세 후속 검증에는 [실기 기록 양식](docs/release/manual-checklist.md)을 사용할 수 있다.
 
 ## 새 채팅에서 시작하기
 
 1. 이 저장소의 최신 `main`을 가져온다. 검증 후 PR 없이 `main`에 직접 커밋·push한다.
 2. [Codex 안내](AGENTS.md), [진행 상태](docs/wayfinder/STATUS.md), [진행 지도](docs/wayfinder/MAP.md)를 읽는다.
-3. 해당 스테이지 문서와 직전 인수인계 문서를 읽고 한 스테이지만 진행한다.
+3. 현재 MVP 지도는 완료됐다. 새 개선·오류 요청은 별도 범위를 정하며 기존 스테이지를 자동 재개하지 않는다.
 
-스테이지 7 재개 문구:
+상세 개선·오류 후속 작업 시작 문구:
 
 ~~~text
 저장소: https://github.com/kdydesign/simple-timeline
-Superpowers와 Wayfinder로 스테이지 7의 남은 Windows 11 실기 검증을 이어가줘.
-최신 main의 AGENTS.md를 읽고 node scripts/harness/run.mjs context 07-windows-release
-결과의 문서와 docs/wayfinder/handoffs/07-windows-release.md,
-docs/release/windows-validation.md, docs/release/manual-checklist.md,
-docs/implementation/stage-07.md를 확인해줘.
-Windows 11 x64·사용자별 설치·제거 후 DB 보존·서명 없는 비공개 CI 정책은 확정됐으니 다시 묻지 마.
-Task 1~8을 다시 만들지 말고 전달한 설치 파일의 소스 SHA·SHA256과 실제 사용자 결과를 대조해줘.
-실행할 수 없는 검증은 완료로 추정하지 말고 필요한 사용자 확인과 결과를 기록해줘.
-완료하면 검증 후 PR 없이 main에 직접 커밋·push하고 최종 결과·인수인계·커밋을 알려줘.
+Superpowers와 Wayfinder로 MVP 이후의 상세 개선·오류 작업을 진행해줘.
+최신 main의 AGENTS.md와 docs/wayfinder/handoffs/07-windows-release.md,
+docs/release/user-acceptance.md, docs/release/windows-validation.md를 확인해줘.
+node scripts/harness/run.mjs context에 활성 스테이지가 없으면 현재 지도 완료 상태야.
+기본 설치 인수는 완료됐고 상세 개선·오류 검증은 별도 진행하기로 했어.
+기존 승인 사항은 다시 묻지 말고 이번에 전달할 개선점/오류의 범위와 재현부터 정리해줘.
+요청 범위만 작업하고 검증 후 PR 없이 main에 직접 커밋·push해줘.
 ~~~
 
 새 채팅이 이전 채팅의 대화나 작업 폴더를 기억한다고 가정하지 않는다.

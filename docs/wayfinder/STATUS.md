@@ -1,11 +1,13 @@
 # 진행 상태
 
-현재: 스테이지 7 Windows 설치·오프라인 검증(Task 9), Windows 11 실기 결과 대기·완료 차단.
-다음: 전달한 설치본으로 Windows 11 실기 결과를 받아 기록한다. 티켓은 in_progress를 유지한다.
+현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
+다음: 상세 개선·오류 검증은 사용자의 별도 후속 요청에서 범위를 정한다.
 [실행 기록](../implementation/stage-07.md)과 [인수인계](handoffs/07-windows-release.md)를 참조한다.
 실제 Electron·SQLite CRUD·간트·달력과 Windows NSIS 빌드가 있다.
 [Windows 검증 기록](../release/windows-validation.md)에서 실제 설치 lifecycle과 미실행 실기 항목을 구분한다.
-Windows Server CI의 설치·오프라인·업데이트·제거 후 보존은 통과했고 두 비공개 설치본을 전달한다.
+Windows Server CI의 설치·오프라인·업데이트·제거 후 보존은 통과했다.
+사용자 기본 설치·실행·업데이트·제거/재설치와 데이터 보존 확인 및 상세 검증 분리는
+[사용자 인수 기록](../release/user-acceptance.md)을 따른다. 상세 미확인 항목을 통과로 표시하지 않았다.
 최종 문서 commit·push 및 CI 결과와 SHA는 종료 메시지에서 확인한다.
 
 프로젝트 설정과 실행 명령: [Codex 하네스](../harness/README.md).
@@ -21,7 +23,7 @@ Windows Server CI의 설치·오프라인·업데이트·제거 후 보존은 �
 | 4 | [구현 계획 확정](stages/04-implementation-plan.md) | 완료 |
 | 5 | [기본 앱·저장·CRUD 구현](stages/05-foundation-crud.md) | 완료 |
 | 6 | [간트·달력 구현](stages/06-visualizations.md) | 완료 |
-| 7 | [Windows 설치·오프라인 검증](stages/07-windows-release.md) | 진행 중 |
+| 7 | [Windows 설치·오프라인 검증](stages/07-windows-release.md) | 완료 |
 
 상태: 미착수 → 진행 중 → 사용자 확인 대기 → 완료. 진행 불가이면 차단됨.
 완료는 완료 기준 충족·필요한 승인·인수인계·저장소 반영까지 확인한 경우다.

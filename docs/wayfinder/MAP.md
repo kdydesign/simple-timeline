@@ -2,7 +2,7 @@
 
 id: simple-timeline-mvp
 labels: wayfinder:map
-status: open
+status: closed
 
 ## Destination
 
@@ -40,14 +40,14 @@ status: open
 
 - [스테이지 6 — 간트·달력 구현](stages/06-visualizations.md): 전체 범위 가상 간트·월간 달력·날짜 전체 목록을 CRUD와 통합하고 독립 검토 수정·극단 연도/1만 개 일정·두 OS 앱 CI를 검증했다.
 
+- [스테이지 7 — Windows 설치·오프라인 검증](stages/07-windows-release.md): Windows Server 설치 lifecycle과 사용자 기본 설치·업데이트·제거/재설치 보존을 확인했다. 사용자 결정으로 상세 검증을 별도 후속으로 분리해 이번 MVP 인수를 마무리했다.
+
 지도 이전에 사용자가 선택한 요구사항·기술은
 [전체 설계 기준](../superpowers/specs/2026-11-03-simple-timeline-design.md)에 기록한다.
 
 ## Not yet specified
 
-- 스테이지 7은 [진행 중인 티켓](stages/07-windows-release.md)과 [인수인계](handoffs/07-windows-release.md)를 따른다.
-  Windows 11 x64·사용자별 설치·제거 후 DB 보존·서명 없는 비공개 CI 배포는 확정했다.
-  Windows Server 설치 lifecycle과 두 OS 앱 CI는 통과했으나 Windows 11 실기 결과가 없어 완료는 차단됐다.
+현재 지도에서 남은 결정은 없다. 상세 검증의 미실행 상태는 아래 후속 범위로 남긴다.
 
 - 날짜 범위와 일정 개수를 줄이는 제약은 추가하지 않았다. 1만 개 fixture의 관측은
   [스테이지 6 실행 기록](../implementation/stage-06.md)에 있다. 실제 사용자 Windows 성능이나 임의 규모의 보장은 없으며,
@@ -58,4 +58,7 @@ status: open
 MVP 수동 백업·복원·데이터 이동(사용자 선택; 재검토는 별도 범위 결정),
 Teams 앱 구현, Microsoft 계정 연동, 사용자 간 공유, PC 간 동기화, 모바일,
 작업 계층, 진행률, 의존성, 드래그 편집, 알림·자동화·외부 이슈 연동.
+2026-11-04 사용자 결정으로 기본 설치 인수 이후의 상세 개선·오류 검증은 이번 MVP 지도 밖의 별도 후속 작업이다.
+[사용자 인수 기록](../release/user-acceptance.md)의 오프라인 전체 실기·배율/Narrator·물리 오류 미실행 항목과
+기존 작은 보완을 통과로 처리하거나 이번 지도에서 자동 착수하지 않는다.
 Teams는 Windows MVP 이후 별도 지도에서 앱 호스팅·데이터 연결·조직 정책을 설계한다.
