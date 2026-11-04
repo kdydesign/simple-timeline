@@ -7,52 +7,56 @@
 
 ## 시작 순서
 
-1. 저장소 루트에서 `git status --short --branch`를 확인한다. 기존 변경을 보존한다.
-2. [현재 상태](docs/wayfinder/STATUS.md)와 [진행 지도](docs/wayfinder/MAP.md)를 읽는다.
-3. 요청받은 스테이지 문서와 직전 인수인계를 읽는다. 문서 위치는 [README](README.md)에 있다.
-4. 필요한 부분만 [전체 설계](docs/superpowers/specs/2026-11-03-simple-timeline-design.md)와
-   [용어](CONTEXT.md)에서 찾아본다. 모든 문서를 한꺼번에 읽지 않는다.
-5. `node scripts/harness/run.mjs context`로 재개할 단계·담당자·읽을 문서를 확인한다.
-   특정 단계는 `context 01-domain`처럼 지정한다. 이 명령은 단계나 승인을 자동 변경하지 않는다.
+1. 저장소 루트에서 `git status --short --branch`로 기존 변경을 확인·보존한다.
+2. `node scripts/harness/run.mjs context`와 [현재 상태](docs/wayfinder/STATUS.md)를 확인한다.
+   `selected: null`, `frontier: []`이고 지도가 완료 상태이면 새 요청의 범위로 진행한다. 완료 단계를 자동 재개하지 않는다.
+3. [문서 기준과 탐색 경로](docs/agents/domain.md)에서 요청과 관련된 설계·코드·검증 기록만 읽는다.
+   단계 작업이면 해당 티켓·선행 인수인계도 읽고 [로컬 트래커 규칙](docs/agents/issue-tracker.md)을 적용한다.
 
 ## 작업 원칙
 
-- 한 채팅에서는 요청받은 한 스테이지만 진행한다. 범위가 바뀌면 상태와 인수인계도 갱신한다.
-- 사용자가 정한 요구사항, 에이전트 제안, 미결정 사항을 구분한다.
+- 요청한 범위만 수행한다. 단계 작업은 해당 단계에서 멈추고, MVP 후속 작업은 기존 완료 상태를 유지한다.
+- 현재 구현, 승인된 설계, 개선 제안을 구분한다. 불일치는 근거와 함께 기록하며 코드나 승인 내용을 임의로 맞추지 않는다.
 - 이미 승인받은 사항을 다시 묻지 않는다. 새로운 제품 결정을 임의 승인하지 않는다.
 - 설계·계획·구현 시 Superpowers, 스테이지 결정·인수인계 시 Wayfinder를 적용한다.
   플러그인을 사용할 수 없으면 그 사실을 밝히고 저장소의 절차로 이어간다.
-- 설계 단계에서 제품 코드·프레임워크·의존성을 미리 만들지 않는다.
-  사용자가 별도로 요청한 프로젝트 하네스 설정은 제품 구현 단계와 구분한다.
-- 과거 채팅의 기억보다 버전 관리된 문서·실제 코드·검증 결과를 기준으로 판단한다.
+- 설계·문서만 요청받으면 제품 코드·의존성·배포 설정을 변경하지 않는다.
+- 날짜는 시간대 없는 `YYYY-MM-DD`, 0001~9999년, 양 끝 포함이다. renderer에 Node·파일·DB 권한을 노출하지 않는다.
+- 저장 commit 전 성공 표시, 실패 DB의 삭제·빈 DB 대체, 운영 DB를 사용하는 자동 테스트를 금지한다.
+- 사용자 요청과 이 저장소의 승인 범위·문서 관례를 외부 스킬의 일반 템플릿보다 우선한다.
 
-## 검증과 종료
+## 실행·검증 명령
 
-- 변경 후 `node scripts/harness/run.mjs verify`를 실행한다. 로컬과 CI가 같은 명령을 사용한다.
-  결과는 `artifacts/harness/latest.json`과 `latest.log`에 남는다. [검증 안내](docs/harness/validation.md)를 따른다.
-- 제품 변경은 `npm run verify:app`도 실행한다. Linux headless는 Xvfb 환경에서 실행한다.
-  `npm ci`는 Electron 다운로드·native 재빌드를 수행하며, DB 테스트는 Electron 런타임과 임시 프로필을 사용한다.
-  앱 보고서는 `artifacts/app/`, native/E2E 로그는 각 하위 artifact에 남는다. 하네스 검증과 실제 앱 검증을 구분한다.
-- 실패하면 원인을 확인하고 수정한 뒤 해당 검사를 재실행한다. 실패를 숨기거나 검사를 비활성화하지 않는다.
-- Windows 설치·오프라인 실행은 실제 Windows에서 검증해야 한다.
-- 종료 시 [인수인계 양식](docs/wayfinder/handoffs/TEMPLATE.md)에 결과·근거·미검증 항목을 기록한다.
-- 티켓·STATUS·지도는 함께 갱신한다. 미승인·미검증 작업을 완료 처리하지 않는다.
-- 인수인계에는 결과·승인 사항·산출물 링크·검증·다음 작업을 채운다. 빈 양식은 완료 근거가 아니다.
+모두 저장소 루트에서 실행한다. 앱 도구는 [.node-version](.node-version)의 Node와 npm을 사용한다.
+처음에는 `npm ci`가 필요하며 Electron 다운로드·native 준비 때문에 네트워크와 대상 빌드 도구가 필요할 수 있다.
+하네스만 실행할 때는 Node 24 이상과 Git이면 된다.
+
+| 목적 | 명령 |
+| --- | --- |
+| 개발 실행 / 제품 빌드 | `npm run dev` / `npm run build` |
+| 타입 / 날짜 단위 검사 | `npm run typecheck` / `npm run test:unit -- tests/unit/date.test.ts --reporter=dot` |
+| 저장소 완료 검사 | `node scripts/harness/run.mjs verify` |
+| 앱 전체 검사 | `npm run verify:app` (Linux headless: `xvfb-run -a npm run verify:app`) |
+| Windows x64 설치본 | `npm run dist:win` (clean checkout, 기존 출력 없는 Windows 환경) |
+
+`npm run dev`는 일반 사용자 DB를 사용한다. 일회성 확인은 [프로필 격리 절차](docs/harness/validation.md)를 따른다.
+Electron sandbox를 끄지 않는다. 앱 검사를 겹쳐 실행하면 artifact 정리가 충돌하므로 순차 실행한다.
+패키지 검사는 실제 AppData·방화벽을 사용하므로 기존 프로필 없는 일회성 Windows CI VM에서만 실행한다.
+
+## 완료 기준
+
+- 문서 변경도 하네스 verify를 통과해야 한다. 제품 변경은 verify:app도 실행한다.
+  실패를 숨기거나 검사를 비활성화하지 않는다. 경로·명령 수정 시 실제 대상과 실행 가능성도 확인한다.
+- [검증 안내](docs/harness/validation.md)에 따라 보고서의 SHA·dirty 상태·환경·검사 범위를 확인한다.
+  실행하지 못한 검사는 미검증으로 남긴다. Windows CI와 사용자 PC 인수 결과를 구분한다.
+- 결과·근거·남은 일을 관련 기존 문서에 기록한다. 단계 종료라면 인수인계·티켓·STATUS·MAP도 함께 갱신한다.
+  일반 후속 작업의 절차는 [세션 안내](docs/harness/session.md)를 따른다.
 - 요청 범위의 변경만 커밋한다. 사용자의 상시 지시에 따라 검증 후 `main`에 직접 커밋·push하고 성공 여부를 보고한다.
   PR 생성·PR 승인 요청을 기본 절차로 사용하지 않는다. 자동 merge, 강제 push, 사용자 변경 폐기는 하지 않는다.
   원격이 앞서 있으면 최신 변경을 확인·통합하고 다시 검증한 뒤 일반 push한다.
 
-## Agent skills
+## 문서·지침 유지
 
-- 이슈 트래커: [로컬 Markdown 티켓 규칙](docs/agents/issue-tracker.md).
-- 도메인 문서: [용어와 설계의 구분](docs/agents/domain.md).
-- 프로젝트 운영: [하네스 안내](docs/harness/README.md), [새 세션 절차](docs/harness/session.md).
-
-## Code Review Rules
-
-- renderer에서 임의 파일·DB·Node.js 접근을 노출하거나 검증 없는 IPC를 추가하는지 확인한다.
-- 날짜 계산이 시간대에 따라 달라지거나 하루짜리·월 경계 일정을 누락하는지 확인한다.
-- 저장 실패를 성공으로 표시하거나 프로젝트 삭제 시 하위 일정이 부분 삭제되는지 확인한다.
-- 사용자 요구사항과 다른 범위 확대, 증거 없는 완료 선언을 지적한다.
-- 가상화된 막대/행 제거 시 포커스가 BODY로 떨어지거나, 숨겨진 overflow 영역의 native scroll이 날짜 좌표를 어긋나게 하는지 확인한다.
-- 날짜 목록·편집 패널을 연 채 창을 좁혀도 최상위 모달이 inert 배경 안에 갇히지 않고 Escape/포커스 복귀가 동작하는지 확인한다.
+- 지침 점검은 [agents-md](.agents/skills/agents-md/SKILL.md), 문서·결정 기록은 [documentation-and-adrs](.agents/skills/documentation-and-adrs/SKILL.md)를 적용한다.
+- 명령·경로·검증 범위가 바뀌면 해당 기준 문서와 이 진입점을 함께 보정한다. 상세 검토 사례는 [검증 안내](docs/harness/validation.md)에 둔다.
+- 과거 실행 기록은 당시 SHA·환경의 증거로 보존한다. 승인된 결정 이유를 추정해 새 ADR로 복제하지 않는다.

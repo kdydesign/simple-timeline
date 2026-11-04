@@ -1,8 +1,9 @@
 # 이 설계 지도의 로컬 Markdown 트래커
 
-이 저장소는 아직 GitHub Issues 설정을 선택하지 않았다.
-Wayfinder의 미설정 시 기본 대안인 로컬 Markdown으로 현재 지도를 기록한다.
+이 저장소는 Wayfinder의 로컬 Markdown 트래커를 사용한다.
 GitHub 이슈·라벨·댓글을 생성하지 않는다. 문서는 Git 커밋으로 새 채팅에 전달한다.
+아래 상태 전이는 지도에 등록된 단계 작업에 적용한다. 완료된 MVP의 일반 후속 요청은
+[세션 절차](../harness/session.md)를 따르며 기존 단계를 자동으로 다시 열지 않는다.
 
 ## Wayfinding operations
 

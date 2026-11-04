@@ -1,12 +1,21 @@
-# 도메인 문서
+# 문서 기준과 탐색 경로
 
-이 프로젝트는 단일 도메인 문맥을 사용한다.
+이 프로젝트는 단일 도메인 문맥을 사용한다. 현재 구현과 승인된 설계가 다르면 둘을 나란히 기록한다.
+코드가 존재한다는 이유로 요구사항이 바뀐 것으로, 설계가 승인됐다는 이유로 구현·검증된 것으로 간주하지 않는다.
 
-- `CONTEXT.md`: 용어 사전만 기록한다. 기술 선택·진행 상태·전체 요구사항을 넣지 않는다.
-- `docs/superpowers/specs/`: 전체 설계 기준.
-- `docs/design/`: 후속 단계에서 확정한 도메인·저장·화면 설계. 현재 아직 생성하지 않은 문서는 요구사항으로 추정하지 않는다.
-- `docs/adr/`: 되돌리기 어렵고 실제 대안 간 선택의 이유가 필요한 결정이 생길 때만 만든다.
-- `docs/wayfinder/stages/`: 질문·선행 관계·해결 요약과 상세 문서 링크.
-- `docs/wayfinder/handoffs/`: 채팅 사이 결과·검증·미결정 사항 전달.
+| 확인할 내용 | 기준과 읽을 문서 |
+| --- | --- |
+| 현재 작업 상태·인수 범위 | [STATUS](../wayfinder/STATUS.md), [MVP 사용자 인수](../release/user-acceptance.md) |
+| 용어·전체 요구사항 | [CONTEXT](../../CONTEXT.md)는 용어만, [전체 설계](../superpowers/specs/2026-11-03-simple-timeline-design.md)는 요구사항 인덱스 |
+| 승인된 업무 규칙 | [도메인·날짜](../design/domain-rules.md), 실제 계산은 [domain](../../src/domain/) |
+| 승인된 권한·저장 계약 | [구조](../design/architecture.md), [저장](../design/storage.md); 현재 코드는 [main](../../src/main/), [preload](../../src/preload/), [API 타입](../../src/shared/api.ts) |
+| 승인된 화면·날짜 배치 | [화면](../design/experience.md), [시각화](../design/visualization.md); 현재 코드는 [renderer](../../src/renderer/), [계산 함수](../../src/visualization/) |
+| 도구·명령·검증 범위 | [package.json](../../package.json), [CI](../../.github/workflows/), [검증 안내](../harness/validation.md) |
+| 설치·사용·보존 정책 | [배포 정책](../release/policy.md), [사용 안내](../release/user-guide.md) |
+| 당시 실행 증거 | [구현 기록](../implementation/), [Windows 검증](../release/windows-validation.md), [단계 인수인계](../wayfinder/handoffs/)의 SHA·환경·한계 |
+| 문서 점검·개선 제안 | [하네스 재점검](../harness/review.md). 제안은 구현·승인 상태와 분리 |
 
-한 결정의 상세는 해당 설계 문서 한 곳에 둔다. 지도·상태·인수인계에는 요약과 링크를 남긴다.
+결정의 상세는 기존 설계 문서 한 곳에 두고 지도·상태·인수인계에는 요약과 링크를 남긴다.
+스테이지별 계획·조사·인수인계는 당시의 근거이며 현재 운영 절차는 [세션 안내](../harness/session.md)를 따른다.
+새로운 중대한 설계 결정을 기록해야 할 때만 `docs/adr/`를 만든다. 실제 대안·선택·이유의 근거를 기록하며,
+기존 승인 문서의 결정을 새 ADR 체계로 중복 이관하지 않는다.

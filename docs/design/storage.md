@@ -2,26 +2,27 @@
 
 작성일: 2026-11-03. 스테이지 2 사용자 승인 설계.
 [도메인 규칙](domain-rules.md), [프로세스·IPC 계약](architecture.md)을 따른다.
-이 문서는 구현 계약이며 DB 생성·드라이버 설치·Windows 앱 검증 결과가 아니다.
+이 문서는 승인된 저장 계약이다. 현재 구현·검증 근거와 계약의 차이는 아래에 구분한다.
 
 ## 드라이버와 호환성
 
 승인된 에이전트 제안: `better-sqlite3`를 main 전용으로 사용한다.
 동기 API와 명시적 트랜잭션이 짧은 로컬 CRUD에 적합하다. `node:sqlite`는 Electron에 포함된 Node의
 지원 상태에 결합되고, 비동기 드라이버는 이 MVP의 짧은 작업에 별도 복잡성을 더하므로 우선 선택하지 않는다.
-이 드라이버 선택은 공식 자료 검토 후 문서 전체 승인으로 확정했으며 라이브러리 버전은 스테이지 4에서 고정한다.
+이 선택은 공식 자료 검토 후 문서 전체 승인으로 확정했다. 현재 고정 버전은 [package.json](../../package.json)을 따른다.
 
 Electron의 ABI와 일반 Node ABI는 다를 수 있다. Electron 버전·Windows CPU 대상별로
 `@electron/rebuild` 또는 패키징 도구의 동등한 재빌드를 적용하고 네이티브 `.node` 파일을
 asar 밖에 포함한다. 빌드 중 prebuilt 다운로드/컴파일이 필요할 수 있으나 설치된 앱 실행에는
 인터넷이나 컴파일러를 요구하지 않는다. 대상별 prebuilt 존재를 추정하지 않는다.
-스테이지 4에서 Electron·드라이버·패키징 도구 버전 및 네이티브 로딩 검사를 정하고,
-스테이지 7에서 실제 Windows 설치본의 DB 열기·쓰기·재실행·오프라인 검증을 수행한다.
+현재 [빌드 설정](../../electron-builder.yml)은 native 준비와 asarUnpack을 설정한다.
+better-sqlite3 13의 선택된 Windows binding은 `prebuilds/win32-x64.node`이며 실제 로딩·설치 검증은
+[Windows 기록](../release/windows-validation.md)을 따른다. 모든 환경에서 소스 컴파일한 것으로 추정하지 않는다.
 공식 근거는 [조사 문서](../research/2026-11-03-electron-sqlite.md)를 따른다.
 
 ## 논리 스키마와 불변식
 
-아래는 에이전트가 정한 내부 표현이다. 실제 SQL/파일 배치는 스테이지 4~5에서 작성한다.
+아래는 승인된 내부 표현이며 실제 SQL은 [schema.ts](../../src/main/db/schema.ts)에 있다.
 테이블은 STRICT를 사용한다. 이름 중복을 금지하는 UNIQUE는 두지 않는다.
 
 | 테이블 | 필드·제약 |
@@ -43,7 +44,7 @@ DB 제약으로 표현할 수 있다. 전역 사람 테이블이나 계정·권�
 - `schedules(project_id, start_date, end_date, id)` 인덱스를 둔다.
 - main은 엄격한 그레고리력 검증과 이름 정리를 수행한다. DB CHECK에도 비어 있지 않은 정리된 이름,
   `#RRGGBB` 색상, 날짜의 고정 형식·0001~9999·월별 일수·윤년·`start_date <= end_date`를 둔다.
-  SQLite 날짜 함수의 자동 보정에 의존하지 않는다. 실제 SQL 작성 시 이 계약을 경계 사례로 검증한다.
+  SQLite 날짜 함수의 자동 보정에 의존하지 않는다. [DB 회귀](../../tests/native/repository.case.ts)에서 경계 사례를 검사한다.
 - JS trim과 SQLite 기본 trim은 의미가 다르므로 main의 정규화가 기준이다.
   DB CHECK가 main 검증 전체를 대신한다고 간주하지 않는다.
 - 기간·간트 범위·선택 연월은 저장하지 않고 승인된 도메인 규칙으로 계산한다.
@@ -66,11 +67,12 @@ getSnapshot은 한 읽기 트랜잭션에서 프로젝트·일정·참여자를 
 사용자는 Q3 선택을 정정하여 아래 권장 정책 전체를 선택했다.
 
 - 고정 앱 정체성의 `app.getPath('userData')/data/timeline.sqlite3` 사용.
-  설치 폴더·현재 작업 폴더에 저장하지 않는다. 정확한 app ID·제품명은 최초 배포 전 고정한다.
+  설치 폴더·현재 작업 폴더에 저장하지 않는다. 현재 [profile.ts](../../src/main/profile.ts)는
+  앱 데이터의 SimpleTimeline 폴더를 userData로 사용한다. app ID·제품명은 [배포 정책](../release/policy.md)을 따른다.
 - `requestSingleInstanceLock`을 DB 열기 전에 획득한다. 두 번째 실행은 첫 창을 활성화하고 종료한다.
 - 첫 실행은 DB 파일이 없을 때만 디렉터리·빈 schema를 만든다. 기존 DB 열기 실패와 빈 DB를 구분한다.
 - 앱 재실행·일반 업데이트 시 userData와 DB 경로를 유지한다. 설치 파일에 쓰기 가능한 DB를 넣지 않는다.
-  제거 시 데이터 삭제 옵션은 스테이지 7에서 명시적으로 결정하며 지금 삭제를 허용한 것으로 추정하지 않는다.
+  제거 후에도 DB를 보존한다. 사용자 선택과 실제 확인 범위는 [사용자 인수](../release/user-acceptance.md)를 따른다.
 - 종료 시 진행 중 쓰기를 정리하고 연결을 닫는다. 비정상 종료 후 SQLite 저널 복구 결과를 확인한다.
 - 기존 DB의 열기·검사·마이그레이션 실패 시 원본을 지우거나 빈 DB로 바꾸지 않는다.
   DB 사용을 차단하고 오류 원인·DB 경로·종료/재실행 안내를 제공한다.
@@ -87,7 +89,9 @@ getSnapshot은 한 읽기 트랜잭션에서 프로젝트·일정·참여자를 
 기존 파일을 덮어쓰지 않는 고유 이름(버전·UTC 시각·임의 접미사)의 앱 내부 migration-backups 경로를 사용한다.
 Promise 완료를 기다린 후 사본을 readonly로 열어 무결성·FK·원본 user_version을 검증하고 닫는다.
 사본 생성/검증 실패 시 마이그레이션하지 않는다. 생성 도중 중단된 파일은 성공 사본으로 취급하지 않는다.
-보존 사본 경로와 대상 버전은 main 로그에 기록한다. 사본을 자동 정리하지 않는다.
+설계는 보존 사본 경로와 대상 버전을 main 로그에 기록하는 것이다. 현재
+[lifecycle.ts](../../src/main/db/lifecycle.ts)는 사본 생성·검증·보존을 구현했지만 이 migration 로그는 남기지 않는다.
+후속 코드 보완 대상으로 유지한다. 사본을 자동 정리하지 않는다.
 이는 내부 업그레이드 안전장치이며 수동 백업·복원 기능이 아니다.
 버전별 실패 시 원본에 이전 단계까지 commit된 변경이 있을 수 있으며, 실패 단계는 rollback한다.
 어떤 경우에도 자동 교체하지 않고 사본과 현재 파일을 모두 보존한 채 편집을 차단한다.
@@ -103,7 +107,16 @@ DB 파일은 평문이며 Windows 사용자 파일 권한을 따른다. 별도 �
 
 ## 검증과 남은 범위
 
-후속 구현 검증: 첫 실행/빈 데이터, Unicode 이름 정리, 참여자 순서·중복, 윤년/최소·최대 날짜,
-ID 정밀도·생성 순서, FK 거부, 삭제 중 실패 rollback, 잠금/용량/권한 오류, 재실행 보존,
-마이그레이션 성공·실패·고버전 거부·원본 보존, 손상 시 빈 DB 대체 방지.
-이는 실행한 테스트 목록이 아니다. Windows 네이티브 로딩·설치·업데이트·오프라인은 미검증이다.
+현재 [migrations.ts](../../src/main/db/migrations.ts)의 제품 스키마는 1뿐이다. 마이그레이션 성공·실패는
+[native lifecycle 회귀](../../tests/native/lifecycle.case.ts)의 시험용 추가 버전으로 검사한다.
+0.1.0→검증용 0.1.1 설치는 같은 schema이므로 실제 제품 schema 업그레이드의 증거가 아니다.
+
+기존 DB는 application_id 1398033486과 SQLite 헤더·user_version·무결성·FK를 검사한다.
+식별된 DB에 rollback journal이 있으면 recovery-backups에 DB·journal과 존재하는 WAL/SHM을 보존한 뒤 SQLite 복구를 시도한다.
+이 복구 사본 경로는 로그에 남는다. migration 사본은 `.partial`에 생성·검증하고 최종 이름으로 바꾸므로
+미완성 파일을 성공 사본으로 취급하지 않는다. 세부 구현은 [lifecycle.ts](../../src/main/db/lifecycle.ts)를 기준으로 한다.
+
+ID·정렬·FK·원자 삭제·재실행·손상 보존·주입 오류는 [스테이지 5 실행](../implementation/stage-05.md),
+현재 검사 명령은 [검증 안내](../harness/validation.md)를 따른다. Windows native 로딩과 설치 lifecycle은
+[Windows 검증](../release/windows-validation.md)에 기록돼 있다. 실제 사용자 PC의 물리 오류·오프라인 전체 시나리오 등은
+[사용자가 분리한 후속 항목](../release/user-acceptance.md)이며 이번 문서 작업에서 통과로 바꾸지 않는다.

@@ -24,7 +24,7 @@ Task 6~8도 스테이지 6에서 구현·검증했다. [실행 기록](../../imp
 
 ## Global Constraints
 
-- 한 채팅에서는 요청받은 한 스테이지만 진행한다.
+- 이 계획의 단계 실행은 요청받은 한 스테이지에 한정한다. 완료 후 일반 작업은 [세션 절차](../../harness/session.md)를 따른다.
 - React renderer는 직접 Node.js·파일 시스템·SQLite를 호출하지 않는다.
 - 날짜는 서기 0001~9999년의 그레고리력 실제 날짜다. 연도 0000은 허용하지 않는다.
 - 표현은 정확히 `YYYY-MM-DD`다. 빈 값·존재하지 않는 날짜·시각/시간대가 붙은 값은 허용하지 않는다.
@@ -68,7 +68,8 @@ Task 6~8도 스테이지 6에서 구현·검증했다. [실행 기록](../../imp
 앱 정체성 제안: `appId=com.kdydesign.simpletimeline`, 표시명 `Simple Timeline`,
 고정 프로필 폴더 `app.getPath('appData')/SimpleTimeline`을 준비해 `userData`로 설정한다.
 DB는 그 아래 `data/timeline.sqlite3`. 업데이트·표시명 변경으로 경로가 바뀌지 않게 한다.
-Windows x64는 최초 CI 빌드 축이며 최종 지원 OS/CPU를 임의 확정한 것이 아니다. 지원 범위·설치 범위·서명·배포·제거 정책은 Task 9에서 사용자와 정한다.
+계획 승인 당시 Windows x64는 최초 CI 빌드 축이었다. 이후 Task 9에서 확정한 지원·설치·서명·제거 범위는
+[배포 정책](../../release/policy.md)을 따른다.
 
 ## 파일·인터페이스 지도
 
