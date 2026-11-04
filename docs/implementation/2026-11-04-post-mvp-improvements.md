@@ -60,7 +60,12 @@ Linux 테스트 진입점의 정상 재실행 한 표본은 프로세스 시작 
 상단이 모두 62px였고 헤더 42px 전체가 보였다. main padding 보정값을 유지하고 전체 헤더 가시성 회귀를 추가했다.
 아이콘 asset import는 bundler 진입점에서 해석하고 window 생성 함수에 경로를 전달해 native 검사에서도 동일 함수를 사용한다.
 PNG를 실제 패키지 파일 목록에 포함하며, ICO 크기·선택된 경로·설치 schema도 검사한다.
-원격 CI URL·최종 소스 SHA는 완료 메시지에서 확인한다.
+첫 원격 CI(`9f89356`, [Application #41777913630](https://github.com/kdydesign/simple-timeline/actions/runs/41777913630))에서
+Ubuntu 검사는 통과했고 Windows의 편집 패널과 배경을 함께 조작하는 E2E 4개가 실패했다.
+1,024px 화면에서는 모달의 `inert`로 배경 slider가 접근성 트리에서 제외되고 1,280px에서는 다시 접근되는 것을
+로컬 Chromium에서 재현했다. 해당 테스트 4개에 1,280×820 viewport와 배경이 활성 상태라는 전제 검사를 명시했다.
+제품의 좁은 화면 모달 동작은 유지했다. 보정 뒤 Linux `verify:app` 7단계(E2E 33개 포함)와 하네스를 다시 통과했다.
+원격 CI 재검증 URL·최종 소스 SHA는 완료 메시지에서 확인한다.
 
 ## 다음 확인
 

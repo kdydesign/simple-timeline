@@ -5,8 +5,9 @@ async function box(l:Locator){const b=await l.boundingBox();if(!b)throw Error('M
 test.describe('uncertain drag recovery',()=>{
   test.use({seed:'hotfix',fault:'drag-lost'})
   test('refresh reconciles a clean panel and a later name save retains the committed dates',async({desktop:d})=>{
-    const p=d.page;await choose(p);await p.locator('[data-bar="3"]').click()
+    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p);await p.locator('[data-bar="3"]').click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
+    await expect(p.locator('main')).not.toHaveAttribute('inert')
     await p.getByRole('slider').focus();await p.keyboard.press('End')
     const b=await box(p.locator('[data-bar="3"] [data-resize="end"]'))
     await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down();await p.mouse.move(b.x+b.width/2+28,b.y+b.height/2,{steps:4});await p.mouse.up()

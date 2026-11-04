@@ -31,11 +31,12 @@ test.describe('approved improvements',()=>{
     await expect(p.getByRole('dialog')).toHaveCount(0)
   })
   test('calendar drags by dates and blocks dirty editor changes',async({desktop:d})=>{
-    const p=d.page;await choose(p,'2026-12');await p.getByRole('button',{name:'달력',exact:true}).click()
+    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12');await p.getByRole('button',{name:'달력',exact:true}).click()
     const bar=p.locator('[data-segment="3"]'),cell=await box(p.locator('[data-date="2026-12-18"]'))
     await drag(p,bar,cell.width,'end')
     await expect(bar).toHaveAttribute('aria-label',/2026-12-18 — 2026-12-19/)
     await bar.click();await p.getByLabel('일정 이름',{exact:true}).fill('미저장')
+    await expect(p.locator('main')).not.toHaveAttribute('inert')
     await drag(p,bar,-cell.width)
     await expect(p.getByRole('alert')).toContainText('먼저 저장하거나')
     await expect(bar).toHaveAttribute('aria-label',/2026-12-18 — 2026-12-19/)
@@ -81,9 +82,10 @@ test.describe('drag navigation and failure protection',()=>{
     await expect(p.locator('[data-segment="3"]')).toHaveAttribute('aria-label',/2027-01-04 — 2027-01-04/)
   })
   test('failed drag preserves data and a clean open editor',async({desktop:d})=>{
-    const p=d.page;await choose(p,'2026-12')
+    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12')
     const bar=p.locator('[data-bar="3"]');await bar.click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
+    await expect(p.locator('main')).not.toHaveAttribute('inert')
     await p.getByRole('slider',{name:'간트 가로 이동'}).focus();await p.keyboard.press('End')
     await d.app.evaluate(({ipcMain})=>{
       ipcMain.removeHandler('schedule:update')
@@ -120,9 +122,10 @@ test.describe('drag bounds and editor synchronization',()=>{
     expect(result.ok && result.data.schedules.find(s=>s.id==='3')?.startDate).toBe('2026-12-18')
   })
   test('a successful drag refreshes the same clean editor without making it dirty',async({desktop:d})=>{
-    const p=d.page;await choose(p,'2026-12')
+    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12')
     const bar=p.locator('[data-bar="3"]');await bar.click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
+    await expect(p.locator('main')).not.toHaveAttribute('inert')
     await p.getByRole('slider',{name:'간트 가로 이동'}).focus();await p.keyboard.press('End')
     await drag(p,bar,28,'end')
     await expect(p.getByLabel('종료일',{exact:true})).toHaveValue('2026-12-19')
