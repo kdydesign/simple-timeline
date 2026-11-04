@@ -1,0 +1,49 @@
+{
+  "skill": "frontend-design",
+  "repository": "https://github.com/anthropics/skills",
+  "upstream_ref": "main",
+  "commit": "ca45fc496a3436251f191354091d557da31c15b5",
+  "upstream_directory": "skills/frontend-design",
+  "retrieved_on": "2026-11-04",
+  "license": {
+    "spdx": "Apache-2.0",
+    "source_path": "skills/frontend-design/LICENSE.txt",
+    "local_path": "LICENSE.txt"
+  },
+  "files": [
+    {
+      "source_path": "skills/frontend-design/LICENSE.txt",
+      "local_path": "LICENSE.txt",
+      "git_blob_sha1": "f433b1a53f5b830a205fd2df78e2b34974656c7b",
+      "bytes": 10174,
+      "mode": "100644",
+      "sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+    },
+    {
+      "source_path": "skills/frontend-design/SKILL.md",
+      "local_path": "SKILL.md",
+      "git_blob_sha1": "a5333457c414d20d625f307df945842c0952ecc3",
+      "bytes": 9390,
+      "mode": "100644",
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+    }
+  ],
+  "added_files": [
+    "SKILL.md",
+    "LICENSE.txt",
+    "UPSTREAM.json"
+  ],
+  "review": {
+    "existing_project_name_or_path_conflicts": [],
+    "scripts_present": false,
+    "additional_reference_files_present": false,
+    "upstream_instructions_modified": false,
+    "upstream_license_modified": false,
+    "suspicious_commands_found": false,
+    "relative_references_verified": [
+      "LICENSE.txt"
+    ],
+    "guidance_scope_note": "Generic mobile responsiveness guidance does not expand the approved Windows MVP scope. Existing project requirements take precedence.",
+    "runtime_skill_dispatch_verified": false
+  }
+}
