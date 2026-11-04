@@ -72,3 +72,24 @@ Windows 실제 설치본의 창 이동·가장자리 크기 조절·더블 클�
 Windows 글꼴·100%/200% 배율·Narrator 및 사용자 PC 인수는 미검증이다.
 최종 커밋의 CI 상태는 완료 메시지와 해당 GitHub Actions 실행에서 별도로 확인한다.
 MVP 단계 지도는 완료 상태를 유지하며 후속 작업은 이 문서와 C안 설계에서 이어간다.
+
+## Windows CI 후속 보정
+
+첫 구현 커밋 `95a4c214d33d188e0eadf6656f333823ecb66a50`의
+[Application 실행 41801371834](https://github.com/kdydesign/simple-timeline/actions/runs/41801371834)에서
+Linux와 Repository harness는 통과했지만 Windows E2E 43개 중 팝오버 크기 검사 1개가 실패했다.
+Windows 타입·배포 정적 검사·단위·UI·제품 빌드·native는 통과했으며,
+이 실패로 Windows 설치본 생성·설치 lifecycle 단계는 실행되지 않았다.
+
+실패한 단언은 viewport를 900px에서 500px로 바꾼 직후 팝오버 하단을 한 번만 읽었다.
+기대값은 492px 이하였고 관측값 535px는 기존 위치 93px + 고정 높이 442px였다.
+`Popover`의 resize listener가 React 상태로 최대 높이를 갱신하는 경로와
+테스트의 즉시 측정 사이에 갱신 완료 대기가 없었다.
+검사를 `expect.poll`로 바꾸어 렌더링 결과가 같은 경계 조건을 만족할 때까지 기다린다.
+시간만 지연하거나 허용 오차를 늘리지 않으며, 계속 잘린 상태이면 그대로 실패한다.
+제품 코드·워크플로·검사 개수는 바꾸지 않았다.
+
+Linux에서 CPU 6배 제한을 포함한 12회 크기 변경은 모두 최종 하단 492px로 수렴했고,
+Windows에서 관측된 즉시 측정 실패는 로컬에서 재현되지 않았다.
+수정 후 타입 검사와 C안 E2E 5개×3회(15개), 하네스 7개·공백 검사를 모두 통과했다.
+최종 Windows 확인은 보정 커밋의 Actions 결과와 완료 메시지에서 확인한다.

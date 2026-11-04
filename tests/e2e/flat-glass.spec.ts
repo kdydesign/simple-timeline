@@ -26,7 +26,12 @@ test('project popup keeps its size and fixed actions while long content scrolls'
  expect(await heading.boundingBox()).toEqual(hb);expect(await footer.boundingBox()).toEqual(fb);
  await expect(panel.getByRole('button',{name:'추가 프로젝트 19 편집',exact:true})).toBeVisible();
  await p.setViewportSize({width:1280,height:500});
- const short=(await panel.boundingBox())!;expect(short.y+short.height).toBeLessThanOrEqual(492);
+ // Viewport emulation can resolve before the resize listener commits React layout.
+ // Keep the same 8px boundary, but wait for the rendered popup to satisfy it.
+ await expect.poll(async()=>{
+  const short=await panel.boundingBox();
+  return short ? short.y+short.height : Infinity;
+ }).toBeLessThanOrEqual(492);
  await expect(footer).toBeInViewport();
  await p.getByRole('button',{name:'간트',exact:true}).click();await expect(panel).toHaveCount(0);
  await p.getByRole('button',{name:'프로젝트 목록',exact:true}).click();await expect(panel).toBeVisible();
