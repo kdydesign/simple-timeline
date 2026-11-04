@@ -1,7 +1,8 @@
 # 진행 상태
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
-다음: 상세 개선·오류 검증은 사용자의 별도 후속 요청에서 범위를 정한다.
+후속: [개선·오류 대응 설계](../design/post-mvp-improvements.md)를 사용자와 확정하고 문서에 반영했다.
+제품 구현은 미착수다. 다음 작업은 이 확정 설계에 따른 기술 설계·구현 계획이며, 기존 MVP 단계는 완료 상태를 유지한다.
 [실행 기록](../implementation/stage-07.md)과 [인수인계](handoffs/07-windows-release.md)를 참조한다.
 실제 Electron·SQLite CRUD·간트·달력과 Windows NSIS 빌드가 있다.
 [Windows 검증 기록](../release/windows-validation.md)에서 실제 설치 lifecycle과 미실행 실기 항목을 구분한다.
