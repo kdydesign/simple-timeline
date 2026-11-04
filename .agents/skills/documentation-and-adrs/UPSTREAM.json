@@ -1,0 +1,32 @@
+{
+  "skill": "documentation-and-adrs",
+  "repository": "https://github.com/addyosmani/agent-skills",
+  "upstream_ref": "main",
+  "commit": "301b02b12bff98e4688e6984af6556802322bbde",
+  "upstream_directory": "skills/documentation-and-adrs",
+  "retrieved_on": "2026-11-04",
+  "license": {
+    "spdx": "MIT",
+    "source_path": "LICENSE",
+    "local_path": "LICENSE"
+  },
+  "files": [
+    {
+      "source_path": "LICENSE",
+      "local_path": "LICENSE",
+      "git_blob_sha1": "d67778ada6b9cda6227e9130da182c13e73c8b2e",
+      "bytes": 1068,
+      "mode": "100644",
+      "sha256": "6f202f8bd568cd730dbb2b0d1f8e243bc74c2fa1f64dbce9b2c7ea08bd5c9fd7"
+    },
+    {
+      "source_path": "skills/documentation-and-adrs/SKILL.md",
+      "local_path": "SKILL.md",
+      "git_blob_sha1": "eff8fddc25d972bc0e3b367d23afa0705b7a87b5",
+      "bytes": 10999,
+      "mode": "100644",
+      "sha256": "6fccf3088d5042a3c889faa25113ffa47b9f7f999f4fc9e527d5e5226888442f"
+    }
+  ],
+  "external_skill_references": []
+}

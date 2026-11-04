@@ -1,0 +1,116 @@
+{
+  "skill": "agents-md",
+  "repository": "https://github.com/mblode/agent-skills",
+  "upstream_ref": "main",
+  "commit": "391508702523088f564fecfdd95ce76304efb117",
+  "upstream_directory": "skills/agents-md",
+  "retrieved_on": "2026-11-04",
+  "license": {
+    "spdx": "MIT",
+    "source_path": "LICENSE.md",
+    "local_path": "LICENSE.md"
+  },
+  "files": [
+    {
+      "source_path": "LICENSE.md",
+      "local_path": "LICENSE.md",
+      "git_blob_sha1": "c5a1d56c6d623c72d077f8aab56b31d7dc371cbb",
+      "bytes": 1070,
+      "mode": "100644",
+      "sha256": "81ac64b19ea7ae7f9a8d197705df58f48ffca02c74fca13e565dedf4f7595b46"
+    },
+    {
+      "source_path": "skills/agents-md/SKILL.md",
+      "local_path": "SKILL.md",
+      "git_blob_sha1": "343ff1bb19cfe7f0401ad876f980a4f9cc17e66f",
+      "bytes": 12570,
+      "mode": "100644",
+      "sha256": "4c5bf1560b7b843ef1b1657aa35f65b7e0b7519ac58b51c85687fb982c815104"
+    },
+    {
+      "source_path": "skills/agents-md/evals/evals.json",
+      "local_path": "evals/evals.json",
+      "git_blob_sha1": "a0a3a68346e53bf47b23e2dcc54b4bf966f96c97",
+      "bytes": 3453,
+      "mode": "100644",
+      "sha256": "6bfe827401856d4ac0f7544dba352953f885072779f3ee28951d554b91aec952"
+    },
+    {
+      "source_path": "skills/agents-md/references/project-setup.md",
+      "local_path": "references/project-setup.md",
+      "git_blob_sha1": "3d697da9f83dac4a972555861edc1b3509d618af",
+      "bytes": 9487,
+      "mode": "100644",
+      "sha256": "c75415ee5b53d17b19028cee43a48897412af7388f0f06425596fc0fb27beaf9"
+    },
+    {
+      "source_path": "skills/agents-md/references/quality-criteria.md",
+      "local_path": "references/quality-criteria.md",
+      "git_blob_sha1": "158e9489a52df27b80e05f0407d993ae714c56fb",
+      "bytes": 5102,
+      "mode": "100644",
+      "sha256": "de38462e73d0f202045bb6ccc68a20f76c9224c41ccaa312dbb499fece2f7cf1"
+    },
+    {
+      "source_path": "skills/agents-md/references/quick-checklist.md",
+      "local_path": "references/quick-checklist.md",
+      "git_blob_sha1": "caeceb1bd5171bc56d9cf35893d4f4ccd975ba73",
+      "bytes": 1720,
+      "mode": "100644",
+      "sha256": "67ed844a9a71a144b39f920ab9cf719fee7348cea4a494d56f0d6758e9939583"
+    },
+    {
+      "source_path": "skills/agents-md/references/refactor-workflow.md",
+      "local_path": "references/refactor-workflow.md",
+      "git_blob_sha1": "7aac3e498c4b56e559df4218b8fd3d115948f04d",
+      "bytes": 3583,
+      "mode": "100644",
+      "sha256": "6e451c6b212c4d4cc0f32410b62ec926cf869c76287396a0e6adc748fef91890"
+    },
+    {
+      "source_path": "skills/agents-md/references/repo-evals.md",
+      "local_path": "references/repo-evals.md",
+      "git_blob_sha1": "e6a06b480d6acd88a5384f28144fc348b8ec2ee0",
+      "bytes": 3628,
+      "mode": "100644",
+      "sha256": "7c912c498a18a204b688db89ec092d6b0909b588fd0523deb83f2b2b80fb7293"
+    },
+    {
+      "source_path": "skills/agents-md/references/root-content-guidance.md",
+      "local_path": "references/root-content-guidance.md",
+      "git_blob_sha1": "e1e8b5cc8e7e9f36f40e395c090348341329e21c",
+      "bytes": 4846,
+      "mode": "100644",
+      "sha256": "c14b76cd9312f5910f566cae588df1d42b58b818c3a60509d1e4f7400434d3c4"
+    },
+    {
+      "source_path": "skills/agents-md/references/templates.md",
+      "local_path": "references/templates.md",
+      "git_blob_sha1": "9612afdb8459c6f367809bdd69bf685ccb02de01",
+      "bytes": 3185,
+      "mode": "100644",
+      "sha256": "5b8072fe07d10b4a8c8dbce23531e5e5ea92c431af9ea420977a50bb7a9db120"
+    }
+  ],
+  "external_skill_references": [
+    {
+      "skill": "codebase-architecture",
+      "mentioned_in": "references/project-setup.md",
+      "reference": "references/enforcement-ladder.md",
+      "scope": "Optional reference in another skill; not a file in agents-md",
+      "url": "https://github.com/mblode/agent-skills/blob/391508702523088f564fecfdd95ce76304efb117/skills/codebase-architecture/references/enforcement-ladder.md"
+    },
+    {
+      "skill": "agent-skills-creator",
+      "scope": "Related skill, not imported"
+    },
+    {
+      "skill": "ghostwriter",
+      "scope": "Related skill, not imported"
+    },
+    {
+      "skill": "cadence-advise",
+      "scope": "External optional skill, not imported"
+    }
+  ]
+}
