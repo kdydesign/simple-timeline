@@ -10,7 +10,7 @@
 | 문서·에이전트 지침 | `node scripts/harness/run.mjs verify` + 변경한 경로·명령의 실제 대상 확인 | 저장소 구조·참조·상태 일관성. 문장 내용의 진실성은 별도 대조 |
 | 순수 날짜·정렬·시각화 계산 중 반복 확인 | `npm run test:unit -- tests/unit/date.test.ts --reporter=dot` (날짜 검사 예) | 지정 단위 검사. 제품 변경의 최종 통합 검사를 대체하지 않음 |
 | 제품 코드 | `npm run verify:app` | 타입·release 정적 검사·3개 TZ unit·UI·build·Electron native·E2E |
-| Windows 설치본 | clean Windows에서 `npm run dist:win`, 이어 `npm run dist:win:test-update` | 실제 NSIS 산출물과 소스 SHA·해시. 설치 실행 성공은 별도 검사 |
+| Windows 설치본 | clean Windows에서 `npm run dist:win`, 이어 `npm run dist:win:test-update`; CI의 `scripts/release/build-legacy.ps1`은 고정0.2.1 fixture 생성 | 실제 NSIS 산출물과 소스 SHA·해시. 설치 실행 성공은 별도 검사 |
 | 패키지 설치 lifecycle | 일회성 Windows CI VM의 `npm run test:packaged` | 실제 제품 앱·설치·차단 후 오프라인 동작·업데이트·제거/재설치 |
 | 사용자 PC | [실기 양식](../release/manual-checklist.md) | 사용자가 실행·보고한 항목만. [기존 MVP 인수 범위](../release/user-acceptance.md) 유지 |
 
@@ -75,6 +75,7 @@ XDG_CONFIG_HOME="$ST_DOC_PROFILE" npm run dev
 headless에서는 준비된 DISPLAY가 추가로 필요하다. 이 예는 Linux용이며 Windows에 같은 환경변수를 적용하지 않는다.
 자동 native/E2E 검사는 자체 임시 DB·Chromium 프로필을 사용한다. 오류 주입은 별도 test main에만 있고
 제품 main에는 테스트용 프로필 override가 없다. 운영 DB 경로를 시험 경로로 넘기지 않는다.
+패키지 검사 전에 실제0.2.1 fixture가 필요하다. CI는 `pwsh -File scripts/release/build-legacy.ps1`로 별도 임시 worktree에서 준비한다.
 패키지 검사는 실제 AppData·방화벽을 다루므로 기존 프로필 없는 일회성 GitHub-hosted Windows VM에서만 실행한다.
 
 앱 검사는 공유 artifact 디렉터리를 정리하므로 전체/개별 검사를 겹쳐 실행하지 않는다.
@@ -89,10 +90,10 @@ verify:app의 순서는 typecheck → test:release → test:tz → test:ui → b
 | `artifacts/harness/latest.json`, `latest.log` | scope·시각·OS·Node·HEAD·dirty·검사 결과와 상세 로그. [Repository harness](../../.github/workflows/harness.yml)는 Ubuntu/Windows, 5분 제한, artifact 14일 보관 |
 | `artifacts/app/latest.json`, 명령별 `.log` | `application-tests`의 SHA·dirty·완료/실패/미실행. 로그 이름은 스크립트의 콜론을 하이픈으로 바꾼 이름 |
 | `artifacts/native/`, `artifacts/e2e/` | Electron DB 결과, E2E JSON·프로세스 로그·화면·성능 fixture 결과 |
-| `artifacts/packaged/`, `release/`, `artifacts/windows-update/` | Windows lifecycle 결과·정식 설치본·검증 전용 업데이트 fixture |
+| `artifacts/packaged/`, `release/`, `artifacts/windows-update/`, `artifacts/windows-legacy/` | Windows lifecycle 결과·정식 설치본·검증 전용 업데이트 fixture |
 
-[Application CI](../../.github/workflows/app.yml)는 Ubuntu/Windows, 작업별 30분 제한으로 앱 검사를 실행한다.
-Windows에서만 이어 두 설치본과 패키지 검사를 실행한다. 로그는 실패해도 업로드하며 설치본은 성공한 경우만 제공한다.
+[Application CI](../../.github/workflows/app.yml)는 Ubuntu/Windows, 작업별 45분 제한으로 앱 검사를 실행한다.
+Windows에서만 현재·검증 전용 다음 버전·고정된 실제0.2.1 설치본을 만들고 패키지 검사를 실행한다. 로그는 실패해도 업로드하며 설치본은 성공한 경우만 제공한다.
 이 workflow는 retention-days를 지정하지 않아 저장소/조직 기본 보관 설정을 따른다. 모두 14일이라고 가정하지 않는다.
 두 workflow 모두 push·pull_request·수동 실행을 받으며 문서만 변경해도 Application의 설치본 생성까지 실행한다.
 

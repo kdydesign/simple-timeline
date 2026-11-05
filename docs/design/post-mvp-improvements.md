@@ -1,5 +1,7 @@
 # MVP 이후 개선·오류 대응 — 확정 설계
 
+> 2026-11-05 [Planrail 승인 설계](planrail-improvements.md)가 명시한 선택 날짜·탐색·배율·트레이·화면 변경은 이 문서의 이전 해당 항목보다 우선한다. 구현 상태와 검증은 [Planrail 기록](../implementation/2026-11-05-planrail.md)을 따른다.
+
 승인일: 2026-11-04 (한국 시간). 기준 구현: `3dc20f69932ac7db2c3d7ae590cd27f62f6fcae2`.
 상태: **요구사항·상호작용 설계 승인 완료**. 후속 구현 요청에 따라 구현·검증을 진행했다.
 현재 결과와 남은 실기 확인은 [구현 기록](../implementation/2026-11-04-post-mvp-improvements.md)을 따른다.

@@ -1,5 +1,7 @@
 # 화면과 상호작용 설계
 
+> 2026-11-05 [Planrail 승인 설계](planrail-improvements.md)가 명시한 선택 날짜·탐색·배율·트레이·화면 변경은 이 문서의 이전 해당 항목보다 우선한다. 구현 상태와 검증은 [Planrail 기록](../implementation/2026-11-05-planrail.md)을 따른다.
+
 작성일: 2026-11-03. 스테이지 3. 사용자 승인 설계.
 기준 main: `a773f88a9ca3747ed712dd1985eea095a6b71ba4`.
 [도메인 규칙](domain-rules.md)·[IPC 계약](architecture.md)·[저장 설계](storage.md)는 승인 상태를 유지한다.
