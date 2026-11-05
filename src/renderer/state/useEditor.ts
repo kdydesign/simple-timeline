@@ -1,3 +1,4 @@
+import {DEFAULT_REMINDER} from '../../domain/reminder';
 import { useState } from "react";
 import type {
   Project,
@@ -48,12 +49,14 @@ export function useEditor() {
   ) => {
     const draft: ScheduleInput = schedule
       ? {
+          reminder: {...schedule.reminder},
           projectId: schedule.projectId,
           name: schedule.name,
           startDate: schedule.startDate,
           endDate: schedule.endDate,
         }
       : {
+          reminder: {...DEFAULT_REMINDER},
           projectId,
           name: "",
           startDate: date ?? monthBounds(ym).start,
@@ -79,7 +82,7 @@ export function useEditor() {
     patch,
     syncSchedule: (schedule: Schedule) => setEditor(e => {
       if (!e || e.kind !== "schedule" || e.id !== schedule.id || JSON.stringify(e.draft) !== JSON.stringify(e.original)) return e;
-      const draft = {projectId:schedule.projectId, name:schedule.name, startDate:schedule.startDate, endDate:schedule.endDate};
+      const draft = {reminder:{...schedule.reminder},projectId:schedule.projectId, name:schedule.name, startDate:schedule.startDate, endDate:schedule.endDate};
       return {...e, draft, original:{...draft}};
     }),
     close: () => setEditor(null),

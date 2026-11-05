@@ -21,3 +21,22 @@ button.primary,button.primary:hover:enabled{background:var(--accent);border-colo
 .confirm-overlay{position:fixed;inset:40px 0 0;z-index:50;background:#0006}.confirm{position:fixed;inset:50% auto auto 50%;transform:none;z-index:51;max-width:min(480px,calc(100vw - 48px));max-height:calc(100vh - 64px);overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:var(--popup-shadow);display:block}.confirm h2{margin:0 0 16px}.confirm p{font-size:14px}.confirm .actions{margin-top:24px}
 @media(max-width:850px){.toolbar{padding:8px 12px;gap:8px}.toolbar .header-actions{gap:2px}.toolbar-view-title{display:none}.mode-switch{margin-left:auto}}
 @media(max-width:700px){.toolbar{gap:4px}.icon-button{width:30px;height:32px}.toolbar .month-controls{gap:2px}.month-input .date-input input{width:116px}.toolbar .header-actions{gap:0}}
+/* Schedule hierarchy and reminders: preserve row geometry and project colors. */
+.project-row .text-button{font-size:15px;font-weight:700;line-height:22px}
+.project-row .gantt-name{box-shadow:inset 3px 0 0 var(--border)}
+.schedule-row .gantt-name{padding-left:52px}
+.schedule-row .text-button{font-size:13px;font-weight:400;line-height:20px}
+.schedule-row .gantt-name small{margin-top:4px}
+.editor-actions button.danger{background:#b42340;color:#fff;border-color:#b42340}
+:root[data-theme="dark"] .editor-actions button.danger{background:#be123c;color:#fff;border-color:#be123c}
+.editor-actions button.danger:hover:enabled{filter:brightness(.92)}
+button.zoom-percent{border:1px solid transparent;background:transparent;padding:3px 5px;min-width:46px;color:var(--muted);font-size:12px}
+button.zoom-percent:hover:enabled{background:var(--subtle);color:var(--text)}
+.reminder-fields{margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+.reminder-fields h3{font-size:13px;font-weight:600;margin:0 0 12px}
+.reminder-inputs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.reminder-inputs label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:7px}
+.reminder-days{display:flex;align-items:center;gap:7px}.reminder-days input{min-width:0;flex:1}.reminder-days span{white-space:nowrap}
+.reminder-options{display:flex;gap:16px;margin-top:14px}.reminder-options label{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer}
+.editor .reminder-options input[type="checkbox"]{appearance:auto;accent-color:var(--accent);width:16px;height:16px;padding:0;margin:0;box-shadow:none}
+.reminder-notice{padding:10px 20px;background:var(--subtle);border-bottom:1px solid var(--border);font-size:13px}.reminder-notice p{margin:4px 0}.reminder-notice button{margin-top:6px}

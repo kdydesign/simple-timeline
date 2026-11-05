@@ -114,3 +114,10 @@ it('returns focus to the persistent name when zoom removes the focused bar from 
   expect(screen.getByRole('button',{name:'운영 배포 편집'})).toHaveFocus()
   expect(v.container.querySelector('[data-bar="3"]')).toBeNull()
 })
+it('resets a fractional zoom to 100% without moving the left date or changing data',()=>{
+ const v=setup(31.157572998894548),before=Number(v.slider.value)/31.157572998894548
+ fireEvent.click(screen.getByRole('button',{name:'간트 배율 100%로 초기화'}))
+ expect(screen.getByRole('button',{name:'간트 배율 100%로 초기화'})).toHaveTextContent('100%')
+ expect(Number(v.slider.value)/28).toBeCloseTo(before,6)
+ expect(v.commit).not.toHaveBeenCalled();expect(v.edit).not.toHaveBeenCalled();expect(v.add).not.toHaveBeenCalled()
+})

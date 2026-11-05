@@ -1,3 +1,5 @@
+import {normalizeReminder} from '../domain/reminder';
+import {useReminders} from './state/useReminders';
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import type { TimelineApi } from "../shared/api";
 import type { ApiError, YearMonth, Result, Id, Schedule } from "../shared/types";
@@ -40,6 +42,8 @@ export function App({
   api?: TimelineApi;
   today?: Date;
 }) {
+  const reminders = useReminders();
+  const handledReminder = useRef<number|null>(null);
   const timeline = useTimeline(api),
     editor = useEditor();
   const [selectedDate, setSelectedDate] = useState(() => localDate(today)),
@@ -200,10 +204,11 @@ export function App({
           endDate: parseBusinessDate(model.draft.endDate, "endDate"),
         };
         inclusiveDays(v.startDate, v.endDate);
+        const reminder = normalizeReminder(model.draft.reminder,v.startDate,v.endDate);
         result = model.id
-          ? await timeline.mutate("updateSchedule", { ...v, id: model.id })
+          ? await timeline.mutate("updateSchedule", { ...v, reminder, id: model.id })
           : await timeline.mutate("createSchedule", {
-              ...v,
+              ...v, reminder,
               projectId: validateId(model.draft.projectId, "projectId"),
             });
       }
@@ -303,7 +308,31 @@ export function App({
     if (drag) setMonth(next);
     else navigateDate(dateInMonth(selectedDate,next));
   };
-  const statusView = (
+  useEffect(()=>{
+    const target=reminders.openRequest;
+    if(!target||handledReminder.current===target.token||!canEdit||confirmation||dayModalOpen||model?.saved)return;
+    let cancelled=false;
+    void api.getSnapshot().then(result=>{
+      if(cancelled)return;
+      handledReminder.current=target.token;
+      void reminders.acknowledge(target.token);
+      if(!result.ok){setFormError(result.error);return}
+      const schedule=result.data.schedules.find(s=>s.id===target.scheduleId);
+      if(!schedule){setFormError({code:'NOT_FOUND',message:'이미 삭제된 일정입니다.'});return}
+      request(caller=>{navigateDate(schedule.startDate);editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller)});
+    }).catch(()=>{if(!cancelled)setFormError({code:'IPC_UNAVAILABLE',message:'알림의 일정을 조회하지 못했습니다. 다시 조회해 주세요.'})});
+    return()=>{cancelled=true};
+  },[reminders.openRequest,canEdit,confirmation,dayModalOpen,model?.saved,editor.dirty,api]);
+  const reminderNotice = (reminders.error||reminders.failed||reminders.unknown||reminders.storageError) ? <div className="reminder-notice" role="alert">
+    {reminders.error&&<p>{reminders.error}</p>}
+    {reminders.storageError&&<p>알림 처리 기록을 저장하지 못했습니다. 알림을 보내지 않았거나 전송 결과가 불명확할 수 있습니다.</p>}
+    {reminders.unknown>0&&<p>알림 전송 결과를 확인하지 못했습니다. 중복 방지를 위해 자동으로 다시 보내지 않습니다.</p>}
+    {reminders.failed>0&&<p>알림 전송에 실패했습니다. Windows 알림 설정을 확인해 주세요.</p>}
+    {reminders.failed>0&&<button type="button" onClick={()=>void reminders.retry()}>오늘의 실패한 알림 재시도</button>}
+    {reminders.error&&<button type="button" onClick={()=>void reminders.refresh()}>알림 상태 다시 조회</button>}
+  </div>:null;
+  const statusView = (<>
+    {reminderNotice}
     <StatusNotice
       phase={timeline.phase}
       error={formError ?? timeline.error}
@@ -313,7 +342,7 @@ export function App({
         void timeline.refresh();
       }}
     />
-  );
+  </>);
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
       <Titlebar/>

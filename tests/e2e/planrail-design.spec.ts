@@ -45,15 +45,15 @@ test('only the seven approved header controls show aligned shadcn tooltips',asyn
  await expect(p.getByLabel('일정 이름',{exact:true})).toHaveAttribute('data-slot','input');
  await expect(p.getByRole('button',{name:'저장',exact:true})).toHaveAttribute('data-slot','button');
 });
-test('zoom percent is read only and exclusive to Gantt',async({desktop:{page:p}})=>{
+test('zoom percent resets to 100% and is exclusive to Gantt',async({desktop:{page:p}})=>{
  await p.setViewportSize({width:1440,height:900});
  expect(await p.locator('main').evaluate(e=>e.scrollHeight-e.clientHeight)).toBe(0);
  const footer=(await p.locator('.gantt-navigation').boundingBox())!;expect(footer.y+footer.height).toBeLessThanOrEqual(900);
- await expect(p.getByLabel('간트 배율',{exact:true})).toHaveText('100%');
+ await expect(p.getByRole('button',{name:'간트 배율 100%로 초기화'})).toHaveText('100%');
  const axis=p.locator('.gantt-date-heading');const b=(await axis.boundingBox())!;
  await p.mouse.move(b.x+150,b.y+35);await p.keyboard.down('Control');await p.mouse.wheel(0,-100);await p.keyboard.up('Control');
- await expect(p.getByLabel('간트 배율',{exact:true})).not.toHaveText('100%');
- await p.getByRole('button',{name:'달력',exact:true}).click();await expect(p.getByLabel('간트 배율',{exact:true})).toHaveCount(0);
+ await expect(p.getByRole('button',{name:'간트 배율 100%로 초기화'})).not.toHaveText('100%');
+ await p.getByRole('button',{name:'달력',exact:true}).click();await expect(p.getByRole('button',{name:'간트 배율 100%로 초기화'})).toHaveCount(0);
 });
 test('portalled controls retain real editor focus and nested Escape at a short viewport',async({desktop:{page:p}})=>{
  await p.setViewportSize({width:760,height:500});
@@ -79,7 +79,7 @@ test('approved Zinc tokens distinguish selected dates and today in light and dar
  for(const theme of ['light','dark']){
   await expect(p.locator('.gantt-name small').first()).toHaveCSS('font-size','12px');
   await expect(p.locator('.gantt-bar').first()).toHaveCSS('font-size','13px');
-  await expect(p.getByLabel('간트 배율',{exact:true})).toHaveCSS('font-size','12px');
+  await expect(p.getByRole('button',{name:'간트 배율 100%로 초기화'})).toHaveCSS('font-size','12px');
   if(theme==='dark')await p.getByRole('button',{name:'다크 모드',exact:true}).click();
   const expected=theme==='light'?'#18181b':'#fafafa';
   expect(await p.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--text').trim())).toBe(expected);

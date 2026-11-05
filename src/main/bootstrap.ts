@@ -1,8 +1,8 @@
+/// <reference types="electron-vite/node" />
 import {createReminderStore} from './db/reminders'
 import {createReminderEngine,type ReminderSender} from './reminders/engine'
 import {createNativeReminderSender} from './reminders/native'
 import {registerReminderIpc} from './reminders/ipc'
-/// <reference types="electron-vite/node" />
 import { app, dialog, powerMonitor } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import { startupRecorder, rendererStartupProbe, observeStartupRequests } from './startup'

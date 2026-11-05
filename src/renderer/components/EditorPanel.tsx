@@ -1,3 +1,4 @@
+import {ReminderFields} from './ReminderFields';
 import {Button} from './ui/button';
 import {Input} from './ui/input';
 import { useEffect, useRef, type ReactNode } from "react";
@@ -189,6 +190,7 @@ export function EditorPanel({
               <p className="help">
                 YYYY-MM-DD · 시작일과 종료일을 모두 포함합니다.
               </p>
+              <ReminderFields value={editor.draft.reminder} onChange={reminder=>patch({reminder})} error={error}/>
               <p className="period">{period}</p>
             </>
           )}

@@ -21,6 +21,14 @@ let changed = false,
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT;
 void bootstrap({
   profileDir: profile,
+  ...(fault?.startsWith('reminder-') ? {
+    reminderClock:()=>new Date(2026,10,9,12),
+    reminderSender:async(message:import('../../src/main/reminders/engine').ReminderMessage,onClick:()=>void)=>{
+      const g=globalThis as any;
+      (g.reminderMessages??=[]).push(message);g.reminderClick=onClick;
+      return fault==='reminder-failed'&&g.reminderMessages.length===1 ? 'failed' as const : 'submitted' as const;
+    },
+  } : {}),
   ...(fault === "tray-failure" ? {
     createTray: () => { throw Error("Injected tray creation failure") },
     notifyTrayFailure: () => writeFileSync(join(profile,"tray-error.txt"),"reported"),

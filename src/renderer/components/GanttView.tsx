@@ -461,7 +461,7 @@ export function GanttView({
                       </button>
                       {s ? <small>{s.startDate} — {s.endDate}</small> : (
                         <small className="project-meta">
-                          <span>{r.project.participants.join(" · ") || "참여자 없음"}</span>
+                          
                           {!index.byProject.get(r.project.id)?.length && <span className="empty-row">일정 없음</span>}
                         </small>
                       )}
@@ -529,7 +529,10 @@ export function GanttView({
         </div>
       )}
       <div className="gantt-navigation" onKeyDown={keyboard}>
-        {active&&<span className="zoom-percent" aria-label="간트 배율">{Math.round(P/28*100)}%</span>}
+        {active&&<button type="button" className="zoom-percent" aria-label="간트 배율 100%로 초기화" disabled={!onDayWidth||navigation.panning} onClick={()=>{
+          if(drag.isActive()||navigation.panning||!onDayWidth)return;
+          move(x/P*28,28);onDayWidth(28);
+        }}>{Math.round(P/28*100)}%</button>}
         <input
           type="range"
           aria-label="간트 가로 이동"
