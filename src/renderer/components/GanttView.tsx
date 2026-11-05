@@ -461,7 +461,7 @@ export function GanttView({
                       </button>
                       {s ? <small>{s.startDate} — {s.endDate}</small> : (
                         <small className="project-meta">
-                          
+
                           {!index.byProject.get(r.project.id)?.length && <span className="empty-row">일정 없음</span>}
                         </small>
                       )}

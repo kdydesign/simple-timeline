@@ -7,7 +7,7 @@ function setup(){
  snapshot.schedules=snapshot.schedules.slice(0,1).map(s=>({...s,endDate:s.startDate,reminder:{daysBefore:0,time:'09:00',start:true,end:true}}))
  const records=new Map<string,DeliveryState>()
  const store={claim:vi.fn((items:any[],retry:boolean)=>items.filter(o=>{if(!records.has(o.key)||(retry&&records.get(o.key)==='failed')){records.set(o.key,'claimed');return true}return false})),finish:vi.fn((keys:string[],state:DeliveryState)=>keys.forEach(k=>records.set(k,state))),recover:()=>{for(const [k,v] of records)if(v==='claimed')records.set(k,'unknown')},state:(key:string)=>records.get(key),issues:()=>({failed:[...records.values()].filter(v=>v==='failed').length,unknown:[...records.values()].filter(v=>v==='unknown').length})}
- const send=vi.fn(async(_message:any,_click:()=>void):Promise<'submitted'|'failed'|'unknown'>=>'submitted'),onClick=vi.fn()
+ const send=vi.fn(async(_message:any,_click:()=>void,_failure?:()=>void):Promise<'submitted'|'failed'|'unknown'>=>'submitted'),onClick=vi.fn()
  const engine=createReminderEngine({store,snapshot:()=>snapshot,clock:()=>now,send,onClick,onChange:()=>{}})
  return {engine,store,send,records,onClick,get snapshot(){return snapshot},set snapshot(v){snapshot=v},set now(v:Date){now=v}}
 }
@@ -44,4 +44,35 @@ it('never sends after failed durable claim and preserves uncertain completion',a
 it('newly enabled end can notify without repeating the processed start',async()=>{
  const v=setup();v.snapshot.schedules[0].reminder.end=false;await v.engine.evaluate();v.snapshot.schedules[0].reminder.end=true;await v.engine.evaluate()
  expect(v.send).toHaveBeenCalledTimes(2);expect(v.send.mock.calls[1][0].body).toContain('오늘 종료');expect(v.send.mock.calls[1][0].body).not.toContain('시작')
+})
+it('consumes each failed identity once per explicit retry despite a concurrent automatic evaluation',async()=>{
+ const v=setup();v.snapshot.schedules.push({...v.snapshot.schedules[0],id:'2'})
+ v.send.mockResolvedValue('failed');await v.engine.evaluate();expect(v.send).toHaveBeenCalledTimes(2)
+ let finish!:(value:'failed')=>void
+ v.send.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}))
+ const manual=v.engine.evaluate(true);const tick=v.engine.evaluate();finish('failed')
+ await Promise.all([manual,tick]);expect(v.send).toHaveBeenCalledTimes(4)
+})
+
+it('records a known asynchronous OS failure after submission for explicit retry',async()=>{
+ const v=setup();await v.engine.evaluate();expect(v.engine.issues().failed).toBe(0)
+ v.send.mock.calls[0][2]!();expect(v.engine.issues().failed).toBe(2)
+ await v.engine.evaluate();expect(v.send).toHaveBeenCalledTimes(1)
+ await v.engine.evaluate(true);expect(v.send).toHaveBeenCalledTimes(2)
+})
+it('does not replay a local-time occurrence when the clock repeats and catches a skipped time',async()=>{
+ const v=setup();v.snapshot.schedules[0].startDate='2026-11-01';v.snapshot.schedules[0].endDate='2026-11-01';v.snapshot.schedules[0].reminder.time='01:30'
+ v.now=new Date(2026,10,1,1,30);await v.engine.evaluate();v.now=new Date(2026,10,1,1,0);await v.engine.evaluate();v.now=new Date(2026,10,1,1,30);await v.engine.evaluate();expect(v.send).toHaveBeenCalledTimes(1)
+ v.snapshot.schedules[0].startDate='2026-03-08';v.snapshot.schedules[0].endDate='2026-03-08';v.snapshot.schedules[0].reminder.time='02:30'
+ v.now=new Date(2026,2,8,1,59);await v.engine.evaluate();expect(v.send).toHaveBeenCalledTimes(1)
+ v.now=new Date(2026,2,8,3,0);await v.engine.evaluate();expect(v.send).toHaveBeenCalledTimes(2)
+})
+it('does not retain an unused retry permission after the user disables the queued schedule',async()=>{
+ const v=setup();v.snapshot.schedules.push({...v.snapshot.schedules[0],id:'2',reminder:{...v.snapshot.schedules[0].reminder}})
+ v.send.mockResolvedValue('failed');await v.engine.evaluate()
+ let finish!:(value:'failed')=>void;v.send.mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve}))
+ const run=v.engine.evaluate(true);v.snapshot.schedules[1].reminder.start=false;v.snapshot.schedules[1].reminder.end=false
+ const change=v.engine.evaluate();finish('failed');await Promise.all([run,change]);expect(v.send).toHaveBeenCalledTimes(3)
+ v.snapshot.schedules[1].reminder.start=true;v.snapshot.schedules[1].reminder.end=true
+ await v.engine.evaluate();expect(v.send).toHaveBeenCalledTimes(3)
 })

@@ -20,3 +20,8 @@ it('identity survives names and toggles but changes with target, days or time',(
  expect(dueReminders({...s,name:'new'},now)[0].key).toBe(key)
  expect(dueReminders({...s,reminder:{...s.reminder,time:'10:00'}},now)[0].key).not.toBe(key)
 })
+it('supports 365 calendar days and year boundaries without changing date limits',()=>{
+ const s={...schedule('1','1','2025-01-01','2025-01-01'),reminder:{daysBefore:365,time:'00:00',start:true,end:false}}
+ expect(dueReminders(s,new Date(2024,0,2,0))).toHaveLength(1)
+ expect(normalizeReminder({...s.reminder,daysBefore:0},'9999-12-31','9999-12-31').daysBefore).toBe(0)
+})

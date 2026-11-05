@@ -23,8 +23,8 @@ export function createReminderStore(db:DatabaseHandle):ReminderStore {
    return allowRetry && !!retry.run(now,o.key).changes
   })),
   finish:db.transaction((keys:string[],state:Exclude<DeliveryState,'claimed'>)=>{
-   const q=db.prepare("UPDATE reminder_deliveries SET state=?,updated_at=? WHERE identity=? AND state='claimed'")
-   for(const key of keys)q.run(state,new Date().toISOString(),key)
+   const q=db.prepare("UPDATE reminder_deliveries SET state=?,updated_at=? WHERE identity=? AND (state='claimed' OR (?='failed' AND state IN ('submitted','unknown')))")
+   for(const key of keys)q.run(state,new Date().toISOString(),key,state)
   }),
   recover:()=>{db.prepare("UPDATE reminder_deliveries SET state='unknown' WHERE state='claimed'").run()},
   state:(key:string)=>(db.prepare('SELECT state FROM reminder_deliveries WHERE identity=?').get(key) as {state:DeliveryState}|undefined)?.state,

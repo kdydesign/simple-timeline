@@ -33,4 +33,5 @@ export const cases:NativeCase[]=[{name:'migrates v1 schedules intact, defaults o
  store.claim(occ,false);store.finish(occ.map(x=>x.key),'failed')
  assert.equal(store.claim(occ,false).length,0);assert.equal(store.claim(occ,true).length,1)
  store.finish(occ.map(x=>x.key),'submitted');assert.equal(createReminderStore(state.db).claim(occ,true).length,0)
+ store.finish(occ.map(x=>x.key),'failed');assert.equal(store.issues().failed,1);assert.equal(store.claim(occ,false).length,0);assert.equal(store.claim(occ,true).length,1)
 }}]

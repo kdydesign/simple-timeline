@@ -17,7 +17,9 @@ test("UI → IPC → SQLite CRUD persists across restart and cascades atomically
   await p.getByRole("button", { name: "저장", exact: true }).click();
   const project = p.getByRole("region", { name: "1.1.1 핫픽스", exact: true });
   await expect(project).toBeVisible();
-  await expect(project).toContainText("민수");
+  await expect(project).not.toContainText("민수");
+  const savedProject = await p.evaluate(() => window.simpleTimeline.getSnapshot());
+  expect(savedProject.ok && savedProject.data.projects[0].participants).toEqual(["민수"]);
   for (const [name, start, end] of [
     ["개발", "2026-11-11", "2026-12-11"],
     ["QA", "2026-12-12", "2026-12-17"],
