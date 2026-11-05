@@ -728,3 +728,17 @@ html, body, #root { height:100%; }
 .gantt-name .project-meta { display:flex; align-items:center; gap:8px; }
 .project-meta > span:first-child { min-width:0; overflow:hidden; text-overflow:ellipsis; }
 .gantt-name .empty-row { padding:0; flex-shrink:0; }
+
+/* Date selection is shared by both views; highlights never receive pointer input. */
+.month-input .date-input input { width: 116px; font-variant-numeric: tabular-nums; }
+.month-input .date-input { border: 0; }
+.gantt-name { padding-block: 8px; }
+.gantt-bar { top: 16px; }
+.day-tick { padding-inline: 0; }
+.day-tick[aria-pressed="true"], .calendar-dates button[aria-pressed="true"] { background-color: var(--selected-date, #e0e7ff); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent); }
+.date-highlight.selected { background: var(--selected-date, #e0e7ff); pointer-events: none; }
+[data-theme="dark"] { --selected-date: #333859; }
+.gantt.is-panning, .gantt.is-panning * { cursor: grabbing !important; user-select: none; }
+/* At 14px, horizontal padding must fit the real date width and leave a body between handles. */
+.gantt-bar { padding-inline: 4px; }
+.gantt-bar .resize-handle { width: min(6px, 25%); }

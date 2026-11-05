@@ -24,26 +24,28 @@ export function ganttRange(
 export function ganttRect(
   s: Schedule,
   range: { start: string; end: string },
+  dayWidth = DAY_WIDTH,
 ): { x: number; width: number } {
   return {
-    x: (toOrdinal(s.startDate) - toOrdinal(range.start)) * DAY_WIDTH,
-    width: inclusiveDays(s.startDate, s.endDate) * DAY_WIDTH,
+    x: (toOrdinal(s.startDate) - toOrdinal(range.start)) * dayWidth,
+    width: inclusiveDays(s.startDate, s.endDate) * dayWidth,
   };
 }
 export function monthOffset(
   ym: YearMonth,
   range: { start: string; end: string },
   width: number,
+  dayWidth = DAY_WIDTH,
 ): { offset: number; outside: boolean } {
   const m = monthBounds(ym),
     max = Math.max(
       0,
-      inclusiveDays(range.start, range.end) * DAY_WIDTH - width,
+      inclusiveDays(range.start, range.end) * dayWidth - width,
     );
   return {
     offset: Math.min(
       max,
-      Math.max(0, (toOrdinal(m.start) - toOrdinal(range.start)) * DAY_WIDTH),
+      Math.max(0, (toOrdinal(m.start) - toOrdinal(range.start)) * dayWidth),
     ),
     outside: m.start < range.start || m.start > range.end,
   };

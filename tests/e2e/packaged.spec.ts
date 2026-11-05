@@ -223,12 +223,12 @@ test("real production package installs, works offline, updates and retains DB af
     console.log("Packaged Windows environment: "+JSON.stringify(system));
 
     page = await launch(installed, base.version);
-    expect(await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1'))).toBe(preferences);
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1')))!) ).toEqual({...JSON.parse(preferences!),dayWidth:28});
     expect(await snapshot(page)).toEqual(before);
     await offline(installed);
     evidence.offline = true;
-    await page.getByLabel("선택 연월", { exact: true }).fill("2026-12");
-    await page.getByLabel("선택 연월", { exact: true }).press("Enter");
+    await page.getByLabel("선택 날짜", { exact: true }).fill("2026-12-01");
+    await page.getByLabel("선택 날짜", { exact: true }).press("Enter");
     await expect(page.locator("[data-range]")).toHaveText(
       "2026-11-01 — 2026-12-31",
     );

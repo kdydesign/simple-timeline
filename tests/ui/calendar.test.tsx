@@ -1,5 +1,5 @@
 import { it, expect } from "vitest";
-import { render, screen, within, waitFor, act } from "@testing-library/react";
+import { render, screen, within, waitFor, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CalendarView } from "../../src/renderer/components/CalendarView";
 import { overlaps, hotfix, project } from "../fixtures/timeline";
@@ -71,7 +71,7 @@ it("keeps month and draft through mode changes and returns from day editing to m
   expect(screen.getByLabelText("일정 이름")).toHaveValue("개발");
   await u.click(screen.getByRole("button", { name: "간트" }));
   expect(screen.getByLabelText("일정 이름")).toHaveValue("개발");
-  expect(screen.getByLabelText("선택 연월")).toHaveValue("2026-12");
+  expect(screen.getByLabelText("선택 날짜")).toHaveValue("2026-12-03");
   await u.click(screen.getByRole("button", { name: "달력" }));
   await u.click(screen.getByRole("button", { name: "편집 닫기" }));
   await waitFor(() => expect(more).toHaveFocus());
@@ -177,9 +177,9 @@ it("uses the current mode and month when an outstanding save completes", async (
   await u.type(screen.getByLabelText("일정 이름"), "저장 대기 중");
   await u.click(screen.getByRole("button", { name: "저장" }));
   await u.click(screen.getByRole("button", { name: "달력" }));
-  const month = screen.getByLabelText("선택 연월");
-  await u.clear(month);
-  await u.type(month, "2027-03{Enter}");
+  const month = screen.getByLabelText("선택 날짜");
+  fireEvent.change(month, {target:{value:"2027-03-01"}});
+  fireEvent.keyDown(month, {key:"Enter"});
   await act(async () => {
     await finish();
   });
@@ -188,6 +188,6 @@ it("uses the current mode and month when an outstanding save completes", async (
       "현재 월 표시 대상 아님",
     ),
   );
-  expect(month).toHaveValue("2027-03");
+  expect(month).toHaveValue("2027-03-01");
   expect(document.querySelector('[data-focus="schedule-add"]')).toHaveFocus();
 });

@@ -10,6 +10,7 @@ import {
 import { parseBusinessDate, inclusiveDays, monthBounds } from "../domain/date";
 import { DomainValidationError } from "../domain/error";
 import { useTimeline } from "./state/useTimeline";
+import { dateInMonth, localDate, monthOf } from "./state/dateNavigation";
 import { usePreferences } from "./state/usePreferences";
 import { useEditor } from "./state/useEditor";
 import {Titlebar} from "./components/Titlebar";
@@ -39,10 +40,7 @@ export function App({
 }) {
   const timeline = useTimeline(api),
     editor = useEditor();
-  const [month, setMonth] = useState<YearMonth>(() => ({
-      year: today.getFullYear(),
-      month: today.getMonth() + 1,
-    })),
+  const [selectedDate, setSelectedDate] = useState(() => localDate(today)),
     [confirmation, setConfirmation] = useState<Confirmation | null>(null),
     [formError, setFormError] = useState<ApiError | null>(null),
     [notice, setNotice] = useState(""),
@@ -50,9 +48,10 @@ export function App({
     [mode, setMode] = useState<"gantt" | "calendar">("gantt"),
     [dayModalOpen, setDayModalOpen] = useState(false),
     [narrow, setNarrow] = useState(window.innerWidth < 1100);
+  const [month,setMonth] = useState(() => monthOf(localDate(today)));
   const preferences = usePreferences();
   const recentProject = useRef<string | null>(null);
-  const [todayRequest, setTodayRequest] = useState<{date:string;token:number} | null>(null);
+  const [todayRequest, setTodayRequest] = useState<{date:string;token:number}>(() => ({date:localDate(today),token:0}));
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(""), 2000);
@@ -290,8 +289,17 @@ export function App({
     if (!canEdit) return;
     const projects = timeline.snapshot?.projects ?? [];
     const project = projects.find(p => p.id === (projectId ?? recentProject.current)) ?? projects[0];
-    if (!project) { setFormError({code:"VALIDATION_ERROR", message:"먼저 프로젝트를 추가해 주세요."}); return; }
-    request(caller => editor.openSchedule(month, project.id, undefined, caller, date));
+    if (!project) { setSelectedDate(date); setMonth(monthOf(date)); setFormError({code:"VALIDATION_ERROR", message:"먼저 프로젝트를 추가해 주세요."}); return; }
+    request(caller => {setSelectedDate(date); setMonth(monthOf(date)); editor.openSchedule(monthOf(date), project.id, undefined, caller, date)});
+  };
+  const navigateDate = (date:string) => {
+    setSelectedDate(date);
+    setMonth(monthOf(date));
+    setTodayRequest(v => ({date,token:v.token+1}));
+  };
+  const navigateMonth = (next:YearMonth, drag = false) => {
+    if (drag) setMonth(next);
+    else navigateDate(dateInMonth(selectedDate,next));
   };
   const statusView = (
     <StatusNotice
@@ -314,21 +322,17 @@ export function App({
         inert={!!confirmation || dayModalOpen || (narrow && !!model)}
       >
         <Toolbar
-          month={month}
+          selectedDate={selectedDate}
           mode={mode}
           onMode={setMode}
           theme={preferences.theme} onTheme={preferences.toggleTheme}
-          onToday={() => {
-            const d = new Date(), ym = {year:d.getFullYear(),month:d.getMonth()+1};
-            const date = `${monthBounds(ym).start.slice(0,8)}${String(d.getDate()).padStart(2,"0")}`;
-            setMonth(ym); setTodayRequest(v => ({date, token:(v?.token ?? 0)+1}));
-          }}
-          onMonth={setMonth}
+          onToday={() => navigateDate(localDate(new Date()))}
+          onDate={navigateDate}
           onInvalid={() =>
             setFormError({
               code: "VALIDATION_ERROR",
               message:
-                "연월은 0001-01부터 9999-12 사이의 YYYY-MM 형식이어야 합니다.",
+                "날짜는 0001-01-01부터 9999-12-31 사이의 올바른 YYYY-MM-DD 형식이어야 합니다.",
             })
           }
           canEdit={canEdit}
@@ -367,9 +371,11 @@ export function App({
                 ref={gantt}
                 collapsed={preferences.collapsed} onToggleProject={preferences.toggleProject}
                 todayRequest={todayRequest} onAddDate={addDate}
+                dayWidth={preferences.dayWidth} onDayWidth={preferences.setDayWidth}
                 active={mode === "gantt"}
                 snapshot={timeline.snapshot}
                 selectedMonth={month}
+                selectedDate={selectedDate}
                 disabled={!canEdit}
                 onEditProject={(p) =>
                   request((caller) => editor.openProject(p, caller))
@@ -386,10 +392,11 @@ export function App({
                 }
               />
               <CalendarView
-                {...dragActions} onMonth={setMonth}
+                {...dragActions} onMonth={navigateMonth}
                 onAddDate={addDate}
                 snapshot={timeline.snapshot}
                 selectedMonth={month}
+                selectedDate={selectedDate}
                 active={mode === "calendar"}
                 disabled={!canEdit}
                 onModalChange={setDayModalOpen}

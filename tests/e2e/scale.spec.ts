@@ -59,8 +59,8 @@ test.describe("scale and extreme years", () => {
     await expect(
       p.getByRole("button", { name: "대량 일정 9998 편집", exact: true }),
     ).toBeFocused();
-    await p.getByLabel("선택 연월", { exact: true }).fill("2026-12");
-    await p.getByLabel("선택 연월", { exact: true }).press("Enter");
+    await p.getByLabel("선택 날짜", { exact: true }).fill("2026-12-01");
+    await p.getByLabel("선택 날짜", { exact: true }).press("Enter");
     const calendarStart = Date.now();
     await p.getByRole("button", { name: "달력", exact: true }).click();
     const more = p.getByRole("button", { name: "2026-12-15 +9995 더 보기" });

@@ -67,10 +67,10 @@ test('date toggle closes its open picker without changing draft',async({desktop:
  await toggle.click();await expect(p.getByRole('group',{name:'시작일 달력'})).toHaveCount(0);
  await expect(input).toHaveValue(value);
 });
-test('month popup handles immediate Escape and returns focus to its trigger',async({desktop:d})=>{
- const p=d.page,trigger=p.getByRole('button',{name:'조회 연월 선택',exact:true});
- await trigger.focus();await p.keyboard.press('Enter');
- await expect(p.getByRole('group',{name:'조회 연월 선택'})).toBeVisible();
- await p.keyboard.press('Escape');await expect(p.getByRole('group',{name:'조회 연월 선택'})).toHaveCount(0);
+test('toolbar date popup handles immediate Escape and returns focus to its input',async({desktop:d})=>{
+ const p=d.page,trigger=p.getByLabel('선택 날짜',{exact:true});
+ await trigger.focus();await p.keyboard.press('Alt+ArrowDown');
+ await expect(p.getByRole('group',{name:'선택 날짜 달력'})).toBeVisible();
+ await p.keyboard.press('Escape');await expect(p.getByRole('group',{name:'선택 날짜 달력'})).toHaveCount(0);
  await expect(trigger).toBeFocused();
 });

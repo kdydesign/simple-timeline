@@ -19,12 +19,12 @@ import { DayScheduleList } from "./DayScheduleList";
 export function CalendarView({
   snapshot,
   onAddDate, onDragStart, onDragCommit, onDragEnd, onMonth,
-  selectedMonth,
+  selectedMonth, selectedDate,
   onEditSchedule,
   disabled = false,
   active = true,
   onModalChange,
-}: { onModalChange?: (open: boolean) => void; onMonth?: (m:YearMonth)=>void } & Omit<GanttProps, "ref">) {
+}: { onModalChange?: (open: boolean) => void; onMonth?: (m:YearMonth, drag?:boolean)=>void } & Omit<GanttProps, "ref">) {
   const [hoveredDate, setHoveredDate] = useState<string | null>(null);
   const [day, setDay] = useState<string | null>(null);
   const root = useRef<HTMLElement>(null), hover = useRef<{direction:number;since:number}|null>(null);
@@ -52,7 +52,7 @@ export function CalendarView({
       const direction=hit && root.current?.contains(hit) && !hit.disabled ? Number(hit.dataset.dragMonth) : 0;
       if(!direction){hover.current=null;return}
       if(hover.current?.direction!==direction){hover.current={direction,since:time};return}
-      if(time-hover.current.since>=650){const m=shiftMonth(selectedMonth,direction as -1|1);if(m)onMonth?.(m);hover.current={direction,since:time}}
+      if(time-hover.current.since>=650){const m=shiftMonth(selectedMonth,direction as -1|1);if(m)onMonth?.(m,true);hover.current={direction,since:time}}
     },reset:()=>{hover.current=null},
   });
   const now = new Date(), today = `${String(now.getFullYear()).padStart(4,"0")}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
@@ -143,6 +143,7 @@ export function CalendarView({
                     type="button"
                     disabled={disabled || !date}
                     aria-label={date ? `${date} 일정 추가` : "날짜 없음"}
+                    aria-pressed={date === selectedDate}
                     aria-current={date === today ? "date" : undefined}
                     onClick={() => date && onAddDate?.(date)}
                     data-date={date ?? undefined}

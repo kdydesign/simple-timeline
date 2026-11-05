@@ -3,14 +3,14 @@ import type { Locator, Page } from 'playwright';
 const background = (el: Locator) => el.evaluate(e => getComputedStyle(e).backgroundColor);
 async function november(p: Page) {
   await p.clock.setFixedTime(new Date('2026-11-04T12:00:00'));
-  await p.getByLabel('선택 연월', { exact: true }).fill('2026-11');
-  await p.getByLabel('선택 연월', { exact: true }).press('Enter');
+  await p.getByLabel('선택 날짜', { exact: true }).fill('2026-11-01');
+  await p.getByLabel('선택 날짜', { exact: true }).press('Enter');
 }
 test.use({ seed: 'hotfix' });
 test('empty project guidance belongs to project metadata and month input keeps its accessible name', async ({ desktop: d }) => {
   const p = d.page; await november(p);
-  await expect(p.locator('header')).not.toContainText('선택 연월');
-  await expect(p.getByLabel('선택 연월', { exact: true })).toHaveValue('2026-11');
+  await expect(p.locator('header')).not.toContainText('선택 날짜');
+  await expect(p.getByLabel('선택 날짜', { exact: true })).toHaveValue('2026-11-01');
   await expect(p.locator('[data-row="project:2"] .gantt-name .empty-row')).toHaveText('일정 없음');
   await expect(p.locator('[data-row="project:2"] .gantt-track')).not.toContainText('일정 없음');
 });

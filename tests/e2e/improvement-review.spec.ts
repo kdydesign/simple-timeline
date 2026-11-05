@@ -1,6 +1,6 @@
 import {test,expect} from './fixture'
 import type {Page,Locator} from 'playwright'
-async function choose(p:Page){await p.getByLabel('선택 연월',{exact:true}).fill('2026-12');await p.getByLabel('선택 연월',{exact:true}).press('Enter')}
+async function choose(p:Page){await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-01');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')}
 async function box(l:Locator){const b=await l.boundingBox();if(!b)throw Error('Missing box');return b}
 test.describe('uncertain drag recovery',()=>{
   test.use({seed:'hotfix',fault:'drag-lost'})
@@ -8,7 +8,7 @@ test.describe('uncertain drag recovery',()=>{
     const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p);await p.locator('[data-bar="3"]').click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
     await expect(p.locator('main')).not.toHaveAttribute('inert')
-    await p.getByRole('slider').focus();await p.keyboard.press('End')
+    await p.getByRole('slider').focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     const b=await box(p.locator('[data-bar="3"] [data-resize="end"]'))
     await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down();await p.mouse.move(b.x+b.width/2+28,b.y+b.height/2,{steps:4});await p.mouse.up()
     await expect(p.getByRole('alert')).toContainText('결과')
@@ -24,7 +24,7 @@ test.describe('visible date regions',()=>{
   test.use({seed:'hotfix'})
   test('Tab never scrolls the date header independently of the logical viewport',async({desktop:d})=>{
     const p=d.page;await choose(p)
-    await p.getByLabel('선택 연월',{exact:true}).fill('2026-11');await p.getByLabel('선택 연월',{exact:true}).press('Enter')
+    await p.getByLabel('선택 날짜',{exact:true}).fill('2026-11-01');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     const first=await p.locator('[data-day]').evaluateAll(els=>{const area=els[0].parentElement!.getBoundingClientRect();return (els.find(e=>{const r=e.getBoundingClientRect();return r.left>=area.left && r.right<=area.right}) as HTMLElement).dataset.day})
     await p.locator(`[data-day="${first}"]`).focus()
     for(let i=0;i<45;i++){

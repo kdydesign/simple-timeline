@@ -38,8 +38,8 @@ for (const fault of ["schedule-full", "schedule-lost", "schedule-refresh"])
     }) => {
       const p = d.page;
       await p.setViewportSize({ width: 1280, height: 800 });
-      await p.getByLabel("선택 연월", { exact: true }).fill("2026-12");
-      await p.getByLabel("선택 연월", { exact: true }).press("Enter");
+      await p.getByLabel("선택 날짜", { exact: true }).fill("2026-12-01");
+      await p.getByLabel("선택 날짜", { exact: true }).press("Enter");
       await p.locator('[data-focus="schedule-add"]').click();
       await p
         .getByLabel("일정 이름", { exact: true })

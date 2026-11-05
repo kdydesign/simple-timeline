@@ -37,7 +37,7 @@ it("bounds date DOM and CSS coordinates even when moving to the last year", asyn
   await u.keyboard("{Home}{ArrowRight}");
   expect(slider).toHaveValue("28");
 });
-it("shows empty projects and outside selection, and preserves anchors on range changes", () => {
+it("shows empty projects and selected-month union, and preserves anchors on range changes", () => {
   const { rerender } = render(
     <GanttView
       snapshot={hotfix}
@@ -45,7 +45,7 @@ it("shows empty projects and outside selection, and preserves anchors on range c
       {...callbacks}
     />,
   );
-  expect(screen.getByText("선택 월은 전체 일정 범위 밖입니다")).toBeVisible();
+  expect(document.querySelector("[data-range]")).toHaveTextContent("2026-11-01 — 2027-03-31");
   expect(screen.getByRole("button", { name: "일정 없음 편집" })).toBeVisible();
   const slider = screen.getByRole("slider", { name: "간트 가로 이동" });
   fireEvent.change(slider, { target: { value: "280" } });

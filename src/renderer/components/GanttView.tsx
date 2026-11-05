@@ -18,7 +18,6 @@ import {
   ganttRange,
   ganttRect,
   monthOffset,
-  DAY_WIDTH as P,
 } from "../../visualization/gantt";
 import { viewportWindow, visibleRows } from "../../visualization/viewport";
 import {
@@ -28,8 +27,12 @@ import {
 export interface GanttHandle {
   focusItem(key: string): boolean;
 }
+import { useGanttNavigation } from "../state/useGanttNavigation";
 import { useScheduleDrag, type DragActions } from "../state/useScheduleDrag";
 export interface GanttProps extends DragActions {
+  selectedDate?: string;
+  dayWidth?: number;
+  onDayWidth?: (width:number) => void;
   onAddDate?: (date: string, projectId?: string) => void;
   collapsed?: string[];
   onToggleProject?: (id:string) => void;
@@ -55,7 +58,7 @@ export function GanttView({
   snapshot,
   onAddDate, collapsed = EXPANDED, onToggleProject, todayRequest,
   onDragStart, onDragCommit, onDragEnd,
-  selectedMonth,
+  selectedMonth, selectedDate, dayWidth: P = 28, onDayWidth,
   onEditProject,
   onEditSchedule,
   onAddSchedule,
@@ -66,19 +69,20 @@ export function GanttView({
   const root = useRef<HTMLElement>(null);
   const now = new Date();
   const today = `${String(now.getFullYear()).padStart(4, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  const todayOrdinal = toOrdinal(today);
+  const todayOrdinal = toOrdinal(today), selectedOrdinal = selectedDate ? toOrdinal(selectedDate) : null;
   const [hoveredDate, setHoveredDate] = useState<number | null>(null);
   const [extension,setExtension] = useState<{start:number;end:number}|null>(null);
-  const range = useMemo(
-      () => {
-        const original = ganttRange(snapshot, selectedMonth);
-        const base = extension ? {start:fromOrdinal(Math.min(toOrdinal(original.start),extension.start)),end:fromOrdinal(Math.max(toOrdinal(original.end),extension.end))} : original;
-        if (!todayRequest) return base;
-        const b=monthBounds({year:Number(todayRequest.date.slice(0,4)), month:Number(todayRequest.date.slice(5,7))});
-        return {start:base.start < b.start ? base.start : b.start, end:base.end > b.end ? base.end : b.end};
-      },
-      [snapshot, selectedMonth, todayRequest, extension],
-    ),
+  const selectedBounds = monthBounds(selectedMonth);
+  const [visited, setVisited] = useState(selectedBounds);
+  const visitedStart = visited.start < selectedBounds.start ? visited.start : selectedBounds.start,
+    visitedEnd = visited.end > selectedBounds.end ? visited.end : selectedBounds.end;
+  useEffect(() => { setVisited(v => v.start === visitedStart && v.end === visitedEnd ? v : {start:visitedStart,end:visitedEnd}); }, [visitedStart,visitedEnd]);
+  const range = useMemo(() => {
+    const original = ganttRange(snapshot, selectedMonth);
+    const lo = Math.min(toOrdinal(original.start),toOrdinal(visitedStart),extension?.start ?? Infinity),
+      hi = Math.max(toOrdinal(original.end),toOrdinal(visitedEnd),extension?.end ?? 0);
+    return {start:fromOrdinal(lo),end:fromOrdinal(hi)};
+  }, [snapshot,selectedMonth,visitedStart,visitedEnd,extension]),
     index = useMemo(() => indexSnapshot(snapshot), [snapshot]);
   const rows = useMemo(
     () =>
@@ -87,14 +91,14 @@ export function GanttView({
           key: `project:${p.id}`,
           project: p,
           label: index.projectLabel(p),
-          height: 56,
+          height: 64,
         } as Row,
         ...(collapsed.includes(p.id) ? [] : index.byProject.get(p.id) ?? []).map((s) => ({
           key: `schedule:${s.id}`,
           project: p,
           schedule: s,
           label: index.scheduleLabel(s),
-          height: 44,
+          height: 60,
         })),
       ]),
     [index, collapsed],
@@ -112,11 +116,10 @@ export function GanttView({
     [focused, setFocused] = useState<string | null>(null);
   const start = toOrdinal(range.start),
     days = inclusiveDays(range.start, range.end),
-    padding = todayRequest ? Math.max(0,(size.width-P)/2) : 0,
-    min = -padding,
-    max = Math.max(min, days * P - size.width + padding);
-  const x = Math.min(max, Math.max(min, offset)),
-    monthKey = `${selectedMonth.year}-${selectedMonth.month}`;
+    min = 0,
+    // Trailing viewport space lets every real date align left, including 9999-12-31.
+    max = Math.max(0, (days - 1) * P);
+  const x = Math.min(max, Math.max(min, offset));
   useEffect(() => { setHoveredDate(null); }, [x, start, active]);
   useEffect(() => {
     const main = root.current?.closest("main");
@@ -130,7 +133,6 @@ export function GanttView({
   const previous = useRef<{
     start: number;
     x: number;
-    monthKey: string;
     rows: Row[];
     prefix: number[];
     top: number;
@@ -161,8 +163,8 @@ export function GanttView({
   useLayoutEffect(() => {
     const old = previous.current;
     let next = x;
-    if (!old || old.monthKey !== monthKey)
-      next = monthOffset(selectedMonth, range, size.width).offset;
+    if (!old)
+      next = (toOrdinal(selectedDate ?? selectedBounds.start) - start) * P;
     else if (old.start !== start)
       next = Math.min(max, Math.max(min, (old.start - start) * P + old.x));
     if (next !== offset) setOffset(next);
@@ -198,10 +200,10 @@ export function GanttView({
       scroller.current.scrollTop = t;
       setTop(t);
     }
-    previous.current = { start, x: next, monthKey, rows, prefix, top };
+    previous.current = { start, x: next, rows, prefix, top };
   }, [
     start,
-    monthKey,
+    P,
     rows,
     prefix,
     size.width,
@@ -216,9 +218,9 @@ export function GanttView({
   useLayoutEffect(() => {
     if (todayRequest && active && appliedToday.current !== todayRequest.token) {
       appliedToday.current = todayRequest.token;
-      setOffset(Math.max(min, Math.min(max, (toOrdinal(todayRequest.date)-start+0.5)*P-size.width/2)));
+      setOffset(Math.max(min, Math.min(max, (toOrdinal(todayRequest.date)-start)*P)));
     }
-  }, [todayRequest, active, start, min, max, size.width]);
+  }, [todayRequest, active, start, min, max, size.width, P]);
   const reveal = (key: string) => {
     const i = rows.findIndex((r) => r.key === key);
     if (i < 0) return false;
@@ -237,15 +239,15 @@ export function GanttView({
     prefix,
     size.height,
   ]);
-  const move = (n: number) => {
-    const next = Math.min(max, Math.max(min, n)),
+  const move = (n: number, width = P) => {
+    const next = Math.min((days - 1) * width, Math.max(min, n)),
       activeElement = document.activeElement as HTMLElement | null;
     if (activeElement?.dataset.bar) {
       const row = rows.find(
         (r) => r.schedule?.id === activeElement.dataset.bar,
       );
       if (row?.schedule) {
-        const rect = ganttRect(row.schedule, range);
+        const rect = ganttRect(row.schedule, range, width);
         if (rect.x + rect.width <= next || rect.x >= next + size.width) {
           scroller.current
             ?.querySelector<HTMLElement>(`[data-focus="${row.key}"]`)
@@ -292,6 +294,8 @@ export function GanttView({
       } else move(x+direction*P);
     },
   });
+  const navigation = useGanttNavigation({root,dateArea,active,offset:x,dayWidth:P,days,viewport:size.width,
+    move, onDayWidth, isScheduleDragging:drag.isActive});
   const w = viewportWindow({
       logicalOffset: x,
       viewportSize: size.width,
@@ -320,9 +324,9 @@ export function GanttView({
     );
   const focusIndex = rows.findIndex((r) => r.key === focused);
   if (focusIndex >= 0) visible.add(focusIndex);
-  const outside = monthOffset(selectedMonth, range, size.width).outside;
+  const outside = monthOffset(selectedMonth, range, size.width, P).outside;
   return (
-    <section ref={root} onClickCapture={e=>{if(drag.consumeClick()){e.preventDefault();e.stopPropagation()}}} className="gantt"
+    <section ref={root} onClickCapture={e=>{if(drag.consumeClick() || navigation.consumeClick()){e.preventDefault();e.stopPropagation()}}} className={"gantt"+(navigation.panning ? " is-panning" : "")}
       onPointerMove={e => {
         const target = (e.target as HTMLElement).closest(".gantt-track, .day-tick");
         const area = dateArea.current?.getBoundingClientRect();
@@ -375,6 +379,7 @@ export function GanttView({
               tabIndex={d.i*P-x >= 0 && (d.i+1)*P-x <= size.width ? 0 : -1}
               aria-label={`${d.date} 일정 추가`}
               onClick={() => onAddDate?.(d.date)}
+              aria-pressed={d.date === selectedDate}
               aria-current={d.date === today ? "date" : undefined}
               className={"day-tick" + (hoveredDate === start + d.i ? " date-hovered" : "")}
               data-day={d.date}
@@ -390,11 +395,6 @@ export function GanttView({
         className="gantt-body"
         ref={scroller}
         onScroll={(e) => setTop(e.currentTarget.scrollTop)}
-        onWheel={(e) => {
-          if (e.deltaX || e.shiftKey) {
-            move(x + (e.deltaX || e.deltaY));
-          }
-        }}
       >
         <div className="gantt-spacer" style={{ height: prefix.at(-1) }}>
           {[...visible]
@@ -403,7 +403,7 @@ export function GanttView({
               const r = rows[i],
                 s = r.schedule,
                 shown = s && drag.preview?.id === s.id ? {...s,...drag.preview} : s,
-                rect = shown ? ganttRect(shown, range) : null;
+                rect = shown ? ganttRect(shown, range, P) : null;
               const left = rect ? Math.max(rect.x, x) : 0,
                 right = rect
                   ? Math.min(rect.x + rect.width, x + size.width)
@@ -491,11 +491,12 @@ export function GanttView({
                       const ordinal=start+Math.floor((e.clientX-e.currentTarget.getBoundingClientRect().left+x)/P);
                       if (ordinal >= start && ordinal < start+days) onAddDate?.(fromOrdinal(ordinal), r.project.id);
                     }}
-                    style={{ backgroundPositionX: -x % P }}
+                    style={{ backgroundPositionX: -x % P, backgroundSize: `${P}px 100%` }}
                   >
-                    {todayOrdinal >= start && todayOrdinal < start + days && (
+                    {todayOrdinal >= start && todayOrdinal < start + days && (todayOrdinal-start+1)*P > x && (todayOrdinal-start)*P < x+size.width && (
                       <span aria-hidden="true" className="date-highlight today" style={{ left: (todayOrdinal - start) * P - x, width: P }} />
                     )}
+                    {selectedOrdinal !== null && (selectedOrdinal-start+1)*P > x && (selectedOrdinal-start)*P < x+size.width && <span aria-hidden="true" className="date-highlight selected" style={{left:(selectedOrdinal-start)*P-x,width:P}} />}
                     {hoveredDate !== null && (
                       <span aria-hidden="true" className="date-highlight hovered" style={{ left: (hoveredDate - start) * P - x, width: P }} />
                     )}
@@ -544,7 +545,7 @@ export function GanttView({
           step="any"
           value={x}
           onChange={(e) => move(Number(e.target.value))}
-          aria-valuetext={`${fromOrdinal(Math.max(start, start + Math.floor(x / P)))} — ${fromOrdinal(Math.max(start, Math.min(start + days - 1, start + Math.floor((x + size.width - 1) / P))))}`}
+          aria-valuetext={`${fromOrdinal(Math.min(start + days - 1, Math.max(start, start + Math.floor(x / P))))} — ${fromOrdinal(Math.max(start, Math.min(start + days - 1, start + Math.floor((x + size.width - 1) / P))))}`}
         />
       </div>
     </section>

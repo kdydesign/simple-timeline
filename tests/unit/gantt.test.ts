@@ -81,3 +81,11 @@ it("rebases date windows to nearby coordinates and finds variable-height rows", 
     lastExclusive: 4,
   });
 });
+
+it('uses the supplied day width for bar position, inclusive duration and month navigation', () => {
+  const s = schedule('1', '1', '2026-12-18', '2026-12-19')
+  for (const dayWidth of [14,28,84]) {
+    expect(ganttRect(s, {start:'2026-12-01',end:'2027-01-31'}, dayWidth)).toEqual({x:17*dayWidth,width:2*dayWidth})
+    expect(monthOffset({year:2027,month:1},{start:'2026-12-01',end:'2027-12-31'},100,dayWidth).offset).toBe(31*dayWidth)
+  }
+})

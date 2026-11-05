@@ -35,8 +35,8 @@ it('opens a date picker and supports year 0001 without auto-saving', async () =>
 it('creates from a calendar date and remembers the selected project within this run', async () => {
   const u=userEvent.setup(); await ready()
   await u.click(screen.getByRole('button',{name:'달력'}))
-  fireEvent.change(screen.getByLabelText('선택 연월'),{target:{value:'2026-11'}})
-  fireEvent.blur(screen.getByLabelText('선택 연월'))
+  fireEvent.change(screen.getByLabelText('선택 날짜'),{target:{value:'2026-11-01'}})
+  fireEvent.blur(screen.getByLabelText('선택 날짜'))
   await u.click(screen.getByRole('button',{name:'2026-11-12 일정 추가'}))
   expect(screen.getByLabelText('시작일')).toHaveValue('2026-11-12')
   expect(screen.getByLabelText('종료일')).toHaveValue('2026-11-12')
@@ -54,12 +54,12 @@ it('collapses only gantt rows and restores collapsed state', async () => {
   v.unmount(); await ready()
   expect(screen.getByRole('button',{name:'1.1.1 핫픽스 펼치기'})).toHaveAttribute('aria-expanded','false')
 })
-it('centers today even near the beginning of the displayed month', async () => {
+it('left aligns today even near the beginning of the displayed month', async () => {
   const {GanttView}=await import('../../src/renderer/components/GanttView')
   const {unmount}=render(<GanttView snapshot={hotfix} selectedMonth={{year:2026,month:11}}
     onEditProject={()=>{}} onEditSchedule={()=>{}} onAddSchedule={()=>{}}
     todayRequest={{date:'2026-11-01',token:1}} />)
   const tick=document.querySelector<HTMLElement>('[data-day="2026-11-01"]')!
-  expect(parseFloat(tick.style.left)+14).toBe(500)
+  expect(parseFloat(tick.style.left)).toBe(0)
   unmount()
 })

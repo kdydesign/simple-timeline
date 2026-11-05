@@ -6,8 +6,8 @@ test.describe("final-review gantt interactions", () => {
   }) => {
     const p = d.page;
     await p.setViewportSize({ width: 1280, height: 800 });
-    const input = p.getByLabel("선택 연월", { exact: true });
-    await input.fill("2026-11");
+    const input = p.getByLabel("선택 날짜", { exact: true });
+    await input.fill("2026-11-01");
     await input.press("Enter");
     const slider = p.getByRole("slider", { name: "간트 가로 이동" });
     await slider.focus();
@@ -25,8 +25,8 @@ test.describe("final-review gantt interactions", () => {
   }) => {
     const p = d.page;
     await p.setViewportSize({ width: 1280, height: 800 });
-    const input = p.getByLabel("선택 연월", { exact: true });
-    await input.fill("2026-11");
+    const input = p.getByLabel("선택 날짜", { exact: true });
+    await input.fill("2026-11-01");
     await input.press("Enter");
     const slider = p.getByRole("slider", { name: "간트 가로 이동" });
     await slider.focus();
@@ -48,8 +48,8 @@ test.describe("final-review responsive layers", () => {
   }) => {
     const p = d.page;
     await p.setViewportSize({ width: 1280, height: 800 });
-    const input = p.getByLabel("선택 연월", { exact: true });
-    await input.fill("2026-12");
+    const input = p.getByLabel("선택 날짜", { exact: true });
+    await input.fill("2026-12-01");
     await input.press("Enter");
     await p
       .getByRole("button", { name: "1.1.1 핫픽스 편집", exact: true })

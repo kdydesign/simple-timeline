@@ -1,6 +1,6 @@
 import { test, expect } from './fixture'
 import type { Page, Locator } from 'playwright'
-async function choose(p:Page,m:string){await p.getByLabel('선택 연월',{exact:true}).fill(m);await p.getByLabel('선택 연월',{exact:true}).press('Enter')}
+async function choose(p:Page,m:string){await p.getByLabel('선택 날짜',{exact:true}).fill(m.length === 7 ? m+'-01' : m);await p.getByLabel('선택 날짜',{exact:true}).press('Enter')}
 async function box(l:Locator){const b=await l.boundingBox();if(!b)throw Error('Missing box');return b}
 async function drag(p:Page,l:Locator,dx:number,part='move'){
   const b=await box(part==='move'?l:l.locator(`[data-resize="${part}"]`))
@@ -17,11 +17,11 @@ test.describe('approved improvements',()=>{
     await d.restart()
     await expect(d.page.locator('html')).toHaveAttribute('data-theme','dark')
     await expect(d.page.getByRole('button',{name:'1.1.1 핫픽스 펼치기'})).toBeVisible()
-    await choose(d.page,'2026-11');await d.page.getByRole('button',{name:'달력',exact:true}).click()
+    await choose(d.page,'2026-11-01');await d.page.getByRole('button',{name:'달력',exact:true}).click()
     await expect(d.page.locator('[data-segment="1"]').first()).toBeVisible()
   })
   test('gantt resizes a true end, moves a whole schedule, and Escape cancels',async({desktop:d})=>{
-    const p=d.page;await choose(p,'2026-12')
+    const p=d.page;await choose(p,'2026-12-01')
     const bar=p.locator('[data-bar="3"]')
     await expect(bar).toHaveAttribute('data-days','1')
     await drag(p,bar,56,'end');await expect(bar).toHaveAttribute('data-days','3')
@@ -31,7 +31,7 @@ test.describe('approved improvements',()=>{
     await expect(p.getByRole('dialog')).toHaveCount(0)
   })
   test('calendar drags by dates and blocks dirty editor changes',async({desktop:d})=>{
-    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12');await p.getByRole('button',{name:'달력',exact:true}).click()
+    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12-01');await p.getByRole('button',{name:'달력',exact:true}).click()
     const bar=p.locator('[data-segment="3"]'),cell=await box(p.locator('[data-date="2026-12-18"]'))
     await drag(p,bar,cell.width,'end')
     await expect(bar).toHaveAttribute('aria-label',/2026-12-18 — 2026-12-19/)
@@ -41,13 +41,13 @@ test.describe('approved improvements',()=>{
     await expect(p.getByRole('alert')).toContainText('먼저 저장하거나')
     await expect(bar).toHaveAttribute('aria-label',/2026-12-18 — 2026-12-19/)
   })
-  test('today expands a distant range and centers the current day; toolbar remains fixed',async({desktop:d})=>{
-    const p=d.page;await choose(p,'2027-03')
+  test('today expands a distant range and left aligns the current day; toolbar remains fixed',async({desktop:d})=>{
+    const p=d.page;await choose(p,'2027-03-01')
     await p.getByRole('button',{name:'오늘',exact:true}).click()
     const date=await p.evaluate(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`})
-    await expect(p.getByLabel('선택 연월',{exact:true})).toHaveValue(date.slice(0,7))
+    await expect(p.getByLabel('선택 날짜',{exact:true})).toHaveValue(date)
     const tick=await box(p.locator(`[data-day="${date}"]`)),area=await box(p.locator('.gantt-date-heading'))
-    expect(tick.x).toBeGreaterThanOrEqual(area.x-1);expect(tick.x+tick.width).toBeLessThanOrEqual(area.x+area.width+1)
+    expect(Math.abs(tick.x-area.x)).toBeLessThan(1)
     await p.getByRole('button',{name:'달력',exact:true}).click()
     await p.setViewportSize({width:1280,height:500})
     const before=await box(p.getByRole('button',{name:'프로젝트 목록',exact:true}))
@@ -71,22 +71,23 @@ test('startup records distinct process/window/data/UI phases on normal relaunch'
 test.describe('drag navigation and failure protection',()=>{
   test.use({seed:'hotfix'})
   test('calendar hover navigation moves the original schedule into the next month',async({desktop:d})=>{
-    const p=d.page;await choose(p,'2026-12');await p.getByRole('button',{name:'달력',exact:true}).click()
+    const p=d.page;await choose(p,'2026-12-01');await p.getByRole('button',{name:'달력',exact:true}).click()
     const bar=await box(p.locator('[data-segment="3"]'))
     await p.mouse.move(bar.x+bar.width/2,bar.y+bar.height/2);await p.mouse.down()
     const next=await box(p.locator('[data-drag-month="1"]'))
     await p.mouse.move(next.x+next.width/2,next.y+next.height/2,{steps:4})
-    await expect(p.getByLabel('선택 연월',{exact:true})).toHaveValue('2027-01')
+    await expect(p.locator('.calendar h2')).toHaveText('2027-01 월간 달력')
+    await expect(p.getByLabel('선택 날짜',{exact:true})).toHaveValue('2026-12-01')
     const target=await box(p.locator('[data-date="2027-01-04"]'))
     await p.mouse.move(target.x+target.width/2,target.y+20,{steps:4});await p.mouse.up()
     await expect(p.locator('[data-segment="3"]')).toHaveAttribute('aria-label',/2027-01-04 — 2027-01-04/)
   })
   test('failed drag preserves data and a clean open editor',async({desktop:d})=>{
-    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12')
+    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12-01')
     const bar=p.locator('[data-bar="3"]');await bar.click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
     await expect(p.locator('main')).not.toHaveAttribute('inert')
-    await p.getByRole('slider',{name:'간트 가로 이동'}).focus();await p.keyboard.press('End')
+    await p.getByRole('slider',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     await d.app.evaluate(({ipcMain})=>{
       ipcMain.removeHandler('schedule:update')
       ipcMain.handle('schedule:update',()=>({ok:false,error:{code:'STORAGE_FULL',message:'드래그 저장 실패'}}))
@@ -110,7 +111,7 @@ test('success toast disappears after two seconds',async({desktop:d})=>{
 test.describe('drag bounds and editor synchronization',()=>{
   test.use({seed:'hotfix'})
   test('gantt edge navigation extends temporarily and cancel restores the previous range',async({desktop:d})=>{
-    const p=d.page;await choose(p,'2026-12')
+    const p=d.page;await choose(p,'2026-12-01')
     const original=await p.locator('[data-range]').textContent(), b=await box(p.locator('[data-bar="3"]')), area=await box(p.locator('.gantt-date-heading'))
     await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down()
     await p.mouse.move(area.x+area.width-5,b.y+b.height/2,{steps:4})
@@ -122,11 +123,11 @@ test.describe('drag bounds and editor synchronization',()=>{
     expect(result.ok && result.data.schedules.find(s=>s.id==='3')?.startDate).toBe('2026-12-18')
   })
   test('a successful drag refreshes the same clean editor without making it dirty',async({desktop:d})=>{
-    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12')
+    const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12-01')
     const bar=p.locator('[data-bar="3"]');await bar.click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
     await expect(p.locator('main')).not.toHaveAttribute('inert')
-    await p.getByRole('slider',{name:'간트 가로 이동'}).focus();await p.keyboard.press('End')
+    await p.getByRole('slider',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     await drag(p,bar,28,'end')
     await expect(p.getByLabel('종료일',{exact:true})).toHaveValue('2026-12-19')
     await expect(p.locator('html')).toHaveAttribute('data-editor-dirty','false')

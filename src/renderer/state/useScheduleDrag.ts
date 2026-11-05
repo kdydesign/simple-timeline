@@ -139,6 +139,7 @@ export function useScheduleDrag(options: Options) {
 
   return {
     preview,
+    isActive: () => session.current !== null,
     begin: (e: ReactPointerEvent, schedule: Schedule, kind: DragKind = 'move') => {
       if (!options.enabled || e.button !== 0 || !e.isPrimary) return
       const anchor = options.dateAt(e.clientX, e.clientY)
