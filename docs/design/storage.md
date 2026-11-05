@@ -122,8 +122,9 @@ DB 파일은 평문이며 Windows 사용자 파일 권한을 따른다. 별도 �
 
 ## 검증과 남은 범위
 
-현재 [migrations.ts](../../src/main/db/migrations.ts)의 제품 스키마는 1뿐이다. 마이그레이션 성공·실패는
-[native lifecycle 회귀](../../tests/native/lifecycle.case.ts)의 시험용 추가 버전으로 검사한다.
+현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1·v2를 지원한다.
+[알림 native 회귀](../../tests/native/reminders.case.ts)는 실제 v1→v2 데이터 보존을,
+[native lifecycle 회귀](../../tests/native/lifecycle.case.ts)는 현재 버전 이후의 시험용 추가 버전으로 성공·실패를 검사한다.
 0.1.0→검증용 0.1.1 설치는 같은 schema이므로 실제 제품 schema 업그레이드의 증거가 아니다.
 
 기존 DB는 application_id 1398033486과 SQLite 헤더·user_version·무결성·FK를 검사한다.
@@ -135,3 +136,18 @@ ID·정렬·FK·원자 삭제·재실행·손상 보존·주입 오류는 [스�
 현재 검사 명령은 [검증 안내](../harness/validation.md)를 따른다. Windows native 로딩과 설치 lifecycle은
 [Windows 검증](../release/windows-validation.md)에 기록돼 있다. 실제 사용자 PC의 물리 오류·오프라인 전체 시나리오 등은
 [사용자가 분리한 후속 항목](../release/user-acceptance.md)이며 이번 문서 작업에서 통과로 바꾸지 않는다.
+
+## 일정 알림 schema v2 (0.4.0)
+
+[알림 확정 설계](reminders-and-hierarchy.md)에 따라 [마이그레이션 목록](../../src/main/db/migrations.ts)의 v2가
+[알림 SQL](../../src/main/db/reminders.ts)을 적용한다. 기존 v1 생성 SQL과 과거 검증 기록은 보존한다.
+
+- `schedules`에 `reminder_days`(0~365), `reminder_time`(HH:mm), `reminder_start`·`reminder_end`(0/1)를 추가한다.
+  기존 일정은 2일 전·09:00·둘 다 꺼짐으로 이관한다. renderer UI 환경 설정과 달리 이 설정은 업무 DB에 저장한다.
+- `reminder_deliveries`는 일정 FK(연쇄 삭제), 조합 identity 기본키, `claimed/submitted/failed/unknown`, UTC 기록 시각을 가진다.
+  identity는 일정 ID·시작/종료·대상 날짜·N·시각이며 이름과 활성화 스위치는 포함하지 않는다.
+- 일정과 알림 설정은 하나의 트랜잭션에서 저장한다. 날짜만 수정하면 기존 설정을 보존해 합성 검증한다.
+- OS 전달 전 선점을 commit한다. 재실행 때 미완료 선점은 결과 불명으로 바꾸고 자동 재전송하지 않는다.
+  명확한 실패만 사용자 재시도 대상이다. 이력과 OS 전달은 원자적이지 않아 비정상 종료 경계의 누락 가능성이 있다.
+- v1→v2는 기존 검증 백업·원자 업그레이드 경로를 따른다. v2를 연 뒤 v1만 아는 구버전 앱으로 되돌리는 것은 지원하지 않는다.
+  [native 회귀 테스트](../../tests/native/reminders.case.ts)가 실제 Electron SQLite에서 v1 데이터 보존과 v2 동작을 검증한다.

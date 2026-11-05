@@ -143,5 +143,24 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 [preload](../../src/preload/index.ts), [8개 API 타입·채널](../../src/shared/api.ts), [화면 상태](../../src/renderer/state/useTimeline.ts)에 있다.
 IPC 거부·오류 변환·원자 삭제·저장 실패 검증은 [스테이지 5 기록](../implementation/stage-05.md)과
 [현재 검증 경로](../harness/validation.md)를 따른다. 자동화 통과를 별도의 침투 테스트 결과로 확대하지 않는다.
-현재 Planrail 실행·검증은 [후속 구현 기록](../implementation/2026-11-05-planrail.md),
+Planrail 0.3.0은 [당시 구현 기록](../implementation/2026-11-05-planrail.md),
+0.4.0 알림·계층 개선은 [최신 구현 기록](../implementation/2026-11-05-reminders.md),
 Windows 설치와 과거 MVP 인수는 [Windows 검증 기록](../release/windows-validation.md)에서 버전별로 구분한다.
+
+## 일정 알림 실행과 별도 IPC (0.4.0)
+
+[알림 확정 설계](reminders-and-hierarchy.md)를 따른다. [순수 평가](../../src/domain/reminder.ts),
+[영속 선점](../../src/main/db/reminders.ts), [main 실행기](../../src/main/reminders/engine.ts),
+[Electron Notification 어댑터](../../src/main/reminders/native.ts)를 분리한다.
+main은 실행·30초 간격·절전 복귀·업무 commit 후 후보를 평가하며 창을 숨겨도 동작한다.
+실제 종료 시 평가 타이머·OS 이벤트·알림 참조·IPC를 정리한 뒤 DB를 닫는다.
+
+기존 8개 업무 API의 일정 DTO에 `reminder`를 추가한다. 입력 미지정은 생성 시 기본값, 수정 시 기존값 보존이다.
+추가된 `timelineReminders`는 [고정 API](../../src/shared/reminder-api.ts)의 `getState/retry/acknowledge/onChange`만 노출한다.
+[main IPC](../../src/main/reminders/ipc.ts)는 sender의 창·메인 frame·URL과 명령·인자를 검증한다.
+임의 채널·메시지 전송을 허용하지 않으며 기존 renderer permission 차단을 완화하지 않는다.
+알림 클릭은 일정 ID·토큰으로 보관해 UI 준비 후 처리한다. 실제 종료 뒤 콜드 활성화는 지원 범위 밖이다.
+
+[알림 상태 훅](../../src/renderer/state/useReminders.ts)은 이벤트 구독을 해제하고 이전 비동기 조회를 무효화한다.
+[App](../../src/renderer/App.tsx)은 ready 상태에서 새 snapshot을 조회하고, 기존 미저장 확인으로 일정 편집을 연다.
+알림 전송 오류는 일정 저장 오류와 구분한다. [알림 입력](../../src/renderer/components/ReminderFields.tsx)은 기존 편집 폼의 dirty·저장·검증을 사용한다.
