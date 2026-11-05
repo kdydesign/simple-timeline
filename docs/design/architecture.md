@@ -1,7 +1,9 @@
 # Electron 구조와 IPC 계약
 
 작성일: 2026-11-03. 스테이지 2 사용자 승인 설계.
-이 문서는 승인된 계약이다. 현재 구현과 검증 근거는 마지막 절에서 연결하며 차이를 별도로 표시한다.
+이 문서는 승인된 권한·IPC 계약과 현재 구현의 연결을 설명한다.
+2026-11-05 [Planrail 후속 승인](planrail-improvements.md)이 선택 날짜·창 숨김/종료·공통 UI의 이전 동작을 대체한다.
+업무 API·저장 권한은 유지하며 검증 근거와 미구현 차이는 별도로 표시한다.
 [도메인 규칙](domain-rules.md)을 유지하며 저장 상세는 [저장 설계](storage.md)에 둔다.
 
 ## 목적과 범위
@@ -27,7 +29,7 @@ Teams·서버·로그인·동기화·자동 업데이트·수동 백업/복원�
   SQLite 연결·쿼리·트랜잭션·마이그레이션·로그를 소유한다.
 - preload: `contextBridge`로 아래 고정 메서드만 노출한다. 범용 `send/invoke`,
   채널명·SQL·파일 경로·Electron 객체·이벤트 객체를 renderer로 넘기지 않는다.
-- React renderer: 입력·표시·선택 연월·편집 상태와 조회 캐시를 관리한다.
+- React renderer: 입력·표시·선택 날짜·달력 표시 월·편집 상태와 조회 캐시를 관리한다.
   Node.js·SQLite·파일 시스템 권한이 없다. 입력 사전 검사는 편의 기능이며 main 검증을 대체하지 않는다.
 - 순수 도메인 함수: 날짜 유효성·기간·정규화·정렬 의미. Electron·UI·DB와 독립적이다.
 
@@ -73,7 +75,11 @@ SQL은 준비된 문장에 값을 바인딩하고 renderer 문자열을 SQL 구�
 `window:command` 채널은 `minimize`, `toggle-maximize`, `close`, `state` 문자열 한 개만 받으며
 동일한 최상위 frame·소유 창·URL 검증을 적용한다. 알 수 없는 명령·잘못된 인수는 거부한다.
 결과는 `{ok: boolean, maximized?: boolean}`이며 창 객체·범용 IPC는 노출하지 않는다.
-닫기는 `BrowserWindow.close()`를 호출해 기존 저장 대기·미저장 변경 확인을 거친다.
+닫기는 `BrowserWindow.close()`를 호출한다. Planrail에서는 트레이가 있으면 창만 숨겨 입력과 진행 중 저장을 유지한다.
+트레이 ‘종료’와 `app.quit()`는 창을 복원한 뒤 저장 대기·미저장 확인을 거쳐 실제 종료한다.
+트레이 생성 실패 시에는 안내 후 창 닫기도 보호 종료 경로를 사용한다.
+[close guard](../../src/main/close.ts)·[main 수명주기](../../src/main/bootstrap.ts)가 이 구분을 소유하며,
+복원·종료를 위해 renderer의 범용 권한이나 새 트레이 IPC를 추가하지 않았다.
 구현은 [창 IPC](../../src/main/window-ipc.ts), [타입](../../src/shared/window-api.ts)에 있다.
 아래 오류 DTO와 저장 계약은 기존 8개 업무 API의 계약이다.
 
@@ -104,7 +110,30 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 ‘저장 성공, 새로고침 실패’로 구분한다. 실패한 입력과 마지막 정상 데이터를 유지하며 오래된 데이터임을 표시한다.
 응답이 끊긴 create를 자동 재전송하지 않는다. 재조회 후 사용자가 판단한다.
 단일 창에서 쓰기 요청은 순차 처리한다. 다중 창 동시 편집·revision 충돌 기능은 추가하지 않는다.
-선택 연월은 메모리에만 유지하며 앱 시작 시 현지 현재 월로 초기화한다.
+선택 날짜는 메모리에만 유지하며 새 실행 시 현지 오늘로 초기화한다. 트레이 복원은 같은 상태를 이어 쓴다.
+일반 날짜 탐색은 달력 표시 월을 맞추지만 드래그로 월을 탐색할 때는 표시 월만 바뀔 수 있다.
+테마·프로젝트 접힘·간트 날짜 너비의 영속화는 [저장 설계](storage.md#화면-설정과-메모리-상태)를 따른다.
+
+## renderer 공통 UI와 스타일
+
+현재 UI는 공식 shadcn/ui 소스를 로컬 컴포넌트로 포함하고 Radix의 동작을 사용한다.
+[출처·고정 커밋·수정 범위](../../resources/licenses/shadcn-ui-NOTICE.md)와 MIT 원문을 배포 파일에도 포함한다.
+승인된 A Zinc 외형을 기존 C안 배치에 적용했으므로 공식 예제와 색상·크기·간격은 다를 수 있다.
+
+| 사용처 | 실제 구성·수정 위치 |
+| --- | --- |
+| 일정 추가의 소속 프로젝트 | [EditorPanel](../../src/renderer/components/EditorPanel.tsx) → [앱 Select](../../src/renderer/components/Select.tsx) → [shadcn Select](../../src/renderer/components/ui/select.tsx) → Radix. 프로젝트 색상·이름·키보드 이동을 연결한다. 일정 편집에서는 읽기 전용이다. |
+| 날짜 입력·선택 달력 | [DatePicker](../../src/renderer/components/DatePicker.tsx)는 shadcn Input·Button·Popover·Select를 조합한다. 날짜 격자는 기존 [calendarGrid](../../src/visualization/calendar.ts)를 사용하며 shadcn Calendar/React DayPicker로 교체하지 않았다. 한국어·월요일 시작·0001~9999년 계약을 유지하기 위한 구성이다. |
+| 프로젝트 목록·날짜 팝오버 | [앱 Popover](../../src/renderer/components/Popover.tsx)가 shadcn/Radix 위치 계산과 로컬 portal container를 연결한다. 편집 패널 안의 중첩 선택기도 같은 DOM 포커스 범위를 유지한다. |
+| 아이콘 버튼·툴팁 | [IconButton](../../src/renderer/components/Icon.tsx)은 shadcn Button을 사용하고 tooltip을 명시적으로 켠 상단 7개 버튼만 Tooltip으로 감싼다. [App](../../src/renderer/App.tsx)의 Provider가 250ms 지연을 설정한다. |
+| 삭제·변경 버리기 확인 | [ConfirmDialog](../../src/renderer/components/ConfirmDialog.tsx)는 shadcn AlertDialog를 사용한다. 제목 표시줄은 모달 중에도 클릭 가능하지만 본문 차단과 확인창 포커스 보호는 유지한다. 실제 앱 종료의 확인은 main의 Electron 대화상자다. |
+
+스타일은 [App](../../src/renderer/App.tsx)에서 `shadcn.css` → `styles.css` → `flat-glass.css` → `planrail.css` 순서로 가져온다.
+[Tailwind 토큰](../../src/renderer/shadcn.css)은 theme/utilities만 사용하며 preflight는 적용하지 않는다.
+[기본 레이아웃](../../src/renderer/styles.css)·[C안 구조](../../src/renderer/flat-glass.css) 위에
+[Planrail 토큰·외형](../../src/renderer/planrail.css)을 적용한다. 기존 전역 규칙과 Tailwind 규칙이 함께 있으므로
+공통 스타일 수정 시 라이트/다크, 간트/달력, 편집 패널·중첩 팝오버를 함께 확인한다.
+회귀 위치와 실제 검증 범위는 [검증 안내](../harness/validation.md)를 따른다.
 
 ## 근거·승인·현재 검증
 
@@ -114,4 +143,5 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 [preload](../../src/preload/index.ts), [8개 API 타입·채널](../../src/shared/api.ts), [화면 상태](../../src/renderer/state/useTimeline.ts)에 있다.
 IPC 거부·오류 변환·원자 삭제·저장 실패 검증은 [스테이지 5 기록](../implementation/stage-05.md)과
 [현재 검증 경로](../harness/validation.md)를 따른다. 자동화 통과를 별도의 침투 테스트 결과로 확대하지 않는다.
-Windows 설치와 사용자 인수는 [스테이지 7 기록](../implementation/stage-07.md)에 연결한다.
+현재 Planrail 실행·검증은 [후속 구현 기록](../implementation/2026-11-05-planrail.md),
+Windows 설치와 과거 MVP 인수는 [Windows 검증 기록](../release/windows-validation.md)에서 버전별로 구분한다.

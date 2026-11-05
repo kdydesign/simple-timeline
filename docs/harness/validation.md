@@ -111,5 +111,9 @@ completed와 passed, 개별 검사 결과를 함께 읽는다. dirty 보고서�
   [DB 검사](../../tests/native/)와 [실패 E2E](../../tests/e2e/failures.spec.ts)를 참조한다.
 - 가상화·포커스: 화면 밖 행 제거 시 BODY로 포커스를 잃지 않고, 숨긴 overflow의 native scroll이 좌표를 바꾸지 않는지 확인한다.
   [검토 회귀](../../tests/e2e/review.spec.ts)를 따른다. 모달을 연 채 창을 좁혀도 최상위 모달을 inert 배경 밖에 두고 Escape/복귀를 확인한다.
+- 공통 UI: shadcn/Radix 변경은 [구성 지도](../design/architecture.md#renderer-공통-ui와-스타일)와
+  [UI 회귀](../../tests/ui/planrail-design.test.tsx)·[실제 Electron 회귀](../../tests/e2e/planrail-design.spec.ts)를 대조한다.
+  중첩 Select/날짜 팝오버의 포커스·Escape, 7개 툴팁의 실제 위치, 확인창 중 제목 표시줄 클릭을 포함한다.
+  Linux에 창 관리자가 없으면 native 최소화/최대화 상태 검사는 환경 한계로 표시하지만 실제 명령 전달과 숨김/복원은 검사한다.
 - 범위·근거: 자동화 viewport·실패 주입을 실제 Windows 배율/Narrator·물리 장애 결과로 확대하지 않는다.
   대량 fixture 수치는 해당 환경의 관측이며 사용자 PC 성능 보장이나 SLA가 아니다.

@@ -1,0 +1,71 @@
+{
+  "legacySourceSha": "5c41982ee23e1f0f76f1aa0875c5361bd94a865b",
+  "legacyInstallerSha256": "9a6063a5d55c1799f8c9bd710abc335c6d2c46de80011dd1b2e1ab5b9acb9662",
+  "legacyVersion": "0.2.1",
+  "sourceSha": "56080cc2660287f596cee5f50ab61999676fd281",
+  "version": "0.3.0",
+  "updateVersion": "0.3.1",
+  "arch": "x64",
+  "osRelease": "10.0.26100",
+  "platform": "win32",
+  "profile": "C:\\Users\\runneradmin\\AppData\\Roaming\\SimpleTimeline",
+  "installerSha256": "cbc61b18ca7a45360e9244c8bb05a0e467e01124c5da3d805ae06c74796f761b",
+  "updateInstallerSha256": "d061f5c5d992ddd4f50f9e681b779ac5e0493db10bcb4fb80db02e835fa16ee7",
+  "installed": true,
+  "offline": true,
+  "updated": true,
+  "uninstallPreserved": true,
+  "reinstalled": true,
+  "runtime": {
+    "packaged": true,
+    "version": "0.3.1",
+    "profile": "C:\\Users\\runneradmin\\AppData\\Roaming\\SimpleTimeline",
+    "appPath": "D:\\a\\_temp\\SimpleTimeline-installed-1793845181598\\resources\\app.asar",
+    "modules": "150"
+  },
+  "legacyUpgradeWithChangedDirectory": true,
+  "system": {
+    "firewallProfiles": [
+      {
+        "Name": "Domain",
+        "Enabled": 1
+      },
+      {
+        "Name": "Private",
+        "Enabled": 1
+      },
+      {
+        "Name": "Public",
+        "Enabled": 1
+      }
+    ],
+    "powershellVersion": "7.6.9",
+    "powershellEdition": "Core",
+    "installerSignature": "NotSigned",
+    "osVersion": "10.0.26100",
+    "osBuild": "26100",
+    "machineInstallCount": 0,
+    "userInstalls": [
+      {
+        "DisplayVersion": "0.3.0",
+        "InstallLocation": null
+      }
+    ],
+    "shortcuts": [
+      {
+        "target": "D:\\a\\_temp\\SimpleTimeline-installed-1793845181598\\Planrail.exe",
+        "path": "C:\\Users\\runneradmin\\Desktop\\Planrail.lnk",
+        "name": "Planrail"
+      },
+      {
+        "target": "D:\\a\\_temp\\SimpleTimeline-installed-1793845181598\\Planrail.exe",
+        "path": "C:\\Users\\runneradmin\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Planrail.lnk",
+        "name": "Planrail"
+      }
+    ],
+    "osCaption": "Microsoft Windows Server 2025 Datacenter"
+  },
+  "uninstallShortcutsRemoved": true,
+  "dbBytes": 32768,
+  "pass": true
+}

@@ -1,7 +1,9 @@
 # 진행 상태
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
-후속: [Planrail 확정 설계](../design/planrail-improvements.md)와 [구현·검증 기록](../implementation/2026-11-05-planrail.md)을 따른다. 기존 MVP 지도는 완료 상태를 유지한다.
+후속: Planrail 0.3.0 구현·main 반영과 Windows/Linux CI를 완료했다.
+[확정 설계](../design/planrail-improvements.md)·[구현 기록](../implementation/2026-11-05-planrail.md)·[버전별 Windows 근거](../release/windows-validation.md)를 따른다.
+기존 MVP 사용자 인수를 0.3.0 실기 인수로 확대하지 않으며 지도는 완료 상태를 유지한다.
 이전 후속: [개선·오류 대응 설계](../design/post-mvp-improvements.md)를 사용자와 확정하고 문서에 반영했다.
 구현과 자동 검증 결과는 [후속 구현 기록](../implementation/2026-11-04-post-mvp-improvements.md)을 따른다.
 기존 MVP 단계는 완료 상태를 유지하며 사용자 Windows PC 시작 시간·새 설치 화면의 실기 확인은 남아 있다.

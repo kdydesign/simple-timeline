@@ -1,5 +1,68 @@
 # 하네스·문서 재점검
 
+## 2026-11-05 — Planrail 후속 문서 정합성
+
+분석 기준 main: `56080cc2660287f596cee5f50ab61999676fd281`.
+[agents-md](../../.agents/skills/agents-md/SKILL.md)와
+[documentation-and-adrs](../../.agents/skills/documentation-and-adrs/SKILL.md)를 적용했다.
+문서·에이전트 지침과 CI 원본 증거 사본만 변경했다. 제품·테스트 코드, 의존성, 빌드/배포/CI 설정,
+가져온 스킬 원문은 수정하지 않았고 스킬에 포함된 스크립트도 실행하지 않았다.
+
+### 분석과 반영
+
+| 발견 | 실제 근거 | 보정 |
+| --- | --- | --- |
+| 구조 문서가 닫기를 보호 종료로만 설명 | main의 close guard는 트레이가 있으면 hide, 실제 quit만 저장 대기·확인 | [구조](../design/architecture.md)에 창 숨김/실제 종료/트레이 실패 경로를 구분 |
+| 선택 연월과 영속 설정의 설명이 현재 상태와 다름 | App의 selectedDate·별도 표시 월, usePreferences의 localStorage | 구조·[저장](../design/storage.md)에 SQLite·화면 설정·메모리 상태의 경계를 명시 |
+| shadcn 사용 범위가 포괄적으로만 적힘 | EditorPanel→앱 Select→shadcn Select→Radix, 날짜 격자는 calendarGrid | 구조 문서에 사용처와 수정 파일 지도 추가. 공식 예제 외형과 앱 토큰, 날짜 선택기와 shadcn Calendar를 구분 |
+| 화면 탐색 링크가 이전 C안 문서부터 안내 | Planrail 설계가 화면·날짜·트레이의 후속 기준 | [문서 지도](../agents/domain.md)에 최신 설계와 공통 UI 연결. AGENTS는 이름만 Planrail로 갱신하고 상세는 링크 문서에 유지 |
+| 구현 기록과 계획에 원격 검증 완료 근거가 빠짐 | 56080cc의 Application/Repository harness 두 OS 성공 | [구현 기록](../implementation/2026-11-05-planrail.md)·계획·STATUS에 완료 상태와 실기 미검증 경계를 연결 |
+| 설치 안내의 검증 경로가 0.1.0 전달 기록으로 이어짐 | 실제 0.3.0 artifact와 Windows 원본 보고서 존재 | [Windows 기록](../release/windows-validation.md)에 0.3.0 고정 SHA·다운로드·해시·증거를 추가. 0.1.0 본문은 당시 기록으로 보존 |
+| 모달·중첩 선택기의 검증 주의점이 빠짐 | 기존 Planrail Electron 회귀의 포커스/툴팁/창 버튼 검사 | [검증 안내](validation.md)에 실제 회귀 경로와 Linux 창 관리자 한계를 연결 |
+
+새 제품 결정을 만들지 않았으므로 별도 ADR은 추가하지 않았다. 승인 이유는 기존 설계에 두고,
+권한·종료·UI 연결은 구조, 영속화는 저장, 설치본과 원본 실행 증거는 Windows 기록에서 관리한다.
+기존 IPC 예외 로그·migration 사본 로그의 설계/구현 차이는 코드 대조 후 미구현 상태로 유지했다.
+
+### AGENTS 빠른 점검
+
+루트 AGENTS 하나만 발견했다. 프로젝트 override/CLAUDE 파일과 이 환경의 상위·홈 지침은 없었다.
+프로젝트 스킬 5개의 역할·절차를 대조했으며 루트에는 공통 계약만 남긴다.
+외부 스킬의 일반 템플릿보다 사용자 범위·저장소 승인이 우선한다는 기존 규칙이 중복 절차의 우선관계를 정한다.
+
+| 파일 | 기준 | 반영 전 | 반영 후 | 변경 |
+| --- | --- | --- | --- | --- |
+| AGENTS.md | [12개 빠른 기준](../../.agents/skills/agents-md/references/quick-checklist.md), N/A 없음 | 12/12 Pass, 62줄 | 12/12 Pass, 62줄 | 프로젝트 표시명만 갱신. 명령·공통 안전 계약·탐색 경로는 유지 |
+
+명령·환경·프로젝트 함정·수정 방향(1~5), 구현 관례·정보 밀도·상세 분리(6~10),
+적용 조건·우선관계(11~12)를 확인했다. 점수는 문서 기준 충족 여부이며 제품 품질이나 다른 에이전트 로더 인증이 아니다.
+실제 Claude/Cursor 로더는 실행하지 않았다.
+
+### 보정과 검증
+
+이번 로컬 실행은 Linux x64·Node 24.22.1, 기준 56080cc + 문서 dirty 상태다.
+제품 소스는 같은 SHA와 동일하다. 기존 의존성을 사용했으며 npm ci·native 재설치는 실행하지 않았다.
+
+| 검사 | 결과·경계 |
+| --- | --- |
+| context / 하네스 verify | selected=null·frontier=[]·errors 없음, verify 7종 PASS. MVP 완료 지도 유지 |
+| 타입·제품 빌드 | `npm run build` PASS. 포함된 `npm run typecheck` 4개 TS 설정과 Electron main/preload/renderer 빌드 확인 |
+| 문서의 날짜 단위 명령 | `npm run test:unit -- tests/unit/date.test.ts --reporter=dot`: 13개 PASS |
+| 개발 명령 | 임시 XDG_CONFIG_HOME·DISPLAY=:94에서 `npm run dev` 실행. HTTP 200·임시 DB schema 1/application_id 1398033486 확인 후 해당 프로세스 그룹 종료. 운영 프로필 미사용 |
+| 경로·명령 | Markdown 67개·로컬 링크 대상 523개·변경 문서 앵커·현재 npm 명령 9종 대조 PASS. 스킬 예제·과거 명령과 현재 실행 명령은 구분 |
+| 기존 원격 실행 | 56080cc Application/Repository harness의 Windows·Ubuntu 성공 및 artifact SHA 대조. 새 문서 커밋 CI와 구분 |
+| 원본 증거 보존 | Windows 보고서 ZIP에서 `windows-validation.json`을 [증거 파일](../release/evidence/56080cc-windows-validation.json)로 바이트 그대로 복사·대조. exe 재다운로드·로컬 해시 재계산은 미실행 |
+
+개발 smoke는 명령·서버·DB 초기화 확인이며 새 UI 시각 검사는 아니다. 컨테이너의 D-Bus 부재 경고는 기록했으며
+화면 조작·트레이·Windows 실기 통과로 확대하지 않는다. 전체 앱 검사는 로컬에서 다시 반복하지 않았고
+기존 56080cc의 clean CI 결과와 이번 문서 범위에 맞는 명령 검증을 구분한다.
+로컬 점검 결과는 `artifacts/docs/2026-11-05/`에 보존한다.
+
+미검증: Windows11 대화형 설치·권한 거부·DPI·트레이 위치·시작 시간, Claude/Cursor 로더,
+문서 외부 URL 전체의 본문/fragment 재검증. 현재 CI·artifact는 인증된 GitHub 도구로 확인했다.
+기존 [하네스 개선 제안](#미검증과-후속-제안--이번에는-구현하지-않음)의 명령/식별자 drift 검사와
+문서 전용 CI 비용 개선은 이번에도 제안이며 검사 스크립트·workflow를 변경하지 않았다.
+
 ## 2026-11-04 — 완료된 MVP의 문서 정합성
 
 분석 기준 main: `22a6ae661b4a9e9f50562f2334849ec7f2c3766b`.

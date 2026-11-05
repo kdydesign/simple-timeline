@@ -2,7 +2,7 @@
 
 ## 프로젝트
 
-오프라인 Windows 일정 관리 프로그램. Electron + React + SQLite.
+Planrail — 오프라인 Windows 일정 관리 프로그램. Electron + React + SQLite.
 사용자와 한국어로 소통한다. Teams·공유·모바일은 현재 MVP 범위 밖이다.
 
 ## 시작 순서
