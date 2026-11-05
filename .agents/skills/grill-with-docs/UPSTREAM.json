@@ -1,0 +1,80 @@
+{
+  "skill": "grill-with-docs",
+  "repository": "https://github.com/mattpocock/skills",
+  "upstream_ref": "main",
+  "commit": "4ae2317ddb22b046e26455e4f9c9b3aaaf62212d",
+  "upstream_directory": "skills/engineering/grill-with-docs",
+  "retrieved_on": "2026-11-05",
+  "license": {
+    "spdx": "MIT",
+    "source_path": "LICENSE",
+    "local_path": "LICENSE"
+  },
+  "files": [
+    {
+      "source_path": "skills/engineering/grill-with-docs/SKILL.md",
+      "local_path": "SKILL.md",
+      "git_blob_sha1": "62b9efb6f991d1b229adee7506962f13ced0c499",
+      "bytes": 247,
+      "mode": "100644",
+      "sha256": "7de372c13488f1ee96cc11cd8907b56b6809cc93eef776eeddd37de6b6cbe3fe"
+    },
+    {
+      "source_path": "skills/engineering/grill-with-docs/agents/openai.yaml",
+      "local_path": "agents/openai.yaml",
+      "git_blob_sha1": "5dbe2780a51be3e9b118bd7758a73e54a9384e11",
+      "bytes": 145,
+      "mode": "100644",
+      "sha256": "94cd0ab161fb468a836349f5ed482ba58ce8e709a05c57ce533d739dbd35cca9"
+    },
+    {
+      "source_path": "LICENSE",
+      "local_path": "LICENSE",
+      "git_blob_sha1": "f1dd2c09108dde1a5f56097cee8461b3ea834499",
+      "bytes": 1068,
+      "mode": "100644",
+      "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+    }
+  ],
+  "required_skills": [
+    "grilling",
+    "domain-modeling"
+  ],
+  "review": {
+    "scripts_present": false,
+    "upstream_instructions_modified": false,
+    "interview_started": false,
+    "runtime_skill_dispatch_verified": false,
+    "existing_project_name_or_path_conflicts": [],
+    "commands_run_for_installation": "GitHub read APIs, local byte copy/hash/YAML/link checks, existing Node repository harness; no npm/npx/skill installation CLI or copied scripts.",
+    "instruction_review": [
+      "정적 검토에서 실행 스크립트·원격 코드 실행·자격 증명 접근·정보 전송 명령을 발견하지 못했다.",
+      "domain-modeling 원본은 GLOSSARY.md/GLOSSARY-MAP.md를 지시하지만 이 저장소는 CONTEXT.md와 docs/agents/domain.md를 기준으로 한다. 루트 AGENTS.md의 사용자 범위·저장소 관례 우선 규칙을 적용하며 이번에는 용어 사전·ADR을 만들거나 바꾸지 않았다.",
+      "grilling은 인터뷰 승인과 필요 시 서브에이전트를 지시한다. 이번에는 파일 추가만 수행하고 인터뷰·스킬 실행을 시작하지 않았다.",
+      "ADR은 실제 결정 근거가 있을 때 기존 docs/adr/ 관례를 따른다. 기존 승인 문서를 새 ADR로 중복 이관하지 않는다."
+    ],
+    "related_plugin_skill": {
+      "name": "engineering-suite-wayfinder:domain-modeling",
+      "source": "skill://plugins_6aa2fbfa71748191b96d8c4ffa873044/domain-modeling/SKILL.md",
+      "overwritten": false,
+      "differences": [
+        "Wayfinder uses CONTEXT.md/CONTEXT-MAP.md/CONTEXT-FORMAT.md; Matt Pocock uses GLOSSARY.md/GLOSSARY-MAP.md/GLOSSARY-FORMAT.md.",
+        "Wayfinder sets disable-model-invocation: true for domain-modeling; this upstream domain-modeling does not."
+      ]
+    },
+    "reference_validation": {
+      "actual_internal_relative_links": 0,
+      "fenced_examples": "Project GLOSSARY.md/GLOSSARY-MAP.md/docs/adr paths in examples are future outputs, not missing imported files."
+    }
+  },
+  "required_skill_resolution": {
+    "grilling": {
+      "path": ".agents/skills/grilling/SKILL.md",
+      "status": "existing, byte-identical to same upstream commit; not modified"
+    },
+    "domain-modeling": {
+      "path": ".agents/skills/domain-modeling/SKILL.md",
+      "status": "added from same upstream commit"
+    }
+  }
+}
