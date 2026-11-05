@@ -1,5 +1,9 @@
+import {createReminderStore} from './db/reminders'
+import {createReminderEngine,type ReminderSender} from './reminders/engine'
+import {createNativeReminderSender} from './reminders/native'
+import {registerReminderIpc} from './reminders/ipc'
 /// <reference types="electron-vite/node" />
-import { app, dialog } from 'electron'
+import { app, dialog, powerMonitor } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import { startupRecorder, rendererStartupProbe, observeStartupRequests } from './startup'
 import { mkdirSync } from 'node:fs'
@@ -16,6 +20,8 @@ import { createTray } from './tray'
 import { toPublicError } from './errors'
 import type { Result } from '../shared/types'
 export interface BootstrapOptions {
+  reminderSender?: ReminderSender
+  reminderClock?: ()=>Date
   profileDir?: string
   rendererUrl?: string
   preloadPath?: string
@@ -77,12 +83,14 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     icon,
     { mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
+  let evaluateReminders = () => {}
   const unregisterWindow = registerWindowIpc(window, rendererUrl)
   const unregister = registerTimelineIpc(
     window,
     storage,
     rendererUrl,
     async (method, result) => {
+      if(result.ok && !method.startsWith('get'))evaluateReminders()
       const response = options.afterDispatch ? await options.afterDispatch(method, result) : result
       if (method === 'getSnapshot' && response.ok) startup.mark('snapshot-served')
       return response
@@ -117,6 +125,18 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     window.show()
     window.focus()
   }
+  const nativeReminders = createNativeReminderSender(icon)
+  let reminderIpc: ReturnType<typeof registerReminderIpc> | undefined
+  const reminderEngine = storage.state === 'ready' ? createReminderEngine({
+    store:createReminderStore(storage.db),snapshot:()=>storage.repository.getSnapshot(),clock:options.reminderClock,
+    send:options.reminderSender ?? nativeReminders.send,
+    onClick:id=>{show();reminderIpc?.open(id)},onChange:()=>reminderIpc?.changed(),
+  }) : undefined
+  reminderIpc=registerReminderIpc(window,rendererUrl,()=>reminderEngine?.issues() ?? {failed:0,unknown:0,storageError:true},async()=>{await reminderEngine?.evaluate(true)})
+  evaluateReminders=()=>{void reminderEngine?.evaluate()}
+  const reminderTimer=setInterval(evaluateReminders,30000)
+  powerMonitor.on('resume',evaluateReminders)
+  evaluateReminders()
   let tray: ReturnType<typeof createTray> | undefined
   const requestQuit = () => {
     if (exiting) return
@@ -157,6 +177,11 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
   app.on('will-quit', () => {
+    clearInterval(reminderTimer)
+    powerMonitor.removeListener('resume',evaluateReminders)
+    reminderEngine?.dispose()
+    nativeReminders.dispose()
+    reminderIpc?.dispose()
     tray?.destroy()
     unregister()
     unregisterWindow()

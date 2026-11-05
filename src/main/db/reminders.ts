@@ -13,7 +13,7 @@ export function addReminders(db:DatabaseHandle) {
  ) STRICT;
  CREATE INDEX reminder_deliveries_schedule ON reminder_deliveries(schedule_id);`)
 }
-export function createReminderStore(db:DatabaseHandle) {
+export function createReminderStore(db:DatabaseHandle):ReminderStore {
  const insert=db.prepare("INSERT OR IGNORE INTO reminder_deliveries(identity,schedule_id,state,updated_at) VALUES(?,?,'claimed',?)")
  const retry=db.prepare("UPDATE reminder_deliveries SET state='claimed',updated_at=? WHERE identity=? AND state='failed'")
  return {
@@ -35,4 +35,10 @@ export function createReminderStore(db:DatabaseHandle) {
   },
  }
 }
-export type ReminderStore=ReturnType<typeof createReminderStore>
+export interface ReminderStore {
+ claim(items:ReminderOccurrence[],retry:boolean):ReminderOccurrence[]
+ finish(keys:string[],state:Exclude<DeliveryState,'claimed'>):void
+ recover():void
+ state(key:string):DeliveryState|undefined
+ issues():{failed:number;unknown:number}
+}
