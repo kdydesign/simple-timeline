@@ -48,6 +48,7 @@ export function memoryApi(
     async createSchedule(input: ScheduleInput) {
       const s: Schedule = {
         ...input,
+        reminder: input.reminder ?? {daysBefore:2,time:'09:00',start:false,end:false},
         id: String(++sequence),
         createdAt: time,
         updatedAt: time,

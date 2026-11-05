@@ -7,6 +7,7 @@ import {
   validateId,
 } from '../domain/normalize'
 import { parseBusinessDate, inclusiveDays } from '../domain/date'
+import { normalizeReminder } from '../domain/reminder'
 import { DomainValidationError } from '../domain/error'
 import { toPublicError, failure } from './errors'
 interface Sender {
@@ -80,10 +81,9 @@ function input(method: string, args: readonly unknown[]): unknown {
   )
     throw new DomainValidationError('input')
   const v = value as Record<string, unknown>
-  if (
-    Object.keys(v).length !== keys[method].length ||
-    Object.keys(v).some((k) => !keys[method].includes(k))
-  )
+  const hasReminder = (method==='createSchedule'||method==='updateSchedule') && Object.hasOwn(v,'reminder')
+  const expected = hasReminder ? [...keys[method], 'reminder'] : keys[method]
+  if (Object.keys(v).length !== expected.length || Object.keys(v).some(k=>!expected.includes(k)))
     throw new DomainValidationError('input')
   const id =
     method.startsWith('update') || method.startsWith('delete')
@@ -106,6 +106,7 @@ function input(method: string, args: readonly unknown[]): unknown {
     endDate = parseBusinessDate(v.endDate, 'endDate')
   inclusiveDays(startDate, endDate)
   const s: Omit<ScheduleInput, 'projectId'> = {
+    ...(hasReminder ? {reminder:normalizeReminder(v.reminder,startDate,endDate)} : {}),
     name: normalizeName(v.name),
     startDate,
     endDate,

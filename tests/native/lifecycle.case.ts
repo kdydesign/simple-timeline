@@ -134,21 +134,21 @@ export const cases: NativeCase[] = [
       const v2 = [
         ...migrations,
         {
-          version: 2,
+          version: migrations.length + 1,
           up(db: ReturnType<typeof openDatabase>) {
             db.exec('CREATE TABLE extra(value TEXT)')
           },
         },
       ]
       const upgraded = await ready(ctx, v2)
-      assert.equal(upgraded.db.pragma('user_version', { simple: true }), 2n)
+      assert.equal(upgraded.db.pragma('user_version', { simple: true }), BigInt(migrations.length + 1))
       const backups = readdirSync(join(ctx.tempDir, 'migration-backups'))
       assert.equal(backups.filter((n) => n.endsWith('.sqlite3')).length, 1)
       const copy = openDatabase(
         join(ctx.tempDir, 'migration-backups', backups[0]),
         true,
       )
-      assert.equal(copy.pragma('user_version', { simple: true }), 1n)
+      assert.equal(copy.pragma('user_version', { simple: true }), BigInt(migrations.length))
       copy.close()
       upgraded.db.close()
       const newer = await initializeStorage(ctx.tempDir)
@@ -167,7 +167,7 @@ export const cases: NativeCase[] = [
       const v2 = [
         ...migrations,
         {
-          version: 2,
+          version: migrations.length + 1,
           up(db: ReturnType<typeof openDatabase>) {
             db.exec('CREATE TABLE should_rollback(a TEXT)')
             throw Error('migration failed')
@@ -177,7 +177,7 @@ export const cases: NativeCase[] = [
       const failed = await initializeStorage(ctx.tempDir, v2)
       assert.equal(failed.state, 'blocked')
       const check = openDatabase(file, true)
-      assert.equal(check.pragma('user_version', { simple: true }), 1n)
+      assert.equal(check.pragma('user_version', { simple: true }), BigInt(migrations.length))
       assert.equal(
         check
           .prepare(

@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3'
+import { normalizeReminder } from '../../domain/reminder'
 import type { TimelineApi } from '../../shared/api'
 import type {
   Project,
@@ -64,6 +65,7 @@ export function createRepository(
     updatedAt: String(r.updated_at),
   })
   const scheduleDto = (r: Row): Schedule => ({
+    reminder: {daysBefore:Number(r.reminder_days),time:String(r.reminder_time),start:!!r.reminder_start,end:!!r.reminder_end},
     id: String(r.id),
     projectId: String(r.project_id),
     name: String(r.name),
@@ -160,21 +162,23 @@ export function createRepository(
     createSchedule: db.transaction((input: ScheduleInput) => {
       getProject(input.projectId)
       const v = dates(input),
+        reminder = normalizeReminder(input.reminder,v.startDate,v.endDate),
         now = clock()
       const info = db
         .prepare(
-          'INSERT INTO schedules(project_id,name,start_date,end_date,created_at,updated_at) VALUES(?,?,?,?,?,?)',
+          'INSERT INTO schedules(project_id,name,start_date,end_date,created_at,updated_at,reminder_days,reminder_time,reminder_start,reminder_end) VALUES(?,?,?,?,?,?,?,?,?,?)',
         )
-        .run(BigInt(input.projectId), v.name, v.startDate, v.endDate, now, now)
+        .run(BigInt(input.projectId), v.name, v.startDate, v.endDate, now, now, reminder.daysBefore,reminder.time,Number(reminder.start),Number(reminder.end))
       return getSchedule(String(info.lastInsertRowid))
     }),
     updateSchedule: db.transaction((input: ScheduleUpdate) => {
       const id = validateId(input.id)
-      getSchedule(id)
+      const current = getSchedule(id)
       const v = dates(input)
+      const reminder = normalizeReminder(input.reminder ?? current.reminder,v.startDate,v.endDate)
       db.prepare(
-        'UPDATE schedules SET name=?,start_date=?,end_date=?,updated_at=? WHERE id=?',
-      ).run(v.name, v.startDate, v.endDate, clock(), BigInt(id))
+        'UPDATE schedules SET name=?,start_date=?,end_date=?,updated_at=?,reminder_days=?,reminder_time=?,reminder_start=?,reminder_end=? WHERE id=?',
+      ).run(v.name, v.startDate, v.endDate, clock(), reminder.daysBefore,reminder.time,Number(reminder.start),Number(reminder.end),BigInt(id))
       return getSchedule(id)
     }),
     deleteSchedule: db.transaction(({ id }: { id: string }) => {

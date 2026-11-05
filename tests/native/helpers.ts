@@ -1,6 +1,6 @@
 import type { DatabaseHandle } from '../../src/main/db/repository'
 import { openDatabase, createRepository } from '../../src/main/db/repository'
-import { createSchema } from '../../src/main/db/schema'
+import { migrations } from '../../src/main/db/migrations'
 import { join } from 'node:path'
 export interface NativeContext {
   tempDir: string
@@ -16,7 +16,7 @@ export function setup(ctx: NativeContext) {
   ctx.defer(() => {
     if (db.open) db.close()
   })
-  createSchema(db)
+  migrations.forEach(m => m.up(db))
   return {
     db,
     file,

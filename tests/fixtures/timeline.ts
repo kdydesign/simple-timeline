@@ -13,6 +13,7 @@ export const schedule = (
   startDate = '2026-11-11',
   endDate = '2026-12-11',
 ): Schedule => ({
+  reminder: {daysBefore:2,time:'09:00',start:false,end:false},
   id,
   projectId,
   name: '개발',

@@ -12,7 +12,14 @@ export interface Project {
   createdAt: string
   updatedAt: string
 }
+export interface ReminderSettings {
+  daysBefore: number
+  time: string
+  start: boolean
+  end: boolean
+}
 export interface Schedule {
+  reminder: ReminderSettings
   id: Id
   projectId: Id
   name: string
@@ -47,5 +54,5 @@ export type ProjectInput = Pick<Project, 'name' | 'color' | 'participants'>
 export type ScheduleInput = Pick<
   Schedule,
   'projectId' | 'name' | 'startDate' | 'endDate'
->
+> & { reminder?: ReminderSettings }
 export type ScheduleUpdate = Omit<ScheduleInput, 'projectId'> & { id: Id }

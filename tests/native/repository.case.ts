@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { createSchema } from '../../src/main/db/schema'
+import { migrations } from '../../src/main/db/migrations'
 import assert from 'node:assert/strict'
 import { setup, type NativeCase } from './helpers'
 import { createRepository, openDatabase } from '../../src/main/db/repository'
@@ -11,7 +11,7 @@ export const cases: NativeCase[] = [
       const db = new Database(':memory:', { verbose: (sql) => queries.push(String(sql)) })
       ctx.defer(() => db.close())
       db.defaultSafeIntegers(true)
-      createSchema(db)
+      migrations.forEach(m => m.up(db))
       const repo = createRepository(db)
       for (let i = 0; i < 200; i++)
         repo.createProject({ name: `P${i}`, color: '#2563EB', participants: i % 2 ? [] : ['Z', 'A'] })
