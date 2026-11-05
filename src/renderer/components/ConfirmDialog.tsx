@@ -1,11 +1,11 @@
-import { useEffect, useRef } from "react";
+import {AlertDialog,AlertDialogContent,AlertDialogTitle,AlertDialogDescription,AlertDialogCancel,AlertDialogAction} from "./ui/alert-dialog";
 export function trapTab(event: React.KeyboardEvent, container: HTMLElement) {
   if (event.key !== "Tab") return;
   const items = [
     ...container.querySelectorAll<HTMLElement>(
       'button:not(:disabled),input:not(:disabled),select:not(:disabled),[tabindex="0"]',
     ),
-  ];
+  ].filter(item => item.tabIndex >= 0 && !item.hasAttribute("data-radix-focus-guard") && !item.closest('[hidden],[aria-hidden="true"]') && !(item instanceof HTMLInputElement && item.type === "hidden"));
   if (!items.length) {
     event.preventDefault();
     container.focus();
@@ -26,51 +26,14 @@ export function trapTab(event: React.KeyboardEvent, container: HTMLElement) {
     first.focus();
   }
 }
-export function ConfirmDialog({
-  title,
-  message,
-  confirmLabel,
-  cancelLabel = "취소",
-  onConfirm,
-  onCancel,
-}: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  cancelLabel?: string;
-  onConfirm: () => void;
-  onCancel: () => void;
+export function ConfirmDialog({title,message,confirmLabel,cancelLabel="취소",onConfirm,onCancel}: {
+ title:string;message:string;confirmLabel:string;cancelLabel?:string;onConfirm:()=>void;onCancel:()=>void;
 }) {
-  const cancel = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    cancel.current?.focus();
-  }, []);
-  return (
-    <div className="scrim">
-      <section
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby="confirm-title"
-        aria-describedby="confirm-message"
-        onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            e.stopPropagation();
-            onCancel();
-          } else trapTab(e, e.currentTarget);
-        }}
-        className="confirm"
-      >
-        <h2 id="confirm-title">{title}</h2>
-        <p id="confirm-message">{message}</p>
-        <div className="actions">
-          <button ref={cancel} onClick={onCancel}>
-            {cancelLabel}
-          </button>
-          <button className="danger" onClick={onConfirm}>
-            {confirmLabel}
-          </button>
-        </div>
-      </section>
-    </div>
-  );
+ return <AlertDialog open>
+  <AlertDialogContent className="confirm" onEscapeKeyDown={e=>{e.preventDefault();e.stopPropagation();onCancel()}} onCloseAutoFocus={e=>e.preventDefault()}>
+   <AlertDialogTitle>{title}</AlertDialogTitle>
+   <AlertDialogDescription>{message}</AlertDialogDescription>
+   <div className="actions"><AlertDialogCancel onClick={onCancel}>{cancelLabel}</AlertDialogCancel><AlertDialogAction className="danger" variant="outline" onClick={onConfirm}>{confirmLabel}</AlertDialogAction></div>
+  </AlertDialogContent>
+ </AlertDialog>
 }

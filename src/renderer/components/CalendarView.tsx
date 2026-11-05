@@ -178,7 +178,6 @@ export function CalendarView({
                         color: "var(--text)",
                       }}
                       aria-label={scheduleDescription(item, p)}
-                      title={scheduleDescription(item, p)}
                       onPointerDown={e=>drag.begin(e,item)}
                       onClick={() => onEditSchedule(item)}
                     >

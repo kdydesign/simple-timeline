@@ -1,4 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react';
+import {Button} from './ui/button';
+import {Tooltip,TooltipTrigger,TooltipContent} from './ui/tooltip';
 const paths = {
  gantt:'M3 6h10M7 12h14M3 18h12', calendar:'M3 9h18M8 2v4m8-4v4M9 9v12m6-12v12M3 4h18v17H3Z',
  folder:'M3 7V4h7l3 3h8v13H3Z', project:'M3 7V4h7l3 3h8v13H3Z M12 11v6m-3-3h6',
@@ -9,6 +11,7 @@ const paths = {
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({name}: {name: IconName}) {return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>}
-export function IconButton({icon,label,className='',...props}: {icon:IconName;label:string}&ButtonHTMLAttributes<HTMLButtonElement>) {
- return <button type="button" {...props} className={`icon-button ${className}`} aria-label={label}><Icon name={icon}/></button>
+export function IconButton({icon,label,tooltip=false,className='',...props}: {icon:IconName;label:string;tooltip?:boolean}&ButtonHTMLAttributes<HTMLButtonElement>) {
+ const button=<Button type="button" variant="ghost" size="icon" {...props} className={`icon-button ${className}`} aria-label={label}><Icon name={icon}/></Button>;
+ return tooltip ? <Tooltip><TooltipTrigger asChild>{button}</TooltipTrigger><TooltipContent side="bottom" align="center" sideOffset={8} collisionPadding={8} className="app-tooltip">{label}</TooltipContent></Tooltip> : button;
 }

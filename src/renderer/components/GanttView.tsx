@@ -436,11 +436,6 @@ export function GanttView({
                         className="text-button"
                         data-focus={r.key}
                         disabled={disabled}
-                        title={
-                          s
-                            ? scheduleDescription(s, r.project)
-                            : `${r.project.name} · #${r.project.id} · ${r.project.participants.join(" · ")}`
-                        }
                         aria-label={`${r.label} 편집`}
                         onKeyDown={(e) => {
                           if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -466,7 +461,7 @@ export function GanttView({
                       </button>
                       {s ? <small>{s.startDate} — {s.endDate}</small> : (
                         <small className="project-meta">
-                          <span title={r.project.participants.join(" · ") || "참여자 없음"}>{r.project.participants.join(" · ") || "참여자 없음"}</span>
+                          <span>{r.project.participants.join(" · ") || "참여자 없음"}</span>
                           {!index.byProject.get(r.project.id)?.length && <span className="empty-row">일정 없음</span>}
                         </small>
                       )}
@@ -476,7 +471,6 @@ export function GanttView({
                         className="row-add"
                         data-focus={`add:${r.project.id}`}
                         aria-label="일정 추가"
-                        title={`${r.label}에 일정 추가`}
                         disabled={disabled}
                         onClick={() => onAddSchedule(r.project)}
                       >
@@ -508,7 +502,6 @@ export function GanttView({
                         className="gantt-bar"
                         disabled={disabled}
                         aria-label={scheduleDescription(s, r.project)}
-                        title={scheduleDescription(s, r.project)}
                         onPointerDown={e=>drag.begin(e,s)}
                         onClick={() => onEditSchedule(s)}
                         style={{
@@ -536,6 +529,7 @@ export function GanttView({
         </div>
       )}
       <div className="gantt-navigation" onKeyDown={keyboard}>
+        {active&&<span className="zoom-percent" aria-label="간트 배율">{Math.round(P/28*100)}%</span>}
         <input
           type="range"
           aria-label="간트 가로 이동"

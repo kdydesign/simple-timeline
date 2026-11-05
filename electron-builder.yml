@@ -5,6 +5,7 @@ directories:
 files:
   - out/**/*
   - resources/icon.png
+  - resources/licenses/**/*
   - package.json
 asar: true
 asarUnpack:

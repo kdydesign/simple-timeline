@@ -50,9 +50,10 @@ test('date and nested month popovers do not shift the form or dismiss dirty edit
  await p.getByRole('combobox',{name:'소속 프로젝트',exact:true}).click();await p.getByRole('option',{name:'일정 없음 · #2',exact:true}).click();
  await expect(p.getByRole('combobox',{name:'소속 프로젝트'})).toContainText('일정 없음');
  await p.getByRole('combobox',{name:'소속 프로젝트'}).press('ArrowDown');
- await p.keyboard.press('Home');await p.keyboard.press('Enter');
+ await expect(p.getByRole('option',{name:'일정 없음 · #2',exact:true})).toBeFocused();
+ await p.keyboard.press('Home');await expect(p.getByRole('option',{name:'1.1.1 핫픽스 · #1',exact:true})).toBeFocused();await p.keyboard.press('Enter');
  await expect(p.getByRole('combobox',{name:'소속 프로젝트'})).toContainText('1.1.1 핫픽스');
- await p.getByRole('combobox',{name:'소속 프로젝트'}).press('ArrowDown');await p.keyboard.press('Tab');
+ await p.getByRole('combobox',{name:'소속 프로젝트'}).press('ArrowDown');await expect(p.getByRole('listbox')).toBeVisible();await p.keyboard.press('Tab');
  await expect(p.getByLabel('시작일',{exact:true})).toBeFocused();
  await p.setViewportSize({width:1280,height:500});await end.scrollIntoViewIfNeeded();await end.click();
  const bounds=(await p.getByRole('group',{name:'종료일 달력'}).boundingBox())!;

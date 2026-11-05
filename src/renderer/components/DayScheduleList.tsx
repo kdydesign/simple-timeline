@@ -99,7 +99,6 @@ export function DayScheduleList({
                     data-return-focus={`more:${date}`}
                     disabled={disabled}
                     aria-label={scheduleDescription(s, p)}
-                    title={scheduleDescription(s, p)}
                     style={{ top: i * 72 }}
                     onFocus={() => setFocus(i)}
                     onClick={() => onEdit(s)}

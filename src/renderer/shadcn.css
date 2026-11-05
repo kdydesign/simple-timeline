@@ -1,0 +1,26 @@
+/* Tailwind utilities/theme only: existing controlled renderer reset is retained. */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@source "./components/ui";
+@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@theme inline {
+ --color-background: var(--surface);
+ --color-foreground: var(--text);
+ --color-popover: var(--surface);
+ --color-popover-foreground: var(--text);
+ --color-primary: var(--accent);
+ --color-primary-foreground: var(--accent-foreground);
+ --color-secondary: var(--subtle);
+ --color-secondary-foreground: var(--text);
+ --color-accent: var(--hover);
+ --color-accent-foreground: var(--text);
+ --color-muted: var(--subtle);
+ --color-muted-foreground: var(--muted);
+ --color-destructive: var(--danger);
+ --color-border: var(--border);
+ --color-input: var(--border);
+ --color-ring: var(--accent);
+ --radius-md: 7px;
+ --radius-lg: 8px;
+}

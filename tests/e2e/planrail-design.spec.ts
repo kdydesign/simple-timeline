@@ -1,0 +1,106 @@
+import {test,expect} from './fixture';
+test.use({seed:'hotfix'});
+test('only the seven approved header controls show aligned shadcn tooltips',async({desktop:{page:p}})=>{
+ await p.setViewportSize({width:1440,height:900});
+ const allowed=['프로젝트 목록','간트','달력','오늘','다크 모드','프로젝트 추가','일정 추가'];
+ for(const name of allowed){
+  const button=p.locator('.toolbar').getByRole('button',{name,exact:true});
+  await button.hover();
+  await p.waitForTimeout(100);
+  await expect(p.getByRole('tooltip')).toHaveCount(0);
+  const tip=p.locator('[data-slot="tooltip-content"]');
+  await expect(tip).toBeVisible();
+  await expect(p.getByRole('tooltip')).toHaveText(name);
+  const b=(await button.boundingBox())!,t=(await tip.boundingBox())!;
+  const expectedLeft=Math.max(8,Math.min(b.x+b.width/2-t.width/2,1440-t.width-8));
+  expect(Math.abs(t.x-expectedLeft)).toBeLessThanOrEqual(1);
+  expect(Math.abs(t.y-b.y-b.height-8)).toBeLessThanOrEqual(1);
+  await p.mouse.move(700,400);await expect(tip).toHaveCount(0);
+ }
+ for(const name of ['최소화','최대화','창 닫기','이전 달','다음 달']){
+  await p.getByRole('button',{name,exact:true}).hover();await p.waitForTimeout(300);await expect(p.getByRole('tooltip')).toHaveCount(0);
+ }
+ await p.locator('[data-focus="schedule-add"]').click();
+ for(const name of ['취소','저장','편집 닫기']){
+  await p.getByRole('button',{name,exact:true}).hover();await p.waitForTimeout(300);await expect(p.getByRole('tooltip')).toHaveCount(0);
+ }
+ await p.locator('.toolbar').getByRole('button',{name:'달력',exact:true}).focus();await expect(p.getByRole('tooltip')).toHaveText('달력');
+ await p.keyboard.press('Escape');await expect(p.getByRole('tooltip')).toHaveCount(0);
+ await p.locator('.toolbar').getByRole('button',{name:'간트',exact:true}).focus();await expect(p.getByRole('tooltip')).toHaveText('간트');
+ await p.getByRole('button',{name:'최소화',exact:true}).focus();await expect(p.getByRole('tooltip')).toHaveCount(0);
+ await p.locator('.toolbar').getByRole('button',{name:'달력',exact:true}).focus();await expect(p.getByRole('tooltip')).toHaveText('달력');
+ await p.locator('.toolbar').getByRole('button',{name:'달력',exact:true}).click();await expect(p.getByRole('tooltip')).toHaveCount(0);
+ expect(await p.locator('[title]').count()).toBe(0);
+ await expect(p.getByLabel('일정 이름',{exact:true})).toHaveAttribute('data-slot','input');
+ await expect(p.getByRole('button',{name:'저장',exact:true})).toHaveAttribute('data-slot','button');
+});
+test('zoom percent is read only and exclusive to Gantt',async({desktop:{page:p}})=>{
+ await p.setViewportSize({width:1440,height:900});
+ expect(await p.locator('main').evaluate(e=>e.scrollHeight-e.clientHeight)).toBe(0);
+ const footer=(await p.locator('.gantt-navigation').boundingBox())!;expect(footer.y+footer.height).toBeLessThanOrEqual(900);
+ await expect(p.getByLabel('간트 배율',{exact:true})).toHaveText('100%');
+ const axis=p.locator('.gantt-date-heading');const b=(await axis.boundingBox())!;
+ await p.mouse.move(b.x+150,b.y+35);await p.keyboard.down('Control');await p.mouse.wheel(0,-100);await p.keyboard.up('Control');
+ await expect(p.getByLabel('간트 배율',{exact:true})).not.toHaveText('100%');
+ await p.getByRole('button',{name:'달력',exact:true}).click();await expect(p.getByLabel('간트 배율',{exact:true})).toHaveCount(0);
+});
+test('portalled controls retain real editor focus and nested Escape at a short viewport',async({desktop:{page:p}})=>{
+ await p.setViewportSize({width:760,height:500});
+ await p.locator('[data-focus="schedule-add"]').click();
+ await p.getByLabel('일정 이름',{exact:true}).fill('포커스 보존');
+ const start=p.getByLabel('시작일',{exact:true}),end=p.getByLabel('종료일',{exact:true});
+ await start.scrollIntoViewIfNeeded();const before=await end.boundingBox();await start.click();expect(await end.boundingBox()).toEqual(before);
+ const picker=p.getByRole('group',{name:'시작일 달력',exact:true});await expect(picker).toHaveAttribute('data-slot','popover-content');
+ await p.getByRole('combobox',{name:'달력 월',exact:true}).click();
+ const list=p.getByRole('listbox');await expect(list).toBeVisible();
+ expect(await list.evaluate(e=>e.contains(document.activeElement))).toBe(true);
+ await p.keyboard.press('End');await expect(p.getByRole('option',{name:'12월',exact:true})).toBeFocused();await p.keyboard.press('Enter');
+ await expect(p.getByRole('combobox',{name:'달력 월',exact:true})).toContainText('12월');await expect(picker).toBeVisible();
+ await p.getByRole('combobox',{name:'달력 월',exact:true}).click();await p.keyboard.press('Escape');await expect(list).toHaveCount(0);await expect(picker).toBeVisible();
+ await expect(p.getByRole('combobox',{name:'달력 월',exact:true})).toBeFocused();
+ await p.keyboard.press('Escape');await expect(picker).toHaveCount(0);await expect(start).toBeFocused();
+ await expect(p.getByRole('alertdialog')).toHaveCount(0);await expect(p.getByLabel('일정 이름',{exact:true})).toHaveValue('포커스 보존');
+ await p.getByRole('button',{name:'저장',exact:true}).focus();await p.keyboard.press('Tab');await expect(p.getByRole('button',{name:'편집 닫기',exact:true})).toBeFocused();
+ await end.scrollIntoViewIfNeeded();await end.click();const bounds=(await p.getByRole('group',{name:'종료일 달력',exact:true}).boundingBox())!;
+ expect(bounds.y).toBeGreaterThanOrEqual(8);expect(bounds.y+bounds.height).toBeLessThanOrEqual(492);
+});
+test('approved Zinc tokens distinguish selected dates and today in light and dark',async({desktop:{page:p}})=>{
+ for(const theme of ['light','dark']){
+  await expect(p.locator('.gantt-name small').first()).toHaveCSS('font-size','12px');
+  await expect(p.locator('.gantt-bar').first()).toHaveCSS('font-size','13px');
+  await expect(p.getByLabel('간트 배율',{exact:true})).toHaveCSS('font-size','12px');
+  if(theme==='dark')await p.getByRole('button',{name:'다크 모드',exact:true}).click();
+  const expected=theme==='light'?'#18181b':'#fafafa';
+  expect(await p.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--text').trim())).toBe(expected);
+  const date=p.getByLabel('선택 날짜',{exact:true});await date.fill('2026-11-13');await date.press('Enter');
+  await p.getByRole('button',{name:'달력',exact:true}).click();
+  const selected=p.locator('.calendar-dates>button[aria-pressed="true"]'),today=p.locator('.calendar-dates>button[aria-current="date"]');
+  await expect(selected).toHaveCount(1);
+  if(await today.count())expect(await selected.evaluate(e=>getComputedStyle(e).backgroundColor)).not.toBe(await today.evaluate(e=>getComputedStyle(e).backgroundColor));
+  await p.getByRole('button',{name:'간트',exact:true}).click();
+ }
+});
+
+test('confirmation cancellation and acceptance preserve the intended editor focus',async({desktop:{page:p}})=>{
+ await p.setViewportSize({width:1280,height:820});
+ await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
+ await p.getByLabel('프로젝트 이름',{exact:true}).fill('미저장 프로젝트');
+ await p.locator('[data-focus="schedule-add"]').click();
+ const alert=p.getByRole('alertdialog');await expect(alert).toBeVisible();
+ const bounds=(await alert.boundingBox())!;expect(bounds.x).toBeGreaterThanOrEqual(24);expect(Math.abs(bounds.x+bounds.width/2-640)).toBeLessThanOrEqual(1);
+ const cancel=alert.getByRole('button',{name:'계속 편집',exact:true});await expect(cancel).toBeFocused();
+ await p.keyboard.press('Shift+Tab');await expect(alert.getByRole('button',{name:'변경 버리기',exact:true})).toBeFocused();
+ await cancel.click();await expect(alert).toHaveCount(0);
+ await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('미저장 프로젝트');
+ await p.locator('[data-focus="schedule-add"]').click();await alert.getByRole('button',{name:'변경 버리기',exact:true}).click();
+ await expect(p.getByRole('dialog',{name:'일정 추가',exact:true})).toBeVisible();
+ await expect(p.getByLabel('일정 이름',{exact:true})).toBeFocused();
+ await p.getByRole('button',{name:'취소',exact:true}).click();
+ await p.getByRole('button',{name:'QA 편집',exact:true}).click();await p.getByRole('button',{name:'삭제',exact:true}).click();
+ await expect(alert.getByRole('button',{name:'취소',exact:true})).toBeFocused();
+ await alert.getByRole('button',{name:'일정 삭제',exact:true}).click();
+ await expect(alert).toHaveCount(0);await expect(p.getByRole('button',{name:'QA 편집',exact:true})).toHaveCount(0);
+ await expect(p.getByRole('button',{name:'운영 배포 편집',exact:true})).toBeFocused();
+ await p.setViewportSize({width:760,height:500});await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await p.getByLabel('프로젝트 이름',{exact:true}).fill('짧은 창 확인');await p.getByRole('button',{name:'편집 닫기',exact:true}).click();
+ const short=(await alert.boundingBox())!;expect(short.x).toBeGreaterThanOrEqual(24);expect(short.y).toBeGreaterThanOrEqual(48);expect(short.x+short.width).toBeLessThanOrEqual(736);expect(short.y+short.height).toBeLessThanOrEqual(492);
+});

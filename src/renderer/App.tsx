@@ -14,7 +14,7 @@ import { dateInMonth, localDate, monthOf } from "./state/dateNavigation";
 import { usePreferences } from "./state/usePreferences";
 import { useEditor } from "./state/useEditor";
 import {Titlebar} from "./components/Titlebar";
-import {TooltipLayer} from "./components/TooltipLayer";
+import {TooltipProvider} from "./components/ui/tooltip";
 import { Toolbar } from "./components/Toolbar";
 import { ProjectList } from "./components/ProjectList";
 import { GanttView, type GanttHandle } from "./components/GanttView";
@@ -22,8 +22,10 @@ import { CalendarView } from "./components/CalendarView";
 import { EditorPanel } from "./components/EditorPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { StatusNotice } from "./components/StatusNotice";
+import "./shadcn.css";
 import "./styles.css";
 import "./flat-glass.css";
+import "./planrail.css";
 interface Confirmation {
   title: string;
   message: string;
@@ -313,9 +315,8 @@ export function App({
     />
   );
   return (
-    <>
+    <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
       <Titlebar/>
-      <TooltipLayer/>
       <div
         className="app-shell"
         aria-hidden={!!confirmation || dayModalOpen || (narrow && !!model)}
@@ -451,6 +452,6 @@ export function App({
           onCancel={cancelConfirm}
         />
       )}
-    </>
+    </TooltipProvider>
   );
 }

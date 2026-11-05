@@ -1,3 +1,5 @@
+import {Button} from './ui/button';
+import {Input} from './ui/input';
 import { useEffect, useRef, type ReactNode } from "react";
 import type { Editor } from "../state/useEditor";
 import type {
@@ -90,7 +92,7 @@ export function EditorPanel({
           <label htmlFor="editor-name">
             {editor.kind === "project" ? "프로젝트 이름" : "일정 이름"}
           </label>
-          <input
+          <Input
             id="editor-name"
             value={editor.draft.name}
             {...invalid("name")}
@@ -100,7 +102,7 @@ export function EditorPanel({
             <>
               <label htmlFor="editor-color">표시 색상</label>
               <div className="color-input">
-                <input
+                <Input
                   id="editor-color"
                   type="color"
                   aria-label="색상 선택"
@@ -113,7 +115,7 @@ export function EditorPanel({
                     patch({ color: e.target.value.toUpperCase() })
                   }
                 />
-                <input
+                <Input
                   id="editor-color-code"
                   aria-label="색상 코드"
                   value={editor.draft.color}
@@ -129,7 +131,7 @@ export function EditorPanel({
                   <label className="sr-only" htmlFor={`participant-${i}`}>
                     참여자 {i + 1}
                   </label>
-                  <input
+                  <Input
                     id={`participant-${i}`}
                     value={name}
                     onChange={(e) => {
@@ -138,7 +140,7 @@ export function EditorPanel({
                       patch({ participants: names });
                     }}
                   />
-                  <button
+                  <Button
                     type="button"
                     aria-label={`참여자 ${i + 1} 삭제`}
                     onClick={() =>
@@ -150,17 +152,17 @@ export function EditorPanel({
                     }
                   >
                     ×
-                  </button>
+                  </Button>
                 </div>
               ))}
-              <button
+              <Button
                 type="button"
                 onClick={() =>
                   patch({ participants: [...editor.draft.participants, ""] })
                 }
               >
                 참여자 이름 추가
-              </button>
+              </Button>
               <p className="help">
                 입력 순서를 유지하고 같은 이름은 저장할 때 한 번만 남깁니다.
               </p>
@@ -193,21 +195,21 @@ export function EditorPanel({
         </fieldset>
         <div className="editor-actions">
           {editor.id && (
-            <button
+            <Button
               type="button"
               className="danger"
               disabled={disabled}
               onClick={onDelete}
             >
               삭제
-            </button>
+            </Button>
           )}
-          <button type="button" disabled={busy} onClick={onClose}>
+          <Button type="button" disabled={busy} onClick={onClose}>
             취소
-          </button>
-          <button className="primary" disabled={disabled} type="submit">
+          </Button>
+          <Button className="primary" disabled={disabled} type="submit">
             저장
-          </button>
+          </Button>
         </div>
       </form>
     </aside>
