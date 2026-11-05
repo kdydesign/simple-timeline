@@ -1,5 +1,5 @@
 appId: com.kdydesign.simpletimeline
-productName: Simple Timeline
+productName: Planrail
 directories:
   output: release
 files:
@@ -12,19 +12,20 @@ asarUnpack:
 npmRebuild: true
 forceCodeSigning: false
 publish: null
-artifactName: SimpleTimeline-${version}-win-${arch}-${env.ST_SOURCE_SHA}.${ext}
+artifactName: Planrail-${version}-win-${arch}-${env.ST_SOURCE_SHA}.${ext}
 win:
   icon: resources/icon.ico
   target:
     - target: nsis
       arch: [x64]
-  executableName: Simple Timeline
+  executableName: Planrail
   requestedExecutionLevel: asInvoker
   signExecutable: false
 nsis:
   installerIcon: resources/icon.ico
   uninstallerIcon: resources/icon.ico
   oneClick: false
+  include: scripts/release/installer.nsh
   perMachine: false
   allowElevation: false
   installerLanguages: [ko_KR]

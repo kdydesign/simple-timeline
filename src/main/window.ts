@@ -7,7 +7,7 @@ export function createWindow(preload: string, url: string, onShown?: () => void,
     show: false,
     frame: false,
     backgroundColor: '#f4f6fa',
-    title: 'Simple Timeline',
+    title: 'Planrail',
     webPreferences: {
       preload,
       nodeIntegration: false,

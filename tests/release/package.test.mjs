@@ -79,7 +79,7 @@ async function fixture(
     join(unpacked, "resources/app.asar"),
     unpack ? { unpack: "**/*.node" } : {},
   );
-  await writeFile(join(unpacked, "Simple Timeline.exe"), pe());
+  await writeFile(join(unpacked, "Planrail.exe"), pe());
   return unpacked;
 }
 test("recognizes an x64 native addon outside ASAR and the production entry", async (t) => {

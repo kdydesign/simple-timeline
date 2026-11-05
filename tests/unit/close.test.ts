@@ -49,3 +49,12 @@ it('waits for pending save before deciding whether to close', async () => {
   await vi.waitFor(() => expect(w.destroyed).toBe(true))
   expect(asked).toBe(0)
 })
+it('asks conservatively when renderer close state is malformed', async () => {
+  const w = windowStub()
+  w.window.webContents.executeJavaScript = async () => ({})
+  let asked = 0
+  const requestClose = installCloseGuard(w.window, async () => { asked++; return false })
+  requestClose()
+  await vi.waitFor(() => expect(asked).toBe(1))
+  expect(w.destroyed).toBe(false)
+})

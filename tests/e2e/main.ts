@@ -21,6 +21,10 @@ let changed = false,
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT;
 void bootstrap({
   profileDir: profile,
+  ...(fault === "tray-failure" ? {
+    createTray: () => { throw Error("Injected tray creation failure") },
+    notifyTrayFailure: () => writeFileSync(join(profile,"tray-error.txt"),"reported"),
+  } : {}),
   rendererUrl: fault === "missing-renderer" ? pathToFileURL(join(profile, "missing.html")).href : undefined,
   notifyBlocked(storage) {
     if (fault === "startup" && storage.state === "blocked")
@@ -36,7 +40,8 @@ void bootstrap({
     }
     return true;
   },
-  afterDispatch(method, result): Result<unknown> {
+  async afterDispatch(method, result): Promise<Result<unknown>> {
+    if (fault === "pending-save" && method === "createProject") await new Promise(resolve => setTimeout(resolve, 1000));
     if (
       (method === "createProject" ||
         (method === "createSchedule" && fault?.startsWith("schedule-")) ||
@@ -66,6 +71,7 @@ void bootstrap({
 })
   .then((result) => {
     if (!result || result.storage.state !== "ready") return;
+    (globalThis as any).desktopController = (result as any).desktop;
     const { storage } = result,
       repo = storage.repository,
       seed = process.env.SIMPLE_TIMELINE_TEST_SEED;

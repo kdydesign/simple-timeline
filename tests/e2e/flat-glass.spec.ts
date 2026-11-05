@@ -10,7 +10,8 @@ test('custom titlebar keeps dirty close protection and isolated window API',asyn
  await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
  await p.getByLabel('프로젝트 이름',{exact:true}).fill('미저장 보호');
  await p.getByRole('button',{name:'창 닫기',exact:true}).click();
- await expect.poll(()=>readFile(join(d.profile,'close-confirmed.txt'),'utf8').catch(()=>null)).toBe('requested');
+ await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false);
+ await d.app.evaluate(()=> (globalThis as any).desktopController.show());
  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('미저장 보호');
  await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().length)).toBe(1);
 });

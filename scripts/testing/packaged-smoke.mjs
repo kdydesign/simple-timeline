@@ -26,7 +26,7 @@ export const normalizeArchivePath = (value) =>
 export async function inspectPackage(directory, { sourceSha, version } = {}) {
   const root = resolve(directory),
     archive = join(root, "resources/app.asar"),
-    exe = join(root, "Simple Timeline.exe");
+    exe = join(root, "Planrail.exe");
   await stat(archive);
   await requireX64(exe, "Executable");
   const files = asar.listPackage(archive).map(normalizeArchivePath),

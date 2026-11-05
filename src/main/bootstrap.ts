@@ -12,6 +12,7 @@ import { registerTimelineIpc } from './ipc'
 import { registerWindowIpc } from './window-ipc'
 import { resolveRendererUrl } from './ipc-core'
 import { installCloseGuard } from './close'
+import { createTray } from './tray'
 import { toPublicError } from './errors'
 import type { Result } from '../shared/types'
 export interface BootstrapOptions {
@@ -23,13 +24,15 @@ export interface BootstrapOptions {
     method: string,
     result: Result<unknown>,
   ) => Result<unknown> | Promise<Result<unknown>>
+  createTray?: typeof createTray
+  notifyTrayFailure?: () => void
   confirmClose?: () => Promise<boolean>
 }
 export async function bootstrap(options: BootstrapOptions = {}) {
   const profile = options.profileDir ?? profileDirectory(app.getPath('appData'))
   try {
     mkdirSync(profile, { recursive: true })
-    app.setName('Simple Timeline')
+    app.setName('Planrail')
     app.setPath('userData', profile)
   } catch (error) {
     const blocked: StorageState = {
@@ -107,7 +110,26 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         `${storage.error.message}\n원본을 보존합니다.\n${join(profile, 'data', 'timeline.sqlite3')}`,
       )
   }
-  installCloseGuard(
+  let exiting = false
+  const show = () => {
+    if (window.isDestroyed()) return
+    if (window.isMinimized()) window.restore()
+    window.show()
+    window.focus()
+  }
+  let tray: ReturnType<typeof createTray> | undefined
+  const requestQuit = () => {
+    if (exiting) return
+    show()
+    requestClose()
+  }
+  try {
+    tray = (options.createTray ?? createTray)(icon, show, requestQuit)
+  } catch {
+    if (options.notifyTrayFailure) options.notifyTrayFailure()
+    else dialog.showErrorBox('트레이를 만들지 못했습니다', '창 닫기로 앱을 종료할 수 있습니다. 저장하지 않은 입력은 종료 전에 확인합니다.')
+  }
+  const requestClose = installCloseGuard(
     window,
     options.confirmClose ??
       (async () => {
@@ -121,17 +143,24 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         })
         return result.response === 1
       }),
+    {
+      hide: tray ? () => window.hide() : undefined,
+      beforeClose: () => { exiting = true },
+      afterClose: () => app.quit(),
+    },
   )
-  app.on('second-instance', () => {
-    if (window.isMinimized()) window.restore()
-    window.show()
-    window.focus()
+  app.on('second-instance', show)
+  app.on('before-quit', event => {
+    if (exiting) return
+    event.preventDefault()
+    requestQuit()
   })
-  app.on('window-all-closed', () => app.quit())
+  app.on('window-all-closed', () => { if (exiting) app.quit() })
   app.on('will-quit', () => {
+    tray?.destroy()
     unregister()
     unregisterWindow()
     if (storage.state === 'ready' && storage.db.open) storage.db.close()
   })
-  return { window, storage, profile }
+  return { window, storage, profile, desktop: { show, requestQuit } }
 }

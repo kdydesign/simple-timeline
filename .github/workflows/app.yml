@@ -4,7 +4,7 @@ permissions:
   contents: read
 jobs:
   app:
-    timeout-minutes: 30
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
@@ -29,6 +29,9 @@ jobs:
       - name: Build unsigned current-user Windows installer
         if: runner.os == 'Windows'
         run: npm run dist:win
+      - name: Build source-pinned actual Simple Timeline 0.2.1 for rename upgrade
+        if: runner.os == 'Windows'
+        run: ./scripts/release/build-legacy.ps1
       - name: Build a synthetic next-version installer for update verification
         if: runner.os == 'Windows'
         run: npm run dist:win:test-update
@@ -38,7 +41,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows' && success()
         with:
-          name: SimpleTimeline-Windows11-x64-unsigned-${{ github.sha }}
+          name: Planrail-Windows11-x64-unsigned-${{ github.sha }}
           path: |
             release/*.exe
             release/*.sha256
@@ -48,7 +51,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows' && success()
         with:
-          name: SimpleTimeline-UPDATE-TEST-ONLY-${{ github.sha }}
+          name: Planrail-UPDATE-TEST-ONLY-${{ github.sha }}
           path: |
             artifacts/windows-update/*.exe
             artifacts/windows-update/*.sha256

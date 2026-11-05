@@ -48,6 +48,8 @@ test("real production package installs, works offline, updates and retains DB af
       process.env.RUNNER_TEMP!,
       "SimpleTimeline-installed-" + Date.now(),
     ),
+    legacyDir = join(process.env.RUNNER_TEMP!, "SimpleTimeline-legacy-" + Date.now()),
+    legacyInstalled = join(legacyDir, "Simple Timeline.exe"),
     db = join(profile, "data/timeline.sqlite3");
   const base = JSON.parse(
       await readFile("release/release-manifest.json", "utf8"),
@@ -55,9 +57,15 @@ test("real production package installs, works offline, updates and retains DB af
     update = JSON.parse(
       await readFile("artifacts/windows-update/release-manifest.json", "utf8"),
     );
-  const installed = join(installDir, "Simple Timeline.exe"),
+  const legacy = JSON.parse(await readFile("artifacts/windows-legacy/release-manifest.json", "utf8"));
+  expect(legacy.version).toBe("0.2.1");
+  expect(legacy.sourceSha).toBe("5c41982ee23e1f0f76f1aa0875c5361bd94a865b");
+  const installed = join(installDir, "Planrail.exe"),
     rules: { name: string; exe: string }[] = [],
     evidence: Record<string, unknown> = {
+      legacySourceSha: legacy.sourceSha,
+      legacyInstallerSha256: legacy.sha256,
+      legacyVersion: legacy.version,
       sourceSha: base.sourceSha,
       version: base.version,
       updateVersion: update.version,
@@ -151,10 +159,9 @@ test("real production package installs, works offline, updates and retains DB af
     return result.data;
   };
   try {
-    let page = await launch(
-      resolve("release/win-unpacked/Simple Timeline.exe"),
-      base.version,
-    );
+    run(resolve("artifacts/windows-legacy", legacy.installer), ["/S", "/D=" + legacyDir]);
+    await waitUntil(async () => existsSync(legacyInstalled));
+    let page = await launch(legacyInstalled, legacy.version);
     await page
       .getByRole("button", { name: "프로젝트 추가", exact: true })
       .click();
@@ -176,17 +183,24 @@ test("real production package installs, works offline, updates and retains DB af
         page.getByRole("button", { name: name + " 편집", exact: true }),
       ).toBeVisible();
     }
+    // Preserve a real legacy preference payload as well as the SQLite content.
+    await page.getByRole('button', { name: '다크 모드', exact: true }).click();
+    await page.getByRole('button', { name: '1.1.1 핫픽스 접기', exact: true }).click();
+    const preferences = await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1'));
+    expect(preferences).not.toBeNull();
     const before = await snapshot(page);
     expect(before.schedules).toHaveLength(3);
     await close();
     page = await launch(
-      resolve("release/win-unpacked/Simple Timeline.exe"),
-      base.version,
+      legacyInstalled,
+      legacy.version,
     );
     expect(await snapshot(page)).toEqual(before);
     await close();
     run(resolve("release", base.installer), ["/S", "/D=" + installDir]);
     await waitUntil(async () => existsSync(installed));
+    await waitUntil(async () => !existsSync(legacyInstalled));
+    evidence.legacyUpgradeWithChangedDirectory = true;
     evidence.installed = true;
     const system = JSON.parse(
       ps([
@@ -200,10 +214,16 @@ test("real production package installs, works offline, updates and retains DB af
     expect(system.userInstalls).toHaveLength(1);
     expect(system.userInstalls[0].DisplayVersion).toBe(base.version);
     expect(system.machineInstallCount).toBe(0);
+    expect(system.shortcuts.length).toBeGreaterThanOrEqual(2);
+    for (const shortcut of system.shortcuts) {
+      expect(shortcut.name).toBe('Planrail');
+      expect(shortcut.target.toLowerCase()).toBe(installed.toLowerCase());
+    }
     evidence.system = system;
     console.log("Packaged Windows environment: "+JSON.stringify(system));
 
     page = await launch(installed, base.version);
+    expect(await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1'))).toBe(preferences);
     expect(await snapshot(page)).toEqual(before);
     await offline(installed);
     evidence.offline = true;
@@ -259,6 +279,10 @@ test("real production package installs, works offline, updates and retains DB af
         .update(await readFile(db))
         .digest("hex"),
     ).toBe(hashBefore);
+    const removedSystem = JSON.parse(ps(['-File',resolve('scripts/testing/windows-release-info.ps1'),'-Installer',resolve('release',base.installer)]));
+    expect(removedSystem.shortcuts).toHaveLength(0);
+    expect(removedSystem.userInstalls).toHaveLength(0);
+    evidence.uninstallShortcutsRemoved = true;
     evidence.uninstallPreserved = true;
     run(resolve("artifacts/windows-update", update.installer), [
       "/S",
@@ -294,6 +318,7 @@ test("real production package installs, works offline, updates and retains DB af
       maxRetries: 10,
       retryDelay: 200,
     });
+    await rm(legacyDir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
     await rm(installDir, {
       recursive: true,
       force: true,

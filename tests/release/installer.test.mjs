@@ -29,3 +29,17 @@ test('the selected B icon is configured for the app and both installer actions',
   const png=readFileSync('resources/icon.png')
   assert.equal(png.subarray(1,4).toString(),'PNG')
 })
+
+test('Planrail rename preserves installer identity and offers directory selection without elevation',()=>{
+ const c=load(readFileSync('electron-builder.yml','utf8'))
+ const pkg=JSON.parse(readFileSync('package.json','utf8'))
+ assert.equal(c.productName,'Planrail')
+ assert.equal(c.win.executableName,'Planrail')
+ assert.match(c.artifactName,/^Planrail-/)
+ assert.equal(c.appId,'com.kdydesign.simpletimeline')
+ assert.equal(pkg.name,'simple-timeline')
+ assert.equal(pkg.version,'0.3.0')
+ assert.equal(c.nsis.include,'scripts/release/installer.nsh')
+ assert.notEqual(c.nsis.allowToChangeInstallationDirectory,true)
+ assert.equal(c.nsis.packElevateHelper,false)
+})
