@@ -4,7 +4,7 @@
 body{font-family:"Malgun Gothic",system-ui,sans-serif}
 button,input{border-radius:7px}button:focus-visible,input:focus-visible,[role="option"]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button.primary,button.primary:hover:enabled{background:var(--accent);border-color:var(--accent);color:var(--accent-foreground)}button.primary:hover:enabled{filter:brightness(.94)}.danger{color:var(--danger)}
-.titlebar .brand-mark{display:grid;background:#193353}.titlebar .brand h1{letter-spacing:-.25px}.titlebar{background:var(--glass)}
+.titlebar .brand-mark{display:grid;background:#193353}.titlebar .brand h1{letter-spacing:-.25px}.titlebar{background:var(--glass);pointer-events:auto}
 .toolbar{min-height:68px;gap:14px;padding:12px 22px}.toolbar-view-title{letter-spacing:-.5px}.icon-button{width:36px;height:36px}.toolbar .mode-switch{border-radius:9px}.mode-switch .icon-button{width:34px;height:30px;color:var(--muted)}.mode-switch button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 3px #0000000d}
 .month-input .date-input input{width:126px;height:36px;padding:8px 9px;text-align:center;background:var(--surface);font-size:13px;font-weight:600;border:1px solid var(--border)}
 .toolbar .month-controls{gap:2px}.toolbar .header-actions{gap:8px}.toolbar .project-anchor{flex-shrink:0}

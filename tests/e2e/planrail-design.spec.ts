@@ -1,4 +1,15 @@
 import {test,expect} from './fixture';
+import {execFileSync} from 'node:child_process';
+// Xvfb without a window manager cannot implement native minimize/maximize states.
+const nativeWindowStates=process.platform!=='linux'||(()=>{
+ try{
+  const options={encoding:'utf8' as const,timeout:2000,stdio:['ignore','pipe','ignore'] as ['ignore','pipe','ignore']};
+  const root=execFileSync('xprop',['-root','_NET_SUPPORTING_WM_CHECK'],options);
+  const id=root.match(/window id # (0x[1-9a-f][0-9a-f]*)/i)?.[1];
+  // EWMH requires the manager's live supporting window to point to itself.
+  return !!id&&execFileSync('xprop',['-id',id,'_NET_SUPPORTING_WM_CHECK'],options).includes(id);
+ }catch{return false}
+})();
 test.use({seed:'hotfix'});
 test('only the seven approved header controls show aligned shadcn tooltips',async({desktop:{page:p}})=>{
  await p.setViewportSize({width:1440,height:900});
@@ -103,4 +114,37 @@ test('confirmation cancellation and acceptance preserve the intended editor focu
  await expect(p.getByRole('button',{name:'운영 배포 편집',exact:true})).toBeFocused();
  await p.setViewportSize({width:760,height:500});await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await p.getByLabel('프로젝트 이름',{exact:true}).fill('짧은 창 확인');await p.getByRole('button',{name:'편집 닫기',exact:true}).click();
  const short=(await alert.boundingBox())!;expect(short.x).toBeGreaterThanOrEqual(24);expect(short.y).toBeGreaterThanOrEqual(48);expect(short.x+short.width).toBeLessThanOrEqual(736);expect(short.y+short.height).toBeLessThanOrEqual(492);
+});
+
+test('confirmation keeps window chrome usable and survives hide and restore',async({desktop:d})=>{
+ const p=d.page;await d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(760,500));
+ await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await p.getByLabel('프로젝트 이름',{exact:true}).fill('창 제어 중 보존');await p.getByRole('button',{name:'편집 닫기',exact:true}).click();
+ const confirmation=p.getByRole('alertdialog');await expect(confirmation).toBeVisible();
+ expect(await p.evaluate(()=>getComputedStyle(document.body).pointerEvents)).toBe('none');
+ const background=(await p.locator('[data-focus="project-add"]').boundingBox())!;await p.mouse.click(background.x+background.width/2,background.y+background.height/2);
+ await expect(confirmation).toBeVisible();await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('창 제어 중 보존');
+ const physicalClick=async(label:string)=>{const b=(await p.locator('.window-controls').getByRole('button',{name:label,exact:true,includeHidden:true}).boundingBox())!;await p.mouse.click(b.x+b.width/2,b.y+b.height/2)};
+ await physicalClick('창 닫기');
+ await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false);
+ await d.app.evaluate(()=>(globalThis as any).desktopController.show());
+ await expect(confirmation).toBeVisible();await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('창 제어 중 보존');
+ // Observe real native command calls while still delegating every call to Electron.
+ await d.app.evaluate(({BrowserWindow})=>{
+  const w=BrowserWindow.getAllWindows()[0],calls={minimize:0,maximize:0,unmaximize:0};(globalThis as any).windowControlCalls=calls;
+  for(const action of ['minimize','maximize','unmaximize'] as const){const native=w[action].bind(w);w[action]=()=>{calls[action]++;native()}}
+ });
+ if(!nativeWindowStates)test.info().annotations.push({type:'environment',description:'No EWMH window manager: native state checks unavailable; real window command delivery and hide/restore remain asserted.'});
+ await physicalClick('최소화');await expect.poll(()=>d.app.evaluate(()=>(globalThis as any).windowControlCalls.minimize)).toBe(1);
+ if(nativeWindowStates)await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isMinimized())).toBe(true);
+ await d.app.evaluate(()=>(globalThis as any).desktopController.show());await expect(confirmation).toBeVisible();
+ await physicalClick('최대화');await expect.poll(()=>d.app.evaluate(()=>(globalThis as any).windowControlCalls.maximize)).toBe(1);
+ if(nativeWindowStates){
+  await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isMaximized())).toBe(true);
+  await expect(p.locator('.window-controls').getByRole('button',{name:'이전 크기로 복원',exact:true,includeHidden:true})).toBeVisible();
+  await physicalClick('이전 크기로 복원');await expect.poll(()=>d.app.evaluate(()=>(globalThis as any).windowControlCalls.unmaximize)).toBe(1);await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isMaximized())).toBe(false);
+ }
+ await expect(confirmation).toBeVisible();await expect(p.getByRole('button',{name:'계속 편집',exact:true})).toBeFocused();
+ await p.keyboard.press('Shift+Tab');await expect(p.getByRole('button',{name:'변경 버리기',exact:true})).toBeFocused();await p.keyboard.press('Tab');await expect(p.getByRole('button',{name:'계속 편집',exact:true})).toBeFocused();
+ await p.getByRole('button',{name:'계속 편집',exact:true}).click();await expect(confirmation).toHaveCount(0);await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('창 제어 중 보존');
+ await p.getByRole('button',{name:'편집 닫기',exact:true}).click();await p.getByRole('button',{name:'변경 버리기',exact:true}).click();await expect(confirmation).toHaveCount(0);await expect(p.getByRole('dialog')).toHaveCount(0);
 });
