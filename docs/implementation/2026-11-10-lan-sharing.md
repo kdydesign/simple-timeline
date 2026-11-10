@@ -117,6 +117,18 @@ Task5 기록 당시 source tree는 기준 commit `78041573e072e3d84bf4951e071c89
 
 보정의 RED/GREEN·명령 로그와 원본 CI 실패 로그는 ignored `artifacts/lan-sharing-acceptance/ci-fix-logs`에 보존한다. 타입·production build, native41/41과 실제 두 프로필 Electron 공유 E2E2/2를 순차 실행해 통과했다. 보정 뒤 `DISPLAY=:94 npm run verify:app`은2026-11-10 10:07:48~10:12:03 UTC에7/7 통과했다. release15/15, UTC/New_York/Seoul별 unit106/106, UI110/110, native41/41, sandbox Electron E2E68/68(2.3분)이며 skipped·flaky·실패는0이다. UI 로그에는 React act/suspended 경고가 없다. Linux x64/Node24.22.1/Electron45.2.1/UID1000·기존 Xorg94와 개별 deadline을 유지했다. 실행 source는 `eb3e119181e154b8d06f91c2fa37e7df5644021d` 위의 dirty 작업이며, 후속 커밋의 clean-SHA 실행 증거로 바꾸지 않는다. 앱/native/E2E 구조화 결과·스크린샷은 `artifacts/lan-sharing-acceptance/ci-fix-*`에 별도 보존했다. Windows 보정은 다음 정확한 SHA의 CI에서 별도로 확인하며 실제 DPAPI·Windows11·회사망 인수를 대신하지 않는다.
 
+## 두 번째 CI의 Select 포커스 보정
+
+`2003e3099d4ed7734c3619cc05f8c9ae095226e1`의 [Application run42797398729](https://github.com/kdydesign/simple-timeline/actions/runs/42797398729)에서는 이전 공유 확인창 Escape 회귀가 통과했고, Windows의 실제 앱 전체 검사도 통과했다. 따라서 첫 Windows fsync 보정은 Windows native/Electron 실행 근거가 생겼다. 이 결과는 실제 사용자 DPAPI·Windows11·회사망 인수를 뜻하지 않는다. 이후 Windows의 정식·검증용 다음 버전·고정0.2.1 installer build도 통과했지만 packaged 검사는 아래의 오래된 스키마 기대값에서 중단됐다.
+
+이 실행의 Linux는 기존 `flat-glass.spec.ts`의 프로젝트 Select에서 Enter 선택→즉시 다시 열기→Tab 뒤 시작일 포커스 검사가 실패했고 나머지67개는 통과했다. 내려받은 실제 CI screenshot에는 listbox가 닫히고 프로젝트 trigger에 포커스가 남아 있었다. 단순히 listbox 표시 이후 option 포커스를 기다리지 않은 시험 문제로 처리하지 않았다.
+
+Radix FocusScope는 unmount autofocus를 `setTimeout(0)`으로 미룬다. 이전 popup의 callback이 재개방·새 Tab 닫기 뒤 실행되면 Select가 공유한 `nextFocus`를 먼저 소비하거나, 새 callback 뒤 trigger로 포커스를 덮어쓸 수 있다. 실제 Radix/React를 유지하고 두 닫기 callback의 실행 순서만 제어한 회귀에서 이전 먼저/현재 먼저 × Tab/Shift+Tab4개가 원래 구현으로 모두 실패해 CI와 같은 trigger 포커스를 재현했다. opening별 번호로 이전 callback의 기본 autofocus를 차단하고, 새 opening에서 이전 Tab 목적지를 초기화했다. 추가2개는 이전 Tab 뒤 새 Enter 닫기가 trigger로 돌아오는 계약을 확인한다. 수정 후6/6 통과했다. 기존 실제 Electron flat-glass5개도 통과했다. E2E의 키보드 동작·assertion·시간 제한·동기화 조건은 변경하지 않았다.
+
+같은 실행의 Windows packaged 검사는 실제0.2.1 설치·재시작·0.6.0 업그레이드 뒤 기존 snapshot·preferences 보존·개인 알림 기본값 검사를 통과했다. 이어 SQLite header의 user_version을2로 기대한 오래된 assertion이 실제3을 받아 실패했다. 현재 승인된 migration은1→2→3이므로 실제 installer DB를 읽는 명시적 기대값과 evidence.schemaVersion만3으로 수정했다. assertion 삭제·현재 코드에서 기대값 동적 계산은 하지 않았다. 다른 release 검사에는 같은 DB 스키마2 기대값이 없었고, startup 진단 JSON의 별도 schemaVersion2는 유지했다. 뒤쪽 offline·업데이트·제거 lifecycle 단계는 이 실패 실행으로 통과했다고 표시하지 않으며, 수정된 packaged 검사의 실제 Windows 재실행은 다음 정확한 SHA의 CI에서 확인한다.
+
+원본 CI artifact·screenshot·로그와 RED/GREEN은 ignored `artifacts/lan-sharing-acceptance/ci-focus-*`에 보존한다. 보정 뒤 `DISPLAY=:94 npm run verify:app`은2026-11-10 10:24:11~10:29:10 UTC에7/7 통과했다. release15/15, UTC/New_York/Seoul별 unit106/106, UI116/116, native41/41, sandbox Electron E2E68/68(2.4분)이며 skipped·flaky·실패는0이다. UI의 React act/suspended 경고는 없었다. 실행 환경은 Linux x64/Node24.22.1/Electron45.2.1/UID1000·기존 DISPLAY94·격리 프로필이며 앱 명령은 순차 실행했다. source는 `2003e3099d4ed7734c3619cc05f8c9ae095226e1` 위의 dirty 작업이다. 제품 코드 최종 상태로 전체 검사를 실행했고, 실행 중 반영한 packaged 전용 숫자 기대값 수정 뒤 typecheck·release15/15를 추가로 통과했다. 이 Linux 전체 검사에 Windows packaged 실행은 포함되지 않는다. 앱/native/E2E 구조화 보고서·스크린샷도 같은 접두사로 별도 보존했다.
+
 ## 남은 실제 Windows 11·회사 PC 인수
 
 - 정확한 installer SHA/manifest를 기록하고 실제 사용자 safeStorage/DPAPI, 회사 방화벽·등록 소스 IP, 주소 변경과 TLS 신원을 확인한다.
