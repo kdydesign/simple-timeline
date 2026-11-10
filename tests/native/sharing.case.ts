@@ -9,6 +9,18 @@ import type { WireSnapshot } from '../../src/shared/sharing'
 const hostId='11111111-1111-4111-8111-111111111111',datasetId='22222222-2222-4222-8222-222222222222'
 const snapshot=():WireSnapshot=>({protocolVersion:1,hostId,datasetId,projects:[{id:'1',name:'Remote',color:'#2563EB',participants:['Member'],createdAt:'t',updatedAt:'t'}],schedules:[{id:'1',projectId:'1',name:'Remote S',startDate:'2026-11-11',endDate:'2026-11-11',createdAt:'t',updatedAt:'t'}]})
 export const cases:NativeCase[]=[
+{name:'pending credential cancellation preserves active credentials and denies abandoned activation',run(ctx){
+ const {db}=setup(ctx),store=createSharingStore(db)
+ store.configureHost({address:'127.0.0.1',port:47831})
+ const device=store.saveDevice({name:'A',ip:'127.0.0.2'})
+ store.putCredential({deviceId:device.id,hash:'1'.repeat(64)});store.activateCredential('1'.repeat(64))
+ store.putCredential({deviceId:device.id,hash:'2'.repeat(64)})
+ store.revokePendingCredentials(device.id)
+ assert.equal(store.findCredential('1'.repeat(64))?.status,'active')
+ assert.equal(store.findCredential('2'.repeat(64))?.status,'revoked')
+ assert.throws(()=>store.activateCredential('2'.repeat(64)))
+ assert.equal(store.getDevice(device.id).revoked,false)
+}},
 {name:'host conversion preserves numeric IDs and delivery identities; invalid ACL rolls back and wire snapshots disclose only allowed data',run(ctx){
  const {db,repo}=setup(ctx),store=createSharingStore(db),identity=store.getConfig()
  store.configureHost({address:'192.168.1.10',port:47831});store.setHosting({enabled:true})

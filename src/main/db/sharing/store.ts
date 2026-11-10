@@ -119,6 +119,10 @@ export function createSharingStore(db:DatabaseHandle) {
       db.prepare("UPDATE sharing_credentials SET status='revoked' WHERE device_id=? AND status='pending'").run(device.id)
       db.prepare("INSERT INTO sharing_credentials(hash,device_id,status) VALUES(?,?,'pending')").run(hash,device.id)
     }),
+    revokePendingCredentials:db.transaction((deviceId:string)=>{
+      requireHost();getDevice(deviceId)
+      db.prepare("UPDATE sharing_credentials SET status='revoked' WHERE device_id=? AND status='pending'").run(deviceId)
+    }),
     activateCredential:db.transaction((hash:string)=>{
       requireHost();credentialHash(hash)
       const r=db.prepare("SELECT c.device_id FROM sharing_credentials c JOIN sharing_devices d ON d.id=c.device_id WHERE c.hash=? AND c.status='pending' AND d.revoked=0").get(hash) as Row|undefined
