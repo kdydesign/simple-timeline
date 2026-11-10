@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes } from 'react';
 import {Button} from './ui/button';
 import {Tooltip,TooltipTrigger,TooltipContent} from './ui/tooltip';
 const paths = {
+ refresh:'M20 7v5h-5M4 17v-5h5M6 8a7 7 0 0 1 12-2l2 3M4 15l2 3a7 7 0 0 0 12-2', connection:'M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Z M9 12l2 2 4-4',
  gantt:'M3 6h10M7 12h14M3 18h12', calendar:'M3 9h18M8 2v4m8-4v4M9 9v12m6-12v12M3 4h18v17H3Z',
  folder:'M3 7V4h7l3 3h8v13H3Z', project:'M3 7V4h7l3 3h8v13H3Z M12 11v6m-3-3h6',
  plus:'M12 5v14M5 12h14', left:'m15 5-7 7 7 7', right:'m9 5 7 7-7 7', down:'m6 9 6 6 6-6',
@@ -12,7 +13,7 @@ const paths = {
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({name}: {name: IconName}) {return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>}
-export function IconButton({icon,label,tooltip=false,onFocus,className='',...props}: {icon:IconName;label:string;tooltip?:boolean}&ButtonHTMLAttributes<HTMLButtonElement>) {
- const button=<Button type="button" variant="ghost" size="icon" {...props} onFocus={e=>{onFocus?.(e);if(isRestoringFocus())e.preventDefault()}} className={`icon-button ${className}`} aria-label={label}><Icon name={icon}/></Button>;
- return tooltip ? <Tooltip><TooltipTrigger asChild>{button}</TooltipTrigger><TooltipContent side="bottom" align="center" sideOffset={8} collisionPadding={8} className="app-tooltip">{label}</TooltipContent></Tooltip> : button;
+export function IconButton({icon,label,tooltip=false,description,onFocus,className='',...props}: {icon:IconName;label:string;tooltip?:boolean;description?:string}&ButtonHTMLAttributes<HTMLButtonElement>) {
+ const button=<Button type="button" variant="ghost" size="icon" {...props} onFocus={e=>{onFocus?.(e);if(isRestoringFocus())e.preventDefault()}} className={`icon-button ${className}`} aria-label={label} aria-description={description??props['aria-description']}><Icon name={icon}/></Button>;
+ return tooltip ? <Tooltip><TooltipTrigger asChild>{button}</TooltipTrigger><TooltipContent side="bottom" align="center" sideOffset={8} collisionPadding={8} className="app-tooltip">{description?`${label} · ${description}`:label}</TooltipContent></Tooltip> : button;
 }

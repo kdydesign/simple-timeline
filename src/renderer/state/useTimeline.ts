@@ -95,6 +95,7 @@ export function useTimeline(api: TimelineApi) {
         ok: false,
         error: { code: 'DB_NOT_READY', message: '먼저 조회를 완료해 주세요.' },
       } as Output
+    generation.current++
     change('saving')
     setError(null)
     let result: Result<unknown>
@@ -122,5 +123,15 @@ export function useTimeline(api: TimelineApi) {
     }
     return result as Output
   }
-  return { snapshot, phase, error, refresh, mutate }
+  const reconcile = useCallback(async () => {
+    if (phaseRef.current !== 'ready') return false
+    const seq = ++generation.current
+    try {
+      const result = await api.getSnapshot()
+      if (!alive.current || seq !== generation.current || phaseRef.current !== 'ready' || !result.ok) return false
+      setSnapshot(result.data)
+      return true
+    } catch { return false }
+  }, [api])
+  return { snapshot, phase, error, refresh, mutate, reconcile }
 }

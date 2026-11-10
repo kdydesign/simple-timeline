@@ -3,6 +3,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "../../src/renderer/App";
 import { memoryApi } from "./fake-api";
+import {sharingFixture} from "./sharing-fixture";
 import { hotfix } from "../fixtures/timeline";
 it("traps keyboard focus in a narrow editor and confirms Escape with a long draft", async () => {
   const u = userEvent.setup(),
@@ -68,7 +69,8 @@ it("keeps uncertain-draft reconciliation inside the active narrow modal", async 
   );
   expect(screen.getByLabelText("프로젝트 이름")).toHaveValue("입력을 보존");
 });
-it("creates a project with defaults and participant rows, then restores focus", async () => {
+it("creates a host personal project with defaults and participant rows, then restores focus", async () => {
+  sharingFixture({role:"host"});
   const u = userEvent.setup(),
     m = memoryApi();
   render(<App api={m.api} />);

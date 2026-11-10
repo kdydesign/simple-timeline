@@ -1,3 +1,8 @@
+import {sharingDescription} from '../shared/sharing-status';
+import {useSharingView} from './state/useSharingView';
+import {useSharing} from './state/useSharing';
+import {SharingSettings} from './components/SharingSettings';
+import {IconButton} from './components/Icon';
 import {restoreFocus} from './state/restoreFocus';
 import {normalizeReminder} from '../domain/reminder';
 import {useReminders} from './state/useReminders';
@@ -47,6 +52,13 @@ export function App({
   const handledReminder = useRef<number|null>(null);
   const timeline = useTimeline(api),
     editor = useEditor();
+  const sharing = useSharing(timeline.reconcile,timeline.phase === 'ready');
+  const [settingsDirty,setSettingsDirty]=useState(false);
+  const [filter,setFilter]=useState<'all'|'personal'|'shared'>('all');
+  const sharingView=useSharingView(timeline.snapshot,filter);
+  const {editableProjects,snapshot:visibleSnapshot}=sharingView;
+  useEffect(()=>{if(sharingView.dragInvalidated)setNotice('공유 항목이 변경되어 드래그를 취소했습니다.')},[sharingView.dragInvalidated]);
+  const openProject=(project?:import('../shared/types').Project,caller?:HTMLElement|null)=>editor.openProject(project,caller,sharing.state?.projects.find(p=>p.id===project?.id)?.participants.map(p=>p.deviceId));
   const [selectedDate, setSelectedDate] = useState(() => localDate(today)),
     [confirmation, setConfirmation] = useState<Confirmation | null>(null),
     [formError, setFormError] = useState<ApiError | null>(null),
@@ -78,27 +90,28 @@ export function App({
   useEffect(()=>{if(confirmation||dayModalOpen)setProjectsOpen(false)},[confirmation,dayModalOpen]);
   const model = editor.editor,
     canEdit = timeline.phase === "ready",
-    saving = timeline.phase === "saving";
+    saving = timeline.phase === "saving" || sharing.busy;
+  const sharedMissing=!!model?.id&&model.sharing==='member'&&!!timeline.snapshot&&!(model.kind==='project'?timeline.snapshot.projects:timeline.snapshot.schedules).some(item=>item.id===model.id);
   useEffect(() => {
     const resize = () => setNarrow(window.innerWidth < 1100);
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
   }, []);
   useLayoutEffect(() => {
-    document.documentElement.dataset.editorDirty = String(editor.dirty);
+    document.documentElement.dataset.editorDirty = String(editor.dirty || settingsDirty);
     document.documentElement.dataset.saving = String(saving);
     document.documentElement.dataset.timelinePhase = timeline.phase;
-  }, [editor.dirty, saving, timeline.phase]);
+  }, [editor.dirty, settingsDirty, saving, timeline.phase]);
   useEffect(() => {
     const prevent = (event: BeforeUnloadEvent) => {
-      if (editor.dirty || saving) {
+      if (editor.dirty || settingsDirty || saving) {
         event.preventDefault();
         event.returnValue = false;
       }
     };
     window.addEventListener("beforeunload", prevent);
     return () => window.removeEventListener("beforeunload", prevent);
-  }, [editor.dirty, saving, timeline.phase]);
+  }, [editor.dirty, settingsDirty, saving, timeline.phase]);
   useEffect(() => {
     if (model?.saved && timeline.phase === "ready") editor.close();
   }, [model?.saved, timeline.phase]);
@@ -125,10 +138,15 @@ export function App({
     }
   }, [model]);
   useEffect(() => {
-    if (timeline.phase !== "ready" || model?.kind !== "schedule" || !model.id || editor.dirty) return;
+    if (timeline.phase !== "ready" || model?.kind !== "schedule" || !model.id || (editor.dirty && model.sharing !== "member")) return;
     const current = timeline.snapshot?.schedules.find(s => s.id === model.id);
     if (current) editor.syncSchedule(current);
   }, [timeline.phase, timeline.snapshot, model?.id, model?.kind, editor.dirty]);
+  useEffect(()=>{
+    if(model?.kind!=='project'||model.sharing!=='member')return;
+    const current=timeline.snapshot?.projects.find(p=>p.id===model.id);
+    if(current)editor.syncProject(current);
+  },[timeline.snapshot,model?.kind,model?.id]);
   const confirm = (value: Confirmation) => {
     dialogCaller.current = document.activeElement as HTMLElement;
     setConfirmation(value);
@@ -182,8 +200,13 @@ export function App({
     setFormError(error);
     document.getElementById(`editor-${error.field}`)?.focus();
   };
-  async function save() {
-    if (!model || !canEdit || model.saved) return;
+  async function save(convertConfirmed=false) {
+    if (!model || !canEdit || model.saved || sharedMissing) return;
+    if(model.kind==='project'&&model.draft.shared&&model.sharing!=='host'&&!convertConfirmed){
+      const participants=model.draft.participants.map((name,i)=>`${name}: ${sharing.state?.devices.find(d=>d.id===model.draft.recipientIds?.[i])?.ip??'PC 미선택'}`).join(', ');
+      const removed=model.original.participants.filter(name=>!model.draft.participants.includes(name)).join(', ')||'없음';
+      confirm({title:'공유 프로젝트로 저장할까요?',message:`참여자 · IP: ${participants||'없음'}. 제거할 참여자: ${removed}. 기존 일정과 이 PC의 알림을 유지합니다.`,confirmLabel:'공유로 저장',run:()=>{setConfirmation(null);void save(true)}});return;
+    }
     setNotice("");
     setFormError(null);
     let result: Result<{ id: Id }>;
@@ -194,7 +217,12 @@ export function App({
           color: normalizeColor(model.draft.color),
           participants: normalizeParticipants(model.draft.participants),
         };
-        result = model.id
+        if(model.sharing==='member')return;
+        if(model.draft.shared){
+          if(sharing.state?.role!=='host'||!sharing.api){setFormError({code:'FORBIDDEN',message:'공유 프로젝트 설정을 확인한 뒤 다시 저장해 주세요.'});return;}
+          result=await sharing.run(()=>sharing.api!.saveProject({...v,...(model.id?{id:model.id}:{}),participants:v.participants.map(name=>({name,deviceId:model.draft.recipientIds?.[model.draft.participants.findIndex(p=>p.trim()===name)]??''}))}));
+          if(result.ok)await timeline.reconcile();
+        }else result = model.id
           ? await timeline.mutate("updateProject", { ...v, id: model.id })
           : await timeline.mutate("createProject", v);
       } else {
@@ -205,7 +233,11 @@ export function App({
         };
         inclusiveDays(v.startDate, v.endDate);
         const reminder = normalizeReminder(model.draft.reminder,v.startDate,v.endDate);
-        result = model.id
+        if(model.sharing==='member'){
+          if(!model.id||!sharing.api){setFormError({code:'IPC_UNAVAILABLE',message:'공유 알림을 저장할 수 없습니다. 앱을 다시 실행하고 공유 연결을 확인해 주세요.'});return;}
+          result=await sharing.run(()=>sharing.api!.saveReminder({id:model.id!,reminder}));
+          if(result.ok)await timeline.reconcile();
+        } else result = model.id
           ? await timeline.mutate("updateSchedule", { ...v, reminder, id: model.id })
           : await timeline.mutate("createSchedule", {
               ...v, reminder,
@@ -233,11 +265,11 @@ export function App({
       )
         setProjectsOpen(true);
       editor.markSaved();
-    } else if (result.error.field)
-      document.getElementById(`editor-${result.error.field}`)?.focus();
+    } else {setFormError(result.error);if (result.error.field)
+      document.getElementById(`editor-${result.error.field}`)?.focus();}
   }
   function remove() {
-    if (!model?.id || !canEdit) return;
+    if (!model?.id || !canEdit || model.sharing==='member') return;
     const id = model.id,
       kind = model.kind,
       snapshot = timeline.snapshot!;
@@ -283,9 +315,11 @@ export function App({
         setFormError({code:"VALIDATION_ERROR",message:"먼저 저장하거나 변경을 버려주세요."});
         return false;
       }
-      setNotice(""); return true;
+      sharingView.beginDrag();setNotice(""); return true;
     },
+    onDragEnd:sharingView.endDrag,
     onDragCommit: (schedule: Schedule, dates: {startDate:string;endDate:string}) => {
+      if(schedule.sharing==='member')return;
       void (async () => {
         const result=await timeline.mutate("updateSchedule",{id:schedule.id,name:schedule.name,...dates});
         if(result.ok) { editor.syncSchedule(result.data); setNotice("일정을 변경했습니다."); }
@@ -294,7 +328,7 @@ export function App({
   };
   const addDate = (date: string, projectId?: string) => {
     if (!canEdit) return;
-    const projects = timeline.snapshot?.projects ?? [];
+    const projects = editableProjects;
     const project = projects.find(p => p.id === (projectId ?? recentProject.current)) ?? projects[0];
     if (!project) { setSelectedDate(date); setMonth(monthOf(date)); setFormError({code:"VALIDATION_ERROR", message:"먼저 프로젝트를 추가해 주세요."}); return; }
     request(() => {
@@ -322,7 +356,7 @@ export function App({
       if(!result.ok){setFormError(result.error);return}
       const schedule=result.data.schedules.find(s=>s.id===target.scheduleId);
       if(!schedule){setFormError({code:'NOT_FOUND',message:'이미 삭제된 일정입니다.'});return}
-      request(caller=>{navigateDate(schedule.startDate);editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller)});
+      request(caller=>{setFilter('all');navigateDate(schedule.startDate);editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller)});
     }).catch(()=>{if(!cancelled)setFormError({code:'IPC_UNAVAILABLE',message:'알림의 일정을 조회하지 못했습니다. 다시 조회해 주세요.'})});
     return()=>{cancelled=true};
   },[reminders.openRequest,canEdit,confirmation,dayModalOpen,model?.saved,editor.dirty,api]);
@@ -336,6 +370,8 @@ export function App({
   </div>:null;
   const statusView = (<>
     {reminderNotice}
+    {sharing.error&&<p className="reminder-notice" role="alert">{sharing.error.message}</p>}
+    {sharing.state&&["error","revoked","disconnected"].includes(sharing.state.status)&&<p className="reminder-notice" role="alert">{sharingDescription(sharing.state)}</p>}
     <StatusNotice
       phase={timeline.phase}
       error={formError ?? timeline.error}
@@ -348,13 +384,15 @@ export function App({
   </>);
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
-      <Titlebar/>
+      <Titlebar sharing={sharing.state}/>
       <div
         className="app-shell"
-        aria-hidden={!!confirmation || dayModalOpen || (narrow && !!model)}
-        inert={!!confirmation || dayModalOpen || (narrow && !!model)}
+        aria-hidden={sharing.settingsOpen || !!confirmation || dayModalOpen || (narrow && !!model)}
+        inert={sharing.settingsOpen || !!confirmation || dayModalOpen || (narrow && !!model)}
       >
         <Toolbar
+          filter={filter} onFilter={value=>request(()=>setFilter(value))}
+          sharingSync={sharing.state?.role==='member'?<IconButton tooltip icon="refresh" label="수동 동기화" description={sharing.state.pendingPair||!sharing.state.address?'설정과 연결 승인이 필요합니다.':'호스트의 전체 공유 자료를 다시 받습니다.'} aria-busy={sharing.busy} className={sharing.busy?'sync-busy':''} disabled={sharing.busy||!!sharing.state.pendingPair||!sharing.state.address||['pairing','revoked'].includes(sharing.state.status)} onClick={()=>{setNotice('');void sharing.sync().then(ok=>{if(ok)setNotice('동기화했습니다.')})}}/>:null}
           selectedDate={selectedDate}
           mode={mode}
           onMode={setMode}
@@ -369,20 +407,20 @@ export function App({
             })
           }
           canEdit={canEdit}
-          hasProjects={!!timeline.snapshot?.projects.length}
-          projectList={timeline.snapshot&&<ProjectList snapshot={timeline.snapshot} disabled={!canEdit}
-            onProject={p=>{setProjectsOpen(false);request(caller=>editor.openProject(p,caller))}}
+          hasProjects={!!editableProjects.length}
+          projectList={visibleSnapshot&&<ProjectList snapshot={visibleSnapshot} disabled={!canEdit}
+            onProject={p=>{setProjectsOpen(false);request(caller=>openProject(p,caller))}}
             onAdd={p=>{setProjectsOpen(false);request(caller=>editor.openSchedule(month,p.id,undefined,caller))}}/>}
           projectsOpen={projectsOpen}
           onProjects={setProjectsOpen}
           onProject={() =>
-            request((caller) => editor.openProject(undefined, caller))
+            request((caller) => openProject(undefined, caller))
           }
           onSchedule={() =>
             request((caller) =>
               editor.openSchedule(
                 month,
-                (timeline.snapshot!.projects.find(p => p.id === recentProject.current) ?? timeline.snapshot!.projects[0]).id,
+                (editableProjects.find(p => p.id === recentProject.current) ?? editableProjects[0]).id,
                 undefined,
                 caller,
               ),
@@ -394,8 +432,8 @@ export function App({
       <div className="workspace">
         <main
           className={mode === "gantt" ? "gantt-workspace" : undefined}
-          aria-hidden={!!confirmation || (narrow && !!model)}
-          inert={!!confirmation || (narrow && !!model)}
+          aria-hidden={sharing.settingsOpen || !!confirmation || (narrow && !!model)}
+          inert={sharing.settingsOpen || !!confirmation || (narrow && !!model)}
           aria-label="프로젝트와 일정"
         >
           {timeline.snapshot ? (
@@ -407,12 +445,12 @@ export function App({
                 todayRequest={todayRequest} onAddDate={addDate}
                 dayWidth={preferences.dayWidth} onDayWidth={preferences.setDayWidth}
                 active={mode === "gantt"}
-                snapshot={timeline.snapshot}
+                snapshot={visibleSnapshot!}
                 selectedMonth={month}
                 selectedDate={selectedDate}
-                disabled={!canEdit}
+                disabled={!canEdit || sharingView.dragInvalidated}
                 onEditProject={(p) =>
-                  request((caller) => editor.openProject(p, caller))
+                  request((caller) => openProject(p, caller))
                 }
                 onEditSchedule={(s) =>
                   request((caller) =>
@@ -421,21 +459,21 @@ export function App({
                 }
                 onAddSchedule={(p) =>
                   request((caller) =>
-                    editor.openSchedule(month, p.id, undefined, caller),
+                    p.sharing!=='member'&&editor.openSchedule(month, p.id, undefined, caller),
                   )
                 }
               />
               <CalendarView
                 {...dragActions} onMonth={navigateMonth}
                 onAddDate={addDate}
-                snapshot={timeline.snapshot}
+                snapshot={visibleSnapshot!}
                 selectedMonth={month}
                 selectedDate={selectedDate}
                 active={mode === "calendar"}
-                disabled={!canEdit}
+                disabled={!canEdit || sharingView.dragInvalidated}
                 onModalChange={setDayModalOpen}
                 onEditProject={(p) =>
-                  request((caller) => editor.openProject(p, caller))
+                  request((caller) => openProject(p, caller))
                 }
                 onEditSchedule={(s) =>
                   request((caller) =>
@@ -444,7 +482,7 @@ export function App({
                 }
                 onAddSchedule={(p) =>
                   request((caller) =>
-                    editor.openSchedule(month, p.id, undefined, caller),
+                    p.sharing!=='member'&&editor.openSchedule(month, p.id, undefined, caller),
                   )
                 }
               />
@@ -459,22 +497,25 @@ export function App({
         </main>
         {model && (
           <EditorPanel
+            unavailable={sharedMissing}
+            sharing={sharing.state}
             editor={model}
             projects={timeline.snapshot?.projects ?? []}
             patch={editor.patch}
             onSave={() => void save()}
             onDelete={remove}
             onClose={() => request(close)}
-            disabled={!canEdit || model.saved}
+            disabled={!canEdit || model.saved || sharedMissing}
             busy={saving}
             narrow={narrow}
-            covered={!!confirmation || dayModalOpen}
-            error={formError ?? timeline.error}
+            covered={!!confirmation || dayModalOpen || sharing.settingsOpen}
+            error={sharedMissing?{code:'NOT_FOUND',message:'더 이상 공유되지 않거나 삭제된 항목입니다. 개인 알림을 저장할 수 없습니다.'}:formError ?? timeline.error}
             status={narrow ? statusView : null}
           />
         )}
       </div>
       <div className="toast" role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
+      {sharing.settingsOpen&&sharing.state&&sharing.api&&<SharingSettings state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
       {confirmation && (
         <ConfirmDialog
           title={confirmation.title}

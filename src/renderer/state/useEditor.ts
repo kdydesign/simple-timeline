@@ -8,15 +8,17 @@ import type {
   YearMonth,
 } from "../../shared/types";
 import { monthBounds } from "../../domain/date";
+export type ProjectDraft = ProjectInput & { shared?: boolean; recipientIds?: string[] };
 interface Base {
   id?: string;
+  sharing?: "host" | "member";
   saved: boolean;
   caller: HTMLElement | null;
   returnFocus?: string;
 }
 export type Editor = Base &
   (
-    | { kind: "project"; draft: ProjectInput; original: ProjectInput }
+    | { kind: "project"; draft: ProjectDraft; original: ProjectDraft }
     | { kind: "schedule"; draft: ScheduleInput; original: ScheduleInput }
   );
 export function useEditor() {
@@ -24,9 +26,11 @@ export function useEditor() {
   const openProject = (
     project?: Project,
     caller: HTMLElement | null = document.activeElement as HTMLElement,
+    recipientIds: string[] = [],
   ) => {
-    const draft: ProjectInput = project
+    const draft: ProjectDraft = project
       ? {
+          shared: project.sharing === "host", recipientIds,
           name: project.name,
           color: project.color,
           participants: [...project.participants],
@@ -35,6 +39,7 @@ export function useEditor() {
     setEditor({
       kind: "project",
       id: project?.id,
+      sharing: project?.sharing,
       saved: false,
       draft,
       original: structuredClone(draft),
@@ -67,6 +72,7 @@ export function useEditor() {
     setEditor({
       kind: "schedule",
       id: schedule?.id,
+      sharing: schedule?.sharing,
       saved: false,
       draft,
       original: structuredClone(draft),
@@ -74,7 +80,7 @@ export function useEditor() {
       returnFocus: caller?.dataset.returnFocus ?? caller?.dataset.focus,
     });
   };
-  const patch = (update: Partial<ProjectInput & ScheduleInput>) =>
+  const patch = (update: Partial<ProjectDraft & ScheduleInput>) =>
     setEditor((e) =>
       e ? ({ ...e, draft: { ...e.draft, ...update } } as Editor) : null,
     );
@@ -83,10 +89,17 @@ export function useEditor() {
     openProject,
     openSchedule,
     patch,
+    syncProject: (project:Project) => setEditor(e=>{
+      if(!e||e.kind!=='project'||e.id!==project.id||e.sharing!=='member')return e;
+      const draft:ProjectDraft={name:project.name,color:project.color,participants:[...project.participants]};
+      return {...e,draft,original:structuredClone(draft)};
+    }),
     syncSchedule: (schedule: Schedule) => setEditor(e => {
-      if (!e || e.kind !== "schedule" || e.id !== schedule.id || JSON.stringify(e.draft) !== JSON.stringify(e.original)) return e;
+      if (!e || e.kind !== "schedule" || e.id !== schedule.id) return e;
+      const dirty = JSON.stringify(e.draft) !== JSON.stringify(e.original);
+      if (dirty && e.sharing !== 'member') return e;
       const draft = {reminder:{...schedule.reminder},projectId:schedule.projectId, name:schedule.name, startDate:schedule.startDate, endDate:schedule.endDate};
-      return {...e, draft, original:{...draft}};
+      return {...e, draft: dirty ? {...draft,reminder:e.draft.reminder} : draft, original:{...draft}};
     }),
     close: () => setEditor(null),
     markSaved: () => setEditor((e) => (e ? { ...e, saved: true } : null)),

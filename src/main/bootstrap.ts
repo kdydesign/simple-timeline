@@ -20,7 +20,7 @@ import { registerWindowIpc } from './window-ipc'
 import { resolveRendererUrl } from './ipc-core'
 import { createAbout } from './about'
 import { installCloseGuard, type CloseChoice } from './close'
-import { createTray } from './tray'
+import { createTray, updateSharingTray } from './tray'
 import { toPublicError } from './errors'
 import type { Result } from '../shared/types'
 export interface BootstrapOptions {
@@ -92,8 +92,9 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     { mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
   let evaluateReminders = () => {}
+  let tray: ReturnType<typeof createTray> | undefined
   let sharingIpc:ReturnType<typeof registerSharingIpc>|undefined
-  const sharing=storage.state==='ready'?createSharingService({storage,profile,transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,changed:state=>sharingIpc?.changed(state)}):undefined
+  const sharing=storage.state==='ready'?createSharingService({storage,profile,transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
   sharingIpc=registerSharingIpc(window,rendererUrl,sharing,()=>evaluateReminders())
   void sharing?.start()
   const unregisterWindow = registerWindowIpc(window, rendererUrl)
@@ -170,14 +171,14 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     return shutdown
   }
   const showAbout = createAbout(icon)
-  let tray: ReturnType<typeof createTray> | undefined
+  const openSharingSettings=()=>{show();sharing?.requestSettings()}
   const requestQuit = () => {
     if (exiting) return
     show()
     requestClose()
   }
   try {
-    tray = (options.createTray ?? createTray)(icon, show, requestQuit, showAbout)
+    tray = (options.createTray ?? createTray)(icon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState())
   } catch {
     if (options.notifyTrayFailure) options.notifyTrayFailure()
     else dialog.showErrorBox('트레이를 만들지 못했습니다', '창 닫기로 앱을 종료할 수 있습니다. 저장하지 않은 입력은 종료 전에 확인합니다.')
@@ -235,5 +236,5 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       shutdownComplete=true;app.quit()
     })
   })
-  return { window, storage, profile, sharing, desktop: { show, requestQuit, showAbout, openSharingSettings:()=>{show();sharing?.requestSettings()} } }
+  return { window, storage, profile, sharing, desktop: { show, requestQuit, showAbout, openSharingSettings } }
 }

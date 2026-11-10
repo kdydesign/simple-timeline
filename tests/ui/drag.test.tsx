@@ -39,3 +39,10 @@ it('does not mutate for dirty editor or an ordinary click',()=>{
   expect(h.commit).not.toHaveBeenCalled();expect(h.result.current.preview).toBeNull()
   h.start();act(()=>pointer('pointerup',14));expect(h.commit).not.toHaveBeenCalled()
 })
+it('cancels a live gesture immediately when authorization/layout is invalidated',()=>{
+ const commit=vi.fn(),end=vi.fn();const h=renderHook(({enabled})=>useScheduleDrag({enabled,onDragCommit:commit,onDragEnd:end,dateAt:x=>toOrdinal('2026-11-01')+Math.floor(x/28)}),{initialProps:{enabled:true}});
+ act(()=>h.result.current.begin({button:0,isPrimary:true,pointerId:1,clientX:14,clientY:20,stopPropagation(){},preventDefault(){}} as never,original));act(()=>pointer('pointermove',70));expect(h.result.current.preview).not.toBeNull();h.rerender({enabled:false});expect(h.result.current.preview).toBeNull();expect(end).toHaveBeenCalledOnce();act(()=>pointer('pointerup',70));expect(commit).not.toHaveBeenCalled();
+});
+it('never begins or commits a member source gesture even when the timeline is editable',()=>{
+ const h=setup();act(()=>h.result.current.begin({button:0,isPrimary:true,pointerId:1,clientX:14,clientY:20,stopPropagation(){},preventDefault(){}} as never,{...original,sharing:'member'}));act(()=>{pointer('pointermove',70);pointer('pointerup',70)});expect(h.result.current.isActive()).toBe(false);expect(h.result.current.preview).toBeNull();expect(h.commit).not.toHaveBeenCalled();
+});

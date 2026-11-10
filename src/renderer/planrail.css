@@ -50,3 +50,25 @@ button.zoom-percent:hover:enabled{background:var(--subtle);color:var(--text)}
 .calendar-preview-bar{opacity:.86;border:2px dashed;box-shadow:0 0 0 1px var(--surface);font-weight:600;color:var(--text)}
 .calendar-preview-bar.invalid{opacity:.45}
 .calendar-drag-label{position:fixed;z-index:60;pointer-events:none;max-width:calc(100vw - 16px);padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px;box-shadow:var(--popup-shadow)}
+
+/* LAN sharing follows the existing Zinc desktop controls and C-layout. */
+.titlebar .sharing-status { -webkit-app-region: no-drag; width: 26px; height: 26px; padding: 4px; }
+.sharing-status.connected { color: #16a34a; }
+.sharing-status.unavailable { color: #dc2626; }
+.sharing-filter { display: flex; gap: 2px; margin-left: 12px; }
+.sharing-filter button { min-height: 28px; padding: 3px 9px; font-size: 12px; }
+.sharing-filter button[aria-pressed=true], .sharing-role button[aria-pressed=true] { background: var(--hover); color: var(--text); }
+.sharing-settings { width: min(620px, calc(100vw - 48px)); max-width: 620px; max-height: calc(100vh - 64px); display: flex; flex-direction: column; gap: 12px; padding: 20px; background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+.sharing-settings-scroll { overflow: auto; min-height: 0; display: grid; gap: 16px; padding: 2px; }
+.sharing-settings section { display: grid; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+.sharing-settings h3 { font-size: 13px; font-weight: 600; }
+.sharing-settings fieldset, .sharing-settings form { display: grid; gap: 8px; min-width: 0; }
+.sharing-settings .sharing-role { display: flex; gap: 8px; margin-bottom: 8px; }
+.sharing-settings .sharing-device { grid-template-columns: minmax(80px,1fr) minmax(120px,1fr) auto auto; gap: 6px; }
+.sharing-device small { grid-column: 1 / -1; color: var(--muted); }
+.sharing-fingerprint { display: block; white-space: normal; overflow-wrap: anywhere; user-select: text; padding: 8px; background: var(--subtle); font-size: 13px; line-height: 1.7; }
+.sharing-settings [role=alert] { color: var(--danger); }
+.sync-busy svg { opacity: .5; }
+.sync-busy svg { animation: sharing-sync-rotate 1s linear infinite; }
+@keyframes sharing-sync-rotate { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sync-busy svg { animation: none; } }

@@ -35,9 +35,10 @@ export function useScheduleDrag(options: Options) {
   const session = useRef<Session | null>(null)
   const suppress = useRef(false)
   const suppressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const cancelSession = useRef<()=>void>(()=>{})
   const startTick = useRef<() => void>(() => {})
   const [preview, setPreview] = useState<DragPreview | null>(null)
-  useLayoutEffect(() => { latest.current = options })
+  useLayoutEffect(() => { latest.current = options; if(!options.enabled)cancelSession.current() })
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | undefined
@@ -65,6 +66,7 @@ export function useScheduleDrag(options: Options) {
       }
       latest.current.reset?.()
     }
+    cancelSession.current=()=>finish(false)
     const update = () => {
       const s = session.current
       if (!s?.moved) return
@@ -144,7 +146,7 @@ export function useScheduleDrag(options: Options) {
     preview,
     isActive: () => session.current !== null,
     begin: (e: ReactPointerEvent, schedule: Schedule, kind: DragKind = 'move') => {
-      if (!options.enabled || e.button !== 0 || !e.isPrimary) return
+      if (schedule.sharing === 'member' || !options.enabled || e.button !== 0 || !e.isPrimary) return
       const anchor = options.dateAt(e.clientX, e.clientY)
       if (anchor === null) return
       e.stopPropagation()

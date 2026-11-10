@@ -463,6 +463,7 @@ export function GanttView({
                       {s ? <small>{s.startDate} — {s.endDate}</small> : (
                         <small className="project-meta">
 
+                          {r.project.sharing&&<span>{r.project.sharing==='member'?'공유 · 조회 전용':'공유'}</span>}
                           {!index.byProject.get(r.project.id)?.length && <span className="empty-row">일정 없음</span>}
                         </small>
                       )}
@@ -472,7 +473,7 @@ export function GanttView({
                         className="row-add"
                         data-focus={`add:${r.project.id}`}
                         aria-label="일정 추가"
-                        disabled={disabled}
+                        disabled={disabled||r.project.sharing==='member'}
                         onClick={() => onAddSchedule(r.project)}
                       >
                         +

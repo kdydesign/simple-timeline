@@ -12,14 +12,13 @@ test("UI → IPC → SQLite CRUD persists across restart and cascades atomically
   ).toBeEnabled();
   await p.getByRole("button", { name: "프로젝트 추가", exact: true }).click();
   await p.getByLabel("프로젝트 이름", { exact: true }).fill(" 1.1.1 핫픽스 ");
-  await p.getByRole("button", { name: "참여자 이름 추가" }).click();
-  await p.getByLabel("참여자 1", { exact: true }).fill(" 민수 ");
+  await expect(p.getByRole("button", { name: "참여자 이름 추가" })).toHaveCount(0);
   await p.getByRole("button", { name: "저장", exact: true }).click();
   const project = p.getByRole("region", { name: "1.1.1 핫픽스", exact: true });
   await expect(project).toBeVisible();
   await expect(project).not.toContainText("민수");
   const savedProject = await p.evaluate(() => window.simpleTimeline.getSnapshot());
-  expect(savedProject.ok && savedProject.data.projects[0].participants).toEqual(["민수"]);
+  expect(savedProject.ok && savedProject.data.projects[0].participants).toEqual([]);
   for (const [name, start, end] of [
     ["개발", "2026-11-11", "2026-12-11"],
     ["QA", "2026-12-12", "2026-12-17"],

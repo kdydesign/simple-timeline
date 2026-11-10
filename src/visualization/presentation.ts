@@ -1,6 +1,8 @@
 import type { Project, Schedule, TimelineSnapshot } from "../shared/types";
 import { inclusiveDays } from "../domain/date";
+import {parseSharedId} from '../domain/sharing';
 import { compareIds } from "../domain/sort";
+const displayId=(id:string)=>id.startsWith('shared:')?parseSharedId(id).remoteId:id;
 export const compareSchedules = (a: Schedule, b: Schedule) =>
   a.startDate.localeCompare(b.startDate) ||
   a.endDate.localeCompare(b.endDate) ||
@@ -27,16 +29,16 @@ export function indexSnapshot(snapshot: TimelineSnapshot) {
     projects,
     byProject,
     projectLabel: (p: Project) =>
-      p.name + (projectCounts.get(p.name)! > 1 ? ` · #${p.id}` : ""),
+      p.name + (projectCounts.get(p.name)! > 1 ? ` · #${displayId(p.id)}${p.sharing?' · 공유':''}` : ""),
     scheduleLabel: (s: Schedule) =>
       s.name +
       (scheduleCounts.get(s.projectId + ":" + s.name)! > 1
-        ? ` · #${s.id}`
+        ? ` · #${displayId(s.id)}${s.sharing?' · 공유':''}`
         : ""),
   };
 }
 export const scheduleDescription = (s: Schedule, p: Project) =>
-  `${p.name} · ${s.name} · #${s.id} · ${s.startDate} — ${s.endDate} · ${inclusiveDays(s.startDate, s.endDate)}일`;
+  `${p.name} · ${s.name} · #${displayId(s.id)}${s.sharing?' · 공유':''} · ${s.startDate} — ${s.endDate} · ${inclusiveDays(s.startDate, s.endDate)}일`;
 export function colorText(color: string) {
   const rgb = [1, 3, 5]
     .map((i) => parseInt(color.slice(i, i + 2), 16) / 255)
