@@ -75,9 +75,11 @@ SQL은 준비된 문장에 값을 바인딩하고 renderer 문자열을 SQL 구�
 `window:command` 채널은 `minimize`, `toggle-maximize`, `close`, `state` 문자열 한 개만 받으며
 동일한 최상위 frame·소유 창·URL 검증을 적용한다. 알 수 없는 명령·잘못된 인수는 거부한다.
 결과는 `{ok: boolean, maximized?: boolean}`이며 창 객체·범용 IPC는 노출하지 않는다.
-닫기는 `BrowserWindow.close()`를 호출한다. Planrail에서는 트레이가 있으면 창만 숨겨 입력과 진행 중 저장을 유지한다.
+닫기는 `BrowserWindow.close()`를 호출한다. 0.5.0부터 main의 선택창에서 트레이 숨김·완전 종료·취소를 고른다.
+숨김은 입력과 진행 중 저장을 유지하며 중복 닫기 요청은 선택창을 쌓지 않는다.
 트레이 ‘종료’와 `app.quit()`는 창을 복원한 뒤 저장 대기·미저장 확인을 거쳐 실제 종료한다.
-트레이 생성 실패 시에는 안내 후 창 닫기도 보호 종료 경로를 사용한다.
+트레이 생성 실패 시에는 안내 후 완전 종료·취소만 제공한다. About은 main의 실제 버전과 기존 아이콘을 사용하는 native 정보창이다.
+기본 창은 1707×820 DIP를 표시 모니터의 작업 영역에 제한한다. 자세한 계약은 [데스크톱 개선 설계](calendar-preview-and-desktop-polish.md)를 따른다.
 [close guard](../../src/main/close.ts)·[main 수명주기](../../src/main/bootstrap.ts)가 이 구분을 소유하며,
 복원·종료를 위해 renderer의 범용 권한이나 새 트레이 IPC를 추가하지 않았다.
 구현은 [창 IPC](../../src/main/window-ipc.ts), [타입](../../src/shared/window-api.ts)에 있다.
