@@ -220,8 +220,7 @@ export function App({
         if(model.sharing==='member')return;
         if(model.draft.shared){
           if(sharing.state?.role!=='host'||!sharing.api){setFormError({code:'FORBIDDEN',message:'공유 프로젝트 설정을 확인한 뒤 다시 저장해 주세요.'});return;}
-          result=await sharing.run(()=>sharing.api!.saveProject({...v,...(model.id?{id:model.id}:{}),participants:v.participants.map(name=>({name,deviceId:model.draft.recipientIds?.[model.draft.participants.findIndex(p=>p.trim()===name)]??''}))}));
-          if(result.ok)await timeline.reconcile();
+          result=await timeline.mutateExternal(()=>sharing.run(()=>sharing.api!.saveProject({...v,...(model.id?{id:model.id}:{}),participants:v.participants.map(name=>({name,deviceId:model.draft.recipientIds?.[model.draft.participants.findIndex(p=>p.trim()===name)]??''}))})));
         }else result = model.id
           ? await timeline.mutate("updateProject", { ...v, id: model.id })
           : await timeline.mutate("createProject", v);
@@ -235,8 +234,7 @@ export function App({
         const reminder = normalizeReminder(model.draft.reminder,v.startDate,v.endDate);
         if(model.sharing==='member'){
           if(!model.id||!sharing.api){setFormError({code:'IPC_UNAVAILABLE',message:'공유 알림을 저장할 수 없습니다. 앱을 다시 실행하고 공유 연결을 확인해 주세요.'});return;}
-          result=await sharing.run(()=>sharing.api!.saveReminder({id:model.id!,reminder}));
-          if(result.ok)await timeline.reconcile();
+          result=await timeline.mutateExternal(()=>sharing.run(()=>sharing.api!.saveReminder({id:model.id!,reminder})));
         } else result = model.id
           ? await timeline.mutate("updateSchedule", { ...v, reminder, id: model.id })
           : await timeline.mutate("createSchedule", {

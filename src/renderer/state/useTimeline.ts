@@ -85,28 +85,22 @@ export function useTimeline(api: TimelineApi) {
       generation.current++
     }
   }, [refresh])
-  async function mutate<K extends MutationName>(
-    method: K,
-    input: Parameters<TimelineApi[K]>[0],
-  ): Promise<Awaited<ReturnType<TimelineApi[K]>>> {
-    type Output = Awaited<ReturnType<TimelineApi[K]>>
+  async function mutateExternal<T>(operation:()=>Promise<Result<T>>):Promise<Result<T>> {
     if (phaseRef.current !== 'ready')
       return {
         ok: false,
         error: { code: 'DB_NOT_READY', message: '먼저 조회를 완료해 주세요.' },
-      } as Output
+      }
     generation.current++
     change('saving')
     setError(null)
-    let result: Result<unknown>
+    let result: Result<T>
     try {
-      result = await (
-        api[method] as (input: unknown) => Promise<Result<unknown>>
-      )(input)
+      result = await operation()
     } catch {
       result = { ok: false, error: transport }
     }
-    if (!alive.current) return result as Output
+    if (!alive.current) return result
     if (result.ok) {
       await read(true)
     } else {
@@ -121,7 +115,11 @@ export function useTimeline(api: TimelineApi) {
             : 'ready',
       )
     }
-    return result as Output
+    return result
+  }
+  function mutate<K extends MutationName>(method:K,input:Parameters<TimelineApi[K]>[0]):Promise<Awaited<ReturnType<TimelineApi[K]>>> {
+    const operation=api[method] as (input:unknown)=>Promise<Result<unknown>>
+    return mutateExternal(()=>operation(input)) as Promise<Awaited<ReturnType<TimelineApi[K]>>>
   }
   const reconcile = useCallback(async () => {
     if (phaseRef.current !== 'ready') return false
@@ -133,5 +131,5 @@ export function useTimeline(api: TimelineApi) {
       return true
     } catch { return false }
   }, [api])
-  return { snapshot, phase, error, refresh, mutate, reconcile }
+  return { snapshot, phase, error, refresh, mutate, mutateExternal, reconcile }
 }
