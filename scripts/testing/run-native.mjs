@@ -1,6 +1,6 @@
 import { createRequire } from 'node:module'
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, rmSync, writeFileSync, mkdtempSync } from 'node:fs'
+import { mkdirSync, rmSync, writeFileSync, mkdtempSync, readFileSync, existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 const require = createRequire(import.meta.url)
@@ -31,5 +31,12 @@ if (r.error || r.status !== 0) {
   console.error(
     r.error || r.stderr || `Electron exited ${r.status} ${r.signal}`,
   )
+  process.exit(1)
+}
+
+// A clean Electron exit is insufficient if it quit before completing the case loop.
+const resultFile='artifacts/native/results.json'
+if(!existsSync(resultFile)||!JSON.parse(readFileSync(resultFile,'utf8')).passed){
+  console.error('Native runner did not write a successful completed result')
   process.exit(1)
 }

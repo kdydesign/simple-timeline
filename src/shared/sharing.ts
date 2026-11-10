@@ -16,7 +16,11 @@ export interface SharedProjectInput { id?: string; name: string; color: string; 
 export interface ApprovedDevice { id: string; name: string; ip: string; revoked: boolean; approved: boolean }
 export interface SharedProjectMapping { id: string; participants: { name: string; deviceId: string }[] }
 export type SharingConnectionStatus = 'personal' | 'stopped' | 'connecting' | 'connected' | 'disconnected' | 'pairing' | 'revoked' | 'error'
+export const sharingChannel = 'sharing:command'
+export const sharingChanged = 'sharing:changed'
 export interface SharingState {
+  availableAddresses: string[]
+  snapshotRevision: number
   role: SharingRole
   roleHistory: 'host' | 'member' | null
   address: string | null

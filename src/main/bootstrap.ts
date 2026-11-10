@@ -1,4 +1,7 @@
 /// <reference types="electron-vite/node" />
+import {createSharingService,type SharingTransport} from './sharing/service'
+import {registerSharingIpc} from './sharing/ipc'
+import type {ProtectedSecrets} from './sharing/secrets'
 import {createReminderStore} from './db/reminders'
 import {createReminderEngine,type ReminderSender} from './reminders/engine'
 import {createNativeReminderSender} from './reminders/native'
@@ -21,6 +24,9 @@ import { createTray } from './tray'
 import { toPublicError } from './errors'
 import type { Result } from '../shared/types'
 export interface BootstrapOptions {
+  sharingTransport?: Partial<SharingTransport>
+  sharingSecrets?: (profile:string)=>Promise<ProtectedSecrets>
+  sharingClock?: ()=>number
   reminderSender?: ReminderSender
   reminderClock?: ()=>Date
   profileDir?: string
@@ -86,13 +92,17 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     { mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
   let evaluateReminders = () => {}
+  let sharingIpc:ReturnType<typeof registerSharingIpc>|undefined
+  const sharing=storage.state==='ready'?createSharingService({storage,profile,transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,changed:state=>sharingIpc?.changed(state)}):undefined
+  sharingIpc=registerSharingIpc(window,rendererUrl,sharing,()=>evaluateReminders())
+  void sharing?.start()
   const unregisterWindow = registerWindowIpc(window, rendererUrl)
   const unregister = registerTimelineIpc(
     window,
-    storage,
+    storage.state==='ready'&&sharing?{...storage,repository:sharing.repository}:storage,
     rendererUrl,
     async (method, result) => {
-      if(result.ok && !method.startsWith('get'))evaluateReminders()
+      if(result.ok && !method.startsWith('get')){sharing?.notifyLocalMutation();evaluateReminders()}
       const response = options.afterDispatch ? await options.afterDispatch(method, result) : result
       if (method === 'getSnapshot' && response.ok) startup.mark('snapshot-served')
       return response
@@ -134,11 +144,31 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     send:options.reminderSender ?? nativeReminders.send,
     onClick:id=>{show();reminderIpc?.open(id)},onChange:()=>reminderIpc?.changed(),
   }) : undefined
-  reminderIpc=registerReminderIpc(window,rendererUrl,()=>reminderEngine?.issues() ?? {failed:0,unknown:0,storageError:true},async()=>{await reminderEngine?.evaluate(true)})
-  evaluateReminders=()=>{void reminderEngine?.evaluate()}
+  const sharedReminderEngine=sharing?createReminderEngine({store:sharing.memberReminderStore,snapshot:sharing.memberSnapshot,clock:options.reminderClock,
+    beforeSchedule:()=>sharing.authorizeReminder(),send:options.reminderSender??nativeReminders.send,
+    onClick:id=>{show();reminderIpc?.open(id)},onChange:()=>reminderIpc?.changed(),
+  }):undefined
+  const reminderIssues=()=>{
+    const local=reminderEngine?.issues()??{failed:0,unknown:0,storageError:true},shared=sharedReminderEngine?.issues()
+    return {failed:local.failed+(shared?.failed??0),unknown:local.unknown+(shared?.unknown??0),storageError:local.storageError||!!shared?.storageError}
+  }
+  reminderIpc=registerReminderIpc(window,rendererUrl,reminderIssues,async()=>{await Promise.all([reminderEngine?.evaluate(true),sharedReminderEngine?.evaluate(true)])})
+  evaluateReminders=()=>{void reminderEngine?.evaluate();void sharedReminderEngine?.evaluate()}
   const reminderTimer=setInterval(evaluateReminders,30000)
-  powerMonitor.on('resume',evaluateReminders)
+  const resume=()=>{void reminderEngine?.evaluate();void sharing?.resume().then(()=>sharedReminderEngine?.evaluate())}
+  const suspend=()=>{void sharing?.suspend()}
+  powerMonitor.on('resume',resume)
+  powerMonitor.on('suspend',suspend)
   evaluateReminders()
+  let shutdown:Promise<void>|undefined
+  const stopServices=()=>{
+    if(!shutdown){
+      clearInterval(reminderTimer)
+      reminderEngine?.dispose();sharedReminderEngine?.dispose()
+      shutdown=(sharing?.dispose()??Promise.resolve()).catch(()=>{/* All handlers are already fenced before storage teardown. */})
+    }
+    return shutdown
+  }
   const showAbout = createAbout(icon)
   let tray: ReturnType<typeof createTray> | undefined
   const requestQuit = () => {
@@ -178,7 +208,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         })
         return choices[result.response] ?? 'cancel'
       })(),
-      beforeClose: () => { exiting = true },
+      beforeClose: () => { exiting = true;void stopServices() },
       afterClose: () => app.quit(),
     },
   )
@@ -189,16 +219,21 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     requestQuit()
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
-  app.on('will-quit', () => {
-    clearInterval(reminderTimer)
-    powerMonitor.removeListener('resume',evaluateReminders)
-    reminderEngine?.dispose()
-    nativeReminders.dispose()
-    reminderIpc?.dispose()
-    tray?.destroy()
-    unregister()
-    unregisterWindow()
-    if (storage.state === 'ready' && storage.db.open) storage.db.close()
+  let shutdownComplete=false,finishingShutdown=false
+  app.on('will-quit', event => {
+    if(shutdownComplete)return
+    event.preventDefault()
+    if(finishingShutdown)return
+    finishingShutdown=true
+    void stopServices().then(()=>{
+      powerMonitor.removeListener('resume',resume)
+      powerMonitor.removeListener('suspend',suspend)
+      nativeReminders.dispose()
+      reminderIpc?.dispose();sharingIpc?.dispose()
+      tray?.destroy();unregister();unregisterWindow()
+      if(storage.state==='ready'&&storage.db.open)storage.db.close()
+      shutdownComplete=true;app.quit()
+    })
   })
-  return { window, storage, profile, desktop: { show, requestQuit, showAbout } }
+  return { window, storage, profile, sharing, desktop: { show, requestQuit, showAbout, openSharingSettings:()=>{show();sharing?.requestSettings()} } }
 }

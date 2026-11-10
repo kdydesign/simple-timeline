@@ -41,11 +41,12 @@ export const cases: NativeCase[] = [
       })
       assert.deepEqual(await flags, { sandboxed: true, isolated: true })
       const result = await w.webContents.executeJavaScript(
-        '({node:typeof require, keys:Object.keys(window.simpleTimeline||{})})',
+        '({node:typeof require, keys:Object.keys(window.simpleTimeline||{}), sharing:Object.keys(window.timelineSharing||{})})',
       )
       assert.equal(result.node, 'undefined')
       assert.equal(result.keys.length, 8)
       assert.equal(result.keys.includes('invoke'), false)
+      assert.deepEqual(result.sharing.sort(),['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','onChange'].sort())
     },
   },
 ]

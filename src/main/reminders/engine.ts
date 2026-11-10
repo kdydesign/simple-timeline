@@ -4,7 +4,7 @@ import {toOrdinal} from '../../domain/date'
 import type {ReminderStore} from '../db/reminders'
 export interface ReminderMessage {title:string;body:string}
 export type ReminderSender=(message:ReminderMessage,onClick:()=>void,onFailure?:()=>void)=>Promise<'submitted'|'failed'|'unknown'>
-interface Options {store:ReminderStore;snapshot:()=>TimelineSnapshot;clock?:()=>Date;send:ReminderSender;onClick:(id:string)=>void;onChange:()=>void}
+interface Options {store:ReminderStore;snapshot:()=>TimelineSnapshot;clock?:()=>Date;send:ReminderSender;onClick:(id:string)=>void;onChange:()=>void;beforeSchedule?:(id:string)=>Promise<boolean>}
 export function createReminderEngine(o:Options) {
  const clock=o.clock??(()=>new Date())
  let running:Promise<void>|undefined,pending=false,stopped=false,storageError=false
@@ -21,11 +21,24 @@ export function createReminderEngine(o:Options) {
    try{
     o.store.recover()
     const snapshot=o.snapshot(),projects=new Map(snapshot.projects.map(p=>[p.id,p]))
-    for(const schedule of snapshot.schedules){
+    for(const candidate of snapshot.schedules){
      if(stopped)break
      // A commit/resume during OS delivery invalidates the remaining snapshot.
      if(pending)break
-     const now=clock(),due=dueReminders(schedule,now),project=projects.get(schedule.projectId)
+     let schedule=candidate,project=projects.get(schedule.projectId)
+     if(!dueReminders(schedule,clock()).length||!project)continue
+     if(o.beforeSchedule){
+      let allowed=false
+      try{allowed=await o.beforeSchedule(schedule.id)}catch{/* No claim before authorization succeeds. */}
+      if(stopped)break
+      if(pending)break
+      if(!allowed)continue
+      const current=o.snapshot()
+      const latest=current.schedules.find(s=>s.id===schedule.id)
+      if(!latest)continue
+      schedule=latest;project=current.projects.find(p=>p.id===schedule.projectId)
+     }
+     const now=clock(),due=dueReminders(schedule,now)
      if(!due.length||!project)continue
      const claimed=o.store.claim(due.filter(item=>o.store.state(item.key)!=='failed'||retryKeys.has(item.key)),true)
      for(const item of claimed)retryKeys.delete(item.key)

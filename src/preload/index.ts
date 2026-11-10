@@ -1,3 +1,4 @@
+import {sharingChannel,sharingChanged,type SharingApi,type SharingState} from '../shared/sharing'
 import {reminderChannel,reminderChanged,type ReminderApi} from '../shared/reminder-api'
 import { contextBridge, ipcRenderer } from 'electron'
 import { channels, type TimelineApi } from '../shared/api'
@@ -44,3 +45,17 @@ contextBridge.exposeInMainWorld('timelineReminders', {
     return ()=>ipcRenderer.removeListener(reminderChanged,listener)
   },
 } satisfies ReminderApi)
+
+// Fixed sharing capability: the renderer never supplies channels, URLs, pins or credentials.
+const sharingInvoke=async(command:string,...args:unknown[])=>{
+  try{return await ipcRenderer.invoke(sharingChannel,command,...args)}
+  catch{return {ok:false,error:{code:'IPC_UNAVAILABLE',message:'공유 상태를 확인하지 못했습니다.'}}}
+}
+const sharingApi={
+  getState:()=>sharingInvoke('getState'),configureHost:(v)=>sharingInvoke('configureHost',v),setHosting:(v)=>sharingInvoke('setHosting',v),
+  connect:(v)=>sharingInvoke('connect',v),confirmHost:(v)=>sharingInvoke('confirmHost',v),approve:(v)=>sharingInvoke('approve',v),
+  saveDevice:(v)=>sharingInvoke('saveDevice',v),revokeDevice:(v)=>sharingInvoke('revokeDevice',v),saveProject:(v)=>sharingInvoke('saveProject',v),
+  saveReminder:(v)=>sharingInvoke('saveReminder',v),sync:()=>sharingInvoke('sync'),disconnect:(v)=>sharingInvoke('disconnect',v),acknowledgeSettings:(v)=>sharingInvoke('acknowledgeSettings',v),
+  onChange:(callback)=>{const listener=(_event:unknown,state:SharingState)=>callback(state);ipcRenderer.on(sharingChanged,listener);return ()=>ipcRenderer.removeListener(sharingChanged,listener)},
+} satisfies SharingApi
+contextBridge.exposeInMainWorld('timelineSharing',sharingApi)

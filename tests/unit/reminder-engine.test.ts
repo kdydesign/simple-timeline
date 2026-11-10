@@ -76,3 +76,19 @@ it('does not retain an unused retry permission after the user disables the queue
  v.snapshot.schedules[1].reminder.start=true;v.snapshot.schedules[1].reminder.end=true
  await v.engine.evaluate();expect(v.send).toHaveBeenCalledTimes(3)
 })
+
+it('awaits fresh authorization before claiming and retries after a failed gate',async()=>{
+ const v=setup();let allowed=false
+ const engine=createReminderEngine({store:v.store,snapshot:()=>v.snapshot,clock:()=>new Date(2026,10,11,12),send:v.send,onClick:()=>{},onChange:()=>{},beforeSchedule:async()=>allowed})
+ await engine.evaluate();expect(v.records.size).toBe(0);expect(v.send).not.toHaveBeenCalled()
+ allowed=true;await engine.evaluate();expect(v.send).toHaveBeenCalledTimes(1)
+})
+it.each(['delete','date','dispose'] as const)('re-reads after awaited gate: %s cannot submit stale alarms',async(change)=>{
+ const v=setup();let release!:(value:boolean)=>void
+ const engine=createReminderEngine({store:v.store,snapshot:()=>v.snapshot,clock:()=>new Date(2026,10,11,12),send:v.send,onClick:()=>{},onChange:()=>{},beforeSchedule:()=>new Promise(resolve=>{release=resolve})})
+ const pending=engine.evaluate()
+ if(change==='delete')v.snapshot.schedules=[]
+ if(change==='date')v.snapshot.schedules[0].startDate=v.snapshot.schedules[0].endDate='2026-11-12'
+ if(change==='dispose')engine.dispose()
+ release(true);await pending;expect(v.records.size).toBe(0);expect(v.send).not.toHaveBeenCalled()
+})

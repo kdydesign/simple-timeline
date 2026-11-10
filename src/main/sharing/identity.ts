@@ -27,7 +27,9 @@ export async function createHostIdentity(hostId: string): Promise<HostIdentity> 
     notBefore: new Date(Date.now() - 86400000),
     notAfter: new Date(Date.now() + 10 * 365 * 86400000),
     signingAlgorithm: { name: 'ECDSA', hash: 'SHA-256' }, keys,
-    extensions: [new BasicConstraintsExtension(false, undefined, true), new KeyUsagesExtension(KeyUsageFlags.digitalSignature, true), new ExtendedKeyUsageExtension([ExtendedKeyUsage.serverAuth]), new SubjectAlternativeNameExtension([{ type: 'dns', value: serverName }])],
+    // Electron BoringSSL requires a CA-capable self-signed trust anchor. The
+    // transport still requires this exact presented DER pin and its host SAN.
+    extensions: [new BasicConstraintsExtension(true, 0, true), new KeyUsagesExtension(KeyUsageFlags.digitalSignature | KeyUsageFlags.keyCertSign, true), new ExtendedKeyUsageExtension([ExtendedKeyUsage.serverAuth]), new SubjectAlternativeNameExtension([{ type: 'dns', value: serverName }])],
   }, crypto)
   const certificatePem = certificate.toString('pem')
   const der = Buffer.from(await crypto.subtle.exportKey('pkcs8', keys.privateKey))

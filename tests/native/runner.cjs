@@ -2,6 +2,8 @@ const { app } = require('electron')
 const fs = require('node:fs')
 const path = require('node:path')
 const os = require('node:os')
+// Keep async native cases alive after a security-test BrowserWindow closes.
+app.on('window-all-closed', () => {})
 const results = []
 const profile = process.env.SIMPLE_TIMELINE_NATIVE_PROFILE
 if (
