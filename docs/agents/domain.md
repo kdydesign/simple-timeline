@@ -16,7 +16,7 @@
 | 승인된 화면·날짜 배치 | 현재 [Planrail 화면](../design/planrail-improvements.md)이 우선. [C안](../design/flat-glass-redesign.md)·[MVP 화면](../design/experience.md)·[시각화](../design/visualization.md)는 대체되지 않은 계약과 당시 결정 근거. 실제 코드는 [renderer](../../src/renderer/)·[계산 함수](../../src/visualization/) |
 | 공통 UI·스타일 수정 | [renderer 구성](../design/architecture.md#renderer-공통-ui와-스타일). 소속 프로젝트 Select·날짜 선택기·포털·테마의 실제 연결과 회귀 경로 |
 | 도구·명령·검증 범위 | [package.json](../../package.json), [CI](../../.github/workflows/), [검증 안내](../harness/validation.md) |
-| 사내 프로젝트 공유·동기화 협의 | [설계 초안](../design/lan-project-sharing.md). Q1~Q24 확정, 독립 검토 후 전체 설계 최종 승인 대기·제품 미구현 |
+| 사내 프로젝트 공유·동기화 | [설계·검토](../design/lan-project-sharing.md). Q1~Q24·후속 참여자 권한·UI 위치 확정. 사용자 설계 완료 선언 후 보안·상태·알림 계약 검토 보정. 화면 세부 Q25~Q26 협의 중·제품 미구현 |
 | 설치·사용·보존 정책 | [배포 정책](../release/policy.md), [사용 안내](../release/user-guide.md) |
 | 당시 실행 증거 | [구현 기록](../implementation/), [Windows 검증](../release/windows-validation.md), [단계 인수인계](../wayfinder/handoffs/)의 SHA·환경·한계 |
 | 문서 점검·개선 제안 | [하네스 재점검](../harness/review.md). 제안은 구현·승인 상태와 분리 |
