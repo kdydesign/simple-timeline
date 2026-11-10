@@ -58,6 +58,16 @@
 - 제한된 CPU 환경의 JSDOM worker 경합으로 실제5초 테스트 실패가 발생해 UI worker를1개로 제한했다. 파일별 격리와 개별 deadline은 유지하고 정상 명령으로 전체 통과를 확인했다.
 - 순차 sandbox Electron68개에서 실제180초에64개 통과 뒤 전체 예산이 끝났다. E2E 전체만240초로 제한하고 다른 명령180초·개별 테스트·요청 deadline은 유지한다. 종료된 자식 프로세스가 남지 않은 것을 확인한 뒤 재실행했다.
 
+## 최종 전체 변경 검토 보정
+
+`e04676a..8e50b04` 전체 변경 검토의 Critical0 / Important1 / Minor1을 확인하고 두 지적을 함께 보정했다.
+
+- Important: 승인 PC 회수는 ACL만 제거하고 프로젝트 참여자 이름은 보존한다. 편집기를 열 때 전체 참여자 이름 순서에 맞춰 정규화된 고유 이름으로 기존 PC 매핑을 찾고, 없는 자리는 빈 선택으로 유지한다. 뒤 참여자의 PC를 앞 이름에 재배정하지 않는다. 이름 제거는 사용자의 명시적 삭제로만 수행한다. 이미 열린 미저장 초안은 갱신으로 덮어쓰지 않으며 회수된 PC의 저장 거절은 기존 main 검증이 담당한다.
+- Minor: 멤버가 받은 최신 날짜와 현재 PC 알림으로 0001년 이전 계산을 매번 판단한다. 편집 중인 일정은 미저장 알림 입력을 사용하고 다른 일정은 저장된 설정을 사용한다. 활성 시작/종료 알림에만 지속 안내와 해당 일정의 자기 알림 편집 동작을 제공한다. 다른 초안은 기존 버리기 확인으로 보호하고, 같은 일정은 입력에 포커스한다. 일수 조정·알림 끄기·유효한 원본 날짜 수신으로 안내를 해제한다. 호스트 변경, 멤버 설정·이력, 전송 보류 규칙은 그대로다.
+- 회귀 UI6개는 첫째/중간 참여자 회수 뒤 다시 열기·빈 매핑 저장·명시적 제거 저장, 열린 dirty 초안과 정상 참여자 제거, 활성/비활성 시작·종료 알림, dirty 알림 중 원본 갱신, 수정 해제와 다른 초안 보호를 다룬다. 수정 전 매핑2개·안내3개가 의도대로 실패했고 기존 dirty 보호1개는 통과했다. 수정 후6개가 통과했다.
+
+검토에서 수용한 경계도 유지한다. CA-capable 인증서의 연결 전용 trust anchor·SAN·DER pin 검증, 양쪽 승인 전 personal 역할, 같은 호스트의 명시적 재승인과 활성 pin 보존, 폐기 자격 해시로 확인한 회수 응답은 기존 계약이다. 만료된 대기 시도의 표시만 남는 것은 권한 우회가 아니며, 이미 OS에 제출한 알림의 원격 철회는 보장하지 않는다. 비활성 비밀의 삭제 실패만으로 자격 재사용이 확인된 것은 아니다. UI worker1·E2E 전체240초는 기록된 실행 비용 판단을 유지한다. 서비스·자동 실행·백업·수량 제한을 추가하지 않는다.
+
 ## 실제 자동 인수 범위
 
 [두 프로필 Electron 시험](../../tests/e2e/sharing.spec.ts)은 `/tmp/simple-timeline-*`만 사용한다.
@@ -73,12 +83,12 @@ client의 선택적 localAddress는 main-only 옵션으로 기존 pinnedRequest�
 실제 Electron screenshot은 light/dark의 host/member 전체 지문 설정, 연결 정상/실패 설정·제목·도구 모음을 기록한다.
 `screenshots.json`은 파일별 public DTO·테마·화면 크기·프로필 이름·Electron/앱 버전·sandbox와 실행 HEAD/dirty/scope를 기록한다.
 호스트 main의 commit 직후 timestamp부터 멤버의 정상 폴링 UI 반영 관측까지의 한 차례 시간도 기록한다.
-최종 관측은1889ms였다. 이는 로컬 두 프로세스의 관측이며6대 회사망의5초 목표 달성 근거가 아니다.
+Task5 당시 관측은1889ms였다. 이는 로컬 두 프로세스의 관측이며6대 회사망의5초 목표 달성 근거가 아니다.
 실행 metadata의 app.getVersion은 test entry 특성상0.0이다. 설치본0.6.0을 실행한 증거로 해석하지 않는다. package/lock0.6.0은 별도 release 검사로 확인했다.
 
 ## 검증 기록과 전달
 
-최종 `DISPLAY=:94 npm run verify:app`은2026-11-10 09:27:26~09:32:34 UTC에7/7 단계를 통과했다.
+Task5 당시 `DISPLAY=:94 npm run verify:app`은2026-11-10 09:27:26~09:32:34 UTC에7/7 단계를 통과했다.
 타입·production build, release15/15, UTC/New_York/Seoul별 unit104/104, UI100/100, native41/41, Electron E2E68/68(2.3분)이다.
 UI 로그에는 React suspended-act 경고가 없다. Node의 NO_COLOR/FORCE_COLOR 안내와 Linux DBus 진단은 숨기지 않았다.
 실행 환경은 Linux x64, Node24.22.1, Electron45.2.1/ABI150,
@@ -90,9 +100,11 @@ UI 로그에는 React suspended-act 경고가 없다. Node의 NO_COLOR/FORCE_COL
 문서 최종 보정 뒤 하네스 verify7/7과 whitespace 검사를 통과했고, 완성된 Wayfinder의 selected:null/frontier:[]도 확인했다.
 `src` 및 production main/preload에서 test profile/vault/controller marker가 없는 것을 확인했다.
 별도 보존한 `artifacts/lan-sharing-acceptance`는 임시 작업 원장 정리 뒤에도 남는 로컬 evidence다.
-이 문서를 기록하는 source tree는 기준 commit `78041573e072e3d84bf4951e071c892495e8b375` 위의 dirty 작업이었다. 결과의 HEAD/dirty 필드를 source identity로 읽는다.
+Task5 기록 당시 source tree는 기준 commit `78041573e072e3d84bf4951e071c892495e8b375` 위의 dirty 작업이었다. 결과의 HEAD/dirty 필드를 source identity로 읽는다.
 
-Windows/Linux GitHub Actions는 controller의 최종 push 뒤 정확한 SHA로 별도 확인한다. 이 작업은 push나 Windows 빌드를 실행하지 않는다.
+최종 리뷰 보정 뒤 같은 `DISPLAY=:94 npm run verify:app`을2026-11-10 09:49:50~09:53:54 UTC에 새로 실행해7/7 통과했다. release15/15, 시간대별 unit104/104×3, UI106/106, native41/41, sandbox Electron E2E68/68이며 skipped·flaky·실패는0이다. 추가 회귀6개는 별도 RED/GREEN과 typecheck도 확인했다. 실행 source는 `8e50b044cc59316cbb8a16627bdc6628207b2b75` 위의 dirty 작업이며, 실행 뒤 커밋을 정확한 clean-SHA 실행 증거로 바꿔 표시하지 않는다. Linux x64/Node24.22.1/Electron45.2.1/UID1000·기존 Xorg94와 개별 deadline을 유지했고 앱 suite를 겹쳐 실행하지 않았다. UI 로그에는 React 경고가 없다. 로그·구조화 결과·새 screenshot metadata는 `artifacts/lan-sharing-acceptance/final-fix-*`에 보존했다. 최종 문서까지 반영한 하네스 verify7/7(내부22/22)과 whitespace 확인도 통과했다.
+
+이 로컬 검증 근거에는 Windows 설치본 빌드·CI 결과가 포함되지 않는다. Windows/Linux GitHub Actions는 최종 push 뒤 정확한 SHA로 별도 확인한다.
 정식 기대 버전은 package/lock 모두0.6.0이다. 설치본·manifest·SHA256·artifact 형식은 기존 [배포 정책](../release/policy.md)·[사용 안내](../release/user-guide.md)를 따른다.
 기존 appId·프로필 경로·비승격 per-user NSIS·제거 후 보존·오프라인 개인 사용은 유지한다.
 

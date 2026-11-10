@@ -15,7 +15,7 @@ import {
   normalizeParticipants,
   validateId,
 } from "../domain/normalize";
-import { parseBusinessDate, inclusiveDays, monthBounds } from "../domain/date";
+import { parseBusinessDate, inclusiveDays, monthBounds, toOrdinal } from "../domain/date";
 import { DomainValidationError } from "../domain/error";
 import { useTimeline } from "./state/useTimeline";
 import { dateInMonth, localDate, monthOf } from "./state/dateNavigation";
@@ -58,7 +58,12 @@ export function App({
   const sharingView=useSharingView(timeline.snapshot,filter);
   const {editableProjects,snapshot:visibleSnapshot}=sharingView;
   useEffect(()=>{if(sharingView.dragInvalidated)setNotice('공유 항목이 변경되어 드래그를 취소했습니다.')},[sharingView.dragInvalidated]);
-  const openProject=(project?:import('../shared/types').Project,caller?:HTMLElement|null)=>editor.openProject(project,caller,sharing.state?.projects.find(p=>p.id===project?.id)?.participants.map(p=>p.deviceId));
+  const openProject=(project?:import('../shared/types').Project,caller?:HTMLElement|null)=>{
+    const mapping=sharing.state?.projects.find(p=>p.id===project?.id);
+    // Revocation removes ACL rows but preserves names; never compress their slots.
+    const recipientIds=project?.participants.map(name=>mapping?.participants.find(p=>p.name.trim()===name.trim())?.deviceId??'');
+    editor.openProject(project,caller,recipientIds);
+  };
   const [selectedDate, setSelectedDate] = useState(() => localDate(today)),
     [confirmation, setConfirmation] = useState<Confirmation | null>(null),
     [formError, setFormError] = useState<ApiError | null>(null),
@@ -358,6 +363,11 @@ export function App({
     }).catch(()=>{if(!cancelled)setFormError({code:'IPC_UNAVAILABLE',message:'알림의 일정을 조회하지 못했습니다. 다시 조회해 주세요.'})});
     return()=>{cancelled=true};
   },[reminders.openRequest,canEdit,confirmation,dayModalOpen,model?.saved,editor.dirty,api]);
+  const reminderCorrections = (timeline.snapshot?.schedules??[]).filter(schedule=>{
+    if(schedule.sharing!=='member')return false;
+    const settings=model?.kind==='schedule'&&model.id===schedule.id?model.draft.reminder:schedule.reminder;
+    return !!settings&&((settings.start&&toOrdinal(schedule.startDate)-settings.daysBefore<1)||(settings.end&&toOrdinal(schedule.endDate)-settings.daysBefore<1));
+  });
   const reminderNotice = (reminders.error||reminders.failed||reminders.unknown||reminders.storageError) ? <div className="reminder-notice" role="alert">
     {reminders.error&&<p>{reminders.error}</p>}
     {reminders.storageError&&<p>알림 처리 기록을 저장하지 못했습니다. 알림을 보내지 않았거나 전송 결과가 불명확할 수 있습니다.</p>}
@@ -368,6 +378,13 @@ export function App({
   </div>:null;
   const statusView = (<>
     {reminderNotice}
+    {reminderCorrections.map(schedule=><div key={schedule.id} className="reminder-notice" role="alert">
+      <p>{schedule.name}: 알림 날짜가 0001-01-01 이전입니다. 며칠 전을 줄이거나 해당 알림을 끈 뒤 저장해 주세요. 수정 전까지 해당 알림을 보류합니다.</p>
+      <button type="button" onClick={()=>{
+        if(model?.kind==='schedule'&&model.id===schedule.id)document.getElementById('editor-daysBefore')?.focus();
+        else request(caller=>editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller));
+      }}>{schedule.name} 알림 설정</button>
+    </div>)}
     {sharing.error&&<p className="reminder-notice" role="alert">{sharing.error.message}</p>}
     {sharing.state&&["error","revoked","disconnected"].includes(sharing.state.status)&&sharing.error?.message!==sharingDescription(sharing.state)&&<p className="reminder-notice" role="alert">{sharingDescription(sharing.state)}</p>}
     <StatusNotice
