@@ -1,6 +1,34 @@
 import {test,expect} from './fixture';
 test.use({seed:'hotfix'});
 
+test('brand uses the P icon',async({desktop:{page:p}})=>{
+ await expect(p.locator('.brand-mark img')).toBeVisible();
+ await expect.poll(()=>p.locator('.brand-mark img').evaluate((el:HTMLImageElement)=>el.complete&&el.naturalWidth>0)).toBe(true);
+});
+test('schedule paint and the composed panels transmit their backdrop',async({desktop:d})=>{
+ const p=d.page;
+ await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-01');await p.getByLabel('선택 날짜',{exact:true}).press('Enter');
+ for(const mode of ['간트','달력']){
+  await p.getByRole('button',{name:mode,exact:true}).click();
+  const bar=p.locator(mode==='간트'?'[data-bar="1"]':'[data-segment="1"]').first();
+  const alpha=await bar.evaluate(el=>{const ctx=document.createElement('canvas').getContext('2d')!;ctx.fillStyle=getComputedStyle(el).backgroundColor;ctx.fillRect(0,0,1,1);return ctx.getImageData(0,0,1,1).data[3]});
+  expect(alpha).toBeGreaterThan(0);expect(alpha).toBeLessThan(255);
+ }
+ await p.getByRole('button',{name:'간트',exact:true}).click();
+ for(const theme of ['light','dark']){
+  if(theme==='dark')await p.getByRole('button',{name:'다크 모드',exact:true}).click();
+  const b=(await p.locator('.gantt-track').first().boundingBox())!;
+  const values:number[]=[];
+  for(const color of ['#000000','#FFFFFF']){
+   await p.evaluate(c=>{document.body.style.background=c},color);
+   const png=await p.screenshot({clip:{x:Math.floor(b.x+80),y:Math.floor(b.y+b.height/2),width:1,height:1}});
+   values.push(await d.app.evaluate(({nativeImage},bytes)=>nativeImage.createFromBuffer(Buffer.from(bytes)).toBitmap()[1],Array.from(png)));
+  }
+  // A painted-over body would produce the same pixel for both underlays.
+  expect(values[1]-values[0]).toBeGreaterThan(20);
+ }
+});
+
 test('project popup stays below its button with an accessible right-aligned icon action',async({desktop:{page:p}})=>{
  await p.setViewportSize({width:1440,height:900});
  const trigger=p.getByRole('button',{name:'프로젝트 목록',exact:true});
@@ -63,7 +91,8 @@ test('invalid fields retain a visible error border in both themes',async({deskto
  }
 });
 
-test('schedule text remains legible for extreme project colors in both views and themes',async({desktop:{page:p}})=>{
+test('schedule text remains legible for extreme project colors in both views and themes',async({desktop:d})=>{
+ const p=d.page;
  await p.setViewportSize({width:1440,height:900});
  for(const color of ['#000000','#FFFFFF']){
   await p.evaluate(async color=>{
@@ -79,13 +108,17 @@ test('schedule text remains legible for extreme project colors in both views and
     await p.getByRole('button',{name:mode,exact:true}).click();
     const bar=p.locator(mode==='간트'?'[data-bar="1"]':'[data-segment="1"]').first();
     await expect(bar).toBeVisible();
-    await expect.poll(()=>bar.evaluate(el=>{
-     const style=getComputedStyle(el),ctx=document.createElement('canvas').getContext('2d')!;
-     const luminance=(color:string)=>{ctx.fillStyle=color;ctx.fillRect(0,0,1,1);const c=ctx.getImageData(0,0,1,1).data;
-      return [0.2126,0.7152,0.0722].reduce((sum,w,i)=>{const v=c[i]/255;return sum+w*(v<=.04045?v/12.92:((v+.055)/1.055)**2.4)},0)};
-     const [low,high]=[luminance(style.color),luminance(style.backgroundColor)].sort((a,b)=>a-b);
+    // Read the composited pixels: CSS backgroundColor alone now has alpha and
+    // cannot describe contrast against the glass panel beneath the bar.
+    await expect.poll(async()=>{
+     const fg=await bar.evaluate(el=>{const ctx=document.createElement('canvas').getContext('2d')!;ctx.fillStyle=getComputedStyle(el).color;ctx.fillRect(0,0,1,1);return Array.from(ctx.getImageData(0,0,1,1).data).slice(0,3)});
+     const b=(await bar.boundingBox())!;
+     const png=await p.screenshot({clip:{x:Math.floor(b.x+b.width-16),y:Math.floor(b.y+b.height/2),width:1,height:1}});
+     const bg=await d.app.evaluate(({nativeImage},bytes)=>Array.from(nativeImage.createFromBuffer(Buffer.from(bytes)).toBitmap().subarray(0,3)).reverse(),Array.from(png));
+     const luminance=(c:number[])=>[.2126,.7152,.0722].reduce((sum,w,i)=>{const v=c[i]/255;return sum+w*(v<=.04045?v/12.92:((v+.055)/1.055)**2.4)},0);
+     const [low,high]=[luminance(fg),luminance(bg)].sort((a,b)=>a-b);
      return (high+.05)/(low+.05);
-    })).toBeGreaterThanOrEqual(4.5);
+    }).toBeGreaterThanOrEqual(4.5);
    }
   }
  }

@@ -181,7 +181,7 @@ export function CalendarView({
                       style={{
                         gridColumn: `${s.column + 1} / span ${s.span}`,
                         gridRow: s.lane + 1,
-                        backgroundColor: `color-mix(in srgb, ${p.color} var(--schedule-tint, 16%), var(--surface))`,
+                        backgroundColor: `color-mix(in srgb, ${p.color} var(--schedule-tint, 50%), transparent)`,
                         borderLeftColor: p.color,
                         color: "var(--text)",
                       }}

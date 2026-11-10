@@ -6,7 +6,7 @@ export function CalendarDragPreview({preview,segment,label,color}:{preview:DragP
   return <div className="calendar-preview-layer" aria-hidden="true">
     <div className={`calendar-bar calendar-preview-bar${preview.valid?'':' invalid'}`}
       data-calendar-preview={preview.id} data-start={preview.startDate} data-end={preview.endDate}
-      style={{gridColumn:`${segment.column+1} / span ${segment.span}`,backgroundColor:`color-mix(in srgb, ${color} 32%, var(--surface))`,borderColor:color}}>
+      style={{gridColumn:`${segment.column+1} / span ${segment.span}`,backgroundColor:`color-mix(in srgb, ${color} var(--schedule-tint, 50%), transparent)`,borderColor:color}}>
       {segment.continuesLeft && '‹ '}{label}{segment.continuesRight && ' ›'}
     </div>
   </div>

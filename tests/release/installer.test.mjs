@@ -17,7 +17,7 @@ test('installer configuration conforms to the installed builder schema',async()=
   const {validateConfiguration}=require('app-builder-lib/out/util/config/config.js')
   await validateConfiguration(load(readFileSync('electron-builder.yml','utf8')),{add(){}})
 })
-test('the selected B icon is configured for the app and both installer actions',()=>{
+test('the approved Forest Crystal P icon is configured for the app and both installer actions',()=>{
   const c=load(readFileSync('electron-builder.yml','utf8'))
   assert.equal(c.win.icon,'resources/icon.ico')
   assert.ok(c.files.includes('resources/icon.png'), 'package the window icon referenced by main')
@@ -38,7 +38,7 @@ test('Planrail rename preserves installer identity and offers directory selectio
  assert.match(c.artifactName,/^Planrail-/)
  assert.equal(c.appId,'com.kdydesign.simpletimeline')
  assert.equal(pkg.name,'simple-timeline')
- assert.equal(pkg.version,'0.6.1')
+ assert.equal(pkg.version,'0.6.2')
  const lock=JSON.parse(readFileSync('package-lock.json','utf8'))
  assert.equal(lock.version,pkg.version)
  assert.equal(lock.packages[''].version,pkg.version)

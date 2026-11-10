@@ -81,7 +81,7 @@ test('approved Forest Crystal tokens distinguish selected dates and today in lig
   await expect(p.locator('.gantt-bar').first()).toHaveCSS('font-size','13px');
   await expect(p.getByRole('button',{name:'간트 배율 100%로 초기화'})).toHaveCSS('font-size','12px');
   if(theme==='dark')await p.getByRole('button',{name:'다크 모드',exact:true}).click();
-  const expected=theme==='light'?'#123b32':'#ecf6f1';
+  const expected=theme==='light'?'#082c23':'#ecf6f1';
   expect(await p.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--text').trim())).toBe(expected);
   const date=p.getByLabel('선택 날짜',{exact:true});await date.fill('2026-11-13');await date.press('Enter');
   await p.getByRole('button',{name:'달력',exact:true}).click();

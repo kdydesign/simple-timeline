@@ -21,6 +21,9 @@ test('today and hovered dates remain distinguishable in both views and themes', 
     await p.getByRole('button', { name: '간트', exact: true }).click();
     const today = p.locator('[data-day="2026-11-04"]');
     await expect(today).toHaveAttribute('aria-current', 'date');
+    // The date attribute changes before the 100ms background transition paints.
+    // Assert the visible highlight before sampling it for comparison with hover.
+    await expect(today).not.toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
     const todayColor = await background(today);
     await p.locator('[data-day="2026-11-05"]').hover();
     const hoveredTick = p.locator('[data-day="2026-11-05"]');

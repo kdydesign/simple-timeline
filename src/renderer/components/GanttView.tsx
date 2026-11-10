@@ -509,7 +509,7 @@ export function GanttView({
                         style={{
                           left: left - x,
                           width: right - left,
-                          backgroundColor: `color-mix(in srgb, ${r.project.color} var(--schedule-tint, 16%), var(--surface))`,
+                          backgroundColor: `color-mix(in srgb, ${r.project.color} var(--schedule-tint, 50%), transparent)`,
                           borderLeftColor: r.project.color,
                           color: "var(--text)",
                         }}

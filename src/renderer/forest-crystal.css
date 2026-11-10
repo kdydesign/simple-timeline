@@ -1,7 +1,7 @@
 /* Forest Crystal. Material layer only: timeline geometry and interaction stay in
    the existing layout. Blur lives on pseudo-elements, never a fixed portal's ancestor. */
 :root {
-  --text: #123b32;
+  --text: #082c23;
   --muted: #506b61;
   --page: #dcece6;
   --surface: #edf6f1;
@@ -19,10 +19,10 @@
   --today: #14866d12;
   --selected-date: #32b79228;
   --date-hover: #075e5410;
-  --schedule-tint: 32%;
+  --schedule-tint: 50%;
   --rim: #ffffffc9;
-  --panel-shadow: 0 5px 12px #174b3820, inset 0 1px 0 #ffffffa6;
-  --control-shadow: 0 2px 3px #1a554322, inset 0 1px 0 #ffffffb3;
+  --panel-shadow: 0 5px 12px #174b3820, inset 0 1px 0 #ffffffc9, inset 0 -1px 0 #237a5b24;
+  --control-shadow: 0 3px 5px #1a55432b, inset 0 1px 1px #ffffffe0, inset 0 -1px 1px #237a5b33;
   --popup-shadow: 0 12px 30px #153e3438, inset 0 1px 0 #ffffffb3;
   --danger: #a42d3b;
   --danger-surface: #f8dfe2d9;
@@ -38,8 +38,8 @@
   --hover: #b8edd51a;
   --accent: #a6dfc2;
   --accent-foreground: #092d22;
-  --glass: rgba(30, 61, 50, .54);
-  --popup-glass: rgba(24, 52, 42, .76);
+  --glass: rgba(12, 43, 35, .46);
+  --popup-glass: rgba(12, 43, 35, .62);
   --control: rgba(187, 227, 205, .08);
   --control-border: #b9e5ce42;
   --selected-control: rgba(155, 220, 184, .8);
@@ -47,7 +47,7 @@
   --today: #a6dfc213;
   --selected-date: #80dcb83a;
   --date-hover: #b7ead41a;
-  --schedule-tint: 26%;
+  --schedule-tint: 50%;
   --rim: #c5f4df5c;
   --panel-shadow: 0 5px 16px #0003, inset 0 1px 0 #d5ffe224;
   --control-shadow: 0 2px 3px #0003, inset 0 1px 0 #e0fff01f;
@@ -63,28 +63,40 @@ html, body { background: transparent; }
   padding: 6px 10px 10px;
   border: 1px solid var(--rim);
   border-radius: 24px;
-  background: radial-gradient(ellipse at 10% 100%, #44b88e38, transparent 65%),
-    linear-gradient(125deg, #e5f7ed9e, #98cdb544 55%, #dbf4e778);
+  background: linear-gradient(125deg, #eafff51f, #00a9870d 55%, #eafff51f);
   box-shadow: inset 0 0 0 3px #ffffff30, inset 0 0 0 6px #b1ead638;
 }
 #root::before {
   content: "";
   position: absolute;
-  inset: 3px;
-  border: 1px solid var(--rim);
-  border-radius: 21px;
-  box-shadow: inset 0 -2px 4px #44b98b30;
+  inset: 1px;
+  border: 6px solid transparent;
+  border-radius: 23px;
+  background: conic-gradient(from 24deg, #78dfc68c, #edfff9, #168d7270 17%, #d5fff6 21%, #68cbb35c 32%, #f6fffc 43%, #23be9b80 48%, #e8fff8 59%, #5dc4a580 72%, #f2fff9 78%, #288d7270 86%, #c1fff0);
+  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 100;
+}
+#root::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid #e4fffbb3;
+  border-radius: 17px;
+  box-shadow: 0 1px 2px #00543f55, inset 0 1px 2px #ffffff66;
   pointer-events: none;
   z-index: 100;
 }
 [data-theme="dark"] #root {
-  background: radial-gradient(ellipse at 10% 100%, #13795440, transparent 65%),
-    linear-gradient(125deg, #102d25ed, #173e30d9 55%, #102e25ed);
+  background: linear-gradient(125deg, #06261ca3, #073b2ca3 55%, #06261ca3);
   box-shadow: inset 0 0 0 3px #d2ffe818, inset 0 0 0 6px #3d856d18;
 }
 .titlebar { height: 42px; padding: 0 14px; border: 0; background: transparent; }
 .titlebar .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: -.5px; }
-.titlebar .brand-mark { background: linear-gradient(145deg,#258873,#075e54); box-shadow: var(--control-shadow); }
+.titlebar .brand-mark { width: 30px; height: 30px; background: transparent; box-shadow: none; }
+.titlebar .brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
+[data-theme="dark"] #root::before { opacity: .45; }
 .window-controls { gap: 4px; }
 .window-controls .icon-button { width: 40px; height: 34px; align-self: center; border-radius: 9px; }
 .app-shell { margin: 6px 10px 0; }
@@ -158,7 +170,7 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 .gantt-name { background: transparent; }
 .project-row .gantt-name, .project-row .gantt-track { background-color: var(--subtle); }
 .project-row .gantt-name { box-shadow: none; }
-.gantt-name .color-dot, .project-list-row > .color-dot { border-radius: 50%; box-shadow: inset 0 1px 1px #fff9, 0 1px 2px #143c3226; }
+.gantt-name .color-dot, .project-list-row > .color-dot { border-radius: 50%; background-image: radial-gradient(circle at 28% 22%, #ffffffb3, transparent 45%), linear-gradient(transparent,#0003); box-shadow: inset 0 1px 1px #fff9, 0 1px 2px #143c3240; }
 .gantt-navigation { background: transparent; padding: 10px 16px; border-top: 1px solid var(--border); }
 .gantt-navigation input { accent-color: var(--accent); }
 .gantt-bar, .calendar-bar {
@@ -166,10 +178,10 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
   border-top: 1px solid #ffffffa6;
   border-right: 1px solid color-mix(in srgb, currentColor 18%, transparent);
   border-bottom: 1px solid color-mix(in srgb, currentColor 24%, transparent);
-  background-image: linear-gradient(180deg,#ffffff4d,transparent 55%,#00000008);
+  background-image: linear-gradient(180deg,#ffffff88,#ffffff55 45%,#ffffff66);
   box-shadow: inset 0 1px 0 #ffffff45, 0 2px 3px #153f3020;
 }
-[data-theme="dark"] .gantt-bar, [data-theme="dark"] .calendar-bar { border-top-color:#d7ffe94d; background-image:linear-gradient(180deg,#ffffff18,transparent 65%); }
+[data-theme="dark"] .gantt-bar, [data-theme="dark"] .calendar-bar { border-top-color:#d7ffe94d; background-image:linear-gradient(180deg,#071f1944,#071f1955 55%,#071f1966); }
 .gantt-bar:hover:enabled, .calendar-bar:hover:enabled { filter: brightness(1.04); }
 .calendar-top { border-radius: 0; background: transparent; backdrop-filter: blur(20px); }
 .calendar-top .view-heading { padding: 16px 20px 12px; }
@@ -242,6 +254,6 @@ button:disabled { box-shadow: none; }
 @media (prefers-reduced-motion: reduce) { input, button { transition: none; } }
 @media (forced-colors: active) {
   #root, .toolbar, .workspace > main, .editor, .floating-popover, .select-popover { background: Canvas; border-color: CanvasText; box-shadow: none; }
-  #root::before, .toolbar::before, .workspace > main::before, .editor::before, .floating-popover::before, .select-popover::before { display: none; }
+  #root::before, #root::after, .toolbar::before, .workspace > main::before, .editor::before, .floating-popover::before, .select-popover::before { display: none; }
   button.primary, .mode-switch button[aria-pressed="true"], .sharing-filter button[aria-pressed="true"] { border: 2px solid Highlight; }
 }
