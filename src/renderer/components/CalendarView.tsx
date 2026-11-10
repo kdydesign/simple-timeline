@@ -1,3 +1,5 @@
+import {CalendarDragPreview, CalendarDragLabel} from './CalendarDragPreview';
+import {calendarPreviewSegments} from '../../visualization/calendar';
 import {IconButton} from './Icon';
 import { useMemo, useState, useEffect, useRef } from "react";
 import type { GanttProps } from "./GanttView";
@@ -79,6 +81,9 @@ export function CalendarView({
       placeWeek(grouped.get(w.find(Boolean)!) ?? []),
     );
   }, [snapshot, selectedMonth, grid]);
+  const previewSegments = useMemo(() => drag.preview ? calendarPreviewSegments(drag.preview,selectedMonth) : [],
+    [drag.preview?.startDate,drag.preview?.endDate,selectedMonth]);
+  const previewItem = drag.preview ? scheduleMap.get(drag.preview.id) : undefined;
   const hiddenCounts = useMemo(() => weeks.map(hiddenCountsForWeek), [weeks]);
   const daySchedules = useMemo(
     () => day ? schedulesOnDate(snapshot, day) : [],
@@ -115,7 +120,8 @@ export function CalendarView({
       }}
       onPointerLeave={() => setHoveredDate(null)}
       aria-label="월간 달력" hidden={!active}>
-      {drag.preview && <div className="drag-preview" role="status">{drag.preview.startDate} — {drag.preview.endDate} · 놓아서 저장 · Esc 취소</div>}
+      {drag.preview && <div className="drag-preview" role="status">{drag.preview.startDate} — {drag.preview.endDate} · {drag.preview.valid ? "놓아서 저장" : "영역 밖 · 놓으면 취소"} · Esc 취소</div>}
+      {drag.preview && <CalendarDragLabel preview={drag.preview}/> }
       <div inert={!!day} aria-hidden={!!day}>
         <div className="calendar-top">
         <div className="view-heading">
@@ -168,7 +174,7 @@ export function CalendarView({
                       key={s.scheduleId}
                       data-segment={s.scheduleId}
                       data-focus={`schedule:${s.scheduleId}`}
-                      className="calendar-bar"
+                      className={"calendar-bar" + (drag.preview?.id === s.scheduleId ? " drag-origin" : "")}
                       disabled={disabled}
                       style={{
                         gridColumn: `${s.column + 1} / span ${s.span}`,
@@ -190,6 +196,9 @@ export function CalendarView({
                   );
                 })}
             </div>
+            {drag.preview && previewItem && <CalendarDragPreview
+              preview={drag.preview} segment={previewSegments.find(s=>s.weekStart===week.find(Boolean))}
+              label={index.scheduleLabel(previewItem)} color={projectMap.get(previewItem.projectId)!.color}/>} 
             <div className="calendar-more">
               {week.map((date, c) => {
                 const count =

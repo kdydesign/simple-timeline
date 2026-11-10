@@ -40,3 +40,9 @@ button.zoom-percent:hover:enabled{background:var(--subtle);color:var(--text)}
 .reminder-options{display:flex;gap:16px;margin-top:14px}.reminder-options label{display:flex;align-items:center;gap:7px;font-size:13px;cursor:pointer}
 .editor .reminder-options input[type="checkbox"]{appearance:auto;accent-color:var(--accent);width:16px;height:16px;padding:0;margin:0;box-shadow:none}
 .reminder-notice{padding:10px 20px;background:var(--subtle);border-bottom:1px solid var(--border);font-size:13px}.reminder-notice p{margin:4px 0}.reminder-notice button{margin-top:6px}
+/* Preview is separate from saved lane layout and never intercepts pointer hit tests. */
+.calendar-bar.drag-origin{opacity:.3}
+.calendar-preview-layer{position:absolute;inset:36px 0 auto;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));pointer-events:none;z-index:3}
+.calendar-preview-bar{opacity:.86;border:2px dashed;box-shadow:0 0 0 1px var(--surface);font-weight:600;color:var(--text)}
+.calendar-preview-bar.invalid{opacity:.45}
+.calendar-drag-label{position:fixed;z-index:60;pointer-events:none;max-width:calc(100vw - 16px);padding:7px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text);font-size:12px;box-shadow:var(--popup-shadow)}

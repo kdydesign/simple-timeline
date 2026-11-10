@@ -155,3 +155,17 @@ export function schedulesOnDate(
     .filter((s) => s.startDate <= date && s.endDate >= date)
     .sort(compareSchedules);
 }
+
+// Preview alone includes the adjacent-month cells visible in the grid.
+// Normal saved schedule placement stays clipped to the displayed month.
+export function calendarPreviewSegments(dates: Pick<Schedule,'startDate'|'endDate'>, ym:YearMonth) {
+  const start=toOrdinal(dates.startDate),end=toOrdinal(dates.endDate)
+  return calendarGrid(ym).weeks.flatMap(week=>{
+    const columns=week.map((date,column)=>({date,column})).filter(v=>v.date!==null)
+    const visible=columns.filter(v=>v.date!>=dates.startDate && v.date!<=dates.endDate)
+    if(!visible.length)return []
+    const first=visible[0],last=visible[visible.length-1]
+    return [{weekStart:columns[0].date!,column:first.column,span:last.column-first.column+1,
+      continuesLeft:start<toOrdinal(first.date!),continuesRight:end>toOrdinal(last.date!)}]
+  })
+}

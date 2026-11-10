@@ -143,3 +143,12 @@ it("counts hidden schedules independently for seven columns without counting dup
   expect(hiddenCountsForWeek(placed)).toEqual([1, 1, 2, 1, 0, 0, 1]);
   expect(hiddenCountsForWeek([])).toEqual([0, 0, 0, 0, 0, 0, 0]);
 });
+it('preview includes visible adjacent dates, splits weeks and marks offscreen continuation', async()=>{
+ const {calendarPreviewSegments}=await import('../../src/visualization/calendar')
+ expect(calendarPreviewSegments({startDate:'2026-11-30',endDate:'2026-12-07'},{year:2026,month:12}).map(s=>[s.weekStart,s.column,s.span,s.continuesLeft,s.continuesRight])).toEqual([
+ ['2026-11-30',0,7,false,true],['2026-12-07',0,1,true,false]])
+ expect(calendarPreviewSegments({startDate:'2026-12-31',endDate:'2027-01-05'},{year:2026,month:12}).map(s=>[s.weekStart,s.column,s.span,s.continuesRight])).toEqual([['2026-12-28',3,4,true]])
+ expect(calendarPreviewSegments({startDate:'9999-12-31',endDate:'9999-12-31'},{year:9999,month:12})).toMatchObject([{column:4,span:1,continuesRight:false}])
+ expect(calendarPreviewSegments({startDate:'0001-01-01',endDate:'0001-01-01'},{year:1,month:1})).toMatchObject([{column:0,span:1,continuesLeft:false}])
+ expect(calendarPreviewSegments({startDate:'2027-02-01',endDate:'2027-02-01'},{year:2026,month:12})).toEqual([])
+})

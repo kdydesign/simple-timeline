@@ -16,6 +16,7 @@ interface Options extends DragActions {
   navigate?: (x: number, y: number, time: number) => void
   reset?: () => void
 }
+export type DragPreview = Dates & {id:string;x:number;y:number;valid:boolean}
 interface Session {
   schedule: Schedule
   kind: DragKind
@@ -35,7 +36,7 @@ export function useScheduleDrag(options: Options) {
   const suppress = useRef(false)
   const suppressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const startTick = useRef<() => void>(() => {})
-  const [preview, setPreview] = useState<(Dates & { id: string }) | null>(null)
+  const [preview, setPreview] = useState<DragPreview | null>(null)
   useLayoutEffect(() => { latest.current = options })
 
   useEffect(() => {
@@ -72,10 +73,12 @@ export function useScheduleDrag(options: Options) {
       s.valid = ordinal !== null
       if (ordinal !== null) {
         s.dates = dragDates(s.schedule, s.kind, ordinal - s.anchor)
-        setPreview(v => v?.startDate === s.dates.startDate && v?.endDate === s.dates.endDate
-          ? v : { ...s.dates, id: s.schedule.id })
       }
+      setPreview(v => v?.startDate === s.dates.startDate && v?.endDate === s.dates.endDate
+        && v.x === s.x && v.y === s.y && v.valid === s.valid
+        ? v : { ...s.dates, id:s.schedule.id, x:s.x, y:s.y, valid:s.valid })
     }
+
     const move = (e: PointerEvent) => {
       const s = session.current
       if (!s || s.pointer !== e.pointerId) return
