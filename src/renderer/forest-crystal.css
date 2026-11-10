@@ -1,0 +1,247 @@
+/* Forest Crystal. Material layer only: timeline geometry and interaction stay in
+   the existing layout. Blur lives on pseudo-elements, never a fixed portal's ancestor. */
+:root {
+  --text: #123b32;
+  --muted: #506b61;
+  --page: #dcece6;
+  --surface: #edf6f1;
+  --subtle: #27765e0b;
+  --border: #326e5b26;
+  --hover: #ffffff73;
+  --accent: #075e54;
+  --accent-foreground: #123b32;
+  --glass: rgba(239, 249, 244, .54);
+  --popup-glass: rgba(232, 248, 239, .64);
+  --control: rgba(247, 255, 250, .34);
+  --control-border: #ffffffb3;
+  --selected-control: rgba(142, 215, 183, .56);
+  --selected-border: #348872;
+  --today: #14866d12;
+  --selected-date: #32b79228;
+  --date-hover: #075e5410;
+  --schedule-tint: 32%;
+  --rim: #ffffffc9;
+  --panel-shadow: 0 5px 12px #174b3820, inset 0 1px 0 #ffffffa6;
+  --control-shadow: 0 2px 3px #1a554322, inset 0 1px 0 #ffffffb3;
+  --popup-shadow: 0 12px 30px #153e3438, inset 0 1px 0 #ffffffb3;
+  --danger: #a42d3b;
+  --danger-surface: #f8dfe2d9;
+  --danger-border: #c86d78;
+}
+:root[data-theme="dark"] {
+  --text: #ecf6f1;
+  --muted: #b1c9bd;
+  --page: #142d27;
+  --surface: #1d3930;
+  --subtle: #b3e3ca0a;
+  --border: #acd6c52e;
+  --hover: #b8edd51a;
+  --accent: #a6dfc2;
+  --accent-foreground: #092d22;
+  --glass: rgba(30, 61, 50, .54);
+  --popup-glass: rgba(24, 52, 42, .76);
+  --control: rgba(187, 227, 205, .08);
+  --control-border: #b9e5ce42;
+  --selected-control: rgba(155, 220, 184, .8);
+  --selected-border: #aadcc2;
+  --today: #a6dfc213;
+  --selected-date: #80dcb83a;
+  --date-hover: #b7ead41a;
+  --schedule-tint: 26%;
+  --rim: #c5f4df5c;
+  --panel-shadow: 0 5px 16px #0003, inset 0 1px 0 #d5ffe224;
+  --control-shadow: 0 2px 3px #0003, inset 0 1px 0 #e0fff01f;
+  --popup-shadow: 0 14px 36px #0006, inset 0 1px 0 #d5ffe233;
+  --danger: #ffe3e7;
+  --danger-surface: #86454ddd;
+  --danger-border: #dc929b;
+}
+html, body { background: transparent; }
+#root {
+  position: relative;
+  isolation: isolate;
+  padding: 6px 10px 10px;
+  border: 1px solid var(--rim);
+  border-radius: 24px;
+  background: radial-gradient(ellipse at 10% 100%, #44b88e38, transparent 65%),
+    linear-gradient(125deg, #e5f7ed9e, #98cdb544 55%, #dbf4e778);
+  box-shadow: inset 0 0 0 3px #ffffff30, inset 0 0 0 6px #b1ead638;
+}
+#root::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid var(--rim);
+  border-radius: 21px;
+  box-shadow: inset 0 -2px 4px #44b98b30;
+  pointer-events: none;
+  z-index: 100;
+}
+[data-theme="dark"] #root {
+  background: radial-gradient(ellipse at 10% 100%, #13795440, transparent 65%),
+    linear-gradient(125deg, #102d25ed, #173e30d9 55%, #102e25ed);
+  box-shadow: inset 0 0 0 3px #d2ffe818, inset 0 0 0 6px #3d856d18;
+}
+.titlebar { height: 42px; padding: 0 14px; border: 0; background: transparent; }
+.titlebar .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: -.5px; }
+.titlebar .brand-mark { background: linear-gradient(145deg,#258873,#075e54); box-shadow: var(--control-shadow); }
+.window-controls { gap: 4px; }
+.window-controls .icon-button { width: 40px; height: 34px; align-self: center; border-radius: 9px; }
+.app-shell { margin: 6px 10px 0; }
+.toolbar, .workspace > main, .editor {
+  position: relative;
+  isolation: isolate;
+  background: var(--glass);
+  border: 1px solid var(--rim);
+  border-radius: 18px;
+  box-shadow: var(--panel-shadow);
+}
+.toolbar::before, .workspace > main::before, .editor::before,
+.floating-popover::before, .select-popover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(20px);
+  pointer-events: none;
+  z-index: -1;
+}
+.toolbar { min-height: 64px; padding: 12px 16px; gap: 12px; }
+.toolbar-view-title { font-size: 19px; font-weight: 700; }
+.toolbar .mode-switch { background: transparent; padding: 0; gap: 8px; border-radius: 0; }
+.toolbar .mode-switch .icon-button { width: 36px; height: 36px; }
+.toolbar .month-controls { border: 0; padding: 0; gap: 5px; }
+.toolbar .header-actions { border: 0; padding-left: 8px; gap: 8px; }
+.toolbar .icon-button, .sharing-filter button, .editor-actions button,
+.calendar-top .icon-button, .project-list-row > .icon-button,
+.project-popup-heading .icon-button, .project-popup-footer .icon-button,
+.confirm .actions button, .sharing-settings button {
+  border: 1px solid var(--control-border);
+  background: var(--control);
+  background-image: linear-gradient(155deg, #ffffff35, transparent 65%);
+  box-shadow: var(--control-shadow);
+  border-radius: 10px;
+  color: var(--text);
+}
+.toolbar .icon-button:hover:enabled, .sharing-filter button:hover:enabled,
+.editor-actions button:hover:enabled { background-color: var(--hover); }
+.sharing-filter { gap: 6px; margin-left: 4px; }
+.sharing-filter button { min-height: 36px; padding: 5px 11px; font-size: 13px; }
+button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-popup-footer button.primary,
+.mode-switch button[aria-pressed="true"], .sharing-filter button[aria-pressed="true"],
+.sharing-role button[aria-pressed="true"] {
+  background-color: var(--selected-control);
+  background-image: linear-gradient(155deg, #ffffff35, transparent 65%);
+  border: 1px solid var(--selected-border);
+  color: var(--accent-foreground);
+  box-shadow: var(--control-shadow);
+  filter: none;
+}
+.toolbar .primary:hover:enabled { background-color: var(--selected-control); }
+.month-input .date-input input, .editor input:not([type="checkbox"]), .select-trigger {
+  background: var(--control);
+  border: 1px solid var(--control-border);
+  border-radius: 9px;
+  box-shadow: inset 0 1px 2px #123b3210, 0 1px 2px #16493218;
+  color: var(--text);
+}
+.month-input .date-input input { width: 132px; }
+.editor input[aria-invalid="true"] { border-color: var(--danger-border); }
+.workspace { gap: 18px; padding: 18px 10px 6px; }
+.workspace > main { --workspace-padding: 0px; padding: 0; }
+.gantt, .calendar { background: transparent; border: 0; border-radius: 0; }
+.gantt > .view-heading { padding: 12px 18px; min-height: 42px; border-bottom: 0; }
+.gantt-heading { background: transparent; border-bottom: 1px solid var(--border); }
+.gantt-name-heading { color: var(--text); padding-inline: 18px; }
+.month-tick { font-size: 13px; font-weight: 600; color: var(--text); }
+.gantt-row { border-bottom-color: color-mix(in srgb, var(--border) 60%, transparent); }
+.gantt-name { background: transparent; }
+.project-row .gantt-name, .project-row .gantt-track { background-color: var(--subtle); }
+.project-row .gantt-name { box-shadow: none; }
+.gantt-name .color-dot, .project-list-row > .color-dot { border-radius: 50%; box-shadow: inset 0 1px 1px #fff9, 0 1px 2px #143c3226; }
+.gantt-navigation { background: transparent; padding: 10px 16px; border-top: 1px solid var(--border); }
+.gantt-navigation input { accent-color: var(--accent); }
+.gantt-bar, .calendar-bar {
+  border-radius: 8px;
+  border-top: 1px solid #ffffffa6;
+  border-right: 1px solid color-mix(in srgb, currentColor 18%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, currentColor 24%, transparent);
+  background-image: linear-gradient(180deg,#ffffff4d,transparent 55%,#00000008);
+  box-shadow: inset 0 1px 0 #ffffff45, 0 2px 3px #153f3020;
+}
+[data-theme="dark"] .gantt-bar, [data-theme="dark"] .calendar-bar { border-top-color:#d7ffe94d; background-image:linear-gradient(180deg,#ffffff18,transparent 65%); }
+.gantt-bar:hover:enabled, .calendar-bar:hover:enabled { filter: brightness(1.04); }
+.calendar-top { border-radius: 0; background: transparent; backdrop-filter: blur(20px); }
+.calendar-top .view-heading { padding: 16px 20px 12px; }
+.calendar-top h2 { font-size: 18px; font-weight: 700; }
+.weekdays { background: transparent; color: var(--text); border-top: 0; }
+.calendar-dates > button, .calendar-dates > button:hover:enabled { background: var(--date-base, transparent); }
+.calendar-dates > button.adjacent-date { --date-base: #637e6905; }
+.calendar-dates > button[aria-current="date"] { --date-base: var(--today); }
+.calendar-dates > button[aria-pressed="true"] { background: var(--selected-date); }
+.calendar-dates > button { font-size: 13px; padding: 9px 12px; }
+.calendar-week:last-of-type { border-bottom: 0; }
+.editor { width: clamp(340px, 27vw, 400px); padding: 20px; }
+.editor-title h2 { font-size: 20px; font-weight: 700; }
+.editor fieldset > label { margin: 18px 0 8px; font-size: 13px; color: var(--text); font-weight: 600; }
+.editor form { min-height: 0; }
+.schedule-dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 12px; }
+.schedule-date-field { min-width: 0; }
+.schedule-date-field > label { display: block; margin: 18px 0 8px; font-size: 13px; font-weight: 600; }
+.schedule-date-field .date-input input { font-size: 13px; padding-left: 9px; padding-right: 31px; }
+.schedule-date-field .date-input > .icon-button { width: 28px; }
+.schedule-dates > .help { grid-column: 1 / -1; }
+.editor-actions { margin-top: 18px; padding: 8px 0 2px; }
+.editor-actions button { flex: 1; min-width: 80px; min-height: 38px; padding: 8px 20px; font-weight: 600; }
+.editor-actions button.danger, [data-theme="dark"] .editor-actions button.danger { background: var(--danger-surface); border-color: var(--danger-border); color: var(--danger); }
+.editor .period { padding: 12px 0 0; margin: 14px 0 0; }
+.reminder-fields { margin-top: 16px; padding-top: 14px; }
+.editor .overlay, .editor.overlay { position: fixed; top: 60px; right: 16px; bottom: 16px; max-height: calc(100vh - 76px); z-index: 20; }
+.floating-popover, .select-popover { position: relative; isolation: isolate; background: var(--popup-glass); border-color: var(--rim); border-radius: 14px; box-shadow: var(--popup-shadow); backdrop-filter: none; }
+.floating-popover::before, .select-popover::before { backdrop-filter: blur(28px); }
+.project-popup { padding: 14px 10px 10px; }
+.project-popup-heading { padding: 0 4px 12px; }
+.project-popup-heading h2 { font-size: 15px; font-weight: 700; }
+.project-list-row { align-items: center; padding: 10px 8px; margin-bottom: 5px; border: 1px solid #ffffff40; border-radius: 11px; background: var(--control); }
+.project-list-row > .color-dot { margin-top: 0; }
+.project-list-name strong { font-size: 13px; font-weight: 650; }
+.project-list-name small { font-size: 11px; margin-top: 2px; }
+.project-list-row > .icon-button { width: 28px; height: 28px; border-radius: 9px; }
+.project-popup-footer { display: flex; justify-content: flex-end; margin-top: 8px; padding: 8px 4px 0; border: 0; }
+.project-popup-footer .icon-button { width: 36px; height: 36px; padding: 0; justify-content: center; }
+.picker-navigation .select-trigger, .picker-navigation > input { background: var(--control); }
+.picker-grid button[aria-pressed="true"] { background: var(--selected-control); color: var(--accent-foreground); border: 1px solid var(--selected-border); }
+.select-popover [role="option"][data-highlighted] { background: var(--hover); }
+.confirm, .sharing-settings, .day-dialog { background: var(--popup-glass); border: 1px solid var(--rim); border-radius: 18px; backdrop-filter: blur(28px); }
+.sharing-settings { backdrop-filter: none; }
+.confirm-overlay, .scrim { background: #102c245c; }
+.app-tooltip, .toast { background: var(--text); color: var(--surface); }
+.status [role="alert"], .reminder-notice { margin-inline: 20px; }
+button:focus-visible, input:focus-visible, [role="option"]:focus-visible { outline-color: var(--accent); }
+input, button { transition: background-color 100ms ease, border-color 100ms ease; }
+button:disabled { box-shadow: none; }
+@media (max-width: 1100px) {
+  .toolbar { gap: 8px; padding-inline: 12px; }
+  .toolbar-view-title { font-size: 16px; }
+  .toolbar .header-actions { gap: 5px; padding-left: 0; }
+  .sharing-filter { gap: 4px; margin-left: 0; }
+  .sharing-filter button { padding-inline: 8px; }
+  .workspace { gap: 12px; }
+}
+@media (max-width: 850px) {
+  #root { padding-inline: 6px; }
+  .app-shell { margin-inline: 6px; }
+  .workspace { padding: 12px 6px 4px; }
+  .toolbar { gap: 5px; }
+  .toolbar .mode-switch { gap: 3px; }
+  .toolbar .mode-switch .icon-button { width: 30px; }
+  .toolbar .month-controls { gap: 2px; }
+  .sharing-filter button { padding-inline: 6px; }
+  .month-input .date-input input { width: 116px; }
+}
+@media (prefers-reduced-motion: reduce) { input, button { transition: none; } }
+@media (forced-colors: active) {
+  #root, .toolbar, .workspace > main, .editor, .floating-popover, .select-popover { background: Canvas; border-color: CanvasText; box-shadow: none; }
+  #root::before, .toolbar::before, .workspace > main::before, .editor::before, .floating-popover::before, .select-popover::before { display: none; }
+  button.primary, .mode-switch button[aria-pressed="true"], .sharing-filter button[aria-pressed="true"] { border: 2px solid Highlight; }
+}

@@ -121,7 +121,7 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 
 현재 UI는 공식 shadcn/ui 소스를 로컬 컴포넌트로 포함하고 Radix의 동작을 사용한다.
 [출처·고정 커밋·수정 범위](../../resources/licenses/shadcn-ui-NOTICE.md)와 MIT 원문을 배포 파일에도 포함한다.
-승인된 A Zinc 외형을 기존 C안 배치에 적용했으므로 공식 예제와 색상·크기·간격은 다를 수 있다.
+기존 C안 배치 위에 [Forest Crystal](forest-crystal.md) 외형을 적용한다. 이전 A Zinc의 재질·색상을 대체하며 공식 예제와 색상·크기·간격은 다를 수 있다.
 
 | 사용처 | 실제 구성·수정 위치 |
 | --- | --- |
@@ -131,10 +131,12 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 | 아이콘 버튼·툴팁 | [IconButton](../../src/renderer/components/Icon.tsx)은 shadcn Button을 사용하고 tooltip을 명시적으로 켠 상단 7개 버튼만 Tooltip으로 감싼다. [App](../../src/renderer/App.tsx)의 Provider가 250ms 지연을 설정한다. |
 | 삭제·변경 버리기 확인 | [ConfirmDialog](../../src/renderer/components/ConfirmDialog.tsx)는 shadcn AlertDialog를 사용한다. 제목 표시줄은 모달 중에도 클릭 가능하지만 본문 차단과 확인창 포커스 보호는 유지한다. 실제 앱 종료의 확인은 main의 Electron 대화상자다. |
 
-스타일은 [App](../../src/renderer/App.tsx)에서 `shadcn.css` → `styles.css` → `flat-glass.css` → `planrail.css` 순서로 가져온다.
+스타일은 [App](../../src/renderer/App.tsx)에서 `shadcn.css` → `styles.css` → `flat-glass.css` → `planrail.css` → `forest-crystal.css` 순서로 가져온다.
 [Tailwind 토큰](../../src/renderer/shadcn.css)은 theme/utilities만 사용하며 preflight는 적용하지 않는다.
 [기본 레이아웃](../../src/renderer/styles.css)·[C안 구조](../../src/renderer/flat-glass.css) 위에
-[Planrail 토큰·외형](../../src/renderer/planrail.css)을 적용한다. 기존 전역 규칙과 Tailwind 규칙이 함께 있으므로
+[Planrail 상태·동작 스타일](../../src/renderer/planrail.css), [Forest Crystal 재질](../../src/renderer/forest-crystal.css)을 적용한다.
+팝오버를 포함하는 패널의 블러는 별도 가상 요소에 둔다. 조상에 직접 `backdrop-filter`를 적용하면 fixed 포털의 기준 좌표가 바뀔 수 있다.
+기존 전역 규칙과 Tailwind 규칙이 함께 있으므로
 공통 스타일 수정 시 라이트/다크, 간트/달력, 편집 패널·중첩 팝오버를 함께 확인한다.
 회귀 위치와 실제 검증 범위는 [검증 안내](../harness/validation.md)를 따른다.
 

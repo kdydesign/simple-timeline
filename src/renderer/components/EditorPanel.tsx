@@ -194,13 +194,17 @@ export function EditorPanel({
                   options={projects.filter(p=>p.sharing!=="member").map(p=>({value:p.id,label:`${p.name} · #${p.id}`,color:p.color}))}/>
 
               )}
-              <fieldset disabled={member}>
+              <fieldset disabled={member} className="schedule-dates">
+              <div className="schedule-date-field">
               <label htmlFor="editor-startDate">시작일</label>
               <DatePicker id="editor-startDate" label="시작일" value={editor.draft.startDate}
                 invalid={error?.field === "startDate"} onChange={value => patch({ startDate: value })} />
+              </div>
+              <div className="schedule-date-field">
               <label htmlFor="editor-endDate">종료일</label>
               <DatePicker id="editor-endDate" label="종료일" value={editor.draft.endDate}
                 invalid={error?.field === "endDate"} onChange={value => patch({ endDate: value })} />
+              </div>
               <p className="help">
                 YYYY-MM-DD · 시작일과 종료일을 모두 포함합니다.
               </p>

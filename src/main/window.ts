@@ -1,12 +1,14 @@
 import { BrowserWindow, screen } from 'electron'
 import { initialWindowBounds } from './window-bounds'
+import { release } from 'node:os'
+import { windowMaterial } from './window-material'
 export function createWindow(preload: string, url: string, onShown?: () => void, icon?: string, startup?: { mark: (name: string, errorCode?: number) => void; observeRequests: (window: BrowserWindow) => void }): BrowserWindow {
   const window = new BrowserWindow({
     icon,
     ...initialWindowBounds(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea),
     show: false,
     frame: false,
-    backgroundColor: '#f4f6fa',
+    ...windowMaterial(process.platform, release()),
     title: 'Planrail',
     webPreferences: {
       preload,

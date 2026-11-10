@@ -6,6 +6,7 @@
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
 | 현재 작업 상태·인수 범위 | [STATUS](../wayfinder/STATUS.md), [MVP 사용자 인수](../release/user-acceptance.md) |
+| 최신 화면 재질·디자인 | [Forest Crystal 승인 설계](../design/forest-crystal.md), [구현·검증](../implementation/2026-11-10-forest-crystal.md). 기존 C안 배치와 기능을 유지하며 색상·재질은 이 설계를 우선 |
 | 용어·전체 요구사항 | [CONTEXT](../../CONTEXT.md)는 용어만, [전체 설계](../superpowers/specs/2026-11-03-simple-timeline-design.md)는 요구사항 인덱스 |
 | Planrail 후속 변경 | [확정 설계](../design/planrail-improvements.md), [구현·검증 기록](../implementation/2026-11-05-planrail.md). 명시된 이름·탐색·트레이·화면 변경은 이전 후속 설계보다 우선 |
 | 일정 알림·간트 계층 개선 | [확정 설계](../design/reminders-and-hierarchy.md). Q15 전체 승인. [구현·검증](../implementation/2026-11-05-reminders.md), 실제 Windows 알림 실기는 미검증 |
@@ -13,7 +14,7 @@
 | 이전 MVP 후속 변경 | [개선·오류 대응 확정 설계](../design/post-mvp-improvements.md). 명시된 변경 항목에서는 기존 MVP 설계보다 우선하며, [구현·검증 기록](../implementation/2026-11-04-post-mvp-improvements.md)과 구분 |
 | 승인된 업무 규칙 | [도메인·날짜](../design/domain-rules.md), 실제 계산은 [domain](../../src/domain/) |
 | 승인된 권한·저장 계약 | [구조](../design/architecture.md), [저장](../design/storage.md); 현재 코드는 [main](../../src/main/), [preload](../../src/preload/), [API 타입](../../src/shared/api.ts) |
-| 승인된 화면·날짜 배치 | 현재 [Planrail 화면](../design/planrail-improvements.md)이 우선. [C안](../design/flat-glass-redesign.md)·[MVP 화면](../design/experience.md)·[시각화](../design/visualization.md)는 대체되지 않은 계약과 당시 결정 근거. 실제 코드는 [renderer](../../src/renderer/)·[계산 함수](../../src/visualization/) |
+| 승인된 화면·날짜 배치 | 기능 배치는 [Planrail 화면](../design/planrail-improvements.md), 재질은 [Forest Crystal](../design/forest-crystal.md)이 우선. [C안](../design/flat-glass-redesign.md)·[MVP 화면](../design/experience.md)·[시각화](../design/visualization.md)는 대체되지 않은 계약과 당시 결정 근거. 실제 코드는 [renderer](../../src/renderer/)·[계산 함수](../../src/visualization/) |
 | 공통 UI·스타일 수정 | [renderer 구성](../design/architecture.md#renderer-공통-ui와-스타일). 소속 프로젝트 Select·날짜 선택기·포털·테마의 실제 연결과 회귀 경로 |
 | 도구·명령·검증 범위 | [package.json](../../package.json), [CI](../../.github/workflows/), [검증 안내](../harness/validation.md) |
 | 사내 프로젝트 공유·동기화 | [설계·검토](../design/lan-project-sharing.md). Q1~Q27·후속 참여자 권한·UI 위치 확정. 보안·상태·알림 계약 검토 보정 완료. 트레이 상태 클릭으로 공유 설정 진입·필터별 간트 기간 확정. 0.6.0 [구현·검증 기록](../implementation/2026-11-10-lan-sharing.md), 실제 Windows·사내망 인수는 별도 |

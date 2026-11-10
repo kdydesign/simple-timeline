@@ -16,7 +16,7 @@ test('closing toolbar and date-cell schedule add restores focus without a ghost 
  await p.mouse.move(700,700);await p.getByRole('button',{name:'다음 달',exact:true}).focus()
  await p.keyboard.press('Tab');await expect(p.getByRole('button',{name:'오늘',exact:true})).toBeFocused();await expect(p.getByRole('tooltip')).toHaveText('오늘')
 })
-test('Gantt navigation stays at the viewport bottom in tall and short windows with editor',async({desktop:{page:p}})=>{
+test('Gantt navigation stays at its panel bottom near the viewport edge in tall and short windows with editor',async({desktop:{page:p}})=>{
  for(const height of [1100,500]){
   await p.setViewportSize({width:1280,height});await choose(p,'2026-12-01')
   for(const editor of [false,true]){
@@ -25,7 +25,10 @@ test('Gantt navigation stays at the viewport bottom in tall and short windows wi
     const nav=document.querySelector('.gantt-navigation')!.getBoundingClientRect(),main=document.querySelector('main')!.getBoundingClientRect()
     return {bottom:nav.bottom,mainBottom:main.bottom,height:innerHeight}
    })
-   expect(Math.abs(geometry.bottom-geometry.height)).toBeLessThanOrEqual(2)
+   // The glass window has an intentional outer rim and panel gutter.
+   // Keep the footer near the window edge and attached to the actual Gantt panel.
+   expect(geometry.height-geometry.bottom).toBeGreaterThanOrEqual(0)
+   expect(geometry.height-geometry.bottom).toBeLessThanOrEqual(24)
    expect(Math.abs(geometry.bottom-geometry.mainBottom)).toBeLessThanOrEqual(2)
    await expect(p.getByRole('slider',{name:'간트 가로 이동'})).toBeVisible()
    await p.locator('.gantt-body').evaluate(el=>{el.scrollTop=el.scrollHeight})

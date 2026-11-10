@@ -20,7 +20,7 @@ export function Toolbar({selectedDate,onDate,onInvalid,canEdit,hasProjects,onPro
  {projectsOpen&&<Popover id="project-popup" anchor={folder} onClose={closeProjects} label="프로젝트 목록" role="region" className="project-popup" width={290} height={442}>
  <div className="project-popup-heading"><h2>프로젝트 목록</h2><IconButton icon="close" label="목록 닫기" onClick={()=>closeProjects(true)}/></div>
  {projectList}
- <div className="project-popup-footer"><Button variant="ghost" type="button" disabled={!canEdit} onClick={()=>{onProjects(false);onProject()}}>프로젝트 추가</Button></div>
+ <div className="project-popup-footer"><IconButton icon="project" label="프로젝트 추가" className="primary" disabled={!canEdit} onClick={()=>{onProjects(false);onProject()}}/></div>
  </Popover>}</span>
  <span className="toolbar-view-title">{mode==='gantt'?'전체 일정':'월간 달력'}</span>
  {sharingSync}
