@@ -33,6 +33,7 @@ export const test = base.extend<{
       );
       delete env.ELECTRON_RUN_AS_NODE;
       const app = await _electron.launch({
+        chromiumSandbox: true,
         executablePath: require("electron"),
         args: [resolve("artifacts/test-app/main/index.cjs")],
         env: {

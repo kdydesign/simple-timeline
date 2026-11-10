@@ -1,5 +1,7 @@
 # 사내 대표 PC를 통한 프로젝트 공유·동기화
 
+> 현재 구현: 0.6.0의 코드·자동 검증과 실제 Windows/사내망 미인수 범위는 [구현 기록](../implementation/2026-11-10-lan-sharing.md)을 따른다. 아래 협의·검토의 미구현 표기는 당시 기록으로 보존한다.
+
 작성: 2026-11-10. 상태: **Q1~Q27·후속 요구 확정. 구현 전 설계 검토·보정 완료. 제품 구현 미착수.**
 기준 코드: `50838365e393b6f95ee5710b41a9d6c24a0e4828` (Planrail 0.5.0).
 초기 협의에 Superpowers와 grill-with-docs의 grilling·domain-modeling을 적용했다.

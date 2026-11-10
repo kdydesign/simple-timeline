@@ -3,7 +3,7 @@
 ## 프로젝트
 
 Planrail — 오프라인 Windows 일정 관리 프로그램. Electron + React + SQLite.
-사용자와 한국어로 소통한다. Teams·공유·모바일은 현재 MVP 범위 밖이다.
+사용자와 한국어로 소통한다. 기존 MVP 지도는 완료 상태다. 0.6.0은 승인된 사내 LAN 공유를 추가했으며 Teams·모바일은 범위 밖이다.
 
 ## 시작 순서
 
@@ -41,6 +41,7 @@ Planrail — 오프라인 Windows 일정 관리 프로그램. Electron + React +
 
 `npm run dev`는 일반 사용자 DB를 사용한다. 일회성 확인은 [프로필 격리 절차](docs/harness/validation.md)를 따른다.
 Electron sandbox를 끄지 않는다. 앱 검사를 겹쳐 실행하면 artifact 정리가 충돌하므로 순차 실행한다.
+verify:app은 명령별180초, 순차 Electron E2E 전체만240초 제한이다. 개별 테스트 제한은 유지한다.
 패키지 검사는 실제 AppData·방화벽을 사용하므로 기존 프로필 없는 일회성 Windows CI VM에서만 실행한다.
 
 ## 완료 기준

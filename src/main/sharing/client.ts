@@ -29,8 +29,8 @@ export class SharingClient {
   private connection: ClientConnection | null = null
   private loaded = false
   private busy = false
-  private readonly options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number }
-  constructor(options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number }) {
+  private readonly options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string }
+  constructor(options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string }) {
     validateSharingIdentity(options.installationId)
     if (options.expectedDatasetId) validateSharingIdentity(options.expectedDatasetId)
     this.options = options

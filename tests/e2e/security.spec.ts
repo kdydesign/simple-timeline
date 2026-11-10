@@ -5,10 +5,18 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
   const shape = await d.page.evaluate(() => ({
     node: typeof (window as unknown as { require: unknown }).require,
     keys: Object.keys(window.simpleTimeline),
+    sharingKeys: Object.keys(window.timelineSharing!),
   }))
   expect(shape.node).toBe('undefined')
   expect(shape.keys).toHaveLength(8)
   expect(shape.keys).not.toContain('invoke')
+  expect(shape.sharingKeys.sort()).toEqual(['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','onChange'].sort())
+  const sandbox = await d.app.evaluate(({app,BrowserWindow})=>({disabled:app.commandLine.hasSwitch('no-sandbox'),renderer:(BrowserWindow.getAllWindows()[0].webContents as unknown as {getLastWebPreferences():{sandbox?:boolean}}).getLastWebPreferences().sandbox}))
+  expect(sandbox).toEqual({disabled:false,renderer:true})
+  const malformedSharing = await d.page.evaluate(()=>window.timelineSharing!.connect({address:'https://example.com',port:47831,token:'forged'} as never))
+  expect(malformedSharing).toMatchObject({ok:false,error:{code:'VALIDATION_ERROR'}})
+  const publicState=await d.page.evaluate(()=>window.timelineSharing!.getState())
+  expect(JSON.stringify(publicState)).not.toMatch(/certificatePin|credentialRef|privateKey|"token"/)
   const invalid = await d.page.evaluate(() =>
     window.simpleTimeline.createProject({
       name: 'P',
@@ -27,11 +35,10 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
   const child = await d.page.evaluate(() => {
     const frame = document.createElement('iframe')
     document.body.append(frame)
-    return typeof (
-      frame.contentWindow as unknown as { simpleTimeline: unknown }
-    ).simpleTimeline
+    const child = frame.contentWindow as unknown as { simpleTimeline:unknown;timelineSharing:unknown }
+    return {timeline:typeof child.simpleTimeline,sharing:typeof child.timelineSharing}
   })
-  expect(child).toBe('undefined')
+  expect(child).toEqual({timeline:'undefined',sharing:'undefined'})
   const old = d.page.url()
   const attempt = await d.app.evaluate(
     ({ BrowserWindow }) =>

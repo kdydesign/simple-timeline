@@ -3,6 +3,9 @@ import { resolve, relative, isAbsolute, dirname, join } from "node:path";
 import { writeFileSync } from "node:fs";
 import { pathToFileURL } from 'node:url';
 import { tmpdir } from "node:os";
+import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { createProtectedSecrets } from '../../src/main/sharing/secrets';
+import { SharingClient } from '../../src/main/sharing/client';
 import { bootstrap } from "../../src/main/bootstrap";
 import { hotfix, schedule, project, overlaps } from "../fixtures/timeline";
 import type { Result } from "../../src/shared/types";
@@ -21,6 +24,30 @@ let changed = false,
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT;
 void bootstrap({
   profileDir: profile,
+  ...(fault === 'sharing' ? {
+    // Test entry only: real pinned HTTPS/authentication, bound to a distinct socket source.
+    sharingTransport: { client: options => {
+      const bound = {...options, localAddress: '127.0.0.2'};
+      return new SharingClient(bound);
+    } },
+    // A deterministic per-isolated-profile key supports restart without an OS keychain.
+    sharingSecrets: async (directory: string) => {
+      const key = createHash('sha256').update(directory).digest();
+      return createProtectedSecrets(directory, {
+        isAsyncEncryptionAvailable: async () => true,
+        getSelectedStorageBackend: () => 'isolated-test-aes',
+        encryptStringAsync: async value => {
+          const iv = randomBytes(12), cipher = createCipheriv('aes-256-gcm', key, iv);
+          return Buffer.concat([iv, cipher.update(value, 'utf8'), cipher.final(), cipher.getAuthTag()]);
+        },
+        decryptStringAsync: async value => {
+          const decipher = createDecipheriv('aes-256-gcm', key, value.subarray(0,12));
+          decipher.setAuthTag(value.subarray(-16));
+          return {result: Buffer.concat([decipher.update(value.subarray(12,-16)), decipher.final()]).toString('utf8'), shouldReEncrypt: false};
+        },
+      });
+    },
+  } : {}),
   chooseClose: async canHide => {
     writeFileSync(join(profile,'close-choice.txt'),'requested')
     return fault === 'close-choice-cancel' ? 'cancel' : canHide ? 'hide' : 'quit'
@@ -53,6 +80,7 @@ void bootstrap({
     return true;
   },
   async afterDispatch(method, result): Promise<Result<unknown>> {
+    if (result.ok && !method.startsWith('get')) (globalThis as any).lastSourceCommitAt = Date.now();
     if (fault === "pending-save" && method === "createProject") await new Promise(resolve => setTimeout(resolve, 1000));
     if (
       (method === "createProject" ||
@@ -84,6 +112,8 @@ void bootstrap({
   .then((result) => {
     if (!result || result.storage.state !== "ready") return;
     (globalThis as any).desktopController = (result as any).desktop;
+    (globalThis as any).sharingService = result.sharing;
+    (globalThis as any).testStorage = result.storage;
     const { storage } = result,
       repo = storage.repository,
       seed = process.env.SIMPLE_TIMELINE_TEST_SEED;
@@ -140,8 +170,10 @@ void bootstrap({
       })();
     }
     if (fault === "schedule-full") {
-      const original = repo.createSchedule;
-      repo.createSchedule = (input) => {
+      // The IPC sharing facade captures local methods during bootstrap.
+      const activeRepository = result.sharing?.repository ?? repo;
+      const original = activeRepository.createSchedule;
+      activeRepository.createSchedule = (input) => {
         if (!injected) {
           injected = true;
           throw Object.assign(Error("Simulated disk full"), {

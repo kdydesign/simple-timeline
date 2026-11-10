@@ -18,6 +18,7 @@ import {
   type Repository,
 } from './repository'
 import { migrations, type Migration } from './migrations'
+import { createSharingStore } from './sharing/store'
 import { failure, toPublicError } from '../errors'
 import type { ApiError } from '../../shared/types'
 export type StorageState =
@@ -119,6 +120,15 @@ export async function initializeStorage(
         handle.pragma(`application_id=${APP_ID}`)
         handle.pragma(`user_version=${m.version}`)
       })()
+    }
+    // Sharing identity is part of the v3 database, including for personal profiles.
+    // Refuse missing/invalid metadata before bootstrap exposes any repository.
+    if (target >= 3) {
+      try { createSharingStore(db).getConfig() }
+      catch (error) {
+        if (['DB_BUSY','STORAGE_IO','STORAGE_FULL'].includes(toPublicError(error).code)) throw error
+        throw failure('DB_CORRUPT')
+      }
     }
     return { state: 'ready', db, repository: createRepository(db) }
   } catch (error) {

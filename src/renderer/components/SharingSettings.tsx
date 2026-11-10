@@ -50,7 +50,7 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
  <div className="editor-title"><AlertDialogTitle>공유 설정</AlertDialogTitle><Button type="button" disabled={busy} aria-label="공유 설정 닫기" onClick={close}>닫기</Button></div>
  <AlertDialogDescription>같은 사내망에서 프로젝트를 공유합니다. 개인 일정은 이 PC에 보관합니다.</AlertDialogDescription>
  <div className="sharing-settings-scroll">
- <p role="status">{state.role==='host'?'호스트':state.role==='member'?'멤버':'개인 전용'} · {sharingDescription(state)}</p>
+ <p role="status">{state.role==='host'?'호스트':state.role==='member'||state.pendingPair?'멤버':'개인 전용'} · {sharingDescription(state)}</p>
  {error&&<p role="alert">{error.message}</p>}{state.cleanupPending&&<p role="alert">연결 정보 삭제가 끝나지 않았습니다. 파일 접근을 확인하고 연결 해제를 다시 시도해 주세요.</p>}
  <p className="help">이 PC의 IP: {state.availableAddresses.join(', ')||'사용 가능한 IPv4 주소 없음'}</p>
  {!state.cleanupPending&&<fieldset disabled={busy}>

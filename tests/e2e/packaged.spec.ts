@@ -98,6 +98,7 @@ test("real production package installs, works offline, updates and retains DB af
     env.ELECTRON_RENDERER_URL = "http://127.0.0.1:1";
     env.NODE_ENV = "development";
     const instance = await _electron.launch({
+      chromiumSandbox: true,
       executablePath: exe,
       env,
       timeout: 30000,

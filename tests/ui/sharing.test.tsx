@@ -29,8 +29,8 @@ it('places member sync immediately before modes and shows status beside title; s
  expect(f.api.saveReminder).toHaveBeenCalledWith(expect.objectContaining({id:p}));
 });
 it('opens settings from tray request while retaining personal draft; pending cleanup remains retryable in personal role',async()=>{
- const f=sharingFixture(),u=userEvent.setup();render(<App api={memoryApi().api}/>);const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await u.click(add);await u.type(screen.getByLabelText('프로젝트 이름'),'보존할 초안');
- act(()=>f.emit({settingsRequestToken:'request-1',cleanupPending:true,message:'파일 접근을 확인하고 연결 해제를 다시 시도해 주세요.'}));
+ const f=sharingFixture(),u=userEvent.setup();await act(async()=>{render(<App api={memoryApi().api}/>)});const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await act(async()=>{fireEvent.click(add)});await act(async()=>{fireEvent.change(screen.getByLabelText('프로젝트 이름'),{target:{value:'보존할 초안'}})});
+ await act(async()=>f.emit({settingsRequestToken:'request-1',cleanupPending:true,message:'파일 접근을 확인하고 연결 해제를 다시 시도해 주세요.'}));
  const settings=await screen.findByRole('dialog',{name:'공유 설정'});await u.click(within(settings).getByRole('button',{name:'연결 해제 다시 시도'}));await u.click(screen.getByRole('button',{name:'연결 해제'}));await waitFor(()=>expect(f.api.disconnect).toHaveBeenCalledWith({confirmed:true}));
  await u.click(within(settings).getByRole('button',{name:'공유 설정 닫기'}));expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('보존할 초안');
 });
@@ -43,7 +43,7 @@ it('background snapshot failure does not block a personal save, and an older ref
 });
 it('never announces sync success for status failure or failed snapshot application; blocks duplicate sync',async()=>{
  const f=sharingFixture({role:'member',address:'192.168.0.10',status:'disconnected',message:'연결 실패'}),m=memoryApi(),u=userEvent.setup();render(<App api={m.api}/>);
- const sync=await screen.findByRole('button',{name:'수동 동기화'});await waitFor(()=>expect(sync).toBeEnabled());await u.click(sync);expect(screen.getByRole('status')).not.toHaveTextContent('동기화했습니다.');
+ const sync=await screen.findByRole('button',{name:'수동 동기화'});await waitFor(()=>expect(sync).toBeEnabled());await u.click(sync);expect(screen.getByRole('status')).not.toHaveTextContent('동기화했습니다.');await waitFor(()=>expect(screen.getAllByRole('alert').filter(a=>a.textContent==='연결 실패')).toHaveLength(1));
  f.api.sync=vi.fn(async()=>({ok:true as const,data:{...personalState,role:'member' as const,status:'connected' as const,address:'192.168.0.10'}}));m.api.getSnapshot=async()=>({ok:false,error:{code:'STORAGE_IO',message:'읽기 실패'}});await u.click(sync);await waitFor(()=>expect(screen.getAllByRole('alert').some(a=>a.textContent?.includes('화면에 반영'))).toBe(true));expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled();
  m.api.getSnapshot=async()=>({ok:true,data:{projects:[],schedules:[]}});let finish!:()=>void;f.api.sync=vi.fn(()=>new Promise<Awaited<ReturnType<SharingApi["sync"]>>>(resolve=>{finish=()=>resolve({ok:true,data:{...personalState,role:'member' as const,status:'connected' as const,address:'192.168.0.10'}})}));await u.click(sync);expect(sync).toBeDisabled();await act(async()=>finish());await waitFor(()=>expect(screen.getByRole('status')).toHaveTextContent('동기화했습니다.'));
 });
@@ -77,4 +77,11 @@ it('refreshes a member project readonly detail when the host changes its name',a
 });
 it('never falls back to source CRUD when a member reminder capability is unavailable',async()=>{
  const m=memoryApi(hotfix),u=userEvent.setup();m.snapshot.projects[0].sharing='member';m.snapshot.schedules[0].sharing='member';const update=vi.spyOn(m.api,'updateSchedule');render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'개발 편집'}));await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));expect(update).not.toHaveBeenCalled();expect(screen.getByRole('alert')).toHaveTextContent('공유 알림');
+});
+it('shows member-intent red status and disabled sync while the first pairing still has personal privileges',async()=>{
+ sharingFixture({role:'personal',status:'pairing',pendingPair:{pairId:'attempt',fingerprint:'A'.repeat(64),expiresAt:'2026-11-10T09:00:00Z'}});
+ render(<App api={memoryApi().api}/>);
+ const sync=await screen.findByRole('button',{name:'수동 동기화'});expect(sync).toBeDisabled();expect(sync.nextElementSibling).toHaveAttribute('aria-label','조회 모드');
+ expect(screen.getByRole('button',{name:/공유 연결 상태/})).toHaveClass('unavailable');
+ expect(sync).toHaveAccessibleDescription('설정과 연결 승인이 필요합니다.');
 });

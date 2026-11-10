@@ -9,6 +9,7 @@ export function createReminderEngine(o:Options) {
  const clock=o.clock??(()=>new Date())
  let running:Promise<void>|undefined,pending=false,stopped=false,storageError=false
  const retryKeys=new Set<string>()
+ const eligible=(key:string)=>{const state=o.store.state(key);return state===undefined||(state==='failed'&&retryKeys.has(key))}
  const changed=()=>{try{o.onChange()}catch{/* UI unavailability cannot cause an OS resend. */}}
  try{o.store.recover()}catch{storageError=true}
  const issues=()=>{
@@ -26,7 +27,7 @@ export function createReminderEngine(o:Options) {
      // A commit/resume during OS delivery invalidates the remaining snapshot.
      if(pending)break
      let schedule=candidate,project=projects.get(schedule.projectId)
-     if(!dueReminders(schedule,clock()).length||!project)continue
+     if(!project||!dueReminders(schedule,clock()).some(item=>eligible(item.key)))continue
      if(o.beforeSchedule){
       let allowed=false
       try{allowed=await o.beforeSchedule(schedule.id)}catch{/* No claim before authorization succeeds. */}
@@ -40,7 +41,7 @@ export function createReminderEngine(o:Options) {
      }
      const now=clock(),due=dueReminders(schedule,now)
      if(!due.length||!project)continue
-     const claimed=o.store.claim(due.filter(item=>o.store.state(item.key)!=='failed'||retryKeys.has(item.key)),true)
+     const claimed=o.store.claim(due.filter(item=>eligible(item.key)),true)
      for(const item of claimed)retryKeys.delete(item.key)
      if(!claimed.length)continue
      const days=toOrdinal(claimed[0].targetDate)-toOrdinal(localClock(now).date)

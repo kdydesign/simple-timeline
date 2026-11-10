@@ -92,3 +92,17 @@ it.each(['delete','date','dispose'] as const)('re-reads after awaited gate: %s c
  if(change==='dispose')engine.dispose()
  release(true);await pending;expect(v.records.size).toBe(0);expect(v.send).not.toHaveBeenCalled()
 })
+
+it.each(['submitted','unknown','claimed','failed'] as const)('skips the authorization network gate for already handled occurrences (%s) at 60 schedules',async(state)=>{
+ const v=setup();
+ v.snapshot.schedules=Array.from({length:60},(_,i)=>({...v.snapshot.schedules[0],id:String(i+1)}));
+ // The first evaluation supplies real occurrence keys rather than mirroring identity encoding.
+ await v.engine.evaluate();for(const key of v.records.keys())v.records.set(key,state);
+ const authorize=vi.fn(async()=>true);
+ const engine=createReminderEngine({store:v.store,snapshot:()=>v.snapshot,clock:()=>new Date(2026,10,11,12),send:v.send,onClick:()=>{},onChange:()=>{},beforeSchedule:authorize});
+ await engine.evaluate();await engine.evaluate();
+ expect(authorize).not.toHaveBeenCalled();expect(v.send).toHaveBeenCalledTimes(60);
+ await engine.evaluate(true);
+ expect(authorize).toHaveBeenCalledTimes(state==='failed'?60:0);
+ expect(v.send).toHaveBeenCalledTimes(state==='failed'?120:60);
+});

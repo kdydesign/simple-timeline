@@ -3,3 +3,7 @@ const descriptions:Record<SharingState['status'],string>={personal:'공유 미�
 export function sharingDescription(state:SharingState):string {
  return state.message|| (state.role==='host'&&state.status==='connected'?'공유 제공 중':descriptions[state.status])
 }
+// Pairing intent is visible before credential delivery commits the member role.
+export function showMemberSharingControls(state:SharingState|null|undefined):boolean {
+ return !!state&&(state.role==='member'||!!state.pendingPair||(state.role==='personal'&&state.status==='connecting'))
+}

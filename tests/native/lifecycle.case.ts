@@ -26,6 +26,21 @@ const ready = async (
 }
 export const cases: NativeCase[] = [
   {
+    name: 'missing sharing identity blocks startup and preserves the entire database',
+    async run(ctx) {
+      const original = await ready(ctx);
+      original.repository.createProject({name:'Preserved',color:'#2563EB',participants:[]});
+      original.db.exec('DELETE FROM sharing_config');
+      original.db.close();
+      const file = join(ctx.tempDir,'data','timeline.sqlite3'), before = readFileSync(file);
+      const result = await initializeStorage(ctx.tempDir);
+      if(result.state==='ready')result.db.close();
+      assert.equal(result.state,'blocked');
+      if(result.state==='blocked')assert.equal(result.error.code,'DB_CORRUPT');
+      assert.deepEqual(readFileSync(file),before);
+    },
+  },
+  {
     name: 'recovers a recognized hot rollback journal without losing committed data or the raw recovery pair',
     async run(ctx) {
       const original = await ready(ctx)

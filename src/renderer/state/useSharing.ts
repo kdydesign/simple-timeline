@@ -7,10 +7,11 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
  const [busy,setBusy]=useState(false),[settingsOpen,setSettingsOpen]=useState(false)
  const revision=useRef<number|null>(null),pending=useRef(false),alive=useRef(true),locked=useRef(false),manual=useRef(false)
  const eventVersion=useRef(0),latest=useRef<SharingState|null>(null),read=useRef(reconcile);read.current=reconcile
+ const errorSource=useRef<'command'|'sync'|null>(null),errorVersion=useRef(0)
  const accept=useCallback((next:SharingState)=>{
   if(!alive.current||(revision.current!==null&&next.snapshotRevision<revision.current))return
   eventVersion.current++;latest.current=next;setState(next)
-  if(revision.current!==next.snapshotRevision){revision.current=next.snapshotRevision;pending.current=true}
+  if(revision.current!==next.snapshotRevision||(next.status==='connected'&&errorSource.current==='sync')){revision.current=next.snapshotRevision;pending.current=true}
  },[])
  useEffect(()=>{
   alive.current=true;if(!api)return
@@ -24,22 +25,26 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
  useEffect(()=>{
   if(!ready||manual.current||!pending.current)return
   pending.current=false
-  void reconcile().then(ok=>{if(!ok)pending.current=true})
+  const expectedRevision=revision.current,version=errorVersion.current
+  void reconcile().then(ok=>{
+   if(!ok)pending.current=true
+   else if(!manual.current&&version===errorVersion.current&&errorSource.current==='sync'&&latest.current?.status==='connected'&&latest.current.snapshotRevision===expectedRevision){errorSource.current=null;setError(null)}
+  })
  },[state,ready,reconcile,busy])
  useEffect(()=>{
   const token=state?.settingsRequestToken;if(!token||!api)return
   setSettingsOpen(true);void api.acknowledgeSettings({token}).catch(()=>{})
  },[state?.settingsRequestToken,api])
- async function run<T>(operation:()=>Promise<Result<T>>,receiveState=true):Promise<Result<T>> {
+ async function run<T>(operation:()=>Promise<Result<T>>,receiveState=true,source:'command'|'sync'='command'):Promise<Result<T>> {
   if(locked.current)return{ok:false,error:{code:'DB_BUSY',message:'공유 작업을 마칠 때까지 기다려 주세요.'}}
-  locked.current=true;setBusy(true);setError(null)
+  locked.current=true;setBusy(true);errorVersion.current++;errorSource.current=null;setError(null)
   try{
    const result=await operation()
-   if(!result.ok)setError(result.error)
+   if(!result.ok){errorSource.current=source;setError(result.error)}
    else if(receiveState&&result.data&&typeof result.data==='object'&&'snapshotRevision' in result.data)accept(result.data as unknown as SharingState)
    return result
   }catch{
-   const error:ApiError={code:'IPC_UNAVAILABLE',message:'공유 작업 결과를 확인하지 못했습니다.'};setError(error);return{ok:false,error}
+   const error:ApiError={code:'IPC_UNAVAILABLE',message:'공유 작업 결과를 확인하지 못했습니다.'};errorSource.current=source;setError(error);return{ok:false,error}
   }finally{locked.current=false;if(alive.current)setBusy(false)}
  }
  async function sync(){
@@ -60,7 +65,7 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
      if(before===revision.current){pending.current=false;return{ok:true,data:latest.current}}
     }
     return{ok:false,error:{code:'STORAGE_IO',message:'수신한 자료를 화면에 반영하지 못했습니다. 다시 동기화해 주세요.'}}
-   },false)
+   },false,'sync')
    return result.ok&&latest.current?.status==='connected'
   }finally{manual.current=false}
  }

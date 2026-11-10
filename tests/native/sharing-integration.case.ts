@@ -17,6 +17,18 @@ function deferred<T>(){let resolve!:(v:T)=>void;const promise=new Promise<T>(r=>
 const pair={pairId:'pair',deviceId:'device',name:'Member',ip:'127.0.0.1',fingerprint:'F'.repeat(64),expiresAt:new Date(Date.now()+300000).toISOString()}
 const vault={isAsyncEncryptionAvailable:async()=>true,getSelectedStorageBackend:()=> 'kwallet',encryptStringAsync:async(v:string)=>Buffer.from(v),decryptStringAsync:async(v:Buffer)=>({result:v.toString(),shouldReEncrypt:false})}
 export const cases:NativeCase[]=[
+ {name:'pending target survives public settings reopen without committing role and is cleared on invalidation',async run(ctx){
+  const {db,repo}=setup(ctx),store=createSharingStore(db);
+  const service=createSharingService({storage:{state:'ready',db,repository:repo},profile:ctx.tempDir,changed:()=>{},transport:{discover:async()=>({hostId,serverName:'host',certificate:'cert',pin:'pin'}),client:()=>({beginPair:async()=>pair,confirmPair:async()=>({kind:'pending',pair}),poll:async()=>({kind:'pending',pair}),close:()=>{}})}});
+  try{
+   await service.connect({address:'127.0.0.1',port:48999});
+   assert.equal(service.getState().address,'127.0.0.1');assert.equal(service.getState().port,48999);assert.equal(service.getState().role,'personal');
+   assert.equal(store.getConfig().address,null);assert.equal(store.getConfig().credentialRef,null);
+   const requested=service.requestSettings();service.acknowledgeSettings({token:requested.settingsRequestToken!});
+   assert.equal(service.getState().address,'127.0.0.1');assert.equal(service.getState().port,48999);
+   await service.disconnect({confirmed:true});assert.equal(service.getState().address,null);assert.equal(service.getState().port,47831);assert.equal(service.getState().pendingPair,null);
+  }finally{await service.dispose()}
+ }},
  {name:'failed credential deletion remains non-active and is retried on the next disconnect',async run(ctx){
   const {db,repo}=setup(ctx),store=createSharingStore(db),protectedSecrets=createProtectedSecrets(ctx.tempDir,vault),ref='d'.repeat(32)
   await protectedSecrets.write(ref,{token:'must never authenticate'},()=>true)

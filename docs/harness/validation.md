@@ -80,7 +80,9 @@ headless에서는 준비된 DISPLAY가 추가로 필요하다. 이 예는 Linux�
 
 앱 검사는 공유 artifact 디렉터리를 정리하므로 전체/개별 검사를 겹쳐 실행하지 않는다.
 verify:app의 순서는 typecheck → test:release → test:tz → test:ui → build → test:native → test:e2e다.
-각 명령은 180초 제한이며 첫 실패에서 멈추고 나머지를 `not-run`으로 기록한다.
+각 명령은 180초 제한이며, `test:e2e`의 전체 suite만 240초다. 첫 실패에서 멈추고 나머지를 `not-run`으로 기록한다.
+0.6.0의 순차 sandbox Electron 68개 회귀는 실제180초에64개 통과 뒤 종료된 근거로 전체 예산만 늘렸다.
+개별 테스트·assertion·네트워크 요청 제한은 유지한다. [실행 기록](../implementation/2026-11-10-lan-sharing.md)을 따른다.
 개별 검사로 실패를 재현·수정한 뒤 변경에 필요한 통합 검사를 마친다. 실패·skip을 성공으로 바꾸지 않는다.
 
 ## 결과와 CI 읽기

@@ -1,4 +1,4 @@
-import {sharingDescription} from '../shared/sharing-status';
+import {sharingDescription,showMemberSharingControls} from '../shared/sharing-status';
 import {useSharingView} from './state/useSharingView';
 import {useSharing} from './state/useSharing';
 import {SharingSettings} from './components/SharingSettings';
@@ -369,7 +369,7 @@ export function App({
   const statusView = (<>
     {reminderNotice}
     {sharing.error&&<p className="reminder-notice" role="alert">{sharing.error.message}</p>}
-    {sharing.state&&["error","revoked","disconnected"].includes(sharing.state.status)&&<p className="reminder-notice" role="alert">{sharingDescription(sharing.state)}</p>}
+    {sharing.state&&["error","revoked","disconnected"].includes(sharing.state.status)&&sharing.error?.message!==sharingDescription(sharing.state)&&<p className="reminder-notice" role="alert">{sharingDescription(sharing.state)}</p>}
     <StatusNotice
       phase={timeline.phase}
       error={formError ?? timeline.error}
@@ -390,7 +390,7 @@ export function App({
       >
         <Toolbar
           filter={filter} onFilter={value=>request(()=>setFilter(value))}
-          sharingSync={sharing.state?.role==='member'?<IconButton tooltip icon="refresh" label="수동 동기화" description={sharing.state.pendingPair||!sharing.state.address?'설정과 연결 승인이 필요합니다.':'호스트의 전체 공유 자료를 다시 받습니다.'} aria-busy={sharing.busy} className={sharing.busy?'sync-busy':''} disabled={sharing.busy||!!sharing.state.pendingPair||!sharing.state.address||['pairing','revoked'].includes(sharing.state.status)} onClick={()=>{setNotice('');void sharing.sync().then(ok=>{if(ok)setNotice('동기화했습니다.')})}}/>:null}
+          sharingSync={sharing.state&&showMemberSharingControls(sharing.state)?<IconButton tooltip icon="refresh" label="수동 동기화" description={sharing.state.pendingPair||!sharing.state.address?'설정과 연결 승인이 필요합니다.':'호스트의 전체 공유 자료를 다시 받습니다.'} aria-busy={sharing.busy} className={sharing.busy?'sync-busy':''} disabled={sharing.busy||!!sharing.state.pendingPair||!sharing.state.address||['pairing','revoked'].includes(sharing.state.status)} onClick={()=>{setNotice('');void sharing.sync().then(ok=>{if(ok)setNotice('동기화했습니다.')})}}/>:null}
           selectedDate={selectedDate}
           mode={mode}
           onMode={setMode}

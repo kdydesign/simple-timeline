@@ -30,7 +30,7 @@ export function createSharingService(o:Options){
   const store=createSharingStore(o.storage.db),transport={...productionTransport,...o.transport},clock=o.clock??(()=>performance.now())
   const initial=store.getConfig()
   let snapshotRevision=0,epoch=0,disposed=false,suspended=false,status:SharingState['status']=initial.pendingCredentialDeleteRef?'error':initial.role==='personal'?'personal':'stopped',message=initial.pendingCredentialDeleteRef?new CredentialCleanupError().message:'',lastCheckedAt:string|null=null
-  let pendingPair:PendingPair|null=null,settingsRequestToken:string|null=null
+  let pendingPair:PendingPair|null=null,pendingAddress:SharingAddress|null=null,settingsRequestToken:string|null=null
   let clientCommand:<T>(operation:(signal:AbortSignal)=>Promise<T>)=>Promise<T>
   let host:ReturnType<typeof createSharingHost>|undefined,client:ReturnType<SharingTransport['client']>|undefined,syncController:ReturnType<typeof createSyncController>|undefined
   let secretsPromise:Promise<ProtectedSecrets>|undefined,closing:Promise<void>|undefined,starting:Promise<void>|undefined
@@ -39,7 +39,7 @@ export function createSharingService(o:Options){
   const check=(generation:number)=>{if(!current(generation))throw failure('FORBIDDEN')}
   function getState():SharingState{
     const c=store.getConfig()
-    return {snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:c.address,port:c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
+    return {snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
       pendingPair:pendingPair?{pairId:pendingPair.pairId,fingerprint:pendingPair.fingerprint,expiresAt:pendingPair.expiresAt}:null,
       pendingPairs:host?.pending()??[],devices:c.role==='host'?store.listDevices():[],projects:c.role==='host'?store.listSharedProjects():[],settingsRequestToken,
       availableAddresses:transport.interfaces(),
@@ -53,7 +53,7 @@ export function createSharingService(o:Options){
     changed()
   }
   function invalidate(){
-    epoch++;starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null
+    epoch++;starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null;pendingAddress=null
     const previous=host;host=undefined
     // stop invalidates handlers synchronously before its first await.
     return previous?.stop()??Promise.resolve()
@@ -67,6 +67,7 @@ export function createSharingService(o:Options){
       await vault.write(ref,value,live);if(!live())throw failure('FORBIDDEN')
       const old=store.getConfig().credentialRef
       store.connectMember({...target,hostId:value.trust.hostId,datasetId:value.datasetId,certificatePin:value.trust.pin,credentialRef:ref})
+      if(value.activation==='active')pendingAddress=null
       connection=value
       if(old&&old!==ref)vault.remove(old)
     }}
@@ -139,6 +140,7 @@ export function createSharingService(o:Options){
   async function connect(input:SharingAddress){
     if(disposed||store.getConfig().roleHistory==='host')throw failure('FORBIDDEN')
     const target=address(input),c=store.getConfig(),drain=invalidate(),generation=epoch;await drain;check(generation)
+    pendingAddress=target
     setStatus('connecting')
     try{
       await cleanupCredential(generation);check(generation)

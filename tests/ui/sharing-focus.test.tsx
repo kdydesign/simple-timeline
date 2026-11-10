@@ -1,13 +1,13 @@
 import {it,expect} from 'vitest'
-import {render,screen,waitFor,act,within} from '@testing-library/react'
+import {render,screen,waitFor,act,within,fireEvent} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {App} from '../../src/renderer/App'
 import {memoryApi} from './fake-api'
 import {sharingFixture} from './sharing-fixture'
 import {hotfix} from '../fixtures/timeline'
 it.each([false,true])('focuses a usable setting and restores the previous target on close (editor=%s)',async(withEditor)=>{
- const u=userEvent.setup(),f=sharingFixture();render(<App api={memoryApi(hotfix).api}/>);const toolbar=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(toolbar).toBeEnabled());
- if(withEditor){await u.click(toolbar);await u.type(screen.getByLabelText('프로젝트 이름'),'보존할 개인 초안')}const target=withEditor?screen.getByLabelText('프로젝트 이름'):toolbar;target.focus();await act(async()=>f.emit({settingsRequestToken:'focus-settings'}));
+ const u=userEvent.setup(),f=sharingFixture();await act(async()=>{render(<App api={memoryApi(hotfix).api}/>)});const toolbar=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(toolbar).toBeEnabled());
+ if(withEditor){await act(async()=>{fireEvent.click(toolbar)});await act(async()=>{fireEvent.change(screen.getByLabelText('프로젝트 이름'),{target:{value:'보존할 개인 초안'}})})}const target=withEditor?screen.getByLabelText('프로젝트 이름'):toolbar;await act(async()=>target.focus());await act(async()=>f.emit({settingsRequestToken:'focus-settings'}));
  const dialog=await screen.findByRole('dialog',{name:'공유 설정'});await waitFor(()=>expect(within(dialog).getByRole('button',{name:'호스트로 공유'})).toHaveFocus());await u.click(within(dialog).getByRole('button',{name:'공유 설정 닫기'}));await waitFor(()=>expect(target).toHaveFocus());await act(async()=>{await new Promise(resolve=>setTimeout(resolve,300))});expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();if(withEditor)expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('보존할 개인 초안');
 });
 it('returns a nested confirmation cancel to its actual setting initiator',async()=>{
