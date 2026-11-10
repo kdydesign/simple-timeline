@@ -200,7 +200,7 @@ export function CalendarView({
             </div>
             {drag.preview && previewItem && <CalendarDragPreview
               preview={drag.preview} segment={previewSegments.find(s=>s.weekStart===week.find(Boolean))}
-              label={index.scheduleLabel(previewItem)} color={projectMap.get(previewItem.projectId)!.color}/>} 
+              label={index.scheduleLabel(previewItem)} color={projectMap.get(previewItem.projectId)!.color}/>}
             <div className="calendar-more">
               {week.map((date, c) => {
                 const count =
