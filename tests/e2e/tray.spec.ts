@@ -73,3 +73,39 @@ test.describe('tray failure',()=>{
   await exited;
  });
 });
+test.describe('window close choice',()=>{
+ test.use({fault:'close-choice-cancel'});
+ test('cancel keeps dirty input and asks again on the next close',async({desktop:d})=>{
+  const p=d.page;
+  await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
+  await p.getByLabel('프로젝트 이름',{exact:true}).fill('선택 취소 유지');
+  await p.getByRole('button',{name:'창 닫기',exact:true}).click();
+  await expect.poll(()=>readFile(join(d.profile,'close-choice.txt'),'utf8').catch(()=>null)).toBe('requested');
+  await expect.poll(()=>visible(d)).toBe(true);
+  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('선택 취소 유지');
+  await p.getByRole('button',{name:'창 닫기',exact:true}).click();
+  await expect.poll(()=>visible(d)).toBe(true);
+ });
+});
+test('initial bounds fit display and hidden About uses current app metadata without touching input',async({desktop:d})=>{
+ const bounds=await d.app.evaluate(({BrowserWindow,screen})=>{
+  const w=BrowserWindow.getAllWindows()[0],a=screen.getDisplayMatching(w.getBounds()).workArea;
+  return {b:w.getBounds(),a};
+ });
+ expect(bounds.b.width).toBe(Math.min(1707,bounds.a.width));
+ expect(bounds.b.height).toBe(Math.min(820,bounds.a.height));
+ await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
+ await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('About 입력 보호');
+ const info=await d.app.evaluate(async({BrowserWindow,dialog,app})=>{
+  BrowserWindow.getAllWindows()[0].hide();
+  const original=dialog.showMessageBox;
+  let captured:any;
+  (dialog as any).showMessageBox=async(options:any)=>{captured=options;return {response:0}};
+  try {(globalThis as any).desktopController.showAbout();await Promise.resolve();return {title:captured.title,detail:captured.detail,version:app.getVersion()}}
+  finally{dialog.showMessageBox=original}
+ });
+ expect(info.title).toBe('About Planrail');expect(info.detail).toContain(info.version);expect(info.detail).toContain('daeyong');
+ await expect.poll(()=>visible(d)).toBe(false);
+ await control(d,'show');
+ await expect(d.page.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('About 입력 보호');
+});

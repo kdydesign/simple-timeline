@@ -1,9 +1,9 @@
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, screen } from 'electron'
+import { initialWindowBounds } from './window-bounds'
 export function createWindow(preload: string, url: string, onShown?: () => void, icon?: string, startup?: { mark: (name: string, errorCode?: number) => void; observeRequests: (window: BrowserWindow) => void }): BrowserWindow {
   const window = new BrowserWindow({
     icon,
-    width: 1280,
-    height: 820,
+    ...initialWindowBounds(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea),
     show: false,
     frame: false,
     backgroundColor: '#f4f6fa',

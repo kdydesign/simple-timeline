@@ -15,7 +15,8 @@ import { createWindow } from './window'
 import { registerTimelineIpc } from './ipc'
 import { registerWindowIpc } from './window-ipc'
 import { resolveRendererUrl } from './ipc-core'
-import { installCloseGuard } from './close'
+import { createAbout } from './about'
+import { installCloseGuard, type CloseChoice } from './close'
 import { createTray } from './tray'
 import { toPublicError } from './errors'
 import type { Result } from '../shared/types'
@@ -33,6 +34,7 @@ export interface BootstrapOptions {
   createTray?: typeof createTray
   notifyTrayFailure?: () => void
   confirmClose?: () => Promise<boolean>
+  chooseClose?: (canHide: boolean) => Promise<CloseChoice>
 }
 export async function bootstrap(options: BootstrapOptions = {}) {
   const profile = options.profileDir ?? profileDirectory(app.getPath('appData'))
@@ -137,6 +139,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const reminderTimer=setInterval(evaluateReminders,30000)
   powerMonitor.on('resume',evaluateReminders)
   evaluateReminders()
+  const showAbout = createAbout(icon)
   let tray: ReturnType<typeof createTray> | undefined
   const requestQuit = () => {
     if (exiting) return
@@ -144,7 +147,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     requestClose()
   }
   try {
-    tray = (options.createTray ?? createTray)(icon, show, requestQuit)
+    tray = (options.createTray ?? createTray)(icon, show, requestQuit, showAbout)
   } catch {
     if (options.notifyTrayFailure) options.notifyTrayFailure()
     else dialog.showErrorBox('트레이를 만들지 못했습니다', '창 닫기로 앱을 종료할 수 있습니다. 저장하지 않은 입력은 종료 전에 확인합니다.')
@@ -165,6 +168,16 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       }),
     {
       hide: tray ? () => window.hide() : undefined,
+      chooseClose: () => options.chooseClose ? options.chooseClose(!!tray) : (async () => {
+        const choices: CloseChoice[] = tray ? ['hide', 'quit', 'cancel'] : ['quit', 'cancel']
+        const result = await dialog.showMessageBox(window, {
+          type: 'question', title: 'Planrail 닫기', message: '어떻게 닫을까요?',
+          detail: '트레이에서는 일정 알림과 편집 중인 입력이 유지됩니다. 완전히 종료하면 일정 알림이 제공되지 않습니다.' + (tray ? '' : '\n트레이를 사용할 수 없습니다.'),
+          buttons: tray ? ['트레이로 보내기', '완전 종료', '취소'] : ['완전 종료', '취소'],
+          defaultId: choices.length - 1, cancelId: choices.length - 1, noLink: true,
+        })
+        return choices[result.response] ?? 'cancel'
+      })(),
       beforeClose: () => { exiting = true },
       afterClose: () => app.quit(),
     },
@@ -187,5 +200,5 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     unregisterWindow()
     if (storage.state === 'ready' && storage.db.open) storage.db.close()
   })
-  return { window, storage, profile, desktop: { show, requestQuit } }
+  return { window, storage, profile, desktop: { show, requestQuit, showAbout } }
 }

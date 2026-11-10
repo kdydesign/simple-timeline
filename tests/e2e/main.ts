@@ -21,6 +21,10 @@ let changed = false,
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT;
 void bootstrap({
   profileDir: profile,
+  chooseClose: async canHide => {
+    writeFileSync(join(profile,'close-choice.txt'),'requested')
+    return fault === 'close-choice-cancel' ? 'cancel' : canHide ? 'hide' : 'quit'
+  },
   ...(fault?.startsWith('reminder-') ? {
     reminderClock:()=>new Date(2026,10,9,12),
     reminderSender:async(message:import('../../src/main/reminders/engine').ReminderMessage,onClick:()=>void)=>{
