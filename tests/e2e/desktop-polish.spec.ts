@@ -7,6 +7,34 @@ async function november(p: Page) {
   await p.getByLabel('선택 날짜', { exact: true }).press('Enter');
 }
 test.use({ seed: 'hotfix' });
+test('compact project groups keep labels and bars inside their rows through collapse', async ({ desktop: d }) => {
+  const p = d.page; await november(p);
+  const project = p.locator('[data-row="project:1"]');
+  const schedule = p.locator('[data-row="schedule:1"]');
+  const nextProject = p.locator('[data-row="project:2"]');
+  const pb = (await project.boundingBox())!, sb = (await schedule.boundingBox())!;
+  const nb = (await nextProject.boundingBox())!;
+  // A project plus three two-line schedules fits the compact group budget.
+  expect(nb.y - pb.y).toBeLessThanOrEqual(168);
+  expect(pb.height).toBeGreaterThan(sb.height);
+  expect(Math.abs(sb.y - pb.y - pb.height)).toBeLessThan(1);
+  for (const row of [project, schedule, nextProject]) {
+    const bounds = (await row.boundingBox())!;
+    for (const child of await row.locator('.text-button, small:not(:empty), .gantt-bar, .row-add').all()) {
+      const b = (await child.boundingBox())!;
+      expect(b.y).toBeGreaterThanOrEqual(bounds.y + 1);
+      expect(b.y + b.height).toBeLessThanOrEqual(bounds.y + bounds.height - 1);
+    }
+  }
+  await project.getByRole('button', { name: '1.1.1 핫픽스 접기', exact: true }).click();
+  await expect(schedule).toHaveCount(0);
+  expect(Math.abs((await nextProject.boundingBox())!.y - pb.y - pb.height)).toBeLessThan(1);
+  await project.getByRole('button', { name: '1.1.1 핫픽스 펼치기', exact: true }).click();
+  await expect(schedule).toBeVisible();
+  expect(Math.abs((await nextProject.boundingBox())!.y - nb.y)).toBeLessThan(1);
+  await schedule.getByRole('button', { name: '개발 편집', exact: true }).click();
+  await expect(p.getByLabel('일정 이름', { exact: true })).toHaveValue('개발');
+});
 test('empty project guidance belongs to project metadata and month input keeps its accessible name', async ({ desktop: d }) => {
   const p = d.page; await november(p);
   await expect(p.locator('header')).not.toContainText('선택 날짜');

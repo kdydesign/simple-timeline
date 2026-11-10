@@ -130,6 +130,7 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 | 프로젝트 목록·날짜 팝오버 | [앱 Popover](../../src/renderer/components/Popover.tsx)가 shadcn/Radix 위치 계산과 로컬 portal container를 연결한다. 편집 패널 안의 중첩 선택기도 같은 DOM 포커스 범위를 유지한다. |
 | 아이콘 버튼·툴팁 | [IconButton](../../src/renderer/components/Icon.tsx)은 shadcn Button을 사용하고 tooltip을 명시적으로 켠 상단 7개 버튼만 Tooltip으로 감싼다. [App](../../src/renderer/App.tsx)의 Provider가 250ms 지연을 설정한다. |
 | 삭제·변경 버리기 확인 | [ConfirmDialog](../../src/renderer/components/ConfirmDialog.tsx)는 shadcn AlertDialog를 사용한다. 제목 표시줄은 모달 중에도 클릭 가능하지만 본문 차단과 확인창 포커스 보호는 유지한다. 실제 앱 종료의 확인은 main의 Electron 대화상자다. |
+| 시작일·종료일 알림 | [ReminderFields](../../src/renderer/components/ReminderFields.tsx) → [로컬 Switch](../../src/renderer/components/ui/switch.tsx) → 기존 `radix-ui`의 Switch. shadcn 원문 복사 없이 작성한 래퍼이며 별도 의존성을 추가하지 않는다. 두 알림 값과 저장 흐름은 유지한다. |
 
 스타일은 [App](../../src/renderer/App.tsx)에서 `shadcn.css` → `styles.css` → `flat-glass.css` → `planrail.css` → `forest-crystal.css` 순서로 가져온다.
 [Tailwind 토큰](../../src/renderer/shadcn.css)은 theme/utilities만 사용하며 preflight는 적용하지 않는다.

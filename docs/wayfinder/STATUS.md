@@ -1,7 +1,8 @@
 # 진행 상태
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
-최신 후속: 0.6.2 Forest Crystal 투과와 유리 표현을 보정하고 시안의 P 아이콘을 적용했다. [승인 설계](../design/forest-crystal.md)·[보정과 검증 범위](../implementation/2026-11-10-glass-correction.md)를 따른다. Windows 실제 바탕화면 투과는 별도 인수 항목이며 최종 커밋·원격 반영 여부는 종료 메시지에서 확인한다.
+최신 후속: 0.6.3 간트 행을 축소하고 시작일·종료일 알림을 스위치로 변경했다. [구현·검증](../implementation/2026-11-10-compact-rows.md)을 따른다. 최종 SHA·CI 상태는 종료 메시지에서 확인한다.
+이전 후속: 0.6.2 Forest Crystal 투과와 유리 표현을 보정하고 시안의 P 아이콘을 적용했다. [승인 설계](../design/forest-crystal.md)·[보정과 검증 범위](../implementation/2026-11-10-glass-correction.md)를 따른다. Windows 실제 바탕화면 투과는 별도 인수 항목이며 최종 커밋·원격 반영 여부는 종료 메시지에서 확인한다.
 후속: Planrail 0.6.0 사내 LAN 공유를 구현했다. [승인 설계](../design/lan-project-sharing.md)와 [구현·검증 기록](../implementation/2026-11-10-lan-sharing.md)을 따른다.
 두 격리 Electron 프로필의 loopback TLS 자동 검증과 실제 Windows·회사망 인수는 구분하며 기존 지도 완료 상태는 유지한다.
 이전 후속: Planrail 0.5.0 달력 미리보기·닫기 선택·About·창 크기·포커스·간트 하단 개선을 구현했다.

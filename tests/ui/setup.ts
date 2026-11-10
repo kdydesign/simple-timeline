@@ -15,3 +15,12 @@ if (!Element.prototype.hasPointerCapture) {
   Element.prototype.releasePointerCapture = function (id) { captures.get(this)?.delete(id) }
 }
 if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = function () {}
+// Radix Switch measures its hidden form input. JSDOM has no layout engine;
+// real dimensions and resizing are covered by the Electron suites.
+if (!globalThis.ResizeObserver) {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}
