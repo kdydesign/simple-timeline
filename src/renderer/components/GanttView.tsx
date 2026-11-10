@@ -383,6 +383,7 @@ export function GanttView({
               aria-current={d.date === today ? "date" : undefined}
               className={"day-tick" + (hoveredDate === start + d.i ? " date-hovered" : "")}
               data-day={d.date}
+              data-focus={`date:${d.date}`}
               key={d.date}
               style={{ left: d.i * P - x, width: P }}
             >

@@ -1,3 +1,4 @@
+import {isRestoringFocus} from '../state/restoreFocus';
 import type { ButtonHTMLAttributes } from 'react';
 import {Button} from './ui/button';
 import {Tooltip,TooltipTrigger,TooltipContent} from './ui/tooltip';
@@ -11,7 +12,7 @@ const paths = {
 } as const;
 export type IconName = keyof typeof paths;
 export function Icon({name}: {name: IconName}) {return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>}
-export function IconButton({icon,label,tooltip=false,className='',...props}: {icon:IconName;label:string;tooltip?:boolean}&ButtonHTMLAttributes<HTMLButtonElement>) {
- const button=<Button type="button" variant="ghost" size="icon" {...props} className={`icon-button ${className}`} aria-label={label}><Icon name={icon}/></Button>;
+export function IconButton({icon,label,tooltip=false,onFocus,className='',...props}: {icon:IconName;label:string;tooltip?:boolean}&ButtonHTMLAttributes<HTMLButtonElement>) {
+ const button=<Button type="button" variant="ghost" size="icon" {...props} onFocus={e=>{onFocus?.(e);if(isRestoringFocus())e.preventDefault()}} className={`icon-button ${className}`} aria-label={label}><Icon name={icon}/></Button>;
  return tooltip ? <Tooltip><TooltipTrigger asChild>{button}</TooltipTrigger><TooltipContent side="bottom" align="center" sideOffset={8} collisionPadding={8} className="app-tooltip">{label}</TooltipContent></Tooltip> : button;
 }

@@ -1,3 +1,4 @@
+import {restoreFocus} from '../state/restoreFocus';
 import {CalendarDragPreview, CalendarDragLabel} from './CalendarDragPreview';
 import {calendarPreviewSegments} from '../../visualization/calendar';
 import {IconButton} from './Icon';
@@ -103,7 +104,7 @@ export function CalendarView({
       const button =
         document.querySelector<HTMLElement>(`[data-focus="more:${old}"]`) ??
         document.querySelector<HTMLElement>('[data-focus="schedule-add"]');
-      if (button && !button.closest("[inert],[hidden]")) button.focus();
+      if (button && !button.closest("[inert],[hidden]")) restoreFocus(button);
       else document.getElementById("editor-name")?.focus();
     });
   };
@@ -153,6 +154,7 @@ export function CalendarView({
                     aria-current={date === today ? "date" : undefined}
                     onClick={() => date && onAddDate?.(date)}
                     data-date={date ?? undefined}
+                    data-focus={date ? `date:${date}` : undefined}
                     className={(inMonth ? "month-date" : "adjacent-date") + (date && date === hoveredDate ? " date-hovered" : "")}
                     key={c}
                   >

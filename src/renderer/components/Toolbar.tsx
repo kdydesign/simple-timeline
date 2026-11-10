@@ -1,3 +1,4 @@
+import {restoreFocus} from '../state/restoreFocus';
 import {useState,useEffect,useRef,type ReactNode} from 'react';
 import {parseBusinessDate} from '../../domain/date';
 import {shiftSelectedDate} from '../state/dateNavigation';
@@ -13,7 +14,7 @@ export function Toolbar({selectedDate,onDate,onInvalid,canEdit,hasProjects,onPro
  useEffect(()=>{setText(selectedDate)},[selectedDate]);
  useEffect(()=>{if(projectsOpen)folder.current?.querySelector<HTMLElement>('.project-popup button')?.focus()},[projectsOpen]);
  const apply=(value:string,origin?:"blur")=>{if(origin==="blur" && value===selectedDate)return;try{onDate(parseBusinessDate(value))}catch{setText(selectedDate);onInvalid()}};
- const closeProjects=(restore:boolean)=>{onProjects(false);if(restore)folder.current?.querySelector<HTMLElement>('[data-project-trigger]')?.focus()};
+ const closeProjects=(restore:boolean)=>{onProjects(false);if(restore)restoreFocus(folder.current?.querySelector<HTMLElement>('[data-project-trigger]'))};
  return <header className="toolbar">
  <span ref={folder} className="project-anchor"><IconButton tooltip icon="folder" label="프로젝트 목록" data-project-trigger aria-expanded={projectsOpen} aria-controls="project-popup" onClick={()=>onProjects(!projectsOpen)}/>
  {projectsOpen&&<Popover id="project-popup" anchor={folder} onClose={closeProjects} label="프로젝트 목록" role="region" className="project-popup" width={290} height={442}>

@@ -1,3 +1,4 @@
+import {restoreFocus} from './state/restoreFocus';
 import {normalizeReminder} from '../domain/reminder';
 import {useReminders} from './state/useReminders';
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
@@ -119,7 +120,7 @@ export function App({
             : '[data-focus="project-add"]',
         );
       focusTarget.current = null;
-      if (target && !target.matches(":disabled")) target.focus();
+      if (target && !target.matches(":disabled")) restoreFocus(target);
       else document.querySelector<HTMLElement>("[data-focus=refresh]")?.focus();
     }
   }, [model]);
@@ -135,7 +136,7 @@ export function App({
   const cancelConfirm = () => {
     setConfirmation(null);
     requestAnimationFrame(() => {
-      if (dialogCaller.current?.isConnected) dialogCaller.current.focus();
+      if (dialogCaller.current?.isConnected) restoreFocus(dialogCaller.current);
       else document.getElementById("editor-name")?.focus();
     });
   };
@@ -143,7 +144,7 @@ export function App({
     focusTarget.current =
       model?.caller?.dataset.returnFocus ??
       model?.caller?.dataset.focus ??
-      "project-add";
+      (model?.kind === "schedule" ? "schedule-add" : "project-add");
     editor.close();
     setFormError(null);
   };
@@ -297,7 +298,10 @@ export function App({
     const projects = timeline.snapshot?.projects ?? [];
     const project = projects.find(p => p.id === (projectId ?? recentProject.current)) ?? projects[0];
     if (!project) { setSelectedDate(date); setMonth(monthOf(date)); setFormError({code:"VALIDATION_ERROR", message:"먼저 프로젝트를 추가해 주세요."}); return; }
-    request(caller => {setSelectedDate(date); setMonth(monthOf(date)); editor.openSchedule(monthOf(date), project.id, undefined, caller, date)});
+    request(() => {
+      const origin=document.querySelector<HTMLElement>(mode === 'calendar' ? `.calendar [data-date="${date}"]` : `.gantt [data-day="${date}"]`);
+      setSelectedDate(date); setMonth(monthOf(date)); editor.openSchedule(monthOf(date), project.id, undefined, origin, date);
+    });
   };
   const navigateDate = (date:string) => {
     setSelectedDate(date);
@@ -390,6 +394,7 @@ export function App({
       {!(narrow && model) && statusView}
       <div className="workspace">
         <main
+          className={mode === "gantt" ? "gantt-workspace" : undefined}
           aria-hidden={!!confirmation || (narrow && !!model)}
           inert={!!confirmation || (narrow && !!model)}
           aria-label="프로젝트와 일정"
