@@ -1,4 +1,4 @@
-import {it,expect} from 'vitest'
+import {it,expect,vi} from 'vitest'
 import {render,screen,waitFor,act,within,fireEvent} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {App} from '../../src/renderer/App'
@@ -12,6 +12,47 @@ it.each([false,true])('focuses a usable setting and restores the previous target
 });
 it('returns a nested confirmation cancel to its actual setting initiator',async()=>{
  const u=userEvent.setup(),f=sharingFixture({role:'member'});render(<App api={memoryApi().api}/>);await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled());await act(async()=>f.emit({settingsRequestToken:'nested-settings'}));const dialog=await screen.findByRole('dialog',{name:'공유 설정'}),disconnect=within(dialog).getByRole('button',{name:'연결 해제'});await u.click(disconnect);const confirmation=screen.getByRole('alertdialog');await u.click(within(confirmation).getByRole('button',{name:'취소'}));await waitFor(()=>expect(disconnect).toHaveFocus());expect(dialog).toBeVisible();
+});
+
+it.each([
+ {order:'parent-first',dirty:false},{order:'child-first',dirty:false},
+ {order:'parent-first',dirty:true},{order:'child-first',dirty:true},
+])('Escape cancels only the inner confirmation during a $order capture-listener handoff (dirty=$dirty)',async({order,dirty})=>{
+ const u=userEvent.setup(),f=sharingFixture({role:'member'});
+ const add=document.addEventListener.bind(document),remove=document.removeEventListener.bind(document);
+ const listeners=new Set<EventListenerOrEventListenerObject>();
+ const adding=vi.spyOn(document,'addEventListener').mockImplementation((type,listener,options)=>{
+  if(type==='keydown'&&typeof options==='object'&&options.capture)listeners.add(listener);
+  add(type,listener,options);
+ });
+ let retain=false;const parents=new Set<EventListenerOrEventListenerObject>();
+ const removing=vi.spyOn(document,'removeEventListener').mockImplementation((type,listener,options)=>{
+  if(retain&&type==='keydown'&&parents.has(listener))return;
+  remove(type,listener,options);
+ });
+ try{
+  render(<App api={memoryApi().api}/>);await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled());
+  await act(async()=>f.emit({settingsRequestToken:'escape-handoff'}));
+  const dialog=await screen.findByRole('dialog',{name:'공유 설정'}),disconnect=within(dialog).getByRole('button',{name:'연결 해제'});
+  if(dirty){await u.clear(within(dialog).getByLabelText('포트'));await u.type(within(dialog).getByLabelText('포트'),'47832')}
+  // Keep the already registered parent listener for this dispatch, as can happen
+  // before Radix's passive effect removes it after the child becomes visible.
+  for(const listener of listeners)parents.add(listener);retain=true;
+  await u.click(disconnect);expect(screen.getByRole('alertdialog')).toBeVisible();
+  if(order==='child-first')for(const listener of parents){remove('keydown',listener,{capture:true});add('keydown',listener,{capture:true})}
+  await u.keyboard('{Escape}');
+  expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+  expect(dialog).toBeVisible();await waitFor(()=>expect(disconnect).toHaveFocus());
+  expect(f.api.disconnect).not.toHaveBeenCalled();
+  retain=false;await u.keyboard('{Escape}');
+  if(dirty){
+   expect(screen.getByRole('alertdialog')).toHaveTextContent('설정 변경을 버릴까요?');
+   await u.keyboard('{Escape}');expect(dialog).toBeVisible();expect(within(dialog).getByLabelText('포트')).toHaveValue(47832);
+  }else expect(dialog).not.toBeInTheDocument();
+ }finally{
+  retain=false;adding.mockRestore();removing.mockRestore();
+  for(const listener of listeners)remove('keydown',listener,{capture:true});
+ }
 });
 
 it('returns from initial tray settings to the toolbar when there was no previous focusable target',async()=>{

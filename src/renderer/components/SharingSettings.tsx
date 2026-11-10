@@ -39,9 +39,16 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
  useEffect(()=>{onGuard(dirty);return()=>onGuard(false)},[dirty,onGuard]);
  const ask:Ask=(title,message,label,action)=>{confirmationCaller.current=document.activeElement as HTMLElement|null;setConfirmation({title,message,label,run:()=>{dismissConfirmation();action()}})};
  const close=()=>{if(busy)return;if(dirty)ask('설정 변경을 버릴까요?','저장하지 않은 공유 설정 입력이 사라집니다. 기존 일정 편집은 유지됩니다.','변경 버리기',onClose);else onClose()};
+ const escape=(event:KeyboardEvent)=>{
+  // Radix hands off document capture listeners in a passive effect. A visible
+  // confirmation must own Escape even while the parent's listener is still live.
+  if(event.defaultPrevented)return;
+  event.preventDefault();event.stopImmediatePropagation();
+  if(confirmation)dismissConfirmation();else close();
+ };
  const affected=(id:string)=>state.projects.filter(p=>p.participants.some(v=>v.deviceId===id)).map(p=>projects.find(v=>v.id===p.id)?.name??p.id).join(', ')||'없음';
  const saveAddress=async()=>{const result=await run(()=>state.role==='host'||(state.role==='personal'&&choice==='host')?api.configureHost({address,port:Number(port)}):api.connect({address,port:Number(port)}));if(result.ok)setSavedAddress({address,port})};
- return <><AlertDialog open><AlertDialogContent ref={panel} role="dialog" className="sharing-settings" onOpenAutoFocus={e=>{e.preventDefault();const target=panel.current?.querySelector<HTMLElement>('.sharing-settings-scroll button:not(:disabled),.sharing-settings-scroll input:not(:disabled)');restoreFocus(target??panel.current)}} onEscapeKeyDown={e=>{e.preventDefault();e.stopPropagation();close()}} onCloseAutoFocus={e=>{
+ return <><AlertDialog open><AlertDialogContent ref={panel} role="dialog" className="sharing-settings" onOpenAutoFocus={e=>{e.preventDefault();const target=panel.current?.querySelector<HTMLElement>('.sharing-settings-scroll button:not(:disabled),.sharing-settings-scroll input:not(:disabled)');restoreFocus(target??panel.current)}} onEscapeKeyDown={escape} onCloseAutoFocus={e=>{
   e.preventDefault();
   const original=returnTarget.current;
   const target=original?.isConnected&&original.tabIndex>=0&&!original.closest('[inert],[hidden]')&&!original.matches(':disabled')?original:[...document.querySelectorAll<HTMLElement>('#editor-name,[aria-label="편집 닫기"],[data-focus="project-add"]')].find(el=>!el.closest('[inert],[hidden]')&&!el.matches(':disabled'));

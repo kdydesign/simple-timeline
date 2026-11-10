@@ -108,6 +108,15 @@ Task5 기록 당시 source tree는 기준 commit `78041573e072e3d84bf4951e071c89
 정식 기대 버전은 package/lock 모두0.6.0이다. 설치본·manifest·SHA256·artifact 형식은 기존 [배포 정책](../release/policy.md)·[사용 안내](../release/user-guide.md)를 따른다.
 기존 appId·프로필 경로·비승격 per-user NSIS·제거 후 보존·오프라인 개인 사용은 유지한다.
 
+## 정확한 SHA의 CI 실패와 보정
+
+최초 push SHA `eb3e119181e154b8d06f91c2fa37e7df5644021d`의 [Application run42795112183](https://github.com/kdydesign/simple-timeline/actions/runs/42795112183)은 Windows/Linux 모두 실패했다. 이전 로컬 통과 기록은 보존하며 이를 해당 SHA의 CI 성공으로 해석하지 않는다.
+
+- Windows native 검사는 `secrets.ts`의 `fsync`에서 `EPERM`으로 실패했다. 임시 암호문을 `wx`로 작성한 뒤 `r`로 다시 열어 flush한 것이 원인이다. [Microsoft FlushFileBuffers](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-flushfilebuffers)는 `GENERIC_WRITE` 권한을 요구하고, [libuv Windows 구현](https://github.com/libuv/libuv/blob/v1.x/src/win/fs.c)은 fsync에서 이 API를 사용한다. 다시 여는 flag만 `r+`로 바꿔 기존 바이트를 보존한다. 암호화 후 epoch fence, 배타 생성·0600 권한, sync-before-rename, 실패 시 partial 제거는 유지한다. Linux 실제 파일 IO에 Windows의 writable-handle flush 조건을 부과한 회귀2개는 수정 전 실패했고 수정 후 통과했다. 교체 실패 시 이전 자격 파일 보존·partial 제거도 확인한다. 이 조건 주입 시험은 실제 Windows 실행 증거가 아니다.
+- Linux Electron E2E는 공유 설정에서 Enter로 연 연결 해제 확인을 Escape로 취소한 뒤 호출자 포커스를 확인하는 지점에서 실패했다. 설정창 자체가 사라졌고 다른67개는 통과했다. Radix는 최상위 document capture listener를 passive effect에서 교체하므로 확인창이 보일 때 부모 listener가 잠시 남을 수 있다. 같은 document의 listener에는 stopPropagation만으로 전파가 차단되지 않으며, Radix는 이미 defaultPrevented인 이벤트에도 사용자 onEscapeKeyDown을 호출한다. 부모는 소비된 이벤트를 무시하고, 자신이 받으면 stopImmediatePropagation으로 한 번 소비한 뒤 현재 확인창을 취소한다. 확인창이 없을 때만 기존 닫기·dirty 보호를 수행한다. 실제 Radix/React를 유지하고 부모 listener 제거만 지연한 회귀4개는 부모 먼저/자식 먼저 × clean/dirty에서 원래 handler로 모두 실패하고 수정 후 모두 통과했다. 확인창만 취소·호출자 복귀·disconnect 미실행·후속 Escape의 clean 닫기/dirty 보존을 검사한다. sleep·재시도·assertion 제거는 추가하지 않았다.
+
+보정의 RED/GREEN·명령 로그와 원본 CI 실패 로그는 ignored `artifacts/lan-sharing-acceptance/ci-fix-logs`에 보존한다. 타입·production build, native41/41과 실제 두 프로필 Electron 공유 E2E2/2를 순차 실행해 통과했다. 보정 뒤 `DISPLAY=:94 npm run verify:app`은2026-11-10 10:07:48~10:12:03 UTC에7/7 통과했다. release15/15, UTC/New_York/Seoul별 unit106/106, UI110/110, native41/41, sandbox Electron E2E68/68(2.3분)이며 skipped·flaky·실패는0이다. UI 로그에는 React act/suspended 경고가 없다. Linux x64/Node24.22.1/Electron45.2.1/UID1000·기존 Xorg94와 개별 deadline을 유지했다. 실행 source는 `eb3e119181e154b8d06f91c2fa37e7df5644021d` 위의 dirty 작업이며, 후속 커밋의 clean-SHA 실행 증거로 바꾸지 않는다. 앱/native/E2E 구조화 결과·스크린샷은 `artifacts/lan-sharing-acceptance/ci-fix-*`에 별도 보존했다. Windows 보정은 다음 정확한 SHA의 CI에서 별도로 확인하며 실제 DPAPI·Windows11·회사망 인수를 대신하지 않는다.
+
 ## 남은 실제 Windows 11·회사 PC 인수
 
 - 정확한 installer SHA/manifest를 기록하고 실제 사용자 safeStorage/DPAPI, 회사 방화벽·등록 소스 IP, 주소 변경과 TLS 신원을 확인한다.

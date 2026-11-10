@@ -30,7 +30,8 @@ export function createProtectedSecrets(profile:string,vault:SecretVault){
     const temporary=dest+'.'+secretRef()+'.partial'
     try{
       writeFileSync(temporary,encrypted,{flag:'wx',mode:0o600})
-      const fd=openSync(temporary,'r');try{fsyncSync(fd)}finally{closeSync(fd)}
+      // Windows FlushFileBuffers requires a writable handle; r+ preserves the bytes.
+      const fd=openSync(temporary,'r+');try{fsyncSync(fd)}finally{closeSync(fd)}
       renameSync(temporary,dest)
     }finally{rmSync(temporary,{force:true})}
   }
