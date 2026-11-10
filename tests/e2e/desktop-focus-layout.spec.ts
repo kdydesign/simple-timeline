@@ -35,3 +35,12 @@ test('Gantt navigation stays at the viewport bottom in tall and short windows wi
   await p.screenshot({path:test.info().outputPath(`gantt-${height}.png`)})
  }
 })
+test('a date origin removed by month navigation falls back to schedule add',async({desktop:{page:p}})=>{
+ await p.setViewportSize({width:1280,height:900});await choose(p,'2026-12-01')
+ await p.getByRole('button',{name:'달력',exact:true}).click()
+ await p.locator('[data-date="2026-12-02"]').click({position:{x:10,y:10}})
+ await p.getByRole('button',{name:'다음 달',exact:true}).click()
+ await p.getByRole('button',{name:'편집 닫기',exact:true}).click()
+ await expect(p.locator('[data-focus="schedule-add"]')).toBeFocused()
+ await expect(p.getByRole('tooltip')).toHaveCount(0)
+})

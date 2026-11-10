@@ -12,6 +12,7 @@ interface Base {
   id?: string;
   saved: boolean;
   caller: HTMLElement | null;
+  returnFocus?: string;
 }
 export type Editor = Base &
   (
@@ -38,6 +39,7 @@ export function useEditor() {
       draft,
       original: structuredClone(draft),
       caller,
+      returnFocus: caller?.dataset.returnFocus ?? caller?.dataset.focus,
     });
   };
   const openSchedule = (
@@ -69,6 +71,7 @@ export function useEditor() {
       draft,
       original: structuredClone(draft),
       caller,
+      returnFocus: caller?.dataset.returnFocus ?? caller?.dataset.focus,
     });
   };
   const patch = (update: Partial<ProjectInput & ScheduleInput>) =>

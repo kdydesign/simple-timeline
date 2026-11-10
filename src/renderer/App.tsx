@@ -115,7 +115,7 @@ export function App({
       const target =
         found ??
         document.querySelector<HTMLElement>(
-          key.startsWith("schedule:") || key.startsWith("more:")
+          key.startsWith("schedule:") || key.startsWith("more:") || key.startsWith("date:")
             ? '[data-focus="schedule-add"]'
             : '[data-focus="project-add"]',
         );
@@ -142,8 +142,7 @@ export function App({
   };
   const close = () => {
     focusTarget.current =
-      model?.caller?.dataset.returnFocus ??
-      model?.caller?.dataset.focus ??
+      model?.returnFocus ??
       (model?.kind === "schedule" ? "schedule-add" : "project-add");
     editor.close();
     setFormError(null);

@@ -38,7 +38,7 @@ test('Planrail rename preserves installer identity and offers directory selectio
  assert.match(c.artifactName,/^Planrail-/)
  assert.equal(c.appId,'com.kdydesign.simpletimeline')
  assert.equal(pkg.name,'simple-timeline')
- assert.equal(pkg.version,'0.4.0')
+ assert.equal(pkg.version,'0.5.0')
  assert.equal(c.nsis.include,'scripts/release/installer.nsh')
  assert.notEqual(c.nsis.allowToChangeInstallationDirectory,true)
  assert.equal(c.nsis.packElevateHelper,false)
