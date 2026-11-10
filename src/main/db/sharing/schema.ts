@@ -11,9 +11,10 @@ export function addSharing(db: DatabaseHandle): void {
     address TEXT, port INTEGER NOT NULL DEFAULT 47831 CHECK(port BETWEEN 1 AND 65535),
     hosting_enabled INTEGER NOT NULL DEFAULT 0 CHECK(hosting_enabled IN (0,1)),
     remote_host_id TEXT, remote_dataset_id TEXT, certificate_pin TEXT, credential_ref TEXT,
-    certificate_ref TEXT, private_key_ref TEXT,
+    certificate_ref TEXT, private_key_ref TEXT, pending_credential_delete_ref TEXT,
     CHECK((role='personal') OR role=role_history),
-    CHECK(hosting_enabled=0 OR role='host')
+    CHECK(hosting_enabled=0 OR role='host'),
+    CHECK(pending_credential_delete_ref IS NULL OR (role='personal' AND credential_ref IS NULL))
   ) STRICT;
   CREATE TABLE sharing_devices (
     id TEXT PRIMARY KEY, name TEXT NOT NULL CHECK(length(trim(name))>0 AND name=trim(name)),

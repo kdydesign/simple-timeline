@@ -101,6 +101,11 @@ export const cases:NativeCase[]=[
  assert.throws(()=>store.connectMember({address:'192.168.1.3',port:47831,hostId,datasetId,certificatePin:'new-pin',credentialRef:'new-ref'}))
  assert.equal(store.getConfig().certificatePin,'old-pin')
  store.disconnectMember({confirmed:true})
+ assert.equal(store.getConfig().pendingCredentialDeleteRef,'old-ref')
+ assert.throws(()=>store.completeCredentialDeletion('wrong-ref'))
+ assert.throws(()=>store.connectMember({address:'192.168.1.3',port:47831,hostId,datasetId,certificatePin:'new-pin',credentialRef:'new-ref'}))
+ assert.throws(()=>db.prepare("UPDATE sharing_config SET role='member',credential_ref='revived'").run())
+ store.completeCredentialDeletion('old-ref')
  store.connectMember({address:'192.168.1.3',port:47831,hostId,datasetId,certificatePin:'new-pin',credentialRef:'new-ref'})
  assert.equal(store.getConfig().certificatePin,'new-pin')
 }},

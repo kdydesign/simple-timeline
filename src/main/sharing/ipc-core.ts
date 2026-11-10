@@ -1,3 +1,4 @@
+import {CredentialCleanupError} from './secrets'
 import type {SharingService} from './service'
 import {DomainValidationError} from '../../domain/error'
 import {normalizeIPv4,validatePort,parseSharedId} from '../../domain/sharing'
@@ -42,5 +43,5 @@ export async function dispatchSharing(service:SharingService|undefined,args:unkn
     if(command==='saveReminder'){parseSharedId(v.id as string);object(v.reminder,['daysBefore','time','start','end'])}
     const handler=service[command as keyof SharingService] as (input:unknown)=>unknown
     const data=await handler(value);JSON.stringify(data);return {ok:true,data}
-  }catch(error){return {ok:false,error:toPublicError(error)}}
+  }catch(error){return {ok:false,error:error instanceof CredentialCleanupError?{code:error.code,message:error.message}:toPublicError(error)}}
 }

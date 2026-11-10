@@ -21,6 +21,7 @@ export const sharingChanged = 'sharing:changed'
 export interface SharingState {
   availableAddresses: string[]
   snapshotRevision: number
+  cleanupPending: boolean
   role: SharingRole
   roleHistory: 'host' | 'member' | null
   address: string | null

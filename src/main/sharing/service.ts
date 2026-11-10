@@ -9,7 +9,7 @@ import {normalizeIPv4,validatePort} from '../../domain/sharing'
 import {failure} from '../errors'
 import {createSharingRepository} from './repository'
 import {createSyncController} from './sync'
-import {electronSecrets,secretRef,type ProtectedSecrets} from './secrets'
+import {electronSecrets,secretRef,CredentialCleanupError,type ProtectedSecrets} from './secrets'
 import {createHostIdentity,hostServerName,certificatePin,type HostIdentity} from './identity'
 import {discoverHost,SharingNetworkError,type HostTrust} from './transport'
 import {createSharingHost,type PendingPair} from './host'
@@ -28,7 +28,8 @@ interface Options {
 }
 export function createSharingService(o:Options){
   const store=createSharingStore(o.storage.db),transport={...productionTransport,...o.transport},clock=o.clock??(()=>performance.now())
-  let snapshotRevision=0,epoch=0,disposed=false,suspended=false,status:SharingState['status']=store.getConfig().role==='personal'?'personal':'stopped',message='',lastCheckedAt:string|null=null
+  const initial=store.getConfig()
+  let snapshotRevision=0,epoch=0,disposed=false,suspended=false,status:SharingState['status']=initial.pendingCredentialDeleteRef?'error':initial.role==='personal'?'personal':'stopped',message=initial.pendingCredentialDeleteRef?new CredentialCleanupError().message:'',lastCheckedAt:string|null=null
   let pendingPair:PendingPair|null=null,settingsRequestToken:string|null=null
   let clientCommand:<T>(operation:(signal:AbortSignal)=>Promise<T>)=>Promise<T>
   let host:ReturnType<typeof createSharingHost>|undefined,client:ReturnType<SharingTransport['client']>|undefined,syncController:ReturnType<typeof createSyncController>|undefined
@@ -38,7 +39,7 @@ export function createSharingService(o:Options){
   const check=(generation:number)=>{if(!current(generation))throw failure('FORBIDDEN')}
   function getState():SharingState{
     const c=store.getConfig()
-    return {snapshotRevision,role:c.role,roleHistory:c.roleHistory,address:c.address,port:c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
+    return {snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:c.address,port:c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
       pendingPair:pendingPair?{pairId:pendingPair.pairId,fingerprint:pendingPair.fingerprint,expiresAt:pendingPair.expiresAt}:null,
       pendingPairs:host?.pending()??[],devices:c.role==='host'?store.listDevices():[],projects:c.role==='host'?store.listSharedProjects():[],settingsRequestToken,
       availableAddresses:transport.interfaces(),
@@ -47,7 +48,7 @@ export function createSharingService(o:Options){
   function changed(){if(disposed)return;try{o.changed(getState())}catch{/* An unavailable renderer does not alter committed state. */}}
   function setStatus(value:SharingState['status'],error?:unknown){
     status=value
-    message=error instanceof SharingNetworkError?error.message:error?'공유 연결을 확인하지 못했습니다. 주소·승인·보호 저장소를 확인하고 다시 연결해 주세요.':''
+    message=error instanceof SharingNetworkError||error instanceof CredentialCleanupError?error.message:error?'공유 연결을 확인하지 못했습니다. 주소·승인·보호 저장소를 확인하고 다시 연결해 주세요.':''
     if(value==='connected')lastCheckedAt=new Date().toISOString()
     changed()
   }
@@ -109,10 +110,19 @@ export function createSharingService(o:Options){
     clientFor(saved.trust,{address:c.address!,port:c.port},generation,saved)
     await syncController!.refresh(true)
   }
+  async function cleanupCredential(generation:number){
+    const ref=store.getConfig().pendingCredentialDeleteRef
+    if(!ref)return
+    try{
+      const vault=await secrets();check(generation)
+      vault.remove(ref);check(generation)
+      store.completeCredentialDeletion(ref)
+    }catch(error){if(!current(generation))throw error;throw new CredentialCleanupError()}
+  }
   async function launch(){
     if(disposed||suspended)return
     const generation=epoch,c=store.getConfig()
-    try{if(c.role==='host'&&c.hostingEnabled){setStatus('connecting');await startHost(generation)}else if(c.role==='member'){setStatus('connecting');await startMember(generation)}else setStatus(c.role==='personal'?'personal':'stopped')}
+    try{await cleanupCredential(generation);check(generation);if(c.role==='host'&&c.hostingEnabled){setStatus('connecting');await startHost(generation)}else if(c.role==='member'){setStatus('connecting');await startMember(generation)}else setStatus(c.role==='personal'?'personal':'stopped')}
     catch(error){if(current(generation))setStatus('error',error)}
   }
   function start(){if(!starting){const task=launch().finally(()=>{if(starting===task)starting=undefined});starting=task}return starting}
@@ -131,6 +141,7 @@ export function createSharingService(o:Options){
     const target=address(input),c=store.getConfig(),drain=invalidate(),generation=epoch;await drain;check(generation)
     setStatus('connecting')
     try{
+      await cleanupCredential(generation);check(generation)
       let trust:HostTrust
       if(c.role==='member'){
         const saved=await loadMember(generation);check(generation)
@@ -168,9 +179,9 @@ export function createSharingService(o:Options){
     if(input.confirmed!==true||disposed||store.getConfig().role==='host')throw failure('FORBIDDEN')
     const drain=invalidate(),generation=epoch;await drain;check(generation)
     const c=store.getConfig()
-    // Clear the reference/cache first so cleanup failure cannot reactivate a credential.
+    // Atomically detach active credentials/cache and retain a durable non-active deletion obligation.
     if(c.role==='member'){store.disconnectMember(input);snapshotRevision++}
-    try{if(c.credentialRef){const vault=await secrets();check(generation);vault.remove(c.credentialRef)}}
+    try{await cleanupCredential(generation)}
     catch(error){if(current(generation))setStatus('error',error);throw error}
     check(generation);lastCheckedAt=null;setStatus('personal');return getState()
   }

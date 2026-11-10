@@ -2,6 +2,10 @@ import {randomBytes} from 'node:crypto'
 import {mkdirSync,readFileSync,writeFileSync,renameSync,rmSync,openSync,fsyncSync,closeSync} from 'node:fs'
 import {join} from 'node:path'
 import {failure} from '../errors'
+export class CredentialCleanupError extends Error {
+  readonly code='STORAGE_IO'
+  constructor(){super('공유 자격 파일을 삭제하지 못했습니다. 파일 접근 권한을 확인하고 공유 설정에서 연결 해제를 다시 시도해 주세요.')}
+}
 export interface SecretVault {
   isAsyncEncryptionAvailable():Promise<boolean>
   getSelectedStorageBackend():string

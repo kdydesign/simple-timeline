@@ -9,7 +9,7 @@ export interface SharingConfig {
   hostId:string; datasetId:string; role:SharingRole; roleHistory:'host'|'member'|null
   address:string|null; port:number; hostingEnabled:boolean
   remoteHostId:string|null; remoteDatasetId:string|null; certificatePin:string|null
-  credentialRef:string|null; certificateRef:string|null; privateKeyRef:string|null
+  credentialRef:string|null; pendingCredentialDeleteRef:string|null; certificateRef:string|null; privateKeyRef:string|null
 }
 export interface MemberConnection extends SharingAddress { hostId:string; datasetId:string; certificatePin:string; credentialRef:string }
 export interface CredentialRecord { hash:string; deviceId:string; status:'pending'|'active'|'revoked' }
@@ -30,7 +30,7 @@ export function createSharingStore(db:DatabaseHandle) {
     const hostId=validateSharingIdentity(r.host_id),datasetId=validateSharingIdentity(r.dataset_id)
     if(r.remote_host_id!==null)validateSharingIdentity(r.remote_host_id)
     if(r.remote_dataset_id!==null)validateSharingIdentity(r.remote_dataset_id)
-    return {hostId,datasetId,role:r.role as SharingRole,roleHistory:r.role_history as SharingConfig['roleHistory'],address:r.address as string|null,port:Number(r.port),hostingEnabled:!!r.hosting_enabled,remoteHostId:r.remote_host_id as string|null,remoteDatasetId:r.remote_dataset_id as string|null,certificatePin:r.certificate_pin as string|null,credentialRef:r.credential_ref as string|null,certificateRef:r.certificate_ref as string|null,privateKeyRef:r.private_key_ref as string|null}
+    return {hostId,datasetId,role:r.role as SharingRole,roleHistory:r.role_history as SharingConfig['roleHistory'],address:r.address as string|null,port:Number(r.port),hostingEnabled:!!r.hosting_enabled,remoteHostId:r.remote_host_id as string|null,remoteDatasetId:r.remote_dataset_id as string|null,certificatePin:r.certificate_pin as string|null,credentialRef:r.credential_ref as string|null,pendingCredentialDeleteRef:r.pending_credential_delete_ref as string|null,certificateRef:r.certificate_ref as string|null,privateKeyRef:r.private_key_ref as string|null}
   }
   // Missing metadata is corruption, never a trigger to generate another identity.
   getConfig()
@@ -78,6 +78,7 @@ export function createSharingStore(db:DatabaseHandle) {
     connectMember:db.transaction((input:MemberConnection)=>{
       const c=getConfig()
       if(c.roleHistory==='host')throw new Error('SHARING_ROLE_FORBIDDEN')
+      if(c.pendingCredentialDeleteRef)throw new Error('SHARING_CREDENTIAL_DELETE_PENDING')
       const address=normalizeIPv4(input.address),port=validatePort(input.port),hostId=validateSharingIdentity(input.hostId),datasetId=validateSharingIdentity(input.datasetId)
       const pin=requiredText(input.certificatePin,'certificatePin'),credentialRef=requiredText(input.credentialRef,'credentialRef')
       if(c.remoteHostId && c.remoteHostId!==hostId)throw new Error('SHARING_HOST_MISMATCH')
@@ -90,7 +91,14 @@ export function createSharingStore(db:DatabaseHandle) {
       if(input.confirmed!==true)throw new DomainValidationError('confirmed')
       if(getConfig().role!=='member')throw new Error('SHARING_ROLE_FORBIDDEN')
       cache.clear()
-      db.prepare("UPDATE sharing_config SET role='personal',hosting_enabled=0,remote_dataset_id=NULL,credential_ref=NULL WHERE singleton=1").run()
+      db.prepare("UPDATE sharing_config SET role='personal',hosting_enabled=0,remote_dataset_id=NULL,pending_credential_delete_ref=COALESCE(credential_ref,pending_credential_delete_ref),credential_ref=NULL WHERE singleton=1").run()
+      return getConfig()
+    }),
+    completeCredentialDeletion:db.transaction((ref:string)=>{
+      requiredText(ref,'credentialRef')
+      const c=getConfig()
+      if(c.role!=='personal'||c.credentialRef!==null||c.pendingCredentialDeleteRef!==ref)throw new Error('SHARING_CREDENTIAL_DELETE_MISMATCH')
+      db.prepare('UPDATE sharing_config SET pending_credential_delete_ref=NULL WHERE singleton=1').run()
       return getConfig()
     }),
     saveDevice:db.transaction((input:{id?:string;name:string;ip:string;installationId?:string})=>{

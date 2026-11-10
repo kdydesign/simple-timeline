@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import {openDatabase,createRepository} from '../../src/main/db/repository'
 import {setup,type NativeCase} from './helpers'
 import {createSharingStore} from '../../src/main/db/sharing/store'
 import {createSharingService} from '../../src/main/sharing/service'
@@ -16,6 +17,45 @@ function deferred<T>(){let resolve!:(v:T)=>void;const promise=new Promise<T>(r=>
 const pair={pairId:'pair',deviceId:'device',name:'Member',ip:'127.0.0.1',fingerprint:'F'.repeat(64),expiresAt:new Date(Date.now()+300000).toISOString()}
 const vault={isAsyncEncryptionAvailable:async()=>true,getSelectedStorageBackend:()=> 'kwallet',encryptStringAsync:async(v:string)=>Buffer.from(v),decryptStringAsync:async(v:Buffer)=>({result:v.toString(),shouldReEncrypt:false})}
 export const cases:NativeCase[]=[
+ {name:'failed credential deletion remains non-active and is retried on the next disconnect',async run(ctx){
+  const {db,repo}=setup(ctx),store=createSharingStore(db),protectedSecrets=createProtectedSecrets(ctx.tempDir,vault),ref='d'.repeat(32)
+  await protectedSecrets.write(ref,{token:'must never authenticate'},()=>true)
+  store.connectMember({address:'127.0.0.1',port:47831,hostId,datasetId,certificatePin:'pin',credentialRef:ref})
+  let removes=0,network=0
+  const service=createSharingService({storage:{state:'ready',db,repository:repo},profile:ctx.tempDir,changed:()=>{},secrets:async()=>({...protectedSecrets,remove:id=>{removes++;if(removes===1)throw Object.assign(Error('locked'),{code:'EACCES'});protectedSecrets.remove(id)}}),transport:{discover:async()=>{network++;throw Error('must not authenticate')}}})
+  try{
+   await assert.rejects(service.disconnect({confirmed:true}));assert.equal(store.getConfig().credentialRef,null);assert.equal(store.getConfig().pendingCredentialDeleteRef,ref)
+   assert.equal(service.getState().status,'error');assert.equal(service.getState().cleanupPending,true);assert.equal(JSON.stringify(service.getState()).includes(ref),false);assert.match(service.getState().message,/연결 해제.*다시/);assert(existsSync(join(ctx.tempDir,'sharing-secrets',ref)))
+   assert.equal(service.memberSnapshot().schedules.length,0);assert.equal(await service.authorizeReminder(),false)
+   assert.throws(()=>store.connectMember({address:'127.0.0.1',port:47831,hostId,datasetId,certificatePin:'pin',credentialRef:ref}))
+   assert.equal(service.repository.createProject({name:'Still personal',color:'#2563EB',participants:[]}).name,'Still personal')
+   const state=await service.disconnect({confirmed:true});assert.equal(state.status,'personal');assert.equal(state.cleanupPending,false);assert.equal(removes,2);assert.equal(network,0);assert.equal(store.getConfig().pendingCredentialDeleteRef,null);assert.equal(existsSync(join(ctx.tempDir,'sharing-secrets',ref)),false)
+  }finally{await service.dispose()}
+ }},
+ {name:'credential deletion obligation survives database reopen and startup retries without network authentication',async run(ctx){
+  const first=setup(ctx),ref='e'.repeat(32),protectedSecrets=createProtectedSecrets(ctx.tempDir,vault),store=createSharingStore(first.db)
+  await protectedSecrets.write(ref,{token:'old'},()=>true);store.connectMember({address:'127.0.0.1',port:47831,hostId,datasetId,certificatePin:'pin',credentialRef:ref})
+  let removes=0,network=0
+  const secrets=async()=>({...protectedSecrets,remove:(id:string)=>{removes++;if(removes<3)throw Object.assign(Error('locked'),{code:'EACCES'});protectedSecrets.remove(id)}})
+  const transport={discover:async()=>{network++;throw Error('must not authenticate')},client:()=>{network++;throw Error('must not authenticate')}}
+  const original=createSharingService({storage:{state:'ready',db:first.db,repository:first.repo},profile:ctx.tempDir,changed:()=>{},secrets,transport})
+  await assert.rejects(original.disconnect({confirmed:true}));await original.dispose();first.db.close()
+  const db=openDatabase(first.file,true);ctx.defer(()=>{if(db.open)db.close()});const repository=createRepository(db)
+  const failedRestart=createSharingService({storage:{state:'ready',db,repository},profile:ctx.tempDir,changed:()=>{},secrets,transport})
+  assert.equal(failedRestart.getState().cleanupPending,true);await failedRestart.start();assert.equal(failedRestart.getState().cleanupPending,true);assert.equal(failedRestart.getState().status,'error');assert.match(failedRestart.getState().message,/연결 해제.*다시/);assert.equal(createSharingStore(db).getConfig().pendingCredentialDeleteRef,ref);assert.equal(createSharingStore(db).getConfig().credentialRef,null);await failedRestart.dispose()
+  const successfulRestart=createSharingService({storage:{state:'ready',db,repository},profile:ctx.tempDir,changed:()=>{},secrets,transport})
+  await successfulRestart.start();assert.equal(successfulRestart.getState().status,'personal');assert.equal(successfulRestart.getState().cleanupPending,false);assert.equal(removes,3);assert.equal(network,0);assert.equal(createSharingStore(db).getConfig().pendingCredentialDeleteRef,null);assert.equal(existsSync(join(ctx.tempDir,'sharing-secrets',ref)),false);await successfulRestart.dispose()
+ }},
+ {name:'a disposed startup cannot clear pending deletion after its awaited vault resolves',async run(ctx){
+  const {db,repo}=setup(ctx),store=createSharingStore(db),ref='f'.repeat(32),protectedSecrets=createProtectedSecrets(ctx.tempDir,vault)
+  await protectedSecrets.write(ref,{token:'old'},()=>true);store.connectMember({address:'127.0.0.1',port:47831,hostId,datasetId,certificatePin:'pin',credentialRef:ref})
+  const first=createSharingService({storage:{state:'ready',db,repository:repo},profile:ctx.tempDir,changed:()=>{},secrets:async()=>({...protectedSecrets,remove:()=>{throw Error('locked')}})})
+  await assert.rejects(first.disconnect({confirmed:true}));await first.dispose();assert.equal(store.getConfig().pendingCredentialDeleteRef,ref)
+  const delayed=deferred<typeof protectedSecrets>(),began=deferred<void>();let removes=0
+  const stale=createSharingService({storage:{state:'ready',db,repository:repo},profile:ctx.tempDir,changed:()=>{},secrets:()=>{began.resolve();return delayed.promise}})
+  const pending=stale.start();await began.promise;await stale.dispose();delayed.resolve({...protectedSecrets,remove:id=>{removes++;protectedSecrets.remove(id)}});await pending
+  assert.equal(removes,0);assert.equal(store.getConfig().pendingCredentialDeleteRef,ref);assert.equal(store.getConfig().credentialRef,null);assert(existsSync(join(ctx.tempDir,'sharing-secrets',ref)))
+ }},
  {name:'disconnect fences a delayed pairing result before publishing pending DTO state',async run(ctx){
   const {db,repo}=setup(ctx),late=deferred<typeof pair>(),began=deferred<void>()
   const service=createSharingService({storage:{state:'ready',db,repository:repo},profile:ctx.tempDir,changed:()=>{},transport:{discover:async()=>({hostId,serverName:'host',certificate:'cert',pin:'pin'}),client:()=>({beginPair:()=>{began.resolve();return late.promise},confirmPair:async()=>({kind:'pending',pair}),poll:async()=>({kind:'pending',pair}),close:()=>{}})}})
