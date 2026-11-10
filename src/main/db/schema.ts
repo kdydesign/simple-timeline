@@ -1,5 +1,5 @@
 import type { DatabaseHandle } from './repository'
-const dateCheck = (col: string) =>
+export const dateCheck = (col: string) =>
   `length(${col})=10 AND ${col} GLOB '[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]' AND substr(${col},1,4) BETWEEN '0001' AND '9999' AND CAST(substr(${col},6,2) AS INTEGER) BETWEEN 1 AND 12 AND CAST(substr(${col},9,2) AS INTEGER) BETWEEN 1 AND CASE CAST(substr(${col},6,2) AS INTEGER) WHEN 2 THEN CASE WHEN CAST(substr(${col},1,4) AS INTEGER)%4=0 AND (CAST(substr(${col},1,4) AS INTEGER)%100!=0 OR CAST(substr(${col},1,4) AS INTEGER)%400=0) THEN 29 ELSE 28 END WHEN 4 THEN 30 WHEN 6 THEN 30 WHEN 9 THEN 30 WHEN 11 THEN 30 ELSE 31 END`
 export function createSchema(db: DatabaseHandle): void {
   db.exec(`

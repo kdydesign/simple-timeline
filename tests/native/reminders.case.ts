@@ -11,7 +11,7 @@ export const cases:NativeCase[]=[{name:'migrates v1 schedules intact, defaults o
  old.db.exec("INSERT INTO projects VALUES(1,'P','#2563EB','t','t'); INSERT INTO schedules VALUES(1,1,'S','2026-11-11','2026-11-11','t','t')")
  old.db.close()
  const current=await initializeStorage(profile);assert.equal(current.state,'ready');if(current.state!=='ready')return
- ctx.defer(()=>current.db.close());assert.equal(current.db.pragma('user_version',{simple:true}),2n)
+ ctx.defer(()=>current.db.close());assert.equal(current.db.pragma('user_version',{simple:true}),3n)
  const s=current.repository.getSnapshot().schedules[0]
  assert.deepEqual(s.reminder,{daysBefore:2,time:'09:00',start:false,end:false});assert.equal(s.id,'1')
  const reminder={...s.reminder,start:true,end:true}

@@ -5,6 +5,7 @@ export interface YearMonth {
   month: number
 }
 export interface Project {
+  sharing?: 'host' | 'member'
   id: Id
   name: string
   color: string
@@ -19,6 +20,7 @@ export interface ReminderSettings {
   end: boolean
 }
 export interface Schedule {
+  sharing?: 'host' | 'member'
   reminder: ReminderSettings
   id: Id
   projectId: Id
