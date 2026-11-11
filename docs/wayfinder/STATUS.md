@@ -1,7 +1,8 @@
 # 진행 상태
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
-최신 후속: 0.6.10 참여자 한 줄 배치·상태 배지 보정. [구현·검증](../implementation/2026-11-11-participant-row.md)을 따른다. [공유 변경 알림](../design/shared-change-notifications.md)은 Q1~Q13 설계 확정이며 미구현이다.
+최신 후속: 0.7.0 공유 변경 알림 구현·로컬 전체 검증 완료. [승인 설계](../design/shared-change-notifications.md)·[구현·검증 기록](../implementation/2026-11-11-shared-change-notifications.md)을 따른다. 기존 MVP 완료 상태를 유지하며 자동 앱 업데이트는 범위 밖이다.
+이전 후속: 0.6.10 참여자 한 줄 배치·상태 배지 보정. [구현·검증](../implementation/2026-11-11-participant-row.md)을 따른다.
 이전 후속: 0.6.9 참여자 필드 검증·삭제와 작은 알림 스위치를 반영했다. [구현·검증](../implementation/2026-11-11-sharing-participants.md)을 따른다.
 이전 후속: 0.6.8 목록 삭제·알림 간편 편집·월 목록·창 숨김·스타일을 반영했다. [구현·검증](../implementation/2026-11-11-quick-actions.md)을 따른다. 최종 SHA·CI 상태는 종료 메시지에서 확인한다.
 이전 후속: 0.6.3 간트 행을 축소하고 시작일·종료일 알림을 스위치로 변경했다. [구현·검증](../implementation/2026-11-10-compact-rows.md)을 따른다. 최종 SHA·CI 상태는 종료 메시지에서 확인한다.

@@ -174,3 +174,14 @@ Linux basic_text backend는 거부한다. 자동 테스트의 격리 AES vault�
 `sharing_devices.deleted`(0/1, 기본 0)를 추가한다. 삭제 시 revoked=1과 deleted=1, 자격 회수, 모든 sharing_recipients 제거를 한 transaction에서 처리한다. 기존 프로젝트·일정·표시용 참여자 이름은 유지한다. 삭제 등록은 목록·공유 대상·신규 승인에서 제외되며 같은 IP는 새 등록·승인으로 다시 사용할 수 있다.
 
 논리 삭제된 내부 PC 식별자·IP·회수된 자격 hash는 구 승인 PC에 `REVOKED`를 응답하기 위해 남긴다. 단순 물리 삭제로 `UNAUTHORIZED`가 되어 멤버 캐시 회수가 누락되는 것을 피한다. 디스크에서 이름/IP의 모든 흔적을 지우는 기능은 아니다. v3→v4는 기존 migration 사본·원자 적용을 따르며 구 버전으로의 다운그레이드는 지원하지 않는다. [native 검증](../../tests/native/sharing.case.ts)은 v3 등록/ACL 보존과 삭제 실패 rollback을 확인한다.
+
+## 공유 변경 알림 schema v5 (0.7.0)
+
+[승인 설계](shared-change-notifications.md)에 따라 [변경 알림 스키마](../../src/main/db/sharing/change-schema.ts)를 추가한다. 전체 기능 연결·검증 결과는 [구현 기록](../implementation/2026-11-11-shared-change-notifications.md)을 따른다.
+
+- `sharing_change_events`는 업무 필드의 전후 값, 수신자, 권한 부여 세대, 순서와 UTC 시각을 보관한다. 개인 변경·색상·알림 설정·표시 참여자명은 제외한다. 프로젝트/일정 삭제 FK에 종속시키지 않으며 최근30일 이후 내용을 정리한다.
+- `sharing_change_grants`, `sharing_change_streams`, `sharing_change_cursors`는 현재 권한 세대, 기록 경계, 수신자·설치본·자격·호스트/dataset에 묶인 불투명 수신 위치를 관리한다. 내부 전역 순번을 다른 PC에 노출하지 않는다. 최소 cursor/전송 식별 메타데이터는 사건 내용의30일 보관 기간과 구분한다.
+- `sharing_change_settings`는 PC 수신 선호(기본 ON), OFF→ON 기준점 대기, 마지막 수신 위치·회수 상태를 유지한다. 명시적 연결 해제는 호스트별 이력을 비우되 PC 선호를 보존한다.
+- `sharing_change_inbox`는 전송 대기·선점·제출·실패·결과 불명·취소와 미선점 프로젝트의 최초 업무 기준을 저장한다. 날짜 알림 전송 이력과 독립하며 삭제된 일정도 중복 억제가 가능하다. 권한 회수 시 이력의 상세 이름/내용은 정리하고 필요한 식별자·처리 상태만 남긴다.
+- 업무 변경과 사건 기록, 멤버 cache/cursor/inbox는 각각 하나의 트랜잭션이다. 내부의 중첩 참여자 교체를 외부 권한 회수로 기록하지 않는다. 송신은 멤버 commit 뒤이며 OS 제출과 DB는 단일 트랜잭션이 아니므로 결과 불명·누락 가능성을 기존 계약대로 표시한다.
+- v4→v5는 기존 백업·원자 migration 경로를 유지한다. v5를 연 프로필은 구버전으로 다운그레이드하지 않는다. metadata가 없으면 빈 기준점을 자동 생성하지 않고 원본을 보존해 차단한다. [native 회귀](../../tests/native/change-notifications.case.ts)가 보존·rollback·재실행 경계를 검사한다.

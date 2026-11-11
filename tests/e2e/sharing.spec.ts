@@ -61,6 +61,49 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await member.page.getByRole('button',{name:'공유',exact:true}).click();await expect(member.page.getByRole('button',{name:'개인 일정 편집',exact:true})).toHaveCount(0);await member.page.getByRole('button',{name:'전체',exact:true}).click();
   await sync.click();await expect(member.page.getByRole('status',{exact:true})).toContainText('동기화했습니다.');
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);
+  // Native callback enters the real fixed bridge; a dirty draft must survive cancellation.
+  const clickChange = async(index:number) => member.app.evaluate((_electron,index)=>new Promise<void>((resolve,reject)=>{
+    setImmediate(()=>{try{(globalThis as any).changeClicks[index]();resolve()}catch(error){reject(error)}});
+  }),index);
+  await member.page.getByRole('button',{name:'달력',exact:true}).click();
+  await member.page.getByRole('button',{name:'개인',exact:true}).click();
+  await member.page.getByRole('button',{name:'일정 추가',exact:true}).click();
+  await member.page.getByLabel('일정 이름',{exact:true}).fill('보존할 초안');
+  await clickChange(1);
+  await expect(member.page.getByRole('alertdialog')).toBeVisible();
+  await member.page.getByRole('button',{name:'계속 편집',exact:true}).click();
+  await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveValue('보존할 초안');
+  await clickChange(1);
+  await member.page.getByRole('button',{name:'변경 버리기',exact:true}).click();
+  await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveValue('공유 변경');
+  await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveAttribute('readonly','');
+  await expect(member.page.getByRole('button',{name:'달력',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(member.page.getByRole('button',{name:'전체',exact:true})).toHaveAttribute('aria-pressed','true');
+  await capture(member,'dark-change-click-readonly-calendar');
+  await member.page.getByRole('button',{name:'편집 닫기',exact:true}).click();
+  await member.page.getByRole('button',{name:'간트',exact:true}).click();
+  // The persisted switch gates OS delivery only; received source data continues updating.
+  m=await settings(member);
+  const changesSwitch=m.getByRole('switch',{name:'공유 변경 알림',exact:true});
+  await expect(changesSwitch).toBeChecked();
+  await capture(member,'dark-change-notification-settings');
+  await changesSwitch.uncheck();
+  await expect.poll(async()=>(await sharingState(member)).changeNotifications?.enabled).toBe(false);
+  await host.page.getByRole('button',{name:'공유 변경 편집',exact:true}).click();
+  await host.page.getByLabel('일정 이름',{exact:true}).fill('수신 꺼짐 중 변경');
+  await host.page.getByRole('button',{name:'저장',exact:true}).click();
+  await expect.poll(async()=>(await snapshot(member)).schedules.find(s=>s.id===remote.id)?.name).toBe('수신 꺼짐 중 변경');
+  expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);
+  await changesSwitch.check();
+  await expect.poll(async()=>(await sharingState(member)).changeNotifications?.enabled).toBe(true);
+  await expect.poll(async()=>(await sharingState(member)).changeNotifications?.baselining).toBe(false);
+  expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);
+  await m.getByRole('button',{name:'공유 설정 닫기'}).click();
+  await host.page.getByRole('button',{name:'수신 꺼짐 중 변경 편집',exact:true}).click();
+  await host.page.getByLabel('일정 이름',{exact:true}).fill('공유 변경');
+  await host.page.getByRole('button',{name:'저장',exact:true}).click();
+  await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(3);
+  expect((await snapshot(member)).schedules.find(s=>s.id===remote.id)?.reminder.start).toBe(true);
   await capture(member,'dark-member-before-connected-toolbar');m=await settings(member);await capture(member,'dark-member-before-connected-settings');await m.getByRole('button',{name:'공유 설정 닫기'}).click();
   await capture(member,'dark-member-connected-toolbar');m=await settings(member);await capture(member,'dark-member-connected-settings');
   // Real modal keyboard focus and nested cancellation restore the initiating control.

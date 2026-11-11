@@ -1,8 +1,8 @@
 # 공유 변경 Windows 알림 설계
 
-상태: **승인된 설계 — Q1~Q12 및 Q13 문서 전체 확정, 미구현**. 2026-11-11.
+상태: **승인된 설계 — Q1~Q12 및 Q13 문서 전체 확정**. 2026-11-11. 이후 사용자가 구현을 요청했으며 현재 [구현·검증 기록](../implementation/2026-11-11-shared-change-notifications.md)에 진행 상태와 검증 범위를 기록한다.
 
-이번 제품 변경인 [참여자 한 줄 배치](../implementation/2026-11-11-participant-row.md)와 별개다. [LAN 공유](lan-project-sharing.md)의 권한·TLS·2초 동기화와 [일정 알림](reminders-and-hierarchy.md)의 Windows 전달·미저장 보호를 유지한다. 아래 ‘기술 제안’은 작성자가 제안하고 Q13 문서 전체 확정으로 승인받은 내용이다. Q1~Q12의 개별 답변과 제안의 출처를 구분한다.
+앞선 제품 변경인 [참여자 한 줄 배치](../implementation/2026-11-11-participant-row.md)와 별개다. [LAN 공유](lan-project-sharing.md)의 권한·TLS·2초 동기화와 [일정 알림](reminders-and-hierarchy.md)의 Windows 전달·미저장 보호를 유지한다. 아래 ‘기술 제안’은 작성자가 제안하고 Q13 문서 전체 확정으로 승인받은 내용이다. Q1~Q12의 개별 답변과 제안의 출처를 구분한다.
 
 ## 목적과 범위
 
@@ -27,7 +27,7 @@
 | Q11 | 호스트의 데이터 저장과 변경 기록을 함께 처리. 기존2초 동기화로 최신 자료와 기록을 받아 정상 반영 후 알림 |
 | Q12 | 건수는 일정별 최종 결과. 같은 일정 반복 수정=변경1건, 추가 후 수정=추가1건, 추가 후 삭제=생략 |
 
-## 현재 구현과 접근 방식
+## 설계 당시 구현과 접근 방식
 
 현재 [host](../../src/main/sharing/host.ts)는 승인 설치본·IP를 검사한 뒤 허용 프로젝트의 전체 snapshot과 ETag를 제공한다. [sync](../../src/main/sharing/sync.ts)는 요청 직렬화·실패 재시도·연결 세대 검사를 수행한다. [cache](../../src/main/db/sharing/cache.ts)는 받은 자료를 원자적으로 반영한다. ETag는 최신 내용 해시이며, renderer의 snapshotRevision은 영속 이벤트 순번이 아니다.
 
@@ -129,7 +129,7 @@ sequenceDiagram
 - 클릭 대상 제거/필터/미저장 입력/멤버 읽기 전용, 수신 스위치 저장 실패와 키보드 조작.
 - 두 격리 Electron 프로필의 실제 TLS 동기화 및 가짜 OS sender로 전달 요청을 검사하고, Windows 알림 배너·센터·클릭·트레이·방해 금지·실제 사내망은 별도 실기 검증한다. Linux mock 통과를 Windows 전달 성공으로 간주하지 않는다.
 
-다음 구현 요청에서는 이 승인 문서를 기준으로 구현 계획을 작성한다. 이번에는 공유 변경 알림 제품 코드·DB migration·통신 계약을 변경하지 않는다.
+Q13 당시에는 설계만 확정했다. 후속 구현 요청에 따라 [구현 계획](../superpowers/plans/2026-11-11-shared-change-notifications.md)과 [실행 기록](../implementation/2026-11-11-shared-change-notifications.md)을 추가했으며, 검증 결과와 실기 한계는 실행 기록을 따른다.
 
 ## 설계 검토 기록
 

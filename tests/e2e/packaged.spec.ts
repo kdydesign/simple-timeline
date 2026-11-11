@@ -226,8 +226,8 @@ test("real production package installs, works offline, updates and retains DB af
     page = await launch(installed, base.version);
     expect(JSON.parse((await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1')))!) ).toEqual({...JSON.parse(preferences!),theme:"dark",dayWidth:28});
     expect(await snapshot(page)).toEqual({...before,schedules:before.schedules.map(s=>({...s,reminder:{daysBefore:2,time:'09:00',start:false,end:false}}))});
-    expect((await readFile(db)).readUInt32BE(60)).toBe(4);
-    evidence.schemaVersion = 4;
+    expect((await readFile(db)).readUInt32BE(60)).toBe(5);
+    evidence.schemaVersion = 5;
     evidence.legacyReminderDefaultsOff = true;
     await offline(installed);
     evidence.offline = true;

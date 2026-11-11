@@ -176,7 +176,7 @@ main은 실행·30초 간격·절전 복귀·업무 commit 후 후보를 평가�
 
 main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본·별도 수신 캐시·핀 검증 HTTPS를 소유한다.
 0.6.0의 preload는 당시 8개 `simpleTimeline` 메서드를 유지하고 별도 고정 `timelineSharing` facade를 제공한다.
-현재 허용된 15개 메서드는 [공유 계약](../../src/shared/sharing.ts)에 있으며 채널·URL·SQL·자격·키를 받거나 노출하지 않는다.
+0.6.10에서 허용된 15개 메서드는 [공유 계약](../../src/shared/sharing.ts)에 있으며 채널·URL·SQL·자격·키를 받거나 노출하지 않는다.
 샌드박스·CSP·최상위 frame 검증을 유지한다. 호스트가 지정한 IPv4 한 곳에만 바인딩하며 기본 포트는 TCP47831이다.
 
 호스트는 원본과 프로젝트별 수신 권한을 수정한다. 멤버는 출처 ID가 있는 읽기 전용 수신본과 자기 PC의 알림만 관리한다.
@@ -198,3 +198,14 @@ main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본�
 날짜 선택기의 월 Select만 `.saving-content`로 포털을 이동하여 부모 backdrop-filter/overflow의 잘림을 피한다. `overlayOwnership`이 트리거 ID를 통해 논리적 소유권을 확인하므로 바깥 클릭/포커스 이탈과 중첩 Escape 동작은 유지한다. 다른 Select는 기존 지역 포털을 유지한다.
 
 0.6.9의 `timelineSharing.deleteDevice({id})`는 호스트 전용 참여자 등록 삭제·권한 회수다. main에서 역할과 ID를 검증하고 [schema v4](storage.md)의 transaction으로 처리한다. renderer는 자격이나 DB에 직접 접근하지 않는다.
+
+
+### 공유 변경 알림 경계 (0.7.0)
+
+[승인 설계](shared-change-notifications.md)와 [구현·검증 기록](../implementation/2026-11-11-shared-change-notifications.md)을 따른다. 업무 저장과 알림 이벤트 기록은 같은 SQLite 트랜잭션이다. [변경 기록](../../src/main/db/sharing/changes.ts)은 업무 필드의 실제 전후 차이를 비교하고 현재 수신 권한과 권한 부여 세대로 요약한다. updated_at 변화만으로 알리지 않으며 원본 삭제와 독립적으로 최근30일 기록을 유지한다.
+
+기존 TLS·IP·설치본 확인을 거친 `POST /v1/changes/sync`는 최신 snapshot·수신자에 묶인 불투명 cursor·허용된 알림 묶음을 반환한다. 기존 `GET /v1/snapshot`은 구버전 멤버를 위해 유지한다. 새 멤버는 기능 지원 전 명시적404에서만 구버전 snapshot으로 대체한다. 지원 확인 뒤 손상 응답이나 인증 오류를 미지원으로 숨기지 않는다.
+
+[멤버 inbox](../../src/main/db/sharing/change-inbox.ts)는 cache·cursor·알림 대기를 한 트랜잭션으로 반영한다. [전달 실행기](../../src/main/sharing/change-delivery.ts)는 그 뒤 영속 claim을 먼저 하고 OS sender를 호출한다. 재시작 때 남은 claim은 결과 불명으로 취급하며 자동 재전송하지 않는다. 날짜 알림의 일정별 전송 이력과 공유 변경 inbox는 독립한다. 권한 회수 때 이름이 포함된 로컬 대기 내용을 제거하며 이미 OS에 제출된 과거 내용의 회수는 보장하지 않는다.
+
+고정 `timelineSharing` facade에 `setChangeNotifications({enabled})`, `retryChangeNotifications()`, `acknowledgeChange({token})`를 추가한다. 설정·결과 불명/실패·기준점·기능 지원 상태와 일정/프로젝트/목록 대상은 `SharingState.changeNotifications`로 전달한다. renderer에는 URL·자격·SQL을 노출하지 않는다. 알림 클릭은 최신 권한과 대상 확인 후 기존 미저장 입력 보호를 거치며 간트/달력 모드를 유지한다.
