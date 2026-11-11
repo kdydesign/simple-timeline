@@ -3,7 +3,7 @@ export type CloseChoice = 'hide' | 'quit' | 'cancel'
 export function installCloseGuard(
   window: BrowserWindow,
   confirm: () => Promise<boolean>,
-  options: { chooseClose?: () => Promise<CloseChoice>; hide?: () => void; beforeClose?: () => void; afterClose?: () => void } = {},
+  options: { allowClose?: () => boolean; chooseClose?: () => Promise<CloseChoice>; hide?: () => void; beforeClose?: () => void; afterClose?: () => void } = {},
 ): () => void {
   let checking = false
   let choosing = false
@@ -36,6 +36,7 @@ export function installCloseGuard(
     options.afterClose?.()
   }
   window.on('close', event => {
+    if (options.allowClose?.()) return
     event.preventDefault()
     if (checking || choosing || window.isDestroyed()) return
     if (!options.chooseClose) {

@@ -1,3 +1,5 @@
+import { createMutationBarrier } from './updates/installer'
+export const appMutationBarrier = createMutationBarrier()
 import type { StorageState } from './db/lifecycle'
 import type { Result, ProjectInput, ScheduleInput } from '../shared/types'
 import {
@@ -128,7 +130,7 @@ export function dispatch(
   trusted: boolean,
 ): Result<unknown> {
   try {
-    if (!trusted) throw failure('FORBIDDEN')
+    if (!trusted || appMutationBarrier.blocked()) throw failure('FORBIDDEN')
     const v = input(method, args)
     if (method === 'getStatus')
       return {

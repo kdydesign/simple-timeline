@@ -4,6 +4,9 @@ export const UPDATE_PROTOCOL_VERSION = 1 as const
 export const UPDATE_APP_ID = 'com.kdydesign.simpletimeline' as const
 export const updatesChannel = 'updates:command'
 export const updatesChanged = 'updates:changed'
+export const updatesGuard = 'updates:guard'
+export const updatesGuardReply = 'updates:guard-reply'
+export interface UpdateGuardRequest { requestId: string; action: 'freeze' | 'release' }
 export type UpdateFileId = 'installer' | 'blockmap' | 'metadata' | 'guide'
 export interface UpdateFile { id: UpdateFileId; name: string; size: number; sha256: string; sha512: string }
 export interface UpdateManifest {
@@ -39,6 +42,7 @@ export interface UpdateState {
   totalBytes: number
   receivedBytes: number
   connected: boolean
+  editingBlocked: boolean
   requiresExplicitInstall: boolean
   canDownload: boolean
   canCancel: boolean
@@ -57,6 +61,8 @@ export interface UpdateApi {
   retry(): Promise<Result<UpdateState>>
   install(): Promise<Result<UpdateState>>
   onChange(callback: (state: UpdateState) => void): () => void
+  /** Freeze every editable form before returning true; await saves, return false for dirty/missing state. Release restores editing. */
+  onInstallGuard(callback: (request: UpdateGuardRequest) => boolean | Promise<boolean>): () => void
 }
 export function compareStableVersions(left: string, right: string): -1 | 0 | 1 {
   const parse = (value: string) => {

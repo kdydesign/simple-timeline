@@ -1,3 +1,4 @@
+import {updatesChannel,updatesChanged,updatesGuard,updatesGuardReply,type UpdateApi,type UpdateState,type UpdateGuardRequest} from '../shared/updates'
 import {sharingChannel,sharingChanged,type SharingApi,type SharingState} from '../shared/sharing'
 import {reminderChannel,reminderChanged,type ReminderApi} from '../shared/reminder-api'
 import { contextBridge, ipcRenderer } from 'electron'
@@ -60,3 +61,17 @@ const sharingApi={
   onChange:(callback)=>{const listener=(_event:unknown,state:SharingState)=>callback(state);ipcRenderer.on(sharingChanged,listener);return ()=>ipcRenderer.removeListener(sharingChanged,listener)},
 } satisfies SharingApi
 contextBridge.exposeInMainWorld('timelineSharing',sharingApi)
+
+const updateInvoke=async(command:string)=>{
+  try{return await ipcRenderer.invoke(updatesChannel,command)}
+  catch{return {ok:false,error:{code:'IPC_UNAVAILABLE',message:'업데이트 상태를 확인하지 못했습니다.'}}}
+}
+contextBridge.exposeInMainWorld('timelineUpdates',{
+  getState:()=>updateInvoke('getState'),importBundle:()=>updateInvoke('importBundle'),publish:()=>updateInvoke('publish'),withdraw:()=>updateInvoke('withdraw'),
+  download:()=>updateInvoke('download'),cancel:()=>updateInvoke('cancel'),retry:()=>updateInvoke('retry'),install:()=>updateInvoke('install'),
+  onChange:callback=>{const listener=(_event:unknown,state:UpdateState)=>callback(state);ipcRenderer.on(updatesChanged,listener);return ()=>ipcRenderer.removeListener(updatesChanged,listener)},
+  onInstallGuard:callback=>{
+    const listener=(_event:unknown,request:UpdateGuardRequest)=>{void Promise.resolve().then(()=>callback(request)).catch(()=>false).then(clean=>ipcRenderer.invoke(updatesGuardReply,request.requestId,clean===true)).catch(()=>{})}
+    ipcRenderer.on(updatesGuard,listener);return ()=>ipcRenderer.removeListener(updatesGuard,listener)
+  },
+} satisfies UpdateApi)

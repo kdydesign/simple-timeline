@@ -1,3 +1,5 @@
+import type { UpdateRoutes } from '../updates/transport'
+import type { UpdateSharingContext } from '../updates/service'
 import {createChangeNotifications} from './change-notifications'
 import type {ReminderSender} from '../reminders/engine'
 import {networkInterfaces} from 'node:os'
@@ -26,6 +28,7 @@ export interface SharingTransport {
 const productionTransport:SharingTransport={discover:discoverHost,client:o=>new SharingClient(o),host:createSharingHost,identity:createHostIdentity,interfaces:()=>Object.values(networkInterfaces()).flatMap(list=>(list??[]).filter(i=>i.family==='IPv4').map(i=>i.address))}
 interface Options {
   storage:Extract<StorageState,{state:'ready'}>;profile:string;changed:(state:SharingState)=>void
+  updates?:UpdateRoutes;updateChanged?:()=>void;mutationsBlocked?:()=>boolean
   changeSender?:ReminderSender;onChangeClick?:()=>void
   clock?:()=>number;transport?:Partial<SharingTransport>;secrets?:(profile:string)=>Promise<ProtectedSecrets>
 }
@@ -36,6 +39,7 @@ export function createSharingService(o:Options){
   let pendingPair:PendingPair|null=null,pendingAddress:SharingAddress|null=null,settingsRequestToken:string|null=null
   let clientCommand:<T>(operation:(signal:AbortSignal)=>Promise<T>)=>Promise<T>
   let host:ReturnType<typeof createSharingHost>|undefined,client:ReturnType<SharingTransport['client']>|undefined,syncController:ReturnType<typeof createSyncController>|undefined
+  let updateConnection:ClientConnection|undefined,updateTrustRejected=false
   let secretsPromise:Promise<ProtectedSecrets>|undefined,closing:Promise<void>|undefined,starting:Promise<void>|undefined
   const secrets=()=>secretsPromise??=(o.secrets??electronSecrets)(o.profile).catch(error=>{secretsPromise=undefined;throw error})
   const changes=createChangeNotifications({db:o.storage.db,role:()=>store.getConfig().role,generation:()=>epoch,
@@ -43,7 +47,7 @@ export function createSharingService(o:Options){
     snapshot:()=>store.readCache(),authorize:async()=>{const generation=epoch,active=syncController;if(!active||disposed||suspended)return false;const allowed=await active.authorize();return current(generation)&&active===syncController&&allowed&&store.getConfig().role==='member'},
     changed,send:o.changeSender,onClick:o.onChangeClick,
   })
-  const current=(generation:number)=>!disposed&&!suspended&&generation===epoch
+  const current=(generation:number)=>!disposed&&!suspended&&!o.mutationsBlocked?.()&&generation===epoch
   const check=(generation:number)=>{if(!current(generation))throw failure('FORBIDDEN')}
   function getState():SharingState{
     const c=store.getConfig()
@@ -53,22 +57,25 @@ export function createSharingService(o:Options){
       availableAddresses:transport.interfaces(),
     }
   }
-  function changed(){if(disposed)return;try{o.changed(getState())}catch{/* An unavailable renderer does not alter committed state. */}}
+  function changed(){if(disposed)return;try{o.updateChanged?.()}catch{};try{o.changed(getState())}catch{/* An unavailable renderer does not alter committed state. */}}
   function setStatus(value:SharingState['status'],error?:unknown){
     status=value
+    if(error instanceof SharingNetworkError&&['TLS_UNTRUSTED','UNAUTHORIZED','REVOKED'].includes(error.code))updateTrustRejected=true
+    if(value==='revoked')updateTrustRejected=true
     message=error instanceof SharingNetworkError||error instanceof CredentialCleanupError?error.message:error?'공유 연결을 확인하지 못했습니다. 주소·승인·보호 저장소를 확인하고 다시 연결해 주세요.':''
     if(value==='connected')lastCheckedAt=new Date().toISOString()
     changed()
     if(value==='connected'||value==='revoked')void changes.evaluate()
   }
   function invalidate(){
-    epoch++;changes.invalidate();starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null;pendingAddress=null
+    epoch++;o.updateChanged?.();changes.invalidate();starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null;pendingAddress=null
     const previous=host;host=undefined
     // stop invalidates handlers synchronously before its first await.
     return previous?.stop()??Promise.resolve()
   }
   const address=(input:SharingAddress):SharingAddress=>({address:normalizeIPv4(input.address),port:validatePort(input.port)})
   function clientFor(trust:HostTrust,target:SharingAddress,generation:number,saved:ClientConnection|null){
+    if(saved){updateConnection=saved;updateTrustRejected=false;o.updateChanged?.()}
     const ref=secretRef();let connection=saved,operationSignal:AbortSignal|undefined
     const persistence:CredentialPersistence={load:async()=>{check(generation);return connection},save:async(value)=>{
       const signal=operationSignal,live=()=>current(generation)&&!signal?.aborted
@@ -77,7 +84,8 @@ export function createSharingService(o:Options){
       const old=store.getConfig().credentialRef
       store.connectMember({...target,hostId:value.trust.hostId,datasetId:value.datasetId,certificatePin:value.trust.pin,credentialRef:ref})
       if(value.activation==='active')pendingAddress=null
-      connection=value
+      connection=value;updateConnection=value;updateTrustRejected=false
+      o.updateChanged?.()
       if(old&&old!==ref)vault.remove(old)
     }}
     client=transport.client({installationId:store.getConfig().hostId,trust,address:target,persistence,expectedDatasetId:store.getConfig().remoteDatasetId??undefined})
@@ -104,7 +112,7 @@ export function createSharingService(o:Options){
       store.setHostIdentity({certificatePin:identity.pin,certificateRef:ref,privateKeyRef:ref})
     }
     check(generation)
-    const activeHost=transport.host({identity,store,onChange:()=>{if(current(generation))changed()},now:clock});host=activeHost
+    const activeHost=transport.host({identity,store,updates:o.updates,onChange:()=>{if(current(generation))changed()},now:clock});host=activeHost
     await activeHost.start(c.address,c.port);check(generation);setStatus('connected')
   }
   async function loadMember(generation:number){
@@ -192,7 +200,7 @@ export function createSharingService(o:Options){
     const drain=invalidate(),generation=epoch;await drain;check(generation)
     const c=store.getConfig()
     // Atomically detach active credentials/cache and retain a durable non-active deletion obligation.
-    if(c.role==='member'){store.disconnectMember(input);snapshotRevision++}
+    if(c.role==='member'){store.disconnectMember(input);updateConnection=undefined;updateTrustRejected=false;o.updateChanged?.();snapshotRevision++}
     try{await cleanupCredential(generation)}
     catch(error){if(current(generation))setStatus('error',error);throw error}
     check(generation);lastCheckedAt=null;setStatus('personal');return getState()
@@ -203,8 +211,14 @@ export function createSharingService(o:Options){
     suspended=false;const drain=invalidate(),generation=epoch
     try{await drain;if(current(generation))await start()}catch(error){if(current(generation))setStatus('error',error)}
   }
-  function dispose(){if(closing)return closing;disposed=true;changes.dispose();closing=invalidate();return closing}
-  return {getState,start,configureHost,setHosting,connect,confirmHost,approve,saveDevice,revokeDevice,deleteDevice,saveProject,saveReminder,disconnect,
+  function dispose(){if(closing)return closing;disposed=true;const notifications=changes.dispose();closing=Promise.all([invalidate(),notifications]).then(()=>{});return closing}
+  return {getState,start,
+    getUpdateHostId:()=>store.getConfig().hostId,
+    getUpdateContext():UpdateSharingContext{
+      const c=store.getConfig(),saved=updateConnection
+      return {role:c.role,connected:status==='connected',trustPending:c.role==='member'&&!!c.credentialRef&&!saved,revoked:updateTrustRejected||status==='revoked',
+        ...(c.role==='member'&&c.credentialRef&&c.address&&saved?.activation==='active'?{connection:{address:{address:c.address,port:c.port},trust:saved.trust,token:saved.token}}:{})}
+    },configureHost,setHosting,connect,confirmHost,approve,saveDevice,revokeDevice,deleteDevice,saveProject,saveReminder,disconnect,
     setChangeNotifications(input:{enabled:boolean}){changes.setEnabled(input);return getState()},
     retryChangeNotifications:async()=>{await changes.retry();return getState()},
     acknowledgeChange(input:{token:string}){changes.acknowledge(input);return getState()},

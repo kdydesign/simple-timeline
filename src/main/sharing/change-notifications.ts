@@ -49,6 +49,6 @@ export function createChangeNotifications(o:Options){
   acknowledge({token}:{token:string}){if(disposed)throw failure('FORBIDDEN');if(openRequest?.token===token){openRequest=null;o.changed()}},
   evaluate(){return delivery.evaluate()},
   invalidate(){revision++;supported=null;openRequest=null;delivery.invalidate()},
-  dispose(){disposed=true;revision++;openRequest=null;delivery.dispose()},
+  dispose(){disposed=true;revision++;openRequest=null;return delivery.dispose()},
  }
 }

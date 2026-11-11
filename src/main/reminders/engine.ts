@@ -73,6 +73,6 @@ export function createReminderEngine(o:Options) {
    if(!running){running=drain().finally(()=>{retryKeys.clear();running=undefined})}
    return running
   },
-  dispose(){stopped=true;pending=false},
+  dispose(){stopped=true;pending=false;return running??Promise.resolve()},
  }
 }

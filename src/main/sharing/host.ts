@@ -1,3 +1,4 @@
+import type { UpdateRoutes } from '../updates/transport'
 import { validateChangeEnvelope } from '../../domain/change-notifications'
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:https'
@@ -43,7 +44,7 @@ function send(res: ServerResponse, status: number, body?: unknown, etag?: string
   res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', connection: 'close', ...(bytes ? { 'content-length': bytes.length } : {}), ...(etag ? { etag } : {}) })
   res.end(bytes)
 }
-export function createSharingHost(options: { identity: HostIdentity; store: HostStore; onChange?: () => void; now?: () => number }) {
+export function createSharingHost(options: { identity: HostIdentity; store: HostStore; onChange?: () => void; now?: () => number; updates?: UpdateRoutes }) {
   const { identity, store } = options
   const now = options.now ?? (() => performance.now())
   const attempts = new Map<string, Attempt>()
@@ -85,6 +86,13 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       let r = rate.get(ip)
       if (!r) { if (rate.size >= 256) fail('RATE_LIMITED', 429); r = { start: clock, count: 0 }; rate.set(ip, r) }
       if (++r.count > 120) fail('RATE_LIMITED', 429)
+      if (req.url?.startsWith('/v1/updates/') && options.updates) {
+        authenticate(req, ip)
+        req.socket.setTimeout(30000)
+        await options.updates(req, res, () => { if (!server || requestGeneration !== generation) fail('ABORTED',503); return authenticate(req, ip) }); return
+      }
+      const deadline = setTimeout(() => req.socket.destroy(), REQUEST_TIMEOUT_MS)
+      res.once('close', () => clearTimeout(deadline))
       if (req.headers['x-planrail-protocol'] !== '1') fail('PROTOCOL_MISMATCH', 409)
       const config = store.getConfig()
       if (req.method === 'GET' && req.url === '/v1/identity') { send(res, 200, { protocolVersion: 1, hostId: config.hostId, datasetId: config.datasetId }); return }
@@ -161,7 +169,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       for (const device of store.listDevices()) store.revokePendingCredentials(device.id)
       const instance = createServer({ cert: identity.certificate, key: identity.privateKey, minVersion: 'TLSv1.2', handshakeTimeout: REQUEST_TIMEOUT_MS, headersTimeout: REQUEST_TIMEOUT_MS, requestTimeout: REQUEST_TIMEOUT_MS, connectionsCheckingInterval: 1000, maxHeaderSize: 16384 }, (req, res) => { void handle(req, res) })
       instance.maxConnections = 64
-      instance.on('connection', socket => { const deadline = setTimeout(() => socket.destroy(), REQUEST_TIMEOUT_MS); socket.once('close', () => clearTimeout(deadline)) })
+      instance.on('secureConnection', socket => { socket.setTimeout(REQUEST_TIMEOUT_MS, () => socket.destroy()) })
       server = instance
       try { await new Promise<void>((resolve, reject) => { instance.once('error', reject); instance.listen(port, address, () => { instance.removeListener('error', reject); resolve() }) }) } catch (e) { server = null; throw e }
       const bound = instance.address(); if (!bound || typeof bound === 'string') throw new SharingNetworkError('UNAVAILABLE')

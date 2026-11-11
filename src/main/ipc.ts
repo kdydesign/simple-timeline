@@ -1,7 +1,7 @@
 import { ipcMain, type BrowserWindow } from 'electron'
 import type { StorageState } from './db/lifecycle'
 import { channels } from '../shared/api'
-import { dispatch, isTrustedSender } from './ipc-core'
+import { dispatch, isTrustedSender, appMutationBarrier } from './ipc-core'
 import type { Result } from '../shared/types'
 export function registerTimelineIpc(
   window: BrowserWindow,
@@ -14,7 +14,7 @@ export function registerTimelineIpc(
 ): () => void {
   let current = storage
   for (const [method, channel] of Object.entries(channels))
-    ipcMain.handle(channel, (event, ...args) => {
+    ipcMain.handle(channel, (event, ...args) => appMutationBarrier.run(() => {
       const result = dispatch(
         current,
         method,
@@ -29,7 +29,7 @@ export function registerTimelineIpc(
       )
         current = { state: 'blocked', error: result.error }
       return afterDispatch ? afterDispatch(method, result) : result
-    })
+    }))
   return () => {
     for (const channel of Object.values(channels))
       ipcMain.removeHandler(channel)

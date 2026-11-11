@@ -60,6 +60,6 @@ export function createChangeDelivery(o:Options){
    return running
   },
   invalidate(){revision++;pending=false},
-  dispose(){stopped=true;revision++;pending=false},
+  dispose(){stopped=true;revision++;pending=false;return running??Promise.resolve()},
  }
 }
