@@ -37,3 +37,9 @@ Windows packaged 검사는 기존 수동 설치 lifecycle과 별도로 `packaged
 남은15개를 별도로 실행해14개가 통과했고 기존 sharing E2E의 `uncheck()`가 클릭 직후 상태를 요구해 실패했다. 공유 변경 알림 스위치는 영속 IPC 성공 뒤에만 checked 상태를 바꾼다. 기존 UI의 pending-save 계약 검사를 단독 실행해 이 동작을 확인했다. E2E를 클릭 → 화면 checked 상태 대기 → 기존 영속 상태 poll로 보정했으며, 실패를 감추는 retry나 시간 제한 완화는 추가하지 않았다. 최종 공유+업데이트3개가45.1초에 통과했다(공유36.8초, 손상 공유 메타데이터2.4초, 업데이트4.9초). 따라서87개 개별 경로는 분할 실행에서 통과 근거를 갖지만,240초 전체 실행은 통과하지 못했다. 전체 단일 실행 성공과 분할 경로 검증을 구분하고, 최종 SHA의 Windows/Linux CI는 후속 실행으로 남긴다. 중간 전체 검사에서 버전 상승 후 release 테스트의0.7.0 고정 기대값 실패를0.8.0으로 갱신했다. 다음 전체 UI 실행에서는 기존 `shared-change-notifications.test.tsx`의 “preserves new input typed while the accepted notification is still reading its target” 한 개가5000ms 제한으로 실패했다(나머지163개 통과). 해당 검사는 수정 없이 단독 실행과 관련29개 묶음 실행에서 통과했다. 제한·assertion을 완화하지 않았으며 최종 전체 실행 결과와 별도로 이 실패를 보존한다.
 
 독립 검토는 기능별3회, 전체 브랜치 검토, 최종3건 보정 재검토를 마쳤다. 소스 최종 커밋 `903e87bd506e278e258e6e19bfb3a6083338fde5`에서 미해결 코드 지적은 없다. 최종 보정의 단위67개·UI14개·typecheck·harness22개가 통과했다. 이후 원격 CI 결과와 실제 Windows11 인수는 이 로컬 결과와 구분한다.
+
+### Windows CI 공유 E2E의 좁은 화면 검사 보정
+
+Windows CI에서 알림으로 일정 편집창을 연 뒤 배경 ‘달력’ 버튼을 찾던 기존 공유 검사가 실패했다. 기준 `24439a489ace18184dd300486cc931abe39c4638`에서 멤버 viewport만1024×768로 지정하고 원래 assertion을 유지해 Linux/Xvfb에서도 같은 실패를 재현했다(23.8초). 진단값은 `innerWidth=1024`, 편집창 `aria-modal=true`, 배경 도구막대 `inert=true`·`aria-hidden=true`였다.1100px 미만의 정상 모달 동작을 테스트가 비모달 화면처럼 조회한 것이 원인이다.
+
+테스트만 보정했다. 알림·미저장 입력 보존·읽기 전용 검사는 유지하고, 좁은 모달과 접근성에서 제외된 배경을 명시적으로 확인한다. 편집창 캡처 뒤 정상 ‘편집 닫기’로 닫은 다음 기존 달력 모드·전체 필터의 `aria-pressed=true` assertion을 수행한다. 숨은 컨트롤 클릭·강제 클릭·재시도·timeout 완화·제품 코드 변경은 없다. 이 좁은 viewport 경로를 모든 플랫폼에서 실행해 회귀를 방지한다. focused 공유 E2E2개가35.5초에 통과했다(32.6초·1.8초). 이 보정의 Windows CI 재실행과 패키지 설치 결과는 별도 확인하며 Linux 재현을 Windows 실기 인수로 확대하지 않는다.

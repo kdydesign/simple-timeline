@@ -65,6 +65,8 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   const clickChange = async(index:number) => member.app.evaluate((_electron,index)=>new Promise<void>((resolve,reject)=>{
     setImmediate(()=>{try{(globalThis as any).changeClicks[index]();resolve()}catch(error){reject(error)}});
   }),index);
+  // Exercise the modal editor used by a 1024px Windows desktop on every platform.
+  await member.page.setViewportSize({width:1024,height:768});
   await member.page.getByRole('button',{name:'달력',exact:true}).click();
   await member.page.getByRole('button',{name:'개인',exact:true}).click();
   await member.page.getByRole('button',{name:'일정 추가',exact:true}).click();
@@ -77,10 +79,13 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await member.page.getByRole('button',{name:'변경 버리기',exact:true}).click();
   await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveValue('공유 변경');
   await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveAttribute('readonly','');
-  await expect(member.page.getByRole('button',{name:'달력',exact:true})).toHaveAttribute('aria-pressed','true');
-  await expect(member.page.getByRole('button',{name:'전체',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(member.page.getByRole('dialog',{name:'일정 편집'})).toHaveAttribute('aria-modal','true');
+  await expect(member.page.getByRole('button',{name:'달력',exact:true})).toHaveCount(0);
   await capture(member,'dark-change-click-readonly-calendar');
   await member.page.getByRole('button',{name:'편집 닫기',exact:true}).click();
+  // Narrow editors hide the background toolbar from accessibility until dismissed.
+  await expect(member.page.getByRole('button',{name:'달력',exact:true})).toHaveAttribute('aria-pressed','true');
+  await expect(member.page.getByRole('button',{name:'전체',exact:true})).toHaveAttribute('aria-pressed','true');
   await member.page.getByRole('button',{name:'간트',exact:true}).click();
   // The persisted switch gates OS delivery only; received source data continues updating.
   m=await settings(member);
