@@ -44,6 +44,7 @@ jobs:
           name: Planrail-Windows11-x64-unsigned-${{ github.sha }}
           path: |
             release/*.exe
+            release/*-update.zip
             release/*.sha256
             release/release-manifest.json
             release/USER-GUIDE.ko.md

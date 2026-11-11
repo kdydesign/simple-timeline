@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { inspectPackage } from "../testing/packaged-smoke.mjs";
 import { releaseIdentity } from "./source-identity.mjs";
+import { createUpdateBundle } from "./update-bundle.mjs";
 if (process.platform !== "win32" || process.arch !== "x64")
   throw Error("Build on Windows x64; cross-build is not release verification");
 const pkg = JSON.parse(await readFile("package.json", "utf8")),
@@ -69,6 +70,7 @@ if (!update)
     "docs/release/user-guide.md",
     join(output, "USER-GUIDE.ko.md"),
   );
+if (!update) await createUpdateBundle({ directory: output, manifest });
 console.log(
   "Windows installer manifest: " + resolve(output, "release-manifest.json"),
 );
