@@ -32,39 +32,43 @@
 **Files:** `src/shared/updates.ts`, `src/main/updates/bundle.ts`, `src/main/updates/catalog.ts`, `scripts/release/update-bundle.mjs`, `scripts/release/build-windows.mjs`, `electron-builder.yml`, `.github/workflows/app.yml`, package manifests, `tests/unit/update-bundle.test.ts`, `tests/release/update-bundle.test.mjs`.
 **Interfaces:** Export typed `UpdateManifest`, `UpdatePublication`, `UpdateState`, `UpdateApi`; catalog main-only import/publish/withdraw/status/read-file APIs. Atomic catalog stores revision, current/candidate, immutable version fingerprints. Later tasks consume these exported types; no paths or tokens in UpdateState.
 
-- [ ] Write failing tests: valid ZIP imports; traversal/duplicate basename, forged hash/length, oversized expansion, fixture and same-version changed bytes reject; failed import preserves active release; published version/source must match host.
-- [ ] Run `npm run test:unit -- tests/unit/update-bundle.test.ts`; record expected missing-function/behavior failure.
-- [ ] Implement bounded streaming ZIP import and JSON-schema YAML parsing, atomic catalog with stream leases and cleanup; precise limits: ZIP/installer1GiB, total expansion2GiB, max16 entries, metadata1MiB. Disk errors fail closed. Use same root/version contract from design.
-- [ ] Extend CI production artifact to include one update ZIP with latest.yml, EXE, blockmap, manifest and checksums. Retain --publish never with inert generic provider. Include schema/appId/arch/per-user/sourceSha and every required hash. Do not allow synthetic fixture in normal importer.
-- [ ] Run focused tests then unit/release suites and typecheck. Commit task-specific files only; report public APIs and evidence for Task2.
+- [x] Write failing tests: valid ZIP imports; traversal/duplicate basename, forged hash/length, oversized expansion, fixture and same-version changed bytes reject; failed import preserves active release; published version/source must match host.
+- [x] Run `npm run test:unit -- tests/unit/update-bundle.test.ts`; record expected missing-function/behavior failure.
+- [x] Implement bounded streaming ZIP import and JSON-schema YAML parsing, atomic catalog with stream leases and cleanup; precise limits: ZIP/installer1GiB, total expansion2GiB, max16 entries, metadata1MiB. Disk errors fail closed. Use same root/version contract from design.
+- [x] Extend CI production artifact to include one update ZIP with latest.yml, EXE, blockmap, manifest and checksums. Retain --publish never with inert generic provider. Include schema/appId/arch/per-user/sourceSha and every required hash. Do not allow synthetic fixture in normal importer.
+- [x] Run focused tests then unit/release suites and typecheck. Commit task-specific files only; report public APIs and evidence for Task2.
 
 ## Task 2: Authenticated update service and safe installer
 
 **Files:** `src/main/updates/{transport,service,feed,installer,ipc}.ts`, `src/main/sharing/{host,service}.ts`, `src/main/bootstrap.ts`, `src/main/ipc-core.ts`, `scripts/release/installer.nsh`, `src/preload/index.ts`, `src/shared/updates.ts`, `tests/unit/update-{transport,service,installer}.test.ts`.
 **Interfaces:** Consume Task1 types/catalog. Expose `createUpdateService` with state/subscription, host import/publish/withdraw, member check/download/cancel/retry/install, sharing trust lifecycle and disposal. IPC is named `updates:command`/`updates:changed`; preload `window.timelineUpdates: UpdateApi` is optional for existing test fixtures.
 
-- [ ] Write failing behavior tests: valid pinned TLS request and >5sec stream; wrong pin/IP/token rejection; replacement/revocation invalidates in-flight attempt; offline trusted ready install; dirty/restarted ready never auto-installs; ordinary Exit never installs.
-- [ ] Run focused tests and observe failures.
-- [ ] Implement stable authenticated /v1/updates routes with metadata1MiB, handshake/headers5sec, stream idle30sec and total30min, max1 stream per device/max5 total. Reject redirects; stream hashes and bounded writes; mutation generations fence races. Existing JSON/sync deadlines stay unchanged.
-- [ ] Wire current sharing credentials in main only. Keep update polling independent of snapshot compatibility, fire on successful connection and every300000ms; only one attempt; explicit failures/retry; staged state atomic persistence and stale-part cleanup.
-- [ ] Implement ephemeral127.0.0.1 feed with256-bit capability, exact GET/HEAD route whitelist, no hostile Origin, bounded lifetime, no renderer URLs. Use electron-updater6.8.11 with approved options; validate cache bytes before install.
-- [ ] Install coordinator obtains clean/frozen renderer acknowledgment and awaits all mutations/services/DB closure before handing off. Add non-killing NSIS gate with bounded wait/abort for current installation. Persist attempt outside installation and confirm actual version plus healthy storage/UI on next startup. Fail teardown closed; preserve current installation path.
-- [ ] Add role-checked, sender-checked IPC and preload interface; global mutation guard during final install. Handle cancel/Exit/destruction and all error paths without hiding failure.
-- [ ] Run focused tests, unit suite and typecheck. Commit task-specific files; report integration APIs for Task3.
+- [x] Write failing behavior tests: valid pinned TLS request and >5sec stream; wrong pin/IP/token rejection; replacement/revocation invalidates in-flight attempt; offline trusted ready install; dirty/restarted ready never auto-installs; ordinary Exit never installs.
+- [x] Run focused tests and observe failures.
+- [x] Implement stable authenticated /v1/updates routes with metadata1MiB, handshake/headers5sec, stream idle30sec and total30min, max1 stream per device/max5 total. Reject redirects; stream hashes and bounded writes; mutation generations fence races. Existing JSON/sync deadlines stay unchanged.
+- [x] Wire current sharing credentials in main only. Keep update polling independent of snapshot compatibility, fire on successful connection and every300000ms; only one attempt; explicit failures/retry; staged state atomic persistence and stale-part cleanup.
+- [x] Implement ephemeral127.0.0.1 feed with256-bit capability, exact GET/HEAD route whitelist, no hostile Origin, bounded lifetime, no renderer URLs. Use electron-updater6.8.11 with approved options; validate cache bytes before install.
+- [x] Install coordinator obtains clean/frozen renderer acknowledgment and awaits all mutations/services/DB closure before handing off. Add non-killing NSIS gate with bounded wait/abort for current installation. Persist attempt outside installation and confirm actual version plus healthy storage/UI on next startup. Fail teardown closed; preserve current installation path.
+- [x] Add role-checked, sender-checked IPC and preload interface; global mutation guard during final install. Handle cancel/Exit/destruction and all error paths without hiding failure.
+- [x] Run focused tests, unit suite and typecheck. Commit task-specific files; report integration APIs for Task3.
 
 ## Task 3: Titlebar/host UI and end-to-end integration
 
 **Files:** `src/renderer/components/{Titlebar,SharingSettings,UpdatePopover,UpdateDistribution}.tsx`, renderer update hook/styles/types and App wiring, UI/E2E tests, release version, `docs/implementation/2026-11-11-lan-app-updates.md`, existing user guide/policy/index/STATUS.
 **Interfaces:** Consume Task2 UpdateApi/UpdateState; renderer registers dirty/frozen state for every editable popup and confirms ready through constrained IPC. Existing component callers without updater are compatible.
 
-- [ ] Write failing UI tests: UPDATE only on available member release; offline disabled vs verified ready; click starts once; popover close leaves download running; cancel/retry explicit; dirty deferral and saved draft require Install and Restart; host ZIP import separate Publish; withdrawn pending hides/changes correctly.
-- [ ] Run `npm run test:ui -- tests/ui/updates.test.tsx` and observe failures.
-- [ ] Implement small rounded bordered UPDATE beside Planrail before connection icon, no-drag and keyboard operable; progress anchored popover with version/bytes/verification/error; host section in existing Sharing Settings. Retain existing dark design, other controls and workflows.
-- [ ] Add isolated Electron integration coverage exercising actual IPC/UI and main service with controlled installer adapter, two-profile TLS and failed-install restart. Never execute installers in ordinary test suite. Extend disposable Windows packaged verification for real update-safe exit, relaunch and data retention.
-- [ ] Bump feature to0.8.0 consistently, update documentation/acceptance instructions, explain first bootstrap manual install and Windows unverified boundaries.
-- [ ] Run `xvfb-run -a npm run verify:app` then `node scripts/harness/run.mjs verify`; inspect complete evidence. Fix regressions with reproductions, never weaken assertions/deadlines.
-- [ ] Obtain independent whole-change review, resolve material findings, verify changed paths, commit and push main under standing authorization. Report CI state separately from actual Windows11 acceptance.
+- [x] Write failing UI tests: UPDATE only on available member release; offline disabled vs verified ready; click starts once; popover close leaves download running; cancel/retry explicit; dirty deferral and saved draft require Install and Restart; host ZIP import separate Publish; withdrawn pending hides/changes correctly.
+- [x] Run `npm run test:ui -- tests/ui/updates.test.tsx` and observe failures.
+- [x] Implement small rounded bordered UPDATE beside Planrail before connection icon, no-drag and keyboard operable; progress anchored popover with version/bytes/verification/error; host section in existing Sharing Settings. Retain existing dark design, other controls and workflows.
+- [x] Add isolated Electron integration coverage exercising actual IPC/UI and main service with controlled installer adapter, two-profile TLS and failed-install restart. Never execute installers in ordinary test suite. Extend disposable Windows packaged verification for real update-safe exit, relaunch and data retention.
+- [x] Bump feature to0.8.0 consistently, update documentation/acceptance instructions, explain first bootstrap manual install and Windows unverified boundaries.
+- [x] Run `xvfb-run -a npm run verify:app` then `node scripts/harness/run.mjs verify`; inspect complete evidence. Fix regressions with reproductions, never weaken assertions/deadlines.
+- [x] Obtain independent whole-change review, resolve material findings, verify changed paths, commit and push main under standing authorization. Report CI state separately from actual Windows11 acceptance.
 
 ## Preflight and execution
 
 Task1 types/catalog feed Task2; Task2 API feeds Task3. Execute sequentially with fresh implementer/reviewer per task. Exact function members may be refined as code is read, but report exported signatures before downstream work. Full approved design governs over this plan. Standing main authorization permits this clean shared checkout; no destructive checkout/reset.
+
+## 실행 결과 (2026-11-11)
+
+구현과 기능별·전체 브랜치·최종 수정 검토를 완료했다. 소스 구현 최종 커밋은 `903e87bd506e278e258e6e19bfb3a6083338fde5`다. 위 체크는 작업 실행을 뜻하며 모든 플랫폼 검사 통과를 뜻하지 않는다. 로컬 전체 검사는 Electron E2E의240초 전체 제한으로 중단됐고87개 경로는 분할 실행에서 통과했다. Windows 설치 검사는 구현·타입/번들 검증만 완료했다. 최종 SHA CI와 사용자 Windows11 인수는 별도로 확인한다. 세부 실패·보정·검증 근거는 [구현 기록](../../implementation/2026-11-11-lan-app-updates.md)을 따른다.
