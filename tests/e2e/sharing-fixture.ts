@@ -7,12 +7,12 @@ import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 const require = createRequire(resolve('package.json'));
 
-export async function launchMember(info: TestInfo): Promise<Desktop & { dispose(): Promise<void> }> {
+export async function launchMember(info: TestInfo, fault='sharing'): Promise<Desktop & { dispose(): Promise<void> }> {
   const profile = await mkdtemp(join(tmpdir(), 'simple-timeline-member-'));
   const launch = async () => {
     const began = Date.now(), env = {...process.env};
     delete env.ELECTRON_RUN_AS_NODE;
-    const app = await _electron.launch({chromiumSandbox: true, executablePath: require('electron'), args: [resolve('artifacts/test-app/main/index.cjs')], env: {...env, SIMPLE_TIMELINE_TEST_PROFILE: profile, SIMPLE_TIMELINE_TEST_FAULT: 'sharing', SIMPLE_TIMELINE_TEST_SEED: 'single'}});
+    const app = await _electron.launch({chromiumSandbox: true, executablePath: require('electron'), args: [resolve('artifacts/test-app/main/index.cjs')], env: {...env, SIMPLE_TIMELINE_TEST_PROFILE: profile, SIMPLE_TIMELINE_TEST_FAULT: fault, SIMPLE_TIMELINE_TEST_SEED: 'single'}});
     app.process().stderr?.on('data', chunk => void appendFile(info.outputPath('member-electron.log'), chunk));
     const page = await app.firstWindow();
     await page.getByRole('button', {name:'프로젝트 추가', exact:true}).waitFor();

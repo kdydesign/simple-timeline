@@ -1,3 +1,4 @@
+import {exposeUpdateFixture} from './update-fixture';
 import { app } from "electron";
 import { resolve, relative, isAbsolute, dirname, join } from "node:path";
 import { writeFileSync } from "node:fs";
@@ -122,6 +123,7 @@ void bootstrap({
     (globalThis as any).desktopController = (result as any).desktop;
     (globalThis as any).sharingService = result.sharing;
     (globalThis as any).testStorage = result.storage;
+    if(fault==='updates')exposeUpdateFixture(result.window,profile,()=>{if(result.storage.state==='ready'&&result.storage.db.open)result.storage.db.close()});
     const { storage } = result,
       repo = storage.repository,
       seed = process.env.SIMPLE_TIMELINE_TEST_SEED;

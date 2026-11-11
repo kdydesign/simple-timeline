@@ -1,7 +1,9 @@
+import {UpdateDistribution} from './UpdateDistribution'
+import {useUpdates} from '../state/useUpdates'
 import {SharingDeviceForm} from './SharingDeviceForm'
 import {IconButton} from './Icon'
 import {sharingDescription} from '../../shared/sharing-status'
-import {useEffect,useState,useRef} from 'react'
+import {useEffect,useLayoutEffect,useState,useRef} from 'react'
 import type {SharingApi,SharingState,ApprovedDevice} from '../../shared/sharing'
 import type {ApiError,Project,Result} from '../../shared/types'
 import {AlertDialog,AlertDialogContent,AlertDialogTitle,AlertDialogDescription} from './ui/alert-dialog'
@@ -14,6 +16,7 @@ import {restoreFocus} from '../state/restoreFocus'
 type Run=<T>(operation:()=>Promise<Result<T>>)=>Promise<Result<T>>
 type Ask=(title:string,message:string,label:string,run:()=>void)=>void
 export function SharingSettings({state,api,busy,error,projects,run,onClose,onGuard}:{state:SharingState;api:SharingApi;busy:boolean;error:ApiError|null;projects:Project[];run:Run;onClose:()=>void;onGuard:(dirty:boolean)=>void}) {
+ const updates=useUpdates()
  const [deviceError,setDeviceError]=useState<ApiError|null>(null)
  const saveDevice=async(input:{id?:string;name:string;ip:string})=>{const result=await run(()=>api.saveDevice(input));setDeviceError(!result.ok&&result.error.code==='VALIDATION_ERROR'&&['name','ip','address'].includes(result.error.field??'')?result.error:null);return result}
  const [address,setAddress]=useState(state.address??''),[port,setPort]=useState(String(state.port)),[choice,setChoice]=useState<'host'|'member'>(state.role==='host'||state.roleHistory==='host'?'host':'member'),[savedAddress,setSavedAddress]=useState({address:state.address??'',port:String(state.port)}),[dirtyDevices,setDirtyDevices]=useState<Record<string,boolean>>({}),[confirmation,setConfirmation]=useState<{title:string;message:string;label:string;run:()=>void}|null>(null);
@@ -31,7 +34,8 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
  },[confirmation,busy]);
  const dismissConfirmation=()=>{returnFromConfirmation.current=true;setConfirmation(null)};
  const dirty=address!==savedAddress.address||port!==savedAddress.port||Object.values(dirtyDevices).some(Boolean);
- useEffect(()=>{onGuard(dirty);return()=>onGuard(false)},[dirty,onGuard]);
+ useLayoutEffect(()=>{onGuard(dirty)},[dirty,onGuard]);
+ useEffect(()=>()=>onGuard(false),[onGuard]);
  const ask:Ask=(title,message,label,action)=>{confirmationCaller.current=document.activeElement as HTMLElement|null;setConfirmation({title,message,label,run:()=>{dismissConfirmation();action()}})};
  const close=()=>{if(busy)return;if(dirty)ask('설정 변경을 버릴까요?','저장하지 않은 공유 설정 입력이 사라집니다. 기존 일정 편집은 유지됩니다.','변경 버리기',onClose);else onClose()};
  const escape=(event:KeyboardEvent)=>{
@@ -52,6 +56,7 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
  <div className="editor-title"><AlertDialogTitle>공유 설정</AlertDialogTitle><IconButton icon="close" disabled={busy} label="공유 설정 닫기" onClick={close}/></div>
  <AlertDialogDescription>같은 사내망에서 프로젝트를 공유합니다. 개인 일정은 이 PC에 보관합니다.</AlertDialogDescription>
  <div className="sharing-settings-scroll">
+ {state.role==='host'&&window.timelineUpdates&&<UpdateDistribution updates={updates}/>}
  <p role="status">{state.role==='host'?'호스트':state.role==='member'||state.pendingPair?'멤버':'개인 전용'} · {sharingDescription(state)}</p>
  {error&&error!==deviceError&&<p role="alert">{error.message}</p>}{state.cleanupPending&&<p role="alert">연결 정보 삭제가 끝나지 않았습니다. 파일 접근을 확인하고 연결 해제를 다시 시도해 주세요.</p>}
  <p className="help">이 PC의 IP: {state.availableAddresses.join(', ')||'사용 가능한 IPv4 주소 없음'}</p>

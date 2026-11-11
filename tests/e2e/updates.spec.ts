@@ -1,0 +1,31 @@
+import {test,expect} from './fixture'
+import {launchMember} from './sharing-fixture'
+test.use({fault:'updates',seed:'single'})
+test('real update IPC across two pinned TLS profiles defers dirty edits and restores failed-install waits',async({desktop:host},info)=>{
+ const member=await launchMember(info,'updates')
+ try{
+  const connection=await host.app.evaluate(()=> (globalThis as any).setupUpdateHost())
+  await member.app.evaluate((_electron,connection)=>(globalThis as any).setupUpdateMember(connection),connection)
+  await member.page.reload()
+  await member.page.getByRole('button',{name:'개발 편집',exact:true}).click();await member.page.getByLabel('일정 이름',{exact:true}).fill('업데이트 중 보존')
+  await member.page.getByRole('button',{name:'UPDATE',exact:true}).click()
+  await expect(member.page.getByText('설치 준비 완료',{exact:true})).toBeVisible()
+  await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveValue('업데이트 중 보존')
+  expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual([])
+  await member.page.screenshot({path:info.outputPath('update-dirty-wait.png')})
+  await member.page.getByRole('button',{name:'업데이트 진행 닫기'}).click();await member.page.getByRole('button',{name:'저장',exact:true}).click()
+  await expect(member.page.getByRole('button',{name:'업데이트 중 보존 편집',exact:true})).toBeVisible()
+  expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual([])
+  await expect(member.page.locator('.saving-shield')).toHaveCount(0)
+  await member.page.getByRole('button',{name:'UPDATE',exact:true}).click();await member.page.getByRole('button',{name:'설치 후 재시작'}).click()
+  await expect(member.page.getByText(/앱을 종료한 뒤 다시 열어/)).toBeVisible()
+  expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual(['shutdown','handoff-failed'])
+  await member.restart();await member.app.evaluate((_electron,connection)=>(globalThis as any).setupUpdateMember(connection),connection);await member.page.reload()
+  await member.page.getByRole('button',{name:'UPDATE',exact:true}).click();await expect(member.page.getByRole('button',{name:'설치 후 재시작'})).toBeEnabled()
+  await expect(member.page.getByText(/설치를 완료하지 못했습니다/)).toBeVisible()
+  await expect(member.page.getByRole('button',{name:'업데이트 중 보존 편집',exact:true})).toBeVisible()
+  expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual([])
+  await host.app.evaluate(()=>(globalThis as any).withdrawUpdate());await member.app.evaluate(()=>(globalThis as any).checkUpdate())
+  await expect(member.page.getByRole('button',{name:'UPDATE',exact:true})).toHaveCount(0)
+ }finally{await member.dispose()}
+})

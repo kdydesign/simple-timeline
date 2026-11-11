@@ -32,7 +32,7 @@ export function DatePicker({id, label, value, onChange, invalid, describedBy, no
     {open && <Popover anchor={anchor} onClose={close} id={`${id}-calendar`} className="date-popover" label={`${label} 달력`} width={296}>
       <div className="picker-navigation">
         <IconButton icon="left" label="달력 이전 달" disabled={!shiftMonth(month,-1)} onClick={()=>navigate(shiftMonth(month,-1)!)}/>
-        <Input aria-label="달력 연도" type="number" min="1" max="9999" value={yearText} onBlur={()=>setYearText(String(month.year))} onChange={e=>{setYearText(e.target.value);const y=Number(e.target.value);if(Number.isInteger(y)&&y>=1&&y<=9999)setMonth({...month,year:y})}}/>
+        <Input data-update-dirty={yearText!==String(month.year)} aria-label="달력 연도" type="number" min="1" max="9999" value={yearText} onBlur={()=>setYearText(String(month.year))} onChange={e=>{setYearText(e.target.value);const y=Number(e.target.value);if(Number.isInteger(y)&&y>=1&&y<=9999)setMonth({...month,year:y})}}/>
         <Select escapeClipping label="달력 월" value={String(month.month)} onChange={v=>setMonth({...month,month:Number(v)})}
           options={Array.from({length:12},(_,i)=>({value:String(i+1),label:`${i+1}월`}))}/>
         <IconButton icon="right" label="달력 다음 달" disabled={!shiftMonth(month,1)} onClick={()=>navigate(shiftMonth(month,1)!)}/>

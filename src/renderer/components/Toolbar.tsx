@@ -26,7 +26,7 @@ export function Toolbar({selectedDate,onDate,onInvalid,canEdit,hasProjects,onPro
  {sharingSync}
  <nav aria-label="조회 모드" className="mode-switch"><IconButton tooltip icon="gantt" label="간트" aria-pressed={mode==='gantt'} onClick={()=>onMode('gantt')}/><IconButton tooltip icon="calendar" label="달력" aria-pressed={mode==='calendar'} onClick={()=>onMode('calendar')}/></nav>
  <nav aria-label="조회 날짜" className="month-controls"><IconButton icon="left" label="이전 달" disabled={!shiftSelectedDate(selectedDate,-1)} onClick={()=>onDate(shiftSelectedDate(selectedDate,-1)!)}/>
- <span className="month-input"><DatePicker id="selected-date" label="선택 날짜" value={text} onChange={setText} onCommit={apply} noIcon/></span>
+ <span className="month-input" data-update-dirty={text!==selectedDate}><DatePicker id="selected-date" label="선택 날짜" value={text} onChange={setText} onCommit={apply} noIcon/></span>
  <IconButton icon="right" label="다음 달" disabled={!shiftSelectedDate(selectedDate,1)} onClick={()=>onDate(shiftSelectedDate(selectedDate,1)!)}/><IconButton tooltip icon="today" label="오늘" onClick={onToday}/></nav>
  {onFilter&&<div className="sharing-filter" role="group" aria-label="프로젝트 필터">{([["all","전체"],["personal","개인"],["shared","공유"]] as const).map(([value,label])=><Button key={value} type="button" variant="ghost" aria-pressed={filter===value} onClick={()=>onFilter(value)}>{label}</Button>)}</div>}
  <div className="header-actions"><IconButton tooltip icon="project" label="프로젝트 추가" data-focus="project-add" disabled={!canEdit} onClick={onProject}/><IconButton tooltip icon="plus" label="일정 추가" className="primary" data-focus="schedule-add" disabled={!canEdit||!hasProjects} onClick={onSchedule}/></div>

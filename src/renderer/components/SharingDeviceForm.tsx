@@ -1,4 +1,4 @@
-import {useEffect,useId,useRef,useState} from 'react'
+import {useEffect,useLayoutEffect,useId,useRef,useState} from 'react'
 import type {ApiError,Result} from '../../shared/types'
 import type {ApprovedDevice} from '../../shared/sharing'
 import {normalizeIPv4} from '../../domain/sharing'
@@ -11,7 +11,8 @@ export function SharingDeviceForm({device,devices,disabled,onSave,onRevoke,onDel
  const [name,setName]=useState(device?.name??''),[ip,setIp]=useState(device?.ip??''),[submitted,setSubmitted]=useState(false),[serverError,setServerError]=useState<ApiError|null>(null)
  const prefix=useId(),form=useRef<HTMLFormElement>(null)
  const dirty=name!==(device?.name??'')||ip!==(device?.ip??'')
- useEffect(()=>{onDirty(dirty);return()=>onDirty(false)},[dirty])
+ useLayoutEffect(()=>{onDirty(dirty)},[dirty])
+ useEffect(()=>()=>onDirty(false),[])
  const invalid:Errors={}
  {
   if(!name.trim())invalid.name='참여자 이름을 입력해 주세요.'

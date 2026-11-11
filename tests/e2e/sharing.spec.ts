@@ -87,14 +87,15 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   const changesSwitch=m.getByRole('switch',{name:'공유 변경 알림',exact:true});
   await expect(changesSwitch).toBeChecked();
   await capture(member,'dark-change-notification-settings');
-  await changesSwitch.uncheck();
+  // This controlled switch changes only after the durable IPC result, not synchronously on click.
+  await changesSwitch.click();await expect(changesSwitch).not.toBeChecked();
   await expect.poll(async()=>(await sharingState(member)).changeNotifications?.enabled).toBe(false);
   await host.page.getByRole('button',{name:'공유 변경 편집',exact:true}).click();
   await host.page.getByLabel('일정 이름',{exact:true}).fill('수신 꺼짐 중 변경');
   await host.page.getByRole('button',{name:'저장',exact:true}).click();
   await expect.poll(async()=>(await snapshot(member)).schedules.find(s=>s.id===remote.id)?.name).toBe('수신 꺼짐 중 변경');
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);
-  await changesSwitch.check();
+  await changesSwitch.click();await expect(changesSwitch).toBeChecked();
   await expect.poll(async()=>(await sharingState(member)).changeNotifications?.enabled).toBe(true);
   await expect.poll(async()=>(await sharingState(member)).changeNotifications?.baselining).toBe(false);
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);

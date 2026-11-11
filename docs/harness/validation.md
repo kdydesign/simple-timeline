@@ -11,7 +11,7 @@
 | 순수 날짜·정렬·시각화 계산 중 반복 확인 | `npm run test:unit -- tests/unit/date.test.ts --reporter=dot` (날짜 검사 예) | 지정 단위 검사. 제품 변경의 최종 통합 검사를 대체하지 않음 |
 | 제품 코드 | `npm run verify:app` | 타입·release 정적 검사·3개 TZ unit·UI·build·Electron native·E2E |
 | Windows 설치본 | clean Windows에서 `npm run dist:win`, 이어 `npm run dist:win:test-update`; CI의 `scripts/release/build-legacy.ps1`은 고정0.2.1 fixture 생성 | 실제 NSIS 산출물과 소스 SHA·해시. 설치 실행 성공은 별도 검사 |
-| 패키지 설치 lifecycle | 일회성 Windows CI VM의 `npm run test:packaged` | 실제 제품 앱·설치·차단 후 오프라인 동작·업데이트·제거/재설치 |
+| 패키지 설치 lifecycle | 일회성 Windows CI VM의 `npm run test:packaged` | 실제 제품 앱·설치·차단 후 오프라인 동작·업데이트·제거/재설치, 실제 updater 인계·자동 재실행(0.8.0 추가·실행 결과 별도) |
 | 사용자 PC | [실기 양식](../release/manual-checklist.md) | 사용자가 실행·보고한 항목만. [기존 MVP 인수 범위](../release/user-acceptance.md) 유지 |
 
 `npm test`·`npm run lint` 스크립트는 없다. 타입 검사는 `npm run typecheck`, 제품 빌드는 `npm run build`다.
@@ -96,6 +96,7 @@ verify:app의 순서는 typecheck → test:release → test:tz → test:ui → b
 
 [Application CI](../../.github/workflows/app.yml)는 Ubuntu/Windows, 작업별 45분 제한으로 앱 검사를 실행한다.
 Windows에서만 현재·검증 전용 다음 버전·고정된 실제0.2.1 설치본을 만들고 패키지 검사를 실행한다. 로그는 실패해도 업로드하며 설치본은 성공한 경우만 제공한다.
+`test:packaged`는 test-only updater harness를 별도 `artifacts/packaged-harness`에 번들한 뒤 기존 lifecycle과 `packaged.update.spec.ts`를 순서대로 실행한다. 새 검사는 실제 production adapter·bootstrap 종료·NSIS·자동 재실행·read-only 자료 보존을 검증하며, 자동 재실행한 앱은 강제 종료하지 않고 일회성 VM 폐기에 맡긴다. 이 harness는 app.asar에 포함되지 않으며 production catalog가 test-only 파일을 거부하는 계약도 유지한다. 실행하지 않은 Windows 검사는 통과로 기록하지 않는다.
 이 workflow는 retention-days를 지정하지 않아 저장소/조직 기본 보관 설정을 따른다. 모두 14일이라고 가정하지 않는다.
 두 workflow 모두 push·pull_request·수동 실행을 받으며 문서만 변경해도 Application의 설치본 생성까지 실행한다.
 

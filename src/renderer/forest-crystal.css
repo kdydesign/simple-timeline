@@ -363,3 +363,14 @@ button:disabled { box-shadow: none; }
 .quick-reminder-popup .editor-actions button { min-width: 76px; }
 @media(prefers-reduced-motion: reduce) { .ui-switch, .ui-switch [data-slot="switch-thumb"] { transition: none; } }
 @media(forced-colors: active) { .sharing-badge, .quick-reminder-popup { background: Canvas; color: CanvasText; border-color: CanvasText; } }
+
+/* LAN update controls share the existing titlebar and dark surface palette. */
+.titlebar .update-anchor { position:relative;display:inline-flex;align-items:center;-webkit-app-region:no-drag; }
+.update-trigger { border:1px solid #638096;border-radius:9px;padding:2px 8px;font-size:10px;font-weight:700;letter-spacing:.06em;color:#d8e9f5;background:#263340;line-height:17px; }
+.update-trigger:hover { background:#35485a; }.update-trigger:focus-visible { outline:2px solid #a1c5e1;outline-offset:3px; }.update-trigger:disabled { opacity:.45;cursor:default; }
+.update-popover { color:#dce3ea;background:#252b32;border:1px solid #485360;border-radius:10px;padding:14px;box-shadow:0 12px 32px #0008;font-size:12px;line-height:1.6;-webkit-app-region:no-drag; }
+.update-heading { display:flex;align-items:center;justify-content:space-between;gap:12px; }.update-heading h2 { font-size:14px;font-weight:600; }.update-popover p { margin:8px 0; }.update-popover progress { width:100%;height:7px;accent-color:#90b6d1; }
+.update-actions { display:flex;flex-wrap:wrap;gap:8px;margin-top:12px; }.update-blocked { position:fixed;top:49px;left:50%;transform:translateX(-50%);z-index:10000;max-width:calc(100vw - 32px);padding:12px 18px;border:1px solid #7993a9;border-radius:8px;background:#293540;color:#edf4fa;font-size:13px; }
+.update-distribution { border-top:1px solid #485360;padding-top:14px;margin-top:14px; }
+html[data-update-frozen="true"] .saving-content { opacity:.65; }
+.titlebar .update-anchor [data-overlay-container] { display:contents; }

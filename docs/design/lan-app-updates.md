@@ -1,7 +1,7 @@
 # 호스트 배포 기반 Planrail 업데이트 설계
 
-상태: **승인된 설계 — Q1~Q20 및 문서 전체 확정, 구현 진행 승인**. 2026-11-11.
-사용자가 ‘확정하고 구현진행해’로 전체 설계와 구현을 승인했다. 설계 당시0.7.0에는 이 기능이 없으며 현재 구현 진행 상태는 구현 계획·검증 기록과 구분한다.
+상태: **승인된 설계 — Q1~Q20 및 문서 전체 확정, 0.8.0 구현**. 2026-11-11.
+사용자가 ‘확정하고 구현진행해’로 전체 설계와 구현을 승인했다. 설계 당시0.7.0에는 이 기능이 없었다. 현재 구현과 실제 Windows 미검증 범위는 [구현·검증 기록](../implementation/2026-11-11-lan-app-updates.md)을 따른다. 아래 소스 조사·검토 후보는 당시 설계 근거로 보존한다.
 
 이 문서는 [LAN 공유](lan-project-sharing.md)의 호스트 신원·IP·설치본 승인과 [배포 정책](../release/policy.md)의 Windows 11 x64·사용자별 설치·서명 없는 비공개 CI 배포를 이어간다. 기존 개인 자료·공유 자료·알림·설정·연결 자격을 보존한다. 아래 **기술 구체화**는 작성자의 제안이며 Q1~Q20의 직접 답변과 구분한다.
 
@@ -206,7 +206,7 @@ main이 catalog·ZIP 검사·네트워크·파일·검증·설치 조정을 소�
 
 향후 구현은 [main](../../src/main/), [preload](../../src/preload/), [API 타입](../../src/shared/), Titlebar·공유 설정과 설치/CI 경로를 포함한다. 업데이트 catalog·시도 기록은 별도 파일 상태 저장소로 두는 제안이며 일정 DB schema를 바꿀 필요는 없다. catalog의 원자적 교체·손상 복구·최소 권한·충돌 방지는 테스트해야 한다. 기존 저장 API·업무 규칙을 업데이트 상태와 같은 트랜잭션으로 결합하지 않는다.
 
-빌드 설정에는 metadata를 생성할 generic publish 설정을 추가하되 `--publish never`를 유지한다. 실제 호스트 URL·자격은 빌드에 넣지 않는다. 패키지의 기본 feed는 네트워크 요청이 일어나지 않는 placeholder로 두고 main이 내부 feed를 지정하기 전 모든 check를 막는다. 이는 기존 `publish: null`을 바꾸는 **향후 구현 요구**이며 이번 설계 작업에서는 수정하지 않는다.
+빌드 설정에는 metadata를 생성할 generic publish 설정을 추가하되 `--publish never`를 유지한다. 실제 호스트 URL·자격은 빌드에 넣지 않는다. 패키지의 기본 feed는 네트워크 요청이 일어나지 않는 placeholder로 두고 main이 내부 feed를 지정하기 전 모든 check를 막는다. 이는 기존 `publish: null`을 바꾸는 **설계 당시 향후 구현 요구**였다. 0.8.0 구현에서는 이를 반영했으며 아래 설계 당시 검증과 현재 구현 검증은 구분한다.
 
 ## 검증 기준
 
@@ -227,12 +227,18 @@ main이 catalog·ZIP 검사·네트워크·파일·검증·설치 조정을 소�
 
 설치형 테스트는 기존 AppData가 없는 일회성 Windows 환경에서만 수행한다. 테스트용 fixture를 정식 host importer가 허용하도록 제품 검증을 약화하지 않는다. 테스트 전용 assembly나 격리된 test harness가 필요하면 제품 배포 경로와 구분하고, 마지막에는 서로 다른 실제 정식 버전으로도 확인한다.
 
-## 설계 검토·완료 경계
+## 설계 당시 검토·완료 경계
 
-- 현재까지는 사용자 Q1~Q20, 저장소 소스, 로컬 builder26.18.0 및 공식 updater6.8.11 패키지 소스를 대조했다. 의존성을 설치하거나 updater·installer를 실행하지 않았다.
+- 설계 당시에는 사용자 Q1~Q20, 저장소 소스, 로컬 builder26.18.0 및 공식 updater6.8.11 패키지 소스를 대조했다. 의존성을 설치하거나 updater·installer를 실행하지 않았다.
 - 실제 Windows 동작·다운로드·UI·CI update ZIP·새 설치 경로는 모두 **미검증**이다.
 - 문서 전체와 구현 진행을 승인받았다. 기술 구체화의 수치 상한·함수/테이블/IPC 이름·정확한 CSS는 제품 계약을 유지하는 범위에서 구현 계획으로 넘긴다. 아래 설계 검증은 제품 구현 검증을 대신하지 않는다.
 - 독립 builder 검토 결과: 구현 계획 전에 사용자가 추가로 결정해야 할 중대한 누락 없음. 이는 Windows 구현·실행 검증을 대신하지 않는다.
 - 문서 검증: 기준 HEAD `2fc8645a3e307423d82adcb6966613bca4fab76b` + 문서 변경 작업 트리, Linux x64·Node24.22.1에서 `node scripts/harness/run.mjs verify` 통과(하네스22개, 실패0). 이 문서·문서 탐색표·배포 정책의 로컬 링크 대상72개 모두 존재하며 결정 표 Q1~Q20 누락 없음. 제품 테스트·설치 실행은 하지 않았다. 기존 MVP 지도는 완료 상태다.
 
 주요 기술 근거는 공식 [updater6.8.11 배포 소스](https://registry.npmjs.org/electron-updater/-/electron-updater-6.8.11.tgz)의 `out/BaseUpdater.js`(설치 실행 후 quit), `out/NsisUpdater.js`(NSIS 인수·검증), `out/AppUpdater.js`/`out/providers/Provider.js`(전체/차등 전송·metadata)와 설치된 builder26.18.0의 `templates/nsis/include/allowOnlyOneInstallerInstance.nsh`(종료 대기·강제 종료·custom hook), `out/publish/PublishManager.js`(로컬 metadata 생성과 publish 제어)다. 버전이 다른 최신 master의 동작을 이 버전의 근거로 사용하지 않았다.
+
+## 구현과의 연결 (2026-11-11)
+
+0.8.0은 위 Q1~Q20을 구현한다. 실제 인증 파일 경로는 `/v1/updates/<releaseId>/<fileId>`이며 설계 중의 `/file` 경로 제안을 대체한다. Actions의 직접 가져오기 대상은 `Planrail-LAN-UPDATE-<SHA>` artifact ZIP이다. 별도 일반 설치 artifact 내부 ZIP과 구분하며 payload의 해시 검증은 GitHub ZIP 컨테이너 메타데이터에 의존하지 않는다.
+
+renderer 설치 가드는 주요 편집·빠른 알림·공유 주소·참여자 입력·날짜 임시 입력을 확인하고 모든 입력을 먼저 동기식으로 차단한 뒤 저장 완료를 기다린다. 해제·unmount 뒤 늦은 응답은 승인하지 않는다. 검증 범위·환경·실제 Windows 한계는 [구현 기록](../implementation/2026-11-11-lan-app-updates.md)을 따른다. 이 문서의 조사 당시 미검증 설명을 자동으로 실기 통과로 해석하지 않는다.

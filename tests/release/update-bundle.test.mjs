@@ -44,3 +44,11 @@ test('rejects a numeric releaseDate before producing a ZIP the importer would re
   await assert.rejects(createUpdateBundle(input), /metadata/i)
   assert.equal((await readdir(input.directory)).filter(name => name.endsWith('.zip')).length, 0)
 })
+test('Actions offers a flat directly importable LAN update artifact, without a nested ZIP', async () => {
+ const workflow=await readFile('.github/workflows/app.yml','utf8')
+ const section=workflow.split('name: Planrail-LAN-UPDATE-')[1]?.split('      - uses:')[0]
+ assert.ok(section,'Dedicated LAN artifact missing')
+ for(const file of ['release/*.exe','release/*.exe.blockmap','release/latest.yml','release/release-manifest.json','release/*.exe.sha256','release/USER-GUIDE.ko.md'])assert.ok(section.includes(file),file)
+ assert.ok(!section.includes('.zip'),'GitHub artifact ZIP must itself be the import bundle')
+ assert.ok(!section.includes('release/*.sha256'),'Do not include nested bundle checksums')
+})

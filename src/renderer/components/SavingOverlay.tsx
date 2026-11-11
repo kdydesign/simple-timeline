@@ -14,7 +14,7 @@ export function SavingOverlay({state,onBlockingChange}:{state:'idle'|'pending'|'
   const content=document.querySelector<HTMLElement>('.saving-content');
   onBlockingChange(visible);
   if(!content)return;
-  if(visible){content.setAttribute('inert','');shield.current?.focus();return()=>{content.removeAttribute('inert')}}
+  if(visible){content.setAttribute('inert','');shield.current?.focus();return()=>{if(document.documentElement.dataset.updateFrozen!=='true')content.removeAttribute('inert')}}
   const target=caller.current;caller.current=null;
   if(target?.isConnected&&!target.closest('[inert],[hidden]')&&!target.matches(':disabled'))restoreFocus(target);
  },[visible]);
