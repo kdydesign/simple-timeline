@@ -30,6 +30,7 @@ export interface BootstrapOptions {
   sharingTransport?: Partial<SharingTransport>
   sharingSecrets?: (profile:string)=>Promise<ProtectedSecrets>
   sharingClock?: ()=>number
+  changeSender?: ReminderSender
   reminderSender?: ReminderSender
   reminderClock?: ()=>Date
   profileDir?: string
@@ -94,10 +95,11 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     desktopIcon,
     { mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
+  const nativeReminders = createNativeReminderSender(icon)
   let evaluateReminders = () => {}
   let tray: ReturnType<typeof createTray> | undefined
   let sharingIpc:ReturnType<typeof registerSharingIpc>|undefined
-  const sharing=storage.state==='ready'?createSharingService({storage,profile,transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
+  const sharing=storage.state==='ready'?createSharingService({storage,profile,transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,changeSender:options.changeSender??nativeReminders.send,onChangeClick:show,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
   sharingIpc=registerSharingIpc(window,rendererUrl,sharing,()=>evaluateReminders())
   void sharing?.start()
   const unregisterWindow = registerWindowIpc(window, rendererUrl)
@@ -135,13 +137,12 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       )
   }
   let exiting = false
-  const show = () => {
+  function show() {
     if (window.isDestroyed()) return
     if (window.isMinimized()) window.restore()
     window.show()
     window.focus()
   }
-  const nativeReminders = createNativeReminderSender(icon)
   let reminderIpc: ReturnType<typeof registerReminderIpc> | undefined
   const reminderEngine = storage.state === 'ready' ? createReminderEngine({
     store:createReminderStore(storage.db),snapshot:()=>storage.repository.getSnapshot(),clock:options.reminderClock,

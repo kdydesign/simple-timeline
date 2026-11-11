@@ -1,3 +1,4 @@
+import type { ChangeTarget } from './change-notifications'
 import type { Project, ReminderSettings, Result, Schedule } from './types'
 export const SHARING_PROTOCOL_VERSION = 1 as const
 export const DEFAULT_SHARING_PORT = 47831
@@ -18,6 +19,15 @@ export interface SharedProjectMapping { id: string; participants: { name: string
 export type SharingConnectionStatus = 'personal' | 'stopped' | 'connecting' | 'connected' | 'disconnected' | 'pairing' | 'revoked' | 'error'
 export const sharingChannel = 'sharing:command'
 export const sharingChanged = 'sharing:changed'
+export interface ChangeNotificationState {
+  enabled:boolean
+  baselining:boolean
+  supported:boolean|null
+  failed:number
+  unknown:number
+  storageError:boolean
+  openRequest:{token:string;target:ChangeTarget}|null
+}
 export interface SharingState {
   availableAddresses: string[]
   snapshotRevision: number
@@ -34,6 +44,7 @@ export interface SharingState {
   pendingPairs: { pairId: string; deviceId: string; name: string; ip: string; fingerprint: string; expiresAt: string }[]
   devices: ApprovedDevice[]
   projects: SharedProjectMapping[]
+  changeNotifications?: ChangeNotificationState
   settingsRequestToken: string | null
 }
 export interface SharingApi {
@@ -50,6 +61,9 @@ export interface SharingApi {
   saveReminder(input: { id: string; reminder: ReminderSettings }): Promise<Result<Schedule>>
   sync(): Promise<Result<SharingState>>
   disconnect(input: { confirmed: true }): Promise<Result<SharingState>>
+  setChangeNotifications(input: { enabled: boolean }): Promise<Result<SharingState>>
+  retryChangeNotifications(): Promise<Result<SharingState>>
+  acknowledgeChange(input: { token: string }): Promise<Result<SharingState>>
   acknowledgeSettings(input: { token: string }): Promise<Result<SharingState>>
   onChange(callback: (state: SharingState) => void): () => void
 }

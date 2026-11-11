@@ -3,7 +3,7 @@ import type { DatabaseHandle } from '../repository'
 import type { ChangeEnvelope, ChangeNotice } from '../../../shared/change-notifications'
 import type { WireSnapshot } from '../../../shared/sharing'
 import { sharedId, parseSharedId } from '../../../domain/sharing'
-import { businessProject, genericNotice, summarizeProject, validateChangeEnvelope, type BusinessProject } from '../../../domain/change-notifications'
+import { businessProject, genericNotice, summarizeProject, sharingNoticeBody, notificationText, notificationDetailBody, validateChangeEnvelope, type BusinessProject } from '../../../domain/change-notifications'
 import { createMemberCache } from './cache'
 import { checkChangeSchema } from './change-schema'
 type State='pending'|'claimed'|'submitted'|'failed'|'unknown'|'cancelled'
@@ -46,7 +46,7 @@ export function createChangeInbox(db:DatabaseHandle) {
   cache.apply(e.snapshot)
   const allowed=new Set(e.snapshot.projects.map(p=>p.id)),confirmedEnded=previous.projects.some(p=>!allowed.has(p.id))
   const continuing=new Set(allowed)
-  for(const n of e.notices)if(old.cursor!==e.cursor&&n.projectId!==null&&n.body===`${e.snapshot.projects.find(p=>p.id===n.projectId)!.name} 프로젝트가 공유되었습니다.`)continuing.delete(n.projectId)
+  for(const n of e.notices)if(old.cursor!==e.cursor&&n.projectId!==null&&n.body===sharingNoticeBody(e.snapshot.projects.find(p=>p.id===n.projectId)!.name))continuing.delete(n.projectId)
   scrubUnauthorized(e.mode==='reset'?new Set():continuing)
   db.prepare('UPDATE sharing_change_settings SET cursor=?,baselining=0,revoked=0 WHERE singleton=1').run(e.cursor)
   if(!old.enabled||old.baselining){db.prepare("UPDATE sharing_change_inbox SET state='cancelled' WHERE state IN ('pending','failed')").run();return}
@@ -65,7 +65,7 @@ export function createChangeInbox(db:DatabaseHandle) {
    const after=businessProject(e.snapshot,row.project_id)
    if(!after)continue
    const fresh=incoming.get(row.project_id)
-   if(fresh?.body===`${after.name} 프로젝트가 공유되었습니다.`)continue
+   if(fresh?.body===sharingNoticeBody(after.name))continue
    const before=row.baseline===null?null:JSON.parse(row.baseline) as BusinessProject|null
    const result=summarizeProject(row.id,before,after,reconnecting||(fresh??JSON.parse(row.payload) as ChangeNotice).target.kind==='project')
    incoming.delete(row.project_id)
@@ -76,7 +76,7 @@ export function createChangeInbox(db:DatabaseHandle) {
   for(const n of incomingNotices){
    if(n.projectId===null){put(n.body==='공유가 종료되었습니다.'&&endedPending?{...n,id:endedPending.id}:n,null,n.body==='공유가 종료되었습니다.'?'ended':e.mode==='initial'?'initial':e.mode==='reset'?'reset':'ended',e.cursor);continue}
    if(oldGeneric||!incoming.has(n.projectId))continue
-   const after=businessProject(e.snapshot,n.projectId)!,before=n.body===`${after.name} 프로젝트가 공유되었습니다.`?null:businessProject(previous,n.projectId)
+   const after=businessProject(e.snapshot,n.projectId)!,before=n.body===sharingNoticeBody(after.name)?null:businessProject(previous,n.projectId)
    put(localNotice(n,e.snapshot),n.projectId,JSON.stringify(before),e.cursor)
   }
  })
@@ -96,9 +96,14 @@ export function createChangeInbox(db:DatabaseHandle) {
   if(!row||(row.state!=='pending'&&!(retry&&row.state==='failed'))||!valid(row,retry))return false
   return !!db.prepare("UPDATE sharing_change_inbox SET state='claimed',updated_at=? WHERE id=? AND state=?").run(new Date().toISOString(),id,row.state).changes
  })
- const finish=(id:string,state:'submitted'|'failed'|'unknown'):void=>{
+ const finish=(id:string,state:'submitted'|'failed'|'unknown',expected?:ChangeNotice):void=>{
   if(!['submitted','failed','unknown'].includes(state))throw new Error('CHANGE_DELIVERY_STATE')
-  db.prepare("UPDATE sharing_change_inbox SET state=?,updated_at=? WHERE id=? AND state='claimed'").run(state,new Date().toISOString(),id)
+  const row=db.prepare('SELECT * FROM sharing_change_inbox WHERE id=?').get(id) as Row|undefined
+  if(!row)return
+  // Native failure may arrive after show/timeout. Never resurrect cancelled or scrubbed detail.
+  if(expected&&(!settingsRow().enabled||row.payload!==JSON.stringify(expected)||!valid(row)))return
+  if(row.state!=='claimed'&&!(expected&&state==='failed'&&['submitted','unknown'].includes(row.state)))return
+  db.prepare('UPDATE sharing_change_inbox SET state=?,updated_at=? WHERE id=? AND state=?').run(state,new Date().toISOString(),id,row.state)
  }
  const recover=()=>{db.prepare("UPDATE sharing_change_inbox SET state='unknown' WHERE state='claimed'").run()}
  const retry=db.transaction(()=>{
@@ -108,10 +113,10 @@ export function createChangeInbox(db:DatabaseHandle) {
    const n=JSON.parse(r.payload) as ChangeNotice
    if(n.projectId!==null){
     const p=db.prepare('SELECT name FROM sharing_cache_projects WHERE id=?').get(n.projectId) as {name:string}
-    n.title=p.name
+    n.title=notificationText(p.name,256)
     if(n.target.kind==='schedule'){
      const schedule=db.prepare('SELECT name,start_date,end_date FROM sharing_cache_schedules WHERE id=?').get(n.target.id) as {name:string;start_date:string;end_date:string}
-     n.body=`${schedule.name} · 일정 변경 · ${schedule.start_date} ~ ${schedule.end_date}`
+     n.body=notificationDetailBody(schedule.name,`일정 변경 · ${schedule.start_date} ~ ${schedule.end_date}`)
     }else n.body='공유 자료가 최신 상태로 갱신되었습니다.'
    }
    db.prepare("UPDATE sharing_change_inbox SET payload=?,state='pending' WHERE id=? AND state='failed'").run(JSON.stringify(n),r.id)

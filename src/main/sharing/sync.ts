@@ -1,8 +1,9 @@
 import type { PollOutcome } from './client'
 import type { SharingConnectionStatus } from '../../shared/sharing'
 interface Options {
-  poll(options:{etag?:string;force?:boolean;signal:AbortSignal}):Promise<PollOutcome>
-  apply(outcome:Extract<PollOutcome,{kind:'snapshot'}>):void
+  poll(options:{etag?:string;force?:boolean;signal:AbortSignal;cursor?:string|null;reconnecting?:boolean}):Promise<PollOutcome>
+  apply(outcome:Extract<PollOutcome,{kind:'snapshot'}>,reconnecting:boolean):void
+  cursor?:()=>string|null
   outcome?(outcome:PollOutcome):void
   state(status:SharingConnectionStatus,error?:unknown):void
   now?:()=>number
@@ -20,12 +21,13 @@ export function createSyncController(o:Options) {
     const current=()=>!stopped&&generation===epoch
     try{
       const timeout=new Promise<never>((_,reject)=>{deadline=setTimeout(()=>{controller.abort();reject(Error('TIMEOUT'))},5000)})
-      const result=await Promise.race([o.poll({etag,force,signal:controller.signal}),timeout])
+      const reconnecting=!fresh()
+      const result=await Promise.race([o.poll({etag,force,signal:controller.signal,cursor:o.cursor?.(),reconnecting}),timeout])
       if(!current())return
-      if(result.kind==='snapshot'){o.apply(result);etag=result.etag}
+      if(result.kind==='snapshot'){o.apply(result,reconnecting);etag=result.etag}
       if(result.kind==='unchanged'&&!etag)throw Error('CACHE_NOT_VALIDATED')
       if(result.kind==='snapshot'||result.kind==='unchanged'){
-        connected=true;lastSuccess=now();failures=0;o.state('connected')
+        connected=true;lastSuccess=now();failures=0;o.outcome?.(result);o.state('connected')
       }else if(result.kind==='revoked'){
         connected=false;etag=undefined;o.outcome?.(result);o.state('revoked');stop();return
       }else{o.outcome?.(result);o.state(result.kind==='pending'?'pairing':'connecting')}

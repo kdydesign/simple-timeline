@@ -53,8 +53,15 @@ export function genericNotice(id:string,kind:'ended'|'reset'|'initial',count=0):
  return {id,projectId:null,title:'공유 변경 알림',body:kind==='ended'?'공유가 종료되었습니다.':kind==='reset'?'공유 자료가 최신 상태로 갱신되었습니다.':`프로젝트 ${count}개가 공유되었습니다.`,target:{kind:'list'}}
 }
 /** Final business result of one authorized project window; timestamps, color and reminders are excluded. */
+// Presentation limits never constrain valid source names or alter shared data.
+export function notificationText(value:string,max:number):string {
+ const clean=value.replace(/[\u0000-\u0008\u000b-\u001f]/g,' ').trim()||'이름 없음'
+ return clean.length>max?clean.slice(0,max-1)+'…':clean
+}
+export const sharingNoticeBody=(name:string)=>`${notificationText(name,2048-' 프로젝트가 공유되었습니다.'.length)} 프로젝트가 공유되었습니다.`
+export const notificationDetailBody=(name:string,detail:string)=>`${notificationText(name,2048-detail.length-3)} · ${detail}`
 export function summarizeProject(id:string,before:BusinessProject|null,after:BusinessProject,reconnecting:boolean):ChangeNotice|null {
- if(!before)return {id,projectId:after.id,title:after.name,body:`${after.name} 프로젝트가 공유되었습니다.`,target:{kind:'project',id:after.id}}
+ if(!before)return {id,projectId:after.id,title:notificationText(after.name,256),body:sharingNoticeBody(after.name),target:{kind:'project',id:after.id}}
  const previous=new Map(before.schedules.map(s=>[s.id,s])),current=new Map(after.schedules.map(s=>[s.id,s]))
  const added=after.schedules.filter(s=>!previous.has(s.id)),changed=after.schedules.filter(s=>previous.has(s.id)&&!sameBusiness(s,previous.get(s.id))),deleted=before.schedules.filter(s=>!current.has(s.id))
  const renamed=before.name!==after.name,total=added.length+changed.length+deleted.length
@@ -62,8 +69,8 @@ export function summarizeProject(id:string,before:BusinessProject|null,after:Bus
  if(!reconnecting&&!renamed&&total===1){
   const s=added[0]??changed[0]??deleted[0],old=previous.get(s.id)
   const details=added.length?['일정 추가']:deleted.length?['일정 삭제']:[...(old?.name!==s.name?['이름 변경']:[]),...(old?.startDate!==s.startDate||old?.endDate!==s.endDate?[`기간 변경 · ${s.startDate} ~ ${s.endDate}`]:[])]
-  return {id,projectId:after.id,title:after.name,body:`${s.name} · ${details.join(' · ')}`,target:deleted.length?{kind:'list'}:{kind:'schedule',id:s.id,projectId:after.id}}
+  return {id,projectId:after.id,title:notificationText(after.name,256),body:notificationDetailBody(s.name,details.join(' · ')),target:deleted.length?{kind:'list'}:{kind:'schedule',id:s.id,projectId:after.id}}
  }
  const details=[...(renamed?['프로젝트 이름 변경']:[]),...(added.length?[`추가${added.length}건`]:[]),...(changed.length?[`변경${changed.length}건`]:[]),...(deleted.length?[`삭제${deleted.length}건`]:[])]
- return {id,projectId:after.id,title:after.name,body:details.join(' · '),target:{kind:'project',id:after.id}}
+ return {id,projectId:after.id,title:notificationText(after.name,256),body:notificationText(details.join(' · '),2048),target:{kind:'project',id:after.id}}
 }

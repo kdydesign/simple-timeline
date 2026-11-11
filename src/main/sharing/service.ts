@@ -1,3 +1,5 @@
+import {createChangeNotifications} from './change-notifications'
+import type {ReminderSender} from '../reminders/engine'
 import {networkInterfaces} from 'node:os'
 import {randomUUID} from 'node:crypto'
 import {createSharingStore} from '../db/sharing/store'
@@ -24,6 +26,7 @@ export interface SharingTransport {
 const productionTransport:SharingTransport={discover:discoverHost,client:o=>new SharingClient(o),host:createSharingHost,identity:createHostIdentity,interfaces:()=>Object.values(networkInterfaces()).flatMap(list=>(list??[]).filter(i=>i.family==='IPv4').map(i=>i.address))}
 interface Options {
   storage:Extract<StorageState,{state:'ready'}>;profile:string;changed:(state:SharingState)=>void
+  changeSender?:ReminderSender;onChangeClick?:()=>void
   clock?:()=>number;transport?:Partial<SharingTransport>;secrets?:(profile:string)=>Promise<ProtectedSecrets>
 }
 export function createSharingService(o:Options){
@@ -35,11 +38,16 @@ export function createSharingService(o:Options){
   let host:ReturnType<typeof createSharingHost>|undefined,client:ReturnType<SharingTransport['client']>|undefined,syncController:ReturnType<typeof createSyncController>|undefined
   let secretsPromise:Promise<ProtectedSecrets>|undefined,closing:Promise<void>|undefined,starting:Promise<void>|undefined
   const secrets=()=>secretsPromise??=(o.secrets??electronSecrets)(o.profile).catch(error=>{secretsPromise=undefined;throw error})
+  const changes=createChangeNotifications({db:o.storage.db,role:()=>store.getConfig().role,generation:()=>epoch,
+    connected:()=>!disposed&&!suspended&&status==='connected'&&!!syncController?.fresh(),revoked:()=>!disposed&&!suspended&&status==='revoked',
+    snapshot:()=>store.readCache(),authorize:async()=>{const generation=epoch,active=syncController;if(!active||disposed||suspended)return false;const allowed=await active.authorize();return current(generation)&&active===syncController&&allowed&&store.getConfig().role==='member'},
+    changed,send:o.changeSender,onClick:o.onChangeClick,
+  })
   const current=(generation:number)=>!disposed&&!suspended&&generation===epoch
   const check=(generation:number)=>{if(!current(generation))throw failure('FORBIDDEN')}
   function getState():SharingState{
     const c=store.getConfig()
-    return {snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
+    return {changeNotifications:changes.state(),snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
       pendingPair:pendingPair?{pairId:pendingPair.pairId,fingerprint:pendingPair.fingerprint,expiresAt:pendingPair.expiresAt}:null,
       pendingPairs:host?.pending()??[],devices:c.role==='host'?store.listDevices():[],projects:c.role==='host'?store.listSharedProjects():[],settingsRequestToken,
       availableAddresses:transport.interfaces(),
@@ -51,9 +59,10 @@ export function createSharingService(o:Options){
     message=error instanceof SharingNetworkError||error instanceof CredentialCleanupError?error.message:error?'공유 연결을 확인하지 못했습니다. 주소·승인·보호 저장소를 확인하고 다시 연결해 주세요.':''
     if(value==='connected')lastCheckedAt=new Date().toISOString()
     changed()
+    if(value==='connected'||value==='revoked')void changes.evaluate()
   }
   function invalidate(){
-    epoch++;starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null;pendingAddress=null
+    epoch++;changes.invalidate();starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null;pendingAddress=null
     const previous=host;host=undefined
     // stop invalidates handlers synchronously before its first await.
     return previous?.stop()??Promise.resolve()
@@ -73,8 +82,8 @@ export function createSharingService(o:Options){
     }}
     client=transport.client({installationId:store.getConfig().hostId,trust,address:target,persistence,expectedDatasetId:store.getConfig().remoteDatasetId??undefined})
     const activeClient=client
-    syncController=createSyncController({now:clock,poll:options=>{operationSignal=options.signal;return activeClient.poll(options)},apply:result=>{check(generation);const before=JSON.stringify(store.readCache());store.applyCache(result.snapshot);if(before!==JSON.stringify(store.readCache())){snapshotRevision++;changed()}},
-      outcome:result=>{check(generation);if(result.kind==='revoked'){store.clearCache();snapshotRevision++;pendingPair=null}else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
+    syncController=createSyncController({now:clock,cursor:changes.cursor,poll:options=>{operationSignal=options.signal;return activeClient.poll(options)},apply:(result,reconnecting)=>{check(generation);const before=JSON.stringify(store.readCache());if(result.changes)changes.apply(result.changes,reconnecting);else{store.applyCache(result.snapshot);if(result.changesSupported===false)changes.unsupported()}if(before!==JSON.stringify(store.readCache())){snapshotRevision++;changed()}},
+      outcome:result=>{check(generation);if(result.kind==='revoked'){changes.revoke();snapshotRevision++;pendingPair=null}else if(result.kind==='unchanged'&&result.changesSupported===false)changes.unsupported();else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
       state:(value,error)=>{if(current(generation))setStatus(value,error)},
     })
     clientCommand=<T>(operation:(signal:AbortSignal)=>Promise<T>)=>syncController!.command(signal=>{operationSignal=signal;return operation(signal)})
@@ -194,8 +203,11 @@ export function createSharingService(o:Options){
     suspended=false;const drain=invalidate(),generation=epoch
     try{await drain;if(current(generation))await start()}catch(error){if(current(generation))setStatus('error',error)}
   }
-  function dispose(){if(closing)return closing;disposed=true;closing=invalidate();return closing}
+  function dispose(){if(closing)return closing;disposed=true;changes.dispose();closing=invalidate();return closing}
   return {getState,start,configureHost,setHosting,connect,confirmHost,approve,saveDevice,revokeDevice,deleteDevice,saveProject,saveReminder,disconnect,
+    setChangeNotifications(input:{enabled:boolean}){changes.setEnabled(input);return getState()},
+    retryChangeNotifications:async()=>{await changes.retry();return getState()},
+    acknowledgeChange(input:{token:string}){changes.acknowledge(input);return getState()},
     sync:async()=>{if(disposed)throw failure('FORBIDDEN');const generation=epoch;await syncController?.refresh(true);check(generation);return getState()},
     authorizeReminder:async()=>{const generation=epoch,active=syncController;if(!active||disposed||suspended)return false;const allowed=await active.authorize();return current(generation)&&active===syncController&&allowed&&store.getConfig().role==='member'},
     notifyLocalMutation(){if(!disposed){snapshotRevision++;changed()}},

@@ -54,6 +54,43 @@ async function ready(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 describe('real loopback pinned HTTPS and pairing', () => {
+  it('synchronizes authenticated change envelopes even when snapshot ETag has not changed', async () => {
+    const f = await fixture(); await ready(f)
+    let received: unknown[] = []
+    Object.assign(f.store, {getChangeSnapshot: (id:string,cursor:string|null,reconnecting:boolean) => {
+      received=[id,cursor,reconnecting]
+      return {version:1,snapshot:f.snapshot,cursor:'a'.repeat(64),mode:'delta',notices:[]}
+    }})
+    const result=await f.client.poll({cursor:null,reconnecting:true} as any)
+    expect(result).toMatchObject({kind:'snapshot',changesSupported:true,changes:{cursor:'a'.repeat(64)}})
+    expect(received).toEqual(['device-a',null,true])
+    if(result.kind!=='snapshot')throw Error('snapshot missing')
+    expect((await f.client.poll({etag:result.etag,cursor:'a'.repeat(64)} as any)).kind).toBe('snapshot')
+    await expect(pinnedRequest({address:f.address,trust:f.trust,path:'/v1/changes/sync',method:'POST',body:{cursor:null,reconnecting:false}})).rejects.toMatchObject({code:'UNAUTHORIZED'})
+    await expect(pinnedRequest({address:f.address,trust:f.trust,path:'/v1/changes/sync',method:'POST',token:f.saved()!.token,localAddress:'127.0.0.2',body:{cursor:null,reconnecting:false}})).rejects.toMatchObject({code:'UNAUTHORIZED'})
+    await expect(f.client.poll({cursor:'broken'} as any)).rejects.toMatchObject({code:'INVALID_REQUEST'})
+  })
+  it('falls back only on explicit old-host 404 and never after change support was established', async () => {
+    const f=await fixture();await ready(f)
+    let supported=false,malformed=false;const paths:string[]=[]
+    const server=createServer({cert:identity.certificate,key:identity.privateKey},(req,res)=>{
+      paths.push(req.url!);res.setHeader('etag','"'+'a'.repeat(64)+'"')
+      if(req.url==='/v1/changes/sync'){
+        if(!supported){res.writeHead(404);res.end(JSON.stringify({code:'NOT_FOUND'}));return}
+        res.end(JSON.stringify(malformed?{broken:true}:{version:1,snapshot:f.snapshot,cursor:'b'.repeat(64),mode:'delta',notices:[]}));return
+      }
+      res.end(JSON.stringify(f.snapshot))
+    })
+    const address=await listen(server),make=()=>new SharingClient({installationId,address,trust:f.trust,persistence:{load:async()=>f.saved(),save:async()=>{}}})
+    const old=make();cleanup.push(async()=>old.close())
+    expect(await old.poll()).toMatchObject({kind:'snapshot',changesSupported:false});expect(paths).toEqual(['/v1/changes/sync','/v1/snapshot'])
+    supported=true;const modern=make();cleanup.push(async()=>modern.close())
+    expect(await modern.poll()).toMatchObject({changesSupported:true})
+    malformed=true;await expect(modern.poll()).rejects.toMatchObject({code:'INVALID_RESPONSE'})
+    supported=false;await expect(modern.poll()).rejects.toMatchObject({status:404})
+    expect(paths.filter(p=>p==='/v1/snapshot')).toHaveLength(1)
+  })
+
   it('discovery sends no HTTP request; trusted identity succeeds and a changed certificate fails', async () => {
     let requests = 0
     const server = createServer({ cert: identity.certificate, key: identity.privateKey }, (_req, res) => { requests++; res.end('{}') })
@@ -183,7 +220,7 @@ describe('real loopback pinned HTTPS and pairing', () => {
     const wrong = new SharingClient({ installationId, address: f.address, trust: { ...f.trust, pin: other.pin, certificate: other.certificate }, persistence: { load: async () => saved, save: async () => {} } })
     cleanup.push(async () => wrong.close())
     await expect(wrong.poll()).rejects.toMatchObject({ code: 'TLS_UNTRUSTED' })
-    const badProtocol = createServer({ cert: identity.certificate, key: identity.privateKey }, (_req, res) => { res.setHeader('etag', '"' + 'a'.repeat(64) + '"'); res.end(JSON.stringify({ ...f.snapshot, protocolVersion: 2 })) })
+    const badProtocol = createServer({ cert: identity.certificate, key: identity.privateKey }, (req, res) => { if(req.url === '/v1/changes/sync'){res.writeHead(404);res.end('{}');return};res.setHeader('etag', '"' + 'a'.repeat(64) + '"'); res.end(JSON.stringify({ ...f.snapshot, protocolVersion: 2 })) })
     const address = await listen(badProtocol)
     const client = new SharingClient({ installationId, address, trust: f.trust, persistence: { load: async () => saved, save: async () => {} } })
     cleanup.push(async () => client.close())

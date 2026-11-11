@@ -49,3 +49,13 @@ it('refuses unavailable OS protection without writing plaintext',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'planrail-secrets-'));const secrets=createProtectedSecrets(dir,{isAsyncEncryptionAvailable:async()=>false,getSelectedStorageBackend:()=> 'basic_text',encryptStringAsync:async()=>Buffer.from('plain'),decryptStringAsync:async()=>({result:'{}',shouldReEncrypt:false})})
  await expect(secrets.write('2'.repeat(32),{token:'secret'},()=>true)).rejects.toThrow();expect(existsSync(join(dir,'sharing-secrets'))).toBe(false);rmSync(dir,{recursive:true,force:true})
 })
+
+it('passes committed cursor and reconnect context through atomic apply without advancing on storage failure',async()=>{
+ vi.useFakeTimers();const calls:any[]=[],contexts:boolean[]=[];let cursor:string|null='a'.repeat(64),fail=false,offline=false
+ const changes={version:1,snapshot:(snapshot as any).snapshot,cursor:'b'.repeat(64),mode:'delta',notices:[]}
+ const sync=createSyncController({cursor:()=>cursor,poll:async(o:any)=>{calls.push(o);if(offline)throw Error('offline');return {...snapshot,changes,changesSupported:true} as any},apply:(_o:any,reconnecting:boolean)=>{contexts.push(reconnecting);if(fail)throw Error('disk');cursor=changes.cursor},state:()=>{}} as any)
+ await sync.refresh();expect(calls[0]).toMatchObject({cursor:'a'.repeat(64),reconnecting:true});expect(contexts).toEqual([true])
+ await sync.refresh();expect(calls[1].reconnecting).toBe(false)
+ offline=true;await sync.refresh();offline=false;fail=true;await sync.refresh();expect(sync.fresh()).toBe(false)
+ expect(contexts.at(-1)).toBe(true);sync.stop()
+})

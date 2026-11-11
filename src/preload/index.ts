@@ -56,6 +56,7 @@ const sharingApi={
   connect:(v)=>sharingInvoke('connect',v),confirmHost:(v)=>sharingInvoke('confirmHost',v),approve:(v)=>sharingInvoke('approve',v),
   saveDevice:(v)=>sharingInvoke('saveDevice',v),revokeDevice:(v)=>sharingInvoke('revokeDevice',v),deleteDevice:(v)=>sharingInvoke('deleteDevice',v),saveProject:(v)=>sharingInvoke('saveProject',v),
   saveReminder:(v)=>sharingInvoke('saveReminder',v),sync:()=>sharingInvoke('sync'),disconnect:(v)=>sharingInvoke('disconnect',v),acknowledgeSettings:(v)=>sharingInvoke('acknowledgeSettings',v),
+  setChangeNotifications:(v)=>sharingInvoke('setChangeNotifications',v),retryChangeNotifications:()=>sharingInvoke('retryChangeNotifications'),acknowledgeChange:(v)=>sharingInvoke('acknowledgeChange',v),
   onChange:(callback)=>{const listener=(_event:unknown,state:SharingState)=>callback(state);ipcRenderer.on(sharingChanged,listener);return ()=>ipcRenderer.removeListener(sharingChanged,listener)},
 } satisfies SharingApi
 contextBridge.exposeInMainWorld('timelineSharing',sharingApi)

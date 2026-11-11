@@ -1,3 +1,5 @@
+import { validateChangeEnvelope } from '../../domain/change-notifications'
+import type { ChangeEnvelope } from '../../shared/change-notifications'
 import { randomBytes } from 'node:crypto'
 import { validateSharingIdentity, validateWireSnapshot } from '../../domain/sharing'
 import type { SharingAddress, WireSnapshot } from '../../shared/sharing'
@@ -17,7 +19,7 @@ export interface CredentialPersistence {
   save(connection: ClientConnection): Promise<void>
 }
 export type PairOutcome = { kind: 'pending'; pair: PendingPair } | { kind: 'ready'; connection: ClientConnection }
-export type PollOutcome = PairOutcome | { kind: 'snapshot'; snapshot: WireSnapshot; etag: string } | { kind: 'unchanged' } | { kind: 'revoked' }
+export type PollOutcome = PairOutcome | { kind: 'snapshot'; snapshot: WireSnapshot; etag: string; changes?: ChangeEnvelope; changesSupported?: boolean } | { kind: 'unchanged'; changesSupported?: boolean } | { kind: 'revoked' }
 interface ClientAttempt { pair: PendingPair; proof: string; datasetId: string; confirmed: boolean; token?: string; acknowledged?: boolean }
 function bodyRecord(response: TransportResponse): Record<string, unknown> {
   if (!response.body || typeof response.body !== 'object' || Array.isArray(response.body)) throw new SharingNetworkError('INVALID_RESPONSE')
@@ -29,6 +31,7 @@ export class SharingClient {
   private connection: ClientConnection | null = null
   private loaded = false
   private busy = false
+  private changesSupported: boolean | null = null
   private readonly options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string }
   constructor(options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string }) {
     validateSharingIdentity(options.installationId)
@@ -103,7 +106,7 @@ export class SharingClient {
     this.connection = connection; this.loaded = true; this.attempt = null
     return { kind: 'ready', connection: structuredClone(connection) }
   }
-  async poll(options: { etag?: string; force?: boolean; signal?: AbortSignal } = {}): Promise<PollOutcome> {
+  async poll(options: { etag?: string; force?: boolean; signal?: AbortSignal; cursor?: string | null; reconnecting?: boolean } = {}): Promise<PollOutcome> {
     return this.exclusive(async () => {
       if (this.attempt) return this.finishPair(this.attempt, options.signal)
       if (!this.loaded) {
@@ -116,12 +119,34 @@ export class SharingClient {
       if (!connection) throw new SharingNetworkError('UNAUTHORIZED')
       const etag = options.force ? undefined : options.etag
       if (etag !== undefined && !/^"[a-f0-9]{64}"$/.test(etag)) throw new SharingNetworkError('INVALID_REQUEST')
+      const cursor = options.cursor ?? null
+      if ((cursor !== null && (typeof cursor !== 'string' || !/^[a-f0-9]{64}$/.test(cursor))) || (options.reconnecting !== undefined && typeof options.reconnecting !== 'boolean')) throw new SharingNetworkError('INVALID_REQUEST')
       let response: TransportResponse
+      if (this.changesSupported !== false) {
+        try {
+          response = await this.request('/v1/changes/sync', { method: 'POST', token: connection.token, body: { cursor, reconnecting: options.reconnecting ?? false } }, options.signal)
+          const b = bodyRecord(response)
+          // Identity errors remain explicit; malformed envelopes never imply an old host.
+          const raw = b.snapshot
+          if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new SharingNetworkError('INVALID_RESPONSE')
+          const datasetId = this.checkIdentity(raw as Record<string, unknown>)
+          if (datasetId !== connection.datasetId) throw new SharingNetworkError('DATASET_MISMATCH')
+          let changes: ChangeEnvelope
+          try { changes = validateChangeEnvelope(b) } catch { throw new SharingNetworkError('INVALID_RESPONSE') }
+          if (response.status !== 200 || typeof response.etag !== 'string' || !/^"[a-f0-9]{64}"$/.test(response.etag)) throw new SharingNetworkError('INVALID_RESPONSE')
+          this.changesSupported = true
+          return { kind: 'snapshot', snapshot: changes.snapshot, etag: response.etag, changes, changesSupported: true }
+        } catch (e) {
+          if (e instanceof SharingNetworkError && e.code === 'REVOKED' && e.status === 403) return { kind: 'revoked' }
+          if (!(e instanceof SharingNetworkError && e.status === 404 && this.changesSupported === null)) throw e
+          this.changesSupported = false
+        }
+      }
       try { response = await this.request('/v1/snapshot', { token: connection.token, etag }, options.signal) }
       catch (e) { if (e instanceof SharingNetworkError && e.code === 'REVOKED' && e.status === 403) return { kind: 'revoked' }; throw e }
       if (response.status === 304) {
         if (!etag || response.etag !== etag) throw new SharingNetworkError('INVALID_RESPONSE')
-        return { kind: 'unchanged' }
+        return { kind: 'unchanged', changesSupported: false }
       }
       const b = bodyRecord(response)
       const datasetId = this.checkIdentity(b)
@@ -129,7 +154,7 @@ export class SharingClient {
       let snapshot: WireSnapshot
       try { snapshot = validateWireSnapshot(b) } catch { throw new SharingNetworkError('INVALID_RESPONSE') }
       if (typeof response.etag !== 'string' || !/^"[a-f0-9]{64}"$/.test(response.etag)) throw new SharingNetworkError('INVALID_RESPONSE')
-      return { kind: 'snapshot', snapshot, etag: response.etag }
+      return { kind: 'snapshot', snapshot, etag: response.etag, changesSupported: false }
     })
   }
   close() { this.controller.abort(); this.attempt = null; this.connection = null }

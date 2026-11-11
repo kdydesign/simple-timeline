@@ -1,3 +1,4 @@
+import { validateChangeEnvelope } from '../../domain/change-notifications'
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:https'
 import type { IncomingMessage, ServerResponse } from 'node:http'
@@ -9,7 +10,7 @@ import { certificatePin, hostServerName, type HostIdentity } from './identity'
 import { REQUEST_LIMIT, REQUEST_TIMEOUT_MS, RESPONSE_LIMIT, SharingNetworkError } from './transport'
 
 type StoreMethods = Pick<SharingStore, 'getDevice' | 'listDevices' | 'getDeviceInstallationId' | 'saveDevice' | 'putCredential' | 'activateCredential' | 'revokePendingCredentials' | 'findCredential' | 'getWireSnapshot'>
-export type HostStore = { [K in keyof StoreMethods]: (...args: Parameters<StoreMethods[K]>) => ReturnType<StoreMethods[K]> } & { getConfig(): { hostId: string; datasetId: string } }
+export type HostStore = { [K in keyof StoreMethods]: (...args: Parameters<StoreMethods[K]>) => ReturnType<StoreMethods[K]> } & { getConfig(): { hostId: string; datasetId: string }; getChangeSnapshot?: SharingStore['getChangeSnapshot'] }
 export interface PendingPair { pairId: string; deviceId: string; name: string; ip: string; fingerprint: string; expiresAt: string }
 interface Attempt extends PendingPair { installationId: string; proof: string; hostApproved: boolean; memberApproved: boolean; deadline: number; tokenHash?: string; acknowledged: boolean }
 export const hashCredential = (token: string) => createHash('sha256').update(token).digest('hex')
@@ -95,10 +96,21 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
         send(res, req.headers['if-none-match'] === etag ? 304 : 200, req.headers['if-none-match'] === etag ? undefined : snapshot, etag)
         return
       }
-      if (req.method !== 'POST' || !['/v1/pair/begin', '/v1/pair/confirm', '/v1/pair/finish', '/v1/pair/ack'].includes(req.url ?? '')) fail('NOT_FOUND', 404)
+      if (req.method !== 'POST' || !['/v1/changes/sync', '/v1/pair/begin', '/v1/pair/confirm', '/v1/pair/finish', '/v1/pair/ack'].includes(req.url ?? '')) fail('NOT_FOUND', 404)
       const body = await readBody(req)
       // stop() runs synchronously before main closes DB; late bodies must never use it.
       if (!server || requestGeneration !== generation) fail('ABORTED', 503)
+      if (req.url === '/v1/changes/sync') {
+        const device = authenticate(req, ip)
+        if (!store.getChangeSnapshot) fail('NOT_FOUND', 404)
+        const b = object(body, ['cursor', 'reconnecting'])
+        if ((b.cursor !== null && (typeof b.cursor !== 'string' || !/^[a-f0-9]{64}$/.test(b.cursor))) || typeof b.reconnecting !== 'boolean') fail('INVALID_REQUEST')
+        let envelope
+        try { envelope = validateChangeEnvelope(store.getChangeSnapshot(device.id, b.cursor as string | null, b.reconnecting)) }
+        catch (error) { if (error instanceof Error && error.message === 'CHANGE_CURSOR_INVALID') fail('CHANGE_CURSOR_INVALID', 409); throw error }
+        send(res, 200, envelope, `"${hashCredential(JSON.stringify(envelope.snapshot))}"`)
+        return
+      }
       if (req.url === '/v1/pair/begin') {
         const b = object(body, ['installationId', 'nonce', 'proof'])
         const installationId = validateSharingIdentity(b.installationId), nonce = hex(b.nonce), proof = hex(b.proof)

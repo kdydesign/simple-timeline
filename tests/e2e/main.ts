@@ -24,6 +24,14 @@ let changed = false,
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT;
 void bootstrap({
   profileDir: profile,
+  // All E2E profiles use an independent change queue; never invoke real OS notifications.
+  changeSender: async(message,onClick,onFailure) => {
+    const g=globalThis as any;
+    (g.changeMessages??=[]).push(message);
+    (g.changeClicks??=[]).push(onClick);
+    (g.changeFailures??=[]).push(onFailure);
+    return 'submitted';
+  },
   ...(fault === 'sharing' ? {
     // Test entry only: real pinned HTTPS/authentication, bound to a distinct socket source.
     sharingTransport: { client: options => {

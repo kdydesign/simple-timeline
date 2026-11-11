@@ -9,6 +9,7 @@ const shapes:Record<string,{required:string[];optional?:string[]}>= {
   configureHost:{required:['address','port']},setHosting:{required:['enabled']},connect:{required:['address','port']},
   confirmHost:{required:['pairId','confirmed']},approve:{required:['pairId','confirmed']},saveDevice:{required:['name','ip'],optional:['id']},
   deleteDevice:{required:['id']},revokeDevice:{required:['id']},saveProject:{required:['name','color','participants'],optional:['id']},
+  setChangeNotifications:{required:['enabled']},acknowledgeChange:{required:['token']},
   saveReminder:{required:['id','reminder']},disconnect:{required:['confirmed']},acknowledgeSettings:{required:['token']},
 }
 function object(value:unknown,required:string[],optional:string[]=[]):Record<string,unknown>{
@@ -24,7 +25,7 @@ export async function dispatchSharing(service:SharingService|undefined,args:unkn
     if(Buffer.byteLength(JSON.stringify(args),'utf8')>1024*1024)throw new DomainValidationError('input')
     const [command,value]=args
     if(typeof command!=='string')throw new DomainValidationError('input')
-    if(command==='getState'||command==='sync'){
+    if(command==='getState'||command==='sync'||command==='retryChangeNotifications'){
       if(args.length!==1)throw new DomainValidationError('input')
       return {ok:true,data:await service[command]()}
     }

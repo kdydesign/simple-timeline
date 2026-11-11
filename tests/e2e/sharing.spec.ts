@@ -44,6 +44,9 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   for(const combo of await host.page.getByRole('combobox').all()){await combo.click();await host.page.getByRole('option',{name:'멤버 PC · 127.0.0.2'}).click()}
   await host.page.getByRole('button',{name:'저장',exact:true}).click();await host.page.getByRole('button',{name:'공유로 저장',exact:true}).click();
   await expect(member.page.getByRole('button',{name:'개발 편집',exact:true})).toBeVisible();
+  await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(1);
+  expect(await member.app.evaluate(()=>(globalThis as any).changeMessages[0])).toMatchObject({body:'1.1.1 핫픽스 프로젝트가 공유되었습니다.'});
+  expect(await host.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(0);
   const mixed=await snapshot(member),remote=mixed.schedules.find(s=>s.sharing==='member')!;
   expect(remote.id).not.toBe('1');expect(mixed.schedules.find(s=>s.id==='1')?.name).toBe('개인 일정');
   const sync=member.page.getByRole('button',{name:'수동 동기화',exact:true});expect(await sync.evaluate(el=>el.nextElementSibling?.getAttribute('aria-label'))).toBe('조회 모드');await expect(member.page.locator('.brand .sharing-status')).toHaveClass(/connected/);
@@ -51,21 +54,27 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   expect((await snapshot(host)).schedules[0].reminder.start).toBe(false);expect((await snapshot(member)).schedules.find(s=>s.id===remote.id)?.reminder.start).toBe(true);expect((await snapshot(member)).schedules.find(s=>s.id==='1')?.reminder.start).toBe(false);
   await host.page.getByRole('button',{name:'개발 편집',exact:true}).click();await host.page.getByLabel('일정 이름',{exact:true}).fill('공유 변경');await host.page.getByRole('button',{name:'저장',exact:true}).click();
   await expect(member.page.getByRole('button',{name:'공유 변경 편집',exact:true})).toBeVisible();
+  await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(2);
+  expect(await member.app.evaluate(()=>(globalThis as any).changeMessages[1])).toMatchObject({title:'1.1.1 핫픽스',body:'공유 변경 · 이름 변경'});
   const memberUiObservedAt=Date.now(),sourceCommitAt=await host.app.evaluate(()=>(globalThis as any).lastSourceCommitAt as number);
   propagation={sourceCommitAt,memberUiObservedAt,elapsedMs:memberUiObservedAt-sourceCommitAt,scope:'one normal-poll observation on two local processes; includes UI assertion scheduling'};
   await member.page.getByRole('button',{name:'공유',exact:true}).click();await expect(member.page.getByRole('button',{name:'개인 일정 편집',exact:true})).toHaveCount(0);await member.page.getByRole('button',{name:'전체',exact:true}).click();
   await sync.click();await expect(member.page.getByRole('status',{exact:true})).toContainText('동기화했습니다.');
+  expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);
   await capture(member,'dark-member-before-connected-toolbar');m=await settings(member);await capture(member,'dark-member-before-connected-settings');await m.getByRole('button',{name:'공유 설정 닫기'}).click();
   await capture(member,'dark-member-connected-toolbar');m=await settings(member);await capture(member,'dark-member-connected-settings');
   // Real modal keyboard focus and nested cancellation restore the initiating control.
   await m.getByRole('button',{name:'연결 해제',exact:true}).focus();await member.page.keyboard.press('Enter');await expect(member.page.getByRole('alertdialog')).toBeVisible();await member.page.keyboard.press('Escape');await expect(m.getByRole('button',{name:'연결 해제',exact:true})).toBeFocused();await member.page.keyboard.press('Escape');await expect(m).toHaveCount(0);
   await member.restart();await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');expect((await snapshot(member)).schedules.find(s=>s.id===remote.id)?.reminder.start).toBe(true);
+  expect(await member.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(0);
   // Stop/start on actual host and member red/green with explicit reconnect.
   h=await settings(host);await h.getByRole('button',{name:'공유 중지',exact:true}).click();await member.page.getByRole('button',{name:'수동 동기화',exact:true}).click();await expect(member.page.locator('.sharing-status')).toHaveClass(/unavailable/);await capture(member,'dark-member-disconnected-toolbar');
   m=await settings(member);await capture(member,'dark-member-disconnected-settings');await m.getByRole('button',{name:'공유 설정 닫기'}).click();await capture(member,'dark-member-before-disconnected-toolbar');m=await settings(member);await capture(member,'dark-member-before-disconnected-settings');
   await h.getByRole('button',{name:'공유 시작',exact:true}).click();await m.getByRole('button',{name:'연결',exact:true}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');await m.getByRole('button',{name:'공유 설정 닫기'}).click();
   await host.restart();await expect.poll(async()=>(await sharingState(host)).status).toBe('connected');await member.page.getByRole('button',{name:'수동 동기화',exact:true}).click();await expect(member.page.locator('.sharing-status')).toHaveClass(/connected/);
   h=await settings(host);await h.getByRole('button',{name:'승인 취소',exact:true}).click();await host.page.getByRole('alertdialog').getByRole('button',{name:'승인 취소',exact:true}).click();await member.page.getByRole('button',{name:'수동 동기화',exact:true}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('revoked');await expect.poll(async()=>(await snapshot(member)).schedules.filter(s=>s.sharing==='member').length).toBe(0);expect((await snapshot(member)).schedules[0].name).toBe('개인 일정');
+  await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(1);
+  expect(await member.app.evaluate(()=>(globalThis as any).changeMessages[0])).toEqual({title:'공유 변경 알림',body:'공유가 종료되었습니다.'});
   m=await settings(member);await m.getByRole('button',{name:'연결 해제',exact:true}).click();await member.page.getByRole('alertdialog').getByRole('button',{name:'연결 해제',exact:true}).click();await expect.poll(async()=>(await sharingState(member)).role).toBe('personal');expect(await snapshot(member)).toMatchObject({schedules:[{id:'1',name:'개인 일정'}]});
  } finally {await writeFile(info.outputPath('screenshots.json'),JSON.stringify({source,propagation,captures},null,2));await member.dispose()}
 });
