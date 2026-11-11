@@ -83,6 +83,7 @@ verify:app의 순서는 typecheck → test:release → test:tz → test:ui → b
 각 명령은 180초 제한이며, `test:e2e`의 전체 suite만 240초다. 첫 실패에서 멈추고 나머지를 `not-run`으로 기록한다.
 0.6.0의 순차 sandbox Electron 68개 회귀는 실제180초에64개 통과 뒤 종료된 근거로 전체 예산만 늘렸다.
 개별 테스트·assertion·네트워크 요청 제한은 유지한다. [실행 기록](../implementation/2026-11-10-lan-sharing.md)을 따른다.
+native 내부 Electron 실행 예산은120초다(상위 명령180초에 컴파일·프로필 정리 포함). Windows에서 이전 성공 단계가58.45초였고 이후 두 실행이 내부60초 제한으로 종료되어 전체 예산을 조정했다. 이 조정은 Windows 통과 근거가 아니며, 단계별 시간을 남긴 Windows 재실행으로 원인 가설을 검증해야 한다.
 개별 검사로 실패를 재현·수정한 뒤 변경에 필요한 통합 검사를 마친다. 실패·skip을 성공으로 바꾸지 않는다.
 
 ## 결과와 CI 읽기
@@ -91,7 +92,7 @@ verify:app의 순서는 typecheck → test:release → test:tz → test:ui → b
 | --- | --- |
 | `artifacts/harness/latest.json`, `latest.log` | scope·시각·OS·Node·HEAD·dirty·검사 결과와 상세 로그. [Repository harness](../../.github/workflows/harness.yml)는 Ubuntu/Windows, 5분 제한, artifact 14일 보관 |
 | `artifacts/app/latest.json`, 명령별 `.log` | `application-tests`의 SHA·dirty·완료/실패/미실행. 로그 이름은 스크립트의 콜론을 하이픈으로 바꾼 이름 |
-| `artifacts/native/`, `artifacts/e2e/` | Electron DB 결과, E2E JSON·프로세스 로그·화면·성능 fixture 결과 |
+| `artifacts/native/`, `artifacts/e2e/` | native `results.json`의 케이스 실행·정리 시간, `latest.log`의 시작 단계, `runner.json`의 프로세스·프로필 정리 시간과 마지막 관측 단계(제한 초과 포함). E2E JSON·프로세스 로그·화면·성능 fixture 결과 |
 | `artifacts/packaged/`, `release/`, `artifacts/windows-update/`, `artifacts/windows-legacy/` | Windows lifecycle 결과·정식 설치본·검증 전용 업데이트 fixture |
 
 [Application CI](../../.github/workflows/app.yml)는 Ubuntu/Windows, 작업별 45분 제한으로 앱 검사를 실행한다.
