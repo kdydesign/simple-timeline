@@ -22,9 +22,9 @@ Task3 TDD는 UPDATE 역할·오프라인·진행·명시적 취소/재시도·di
 
 Windows packaged 검사는 기존 수동 설치 lifecycle과 별도로 `packaged.update.spec.ts`·test-only harness를 준비했다. 정식 앱 ASAR에는 포함하지 않으며, 격리 Windows CI에서만 privileged main inspector로 정확한 production installer adapter를 불러 실제 updater loopback/cache/NSIS를 사용한다. synthetic next-version 설치 파일의 catalog 우회는 이 harness에만 있다. 실제 production bootstrap의 will-quit가 서비스·DB를 정리할 때 첫 이벤트를 취소하고, 이후 취소되지 않은 이벤트까지 기다린 뒤 검증·인계한다. 새 버전의 새로운 startup timestamp·UI 준비·새 프로세스·read-only SQLite 보존을 확인한다. 자동 재실행한 앱은 강제 종료하거나 열린 DB를 지우지 않고 일회성 VM 폐기에 맡긴다. 기존 full service/인증/dirty/재시작 경로와 Windows adapter/실제 설치 검증을 층별로 구분한다.
 
-## 실행하지 않은 범위
+## 로컬 환경의 제한과 사용자 PC 확인 범위
 
-이 Linux 개발 환경에서는 EXE/NSIS를 실행하지 않았다. 실제 Windows packaged updater 테스트는 **구현·타입/번들 검증만 완료, 실행 미검증**이다. 이후 Windows CI 결과도 Windows11 사용자 PC 인수와 별개다. 현재 사용자 권한·기본/사용자 지정/legacy 경로·CIM 가시성·보안 프로그램 잠금·설치 실패/자동 재실행·알림/설정/연결 자격 보존·사내망 장시간 전송·구버전 호환 실기는 미검증으로 남는다. 사용자 첫 도입에는 호스트와 멤버 모두0.8.0 이상 수동 설치가 필요하며,0.7.0에서 자동 bootstrap을 제공한다고 안내하지 않는다.
+이 Linux 개발 환경에서는 EXE/NSIS를 실행하지 않았다. 아래 최종 Windows CI에서는 실제 packaged updater 실행까지 통과했다. 이 결과는 Windows11 사용자 PC 인수와 별개다. 회사 PC의 실제 설치 경로·CIM 가시성·보안 프로그램 잠금·실패 복구·알림/설정/연결 자격 보존·사내망 장시간 전송은 사용자 환경에서 추가 확인해야 한다. 사용자 첫 도입에는 호스트와 멤버 모두0.8.0 이상 수동 설치가 필요하며,0.7.0에서 자동 bootstrap을 제공한다고 안내하지 않는다.
 
 ## 최종 검증 기록
 
@@ -51,3 +51,17 @@ CI `43055632996`의 Windows E2E는87개 중86개가 통과했고, 기존 missing
 기준 `ad44f6cdb847e2d85d75889d6eab514fb7c276ca`에서 시험용 진입점이 실제 bootstrap을5.5초 늦추도록 해 동일한 `Expected -6, Received undefined` 실패를 재현했다. 제품 코드·기록기는 변경하지 않았다. 테스트는 기존 Electron fixture와 같은30초 launch 예산 안에 실제 `load-requested` 기록을 기다린 후, 기존5초 `load-failed=-6` assertion을 시작한다. 즉시 시작과 지연 시작을 모두 실행하며 `ui-ready` 부재·프로필 경로 비노출 검사를 유지한다. 전체 E2E240초·개별 테스트45초 제한과 오류 assertion5초는 유지했다.
 
 실패 원인을 다음 실행에서 확인할 수 있도록 성공·실패 모두 프로필 삭제 전에 마지막 시작 보고서·프로세스 상태·준비 관측 시각과 각65,536자 이내 stdout/stderr를 첨부한다. 로그의 임시 프로필 경로는 치환하고 spawn 오류·조기 종료도 기록하며, spawn 오류에서 발생하지 않을 수 있는 `exit` 대신 `close`로 정리를 기다린다. Linux x64·Node24.22.1·Electron45.2.1·sandbox 유지 Xvfb에서 focused 시작 E2E4개가11.1초에 통과했다. 지연 사례의 실제 `load-requested`는5,738ms, `load-failed=-6`은5,820ms였다. 새 회귀1개로 전체 대상은88개이며, 이 보정의 Windows CI와 전체 단일 실행은 아직 재실행하지 않았다.
+
+### 최종 원격 CI 확인 — 2026-11-11
+
+위의 미실행·실패 기록은 각 시점의 증거다. 이후 소스 `bde6edf63b8f16f6be4943f864aca2e585339245`의 [Application 43058969346](https://github.com/kdydesign/simple-timeline/actions/runs/43058969346)과 [Repository harness 43058970078](https://github.com/kdydesign/simple-timeline/actions/runs/43058970078)이 모두 성공했다. Linux와 Windows 양쪽의 `verify:app` 전체 단일 실행이 통과했다. 타입·release·3개 시간대 단위·UI·build·native·Electron E2E를 포함하며, 앞선 분할 실행과 전체 시간 제한 실패를 이번 정확한 SHA의 성공과 구분한다.
+
+Windows job `130656012586`에서는 현재 설치본·실제 구버전 Simple Timeline0.2.1·합성 다음 버전 설치본 생성도 성공했다. 실제 패키지 검사2개가1.5분에 통과했다. 기존 설치·오프라인 사용·업데이트·제거 후 DB 보존 검사와 새 자동 업데이터 검사다. 자동 업데이터 검사는24.3초에 통과했으며 미저장 초안 보호, 안전한 종료 후 실제 NSIS 인계, 대상 버전 자동 재실행, 새로운 프로세스·UI 준비, SQLite 프로젝트 보존을 확인했다. 테스트용 설치본의 등록 우회는 test harness에만 있으며 정식 importer는 계속 거부한다. 자동 실행한 앱은 강제 종료하지 않고 일회성 VM 폐기에 맡겼다.
+
+같은 실행의 다운로드 산출물:
+
+- 최초 수동 설치: `Planrail-Windows11-x64-unsigned-bde6edf63b8f16f6be4943f864aca2e585339245`.
+- 호스트에서 압축 해제 없이 등록: `Planrail-LAN-UPDATE-bde6edf63b8f16f6be4943f864aca2e585339245`.
+- `Planrail-UPDATE-TEST-ONLY-*`는 검증 전용이며 실제 배포에 사용하지 않는다.
+
+이 결과 기록 이후 문서만 변경하며 제품·테스트·배포 설정은 바꾸지 않는다. 문서의 저장소 하네스 검사를 별도로 실행하고, 문서 기록 커밋은 `[skip ci]`로 동일한 전체 앱 CI의 중복 실행을 생략한다. 설치 산출물의 소스 SHA는 위의 검증된 SHA이며 문서 기록 커밋 SHA와 다르다. 실제 사내 Windows11 PC 인수는 남아 있다.
