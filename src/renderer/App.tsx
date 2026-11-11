@@ -470,15 +470,15 @@ export function App({
     let cancelled=false;
     void (async()=>{
       if(!await timeline.reconcile()){if(!cancelled){setChangeToOpen(null);setFormError({code:'IPC_UNAVAILABLE',message:'공유 알림의 대상을 조회하지 못했습니다. 다시 동기화해 주세요.'});}return;}
-      const result=await api.getSnapshot();
+      const snapshot=await timeline.reconcileSnapshot();
       if(cancelled)return;
       setChangeToOpen(null);
-      if(!result.ok){setFormError(result.error);return;}
+      if(!snapshot){setFormError({code:'IPC_UNAVAILABLE',message:'공유 알림의 대상을 조회하지 못했습니다. 다시 동기화해 주세요.'});return;}
       const target=changeToOpen.target;
       const allowed=sharing.state?.role==='member'&&sharing.state.status!=='revoked';
       const projectId=target.kind==='project'?target.id:target.kind==='schedule'?target.projectId:null;
-      const project=allowed?result.data.projects.find(p=>p.id===projectId&&p.sharing==='member'):undefined;
-      const schedule=project&&target.kind==='schedule'?result.data.schedules.find(s=>s.id===target.id&&s.projectId===project.id&&s.sharing==='member'):undefined;
+      const project=allowed?snapshot.projects.find(p=>p.id===projectId&&p.sharing==='member'):undefined;
+      const schedule=project&&target.kind==='schedule'?snapshot.schedules.find(s=>s.id===target.id&&s.projectId===project.id&&s.sharing==='member'):undefined;
       setFilter('all');setFormError(null);
       if(schedule){
         navigateDate(schedule.startDate);
@@ -486,7 +486,7 @@ export function App({
         editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,changeToOpen.caller);
       }else if(project&&target.kind==='project'){
         editor.close();
-        const date=result.data.schedules.filter(s=>s.projectId===project.id).map(s=>s.startDate).sort()[0];
+        const date=snapshot.schedules.filter(s=>s.projectId===project.id).map(s=>s.startDate).sort()[0];
         if(date)navigateDate(date);
         if(preferences.collapsed.includes(project.id))preferences.toggleProject(project.id);
         if(mode==='calendar')setProjectsOpen(true);
@@ -497,7 +497,7 @@ export function App({
       }
     })().catch(()=>{if(!cancelled){setChangeToOpen(null);setFormError({code:'IPC_UNAVAILABLE',message:'공유 알림의 대상을 조회하지 못했습니다. 다시 동기화해 주세요.'});}});
     return()=>{cancelled=true;};
-  },[changeToOpen,changeNavigationBlocked,changeNotifications?.enabled,sharing.state?.role,sharing.state?.status,changeDraftKey,editor.dirty,api,timeline.reconcile,mode,preferences.collapsed]);
+  },[changeToOpen,changeNavigationBlocked,changeNotifications?.enabled,sharing.state?.role,sharing.state?.status,changeDraftKey,editor.dirty,api,timeline.reconcile,timeline.reconcileSnapshot,mode,preferences.collapsed]);
   useEffect(()=>{
     if(!projectToReveal||model||confirmation||sharing.settingsOpen||quickReminder)return;
     const frame=requestAnimationFrame(()=>{

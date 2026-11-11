@@ -1,5 +1,5 @@
 import {it,expect,vi,beforeEach} from 'vitest'
-import {render,screen,waitFor,act,within} from '@testing-library/react'
+import {render,screen,waitFor,act,within,fireEvent} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {App} from '../../src/renderer/App'
 import {memoryApi} from './fake-api'
@@ -57,7 +57,24 @@ it.each(['deleted','revoked'] as const)('falls back to current list if the targe
  const f=member(),u=userEvent.setup();render(<App api={f.m.api}/>);await u.click(await screen.findByRole('button',{name:'프로젝트 추가'}));await u.type(screen.getByLabelText('프로젝트 이름'),'초안');await f.click({kind:'schedule',id:'1',projectId:'1'});await screen.findByRole('alertdialog');await f.m.api.deleteProject({id:'1',confirmed:true});if(scenario==='revoked')await act(async()=>f.emit({status:'revoked',snapshotRevision:1}));await u.click(screen.getByRole('button',{name:'변경 버리기'}));expect(await screen.findByText('공유 대상이 삭제되거나 공유가 해제되어 현재 프로젝트 목록을 표시합니다.')).toBeVisible();expect(screen.queryByLabelText('일정 이름')).not.toBeInTheDocument();expect(screen.queryByLabelText('프로젝트 이름')).not.toBeInTheDocument();expect(within(await screen.findByRole('region',{name:'프로젝트 목록'})).getByRole('button',{name:'일정 없음 편집'})).toBeVisible()
 })
 it('defers notification while dirty sharing settings remain open and preserves both drafts on cancel',async()=>{
- const f=member(),u=userEvent.setup();render(<App api={f.m.api}/>);await u.click(await screen.findByRole('button',{name:'프로젝트 추가'}));await u.type(screen.getByLabelText('프로젝트 이름'),'편집 초안');await act(async()=>f.emit({settingsRequestToken:'settings'}));const dialog=await screen.findByRole('dialog',{name:'공유 설정'});await u.clear(within(dialog).getByLabelText('포트'));await u.type(within(dialog).getByLabelText('포트'),'47832');await f.click({kind:'schedule',id:'1',projectId:'1'});expect(within(dialog).getByLabelText('포트')).toHaveValue(47832);expect(f.api.acknowledgeChange).not.toHaveBeenCalled();await u.click(within(dialog).getByRole('button',{name:'공유 설정 닫기'}));await u.click(screen.getByRole('button',{name:'취소'}));expect(within(dialog).getByLabelText('포트')).toHaveValue(47832);await u.click(within(dialog).getByRole('button',{name:'공유 설정 닫기'}));await u.click(screen.getByRole('button',{name:'변경 버리기'}));await u.click(await screen.findByRole('button',{name:'계속 편집'}));expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('편집 초안')
+ const f=member()
+ const click=async(target:HTMLElement)=>{await act(async()=>{target.focus();fireEvent.click(target)})}
+ render(<App api={f.m.api}/>)
+ await click(await screen.findByRole('button',{name:'프로젝트 추가'}))
+ await act(async()=>{fireEvent.change(screen.getByLabelText('프로젝트 이름'),{target:{value:'편집 초안'}})})
+ await act(async()=>f.emit({settingsRequestToken:'settings'}))
+ const dialog=await screen.findByRole('dialog',{name:'공유 설정'})
+ await act(async()=>{fireEvent.change(within(dialog).getByLabelText('포트'),{target:{value:'47832'}})})
+ await f.click({kind:'schedule',id:'1',projectId:'1'})
+ expect(within(dialog).getByLabelText('포트')).toHaveValue(47832)
+ expect(f.api.acknowledgeChange).not.toHaveBeenCalled()
+ await click(within(dialog).getByRole('button',{name:'공유 설정 닫기'}))
+ await click(screen.getByRole('button',{name:'취소'}))
+ expect(within(dialog).getByLabelText('포트')).toHaveValue(47832)
+ await click(within(dialog).getByRole('button',{name:'공유 설정 닫기'}))
+ await click(screen.getByRole('button',{name:'변경 버리기'}))
+ await click(await screen.findByRole('button',{name:'계속 편집'}))
+ expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('편집 초안')
 })
 it('defers notification while a dirty quick alarm dialog remains open',async()=>{
  const f=member(),u=userEvent.setup();f.m.snapshot.schedules[0].reminder.start=true;render(<App api={f.m.api}/>);await u.click(await screen.findByRole('button',{name:'개발 알림 설정'}));const dialog=screen.getByRole('dialog',{name:'알림 설정'});await u.clear(within(dialog).getByLabelText('알림 며칠 전'));await u.type(within(dialog).getByLabelText('알림 며칠 전'),'4');await f.click({kind:'project',id:'1'});expect(f.api.acknowledgeChange).not.toHaveBeenCalled();await u.keyboard('{Escape}');await u.click(screen.getByRole('button',{name:'계속 편집'}));expect(within(dialog).getByLabelText('알림 며칠 전')).toHaveValue(4);await u.click(within(dialog).getByRole('button',{name:'알림 설정 닫기'}));await u.click(screen.getByRole('button',{name:'변경 버리기'}));await waitFor(()=>expect(f.api.acknowledgeChange).toHaveBeenCalledWith({token:'click-1'}));expect(screen.queryByLabelText('프로젝트 이름')).not.toBeInTheDocument()
@@ -78,4 +95,25 @@ it('rejects a schedule whose current project does not match the typed click targ
 })
 it('defers a change click until the calendar day dialog closes',async()=>{
  const f=member(),u=userEvent.setup();f.m.snapshot.schedules=Array.from({length:5},(_,i)=>({...hotfix.schedules[0],id:String(i+1),startDate:'2026-12-15',endDate:'2026-12-15',sharing:'member'}));render(<App api={f.m.api} today={new Date(2026,11,3)}/>);await u.click(await screen.findByRole('button',{name:'달력'}));await u.click(screen.getByRole('button',{name:'2026-12-15 +2 더 보기'}));const dialog=screen.getByRole('dialog',{name:'2026-12-15 전체 일정 5개'});await f.click({kind:'project',id:'1'});expect(dialog).toBeVisible();expect(f.api.acknowledgeChange).not.toHaveBeenCalled();await u.keyboard('{Escape}');await waitFor(()=>expect(f.api.acknowledgeChange).toHaveBeenCalledWith({token:'click-1'}));expect(dialog).not.toBeInTheDocument();expect(await screen.findByRole('region',{name:'프로젝트 목록'})).toBeVisible();expect(screen.getByRole('button',{name:'달력'})).toHaveAttribute('aria-pressed','true')
+})
+it('retains the final source snapshot in both the timeline and editor when the host changes between reads',async()=>{
+ const f=member();render(<App api={f.m.api}/>);await screen.findByRole('button',{name:'개발 편집'});await screen.findByRole('button',{name:'수동 동기화'})
+ const read=f.m.api.getSnapshot
+ let release!:(result:Awaited<ReturnType<typeof read>>)=>void
+ const readSpy=vi.fn(read).mockImplementationOnce(async()=>{
+  const older=await read()
+  Object.assign(f.m.snapshot.schedules[0],{name:'최신 호스트 일정',startDate:'2027-03-10',endDate:'2027-03-12'})
+  return older
+ }).mockImplementationOnce(()=>new Promise(resolve=>{release=resolve}))
+ f.m.api.getSnapshot=readSpy
+ await f.click({kind:'schedule',id:'1',projectId:'1'})
+ await waitFor(()=>expect(readSpy).toHaveBeenCalledTimes(2))
+ expect(screen.getByRole('button',{name:'개발 편집'})).toBeVisible()
+ await act(async()=>release(await read()))
+ await waitFor(()=>{
+  expect(screen.getByLabelText('일정 이름')).toHaveValue('최신 호스트 일정')
+  expect(screen.getByRole('button',{name:'최신 호스트 일정 편집'})).toBeVisible()
+ })
+ expect(screen.getByLabelText('시작일')).toHaveValue('2027-03-10')
+ expect(screen.getByLabelText('종료일')).toHaveValue('2027-03-12')
 })

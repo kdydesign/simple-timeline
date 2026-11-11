@@ -125,15 +125,16 @@ export function useTimeline(api: TimelineApi) {
     const operation=api[method] as (input:unknown)=>Promise<Result<unknown>>
     return mutateExternal(()=>operation(input)) as Promise<Awaited<ReturnType<TimelineApi[K]>>>
   }
-  const reconcile = useCallback(async () => {
-    if (phaseRef.current !== 'ready') return false
+  const reconcileSnapshot = useCallback(async (): Promise<TimelineSnapshot | null> => {
+    if (phaseRef.current !== 'ready') return null
     const seq = ++generation.current
     try {
       const result = await api.getSnapshot()
-      if (!alive.current || seq !== generation.current || phaseRef.current !== 'ready' || !result.ok) return false
+      if (!alive.current || seq !== generation.current || phaseRef.current !== 'ready' || !result.ok) return null
       setSnapshot(result.data)
-      return true
-    } catch { return false }
+      return result.data
+    } catch { return null }
   }, [api])
-  return { snapshot, phase, error, mutation, refresh, mutate, mutateExternal, reconcile }
+  const reconcile = useCallback(async () => await reconcileSnapshot() !== null, [reconcileSnapshot])
+  return { snapshot, phase, error, mutation, refresh, mutate, mutateExternal, reconcile, reconcileSnapshot }
 }
