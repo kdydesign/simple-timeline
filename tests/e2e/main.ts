@@ -50,7 +50,7 @@ void bootstrap({
   } : {}),
   chooseClose: async canHide => {
     writeFileSync(join(profile,'close-choice.txt'),'requested')
-    return fault === 'close-choice-cancel' ? 'cancel' : canHide ? 'hide' : 'quit'
+    return fault === 'tray-failure-cancel' ? 'cancel' : canHide ? 'hide' : 'quit'
   },
   ...(fault?.startsWith('reminder-') ? {
     reminderClock:()=>new Date(2026,10,9,12),
@@ -60,7 +60,7 @@ void bootstrap({
       return fault==='reminder-failed'&&g.reminderMessages.length===1 ? 'failed' as const : 'submitted' as const;
     },
   } : {}),
-  ...(fault === "tray-failure" ? {
+  ...(fault?.startsWith("tray-failure") ? {
     createTray: () => { throw Error("Injected tray creation failure") },
     notifyTrayFailure: () => writeFileSync(join(profile,"tray-error.txt"),"reported"),
   } : {}),

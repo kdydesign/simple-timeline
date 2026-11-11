@@ -16,6 +16,7 @@ test('close hides dirty form and restore/minimize/second-instance retain it', as
  await expect.poll(()=>visible(d)).toBe(false);
  await control(d,'show');
  expect(await closing).toBeNull();
+ expect(await readFile(join(d.profile,'close-choice.txt'),'utf8').catch(()=>null)).toBeNull();
  await expect.poll(()=>visible(d)).toBe(true);
  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('숨겨도 유지');
  await d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].minimize());
@@ -39,11 +40,12 @@ test.describe('quit cancellation',()=>{
  test('actual quit restores dirty editor and allows rejection',async({desktop:d})=>{
   await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
   await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('종료 취소');
-  await d.page.getByRole('button',{name:'창 닫기',exact:true}).click();
+  const closing=d.page.getByRole('button',{name:'창 닫기',exact:true}).click().then(()=>null,error=>error);
   await expect.poll(()=>visible(d)).toBe(false);
   await control(d,'requestQuit');
   await expect.poll(()=>readFile(join(d.profile,'close-confirmed.txt'),'utf8').catch(()=>null)).toBe('requested');
   await expect.poll(()=>visible(d)).toBe(true);
+  expect(await closing).toBeNull();
   await expect(d.page.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('종료 취소');
  });
 });
@@ -54,10 +56,11 @@ test.describe('pending save',()=>{
   await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('종료 전 저장');
   await d.page.getByRole('button',{name:'저장',exact:true}).click();
   await expect(d.page.locator('html')).toHaveAttribute('data-saving','true');
-  await d.page.getByRole('button',{name:'창 닫기',exact:true}).click();
+  const closing=d.page.getByRole('button',{name:'창 닫기',exact:true}).click().then(()=>null,error=>error);
   await expect.poll(()=>visible(d)).toBe(false);
   const began=Date.now(),exited=d.app.waitForEvent('close');
   await d.app.evaluate(({app})=>app.quit());
+  expect(await closing).toBeNull();
   await new Promise(resolve=>setTimeout(resolve,200));
   expect(d.app.process().exitCode).toBeNull();
   await exited;
@@ -76,8 +79,8 @@ test.describe('tray failure',()=>{
   await exited;
  });
 });
-test.describe('window close choice',()=>{
- test.use({fault:'close-choice-cancel'});
+test.describe('unavailable tray close choice',()=>{
+ test.use({fault:'tray-failure-cancel'});
  test('cancel keeps dirty input and asks again on the next close',async({desktop:d})=>{
   const p=d.page;
   await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
@@ -96,7 +99,7 @@ test('initial bounds fit display and hidden About uses current app metadata with
   return {b:w.getBounds(),a};
  });
  expect(bounds.b.width).toBe(Math.min(1707,bounds.a.width));
- expect(bounds.b.height).toBe(Math.min(820,bounds.a.height));
+ expect(bounds.b.height).toBe(Math.min(890,bounds.a.height));
  await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
  await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('About 입력 보호');
  const info=await d.app.evaluate(async({BrowserWindow,dialog,app})=>{

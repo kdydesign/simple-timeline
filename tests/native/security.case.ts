@@ -9,7 +9,7 @@ import { createWindow } from '../../src/main/window'
 import type { NativeCase } from './helpers'
 export const cases: NativeCase[] = [
   {
-    name: 'isolates the real renderer and exposes only eight bridge methods',
+    name: 'isolates the real renderer and exposes only nine named bridge methods',
     async run(ctx) {
       assert.ok(
         app
@@ -44,7 +44,7 @@ export const cases: NativeCase[] = [
         '({node:typeof require, keys:Object.keys(window.simpleTimeline||{}), sharing:Object.keys(window.timelineSharing||{})})',
       )
       assert.equal(result.node, 'undefined')
-      assert.equal(result.keys.length, 8)
+      assert.deepEqual(result.keys.sort(), ['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort())
       assert.equal(result.keys.includes('invoke'), false)
       assert.deepEqual(result.sharing.sort(),['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','onChange'].sort())
     },

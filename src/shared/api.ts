@@ -5,6 +5,7 @@ import type {
   Schedule,
   ScheduleInput,
   ScheduleUpdate,
+  ReminderSettings,
   TimelineSnapshot,
   Result,
   ErrorCode,
@@ -19,6 +20,7 @@ export interface TimelineApi {
   deleteProject(input: { id: Id; confirmed: true }): Promise<Result<{ id: Id }>>
   createSchedule(input: ScheduleInput): Promise<Result<Schedule>>
   updateSchedule(input: ScheduleUpdate): Promise<Result<Schedule>>
+  updateScheduleReminder(input: { id: Id; reminder: ReminderSettings }): Promise<Result<Schedule>>
   deleteSchedule(input: { id: Id }): Promise<Result<{ id: Id }>>
 }
 export const channels = {
@@ -30,6 +32,7 @@ export const channels = {
   createSchedule: 'schedule:create',
   updateSchedule: 'schedule:update',
   deleteSchedule: 'schedule:delete',
+  updateScheduleReminder: 'schedule:reminder',
 } as const satisfies Record<keyof TimelineApi, string>
 export type MutationName = Exclude<
   keyof TimelineApi,

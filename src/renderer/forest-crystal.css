@@ -145,7 +145,7 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 .workspace { gap: 18px; padding: 14px 14px 14px; }
 .workspace > main { --workspace-padding: 0px; padding: 0; }
 .gantt, .calendar { background: transparent; border: 0; border-radius: 0; }
-.gantt > .view-heading { padding: 12px 18px; min-height: 42px; border-bottom: 0; }
+.gantt > .view-heading { padding: 12px 18px; min-height: 42px; border-bottom: 1px solid var(--border); }
 .gantt-heading { background: transparent; border-bottom: 1px solid var(--border); }
 .gantt-name-heading { color: var(--text); padding: 0 18px; display: flex; align-items: center; justify-content: center; }
 .month-tick { font-size: 13px; font-weight: 600; color: var(--text); }
@@ -194,10 +194,10 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 .editor .overlay, .editor.overlay { position: fixed; top: 60px; right: 16px; bottom: 16px; max-height: calc(100vh - 76px); z-index: 20; }
 .floating-popover, .select-popover { position: relative; isolation: isolate; background: var(--popup-glass); border-color: var(--rim); border-radius: 14px; box-shadow: var(--popup-shadow); backdrop-filter: blur(10px); }
 .floating-popover::before, .select-popover::before { backdrop-filter: blur(10px); }
-.project-popup { padding: 14px 10px 10px; }
+.project-popup { padding: 14px 10px 10px; background: rgba(43, 46, 49, .7); backdrop-filter: blur(10px); }
 .project-popup-heading { padding: 0 4px 12px; }
 .project-popup-heading h2 { font-size: 15px; font-weight: 700; }
-.project-list-row { align-items: center; padding: 10px 8px; margin-bottom: 5px; border: 1px solid #ffffff40; border-radius: 11px; background: var(--list-control); }
+.project-list-row { align-items: center; padding: 10px 8px; margin-bottom: 5px; border: 1px solid #ffffff40; border-radius: 11px; background: rgb(255 255 255 / 5%); }
 .project-list-row > .color-dot { margin-top: 0; }
 .project-list-name strong { font-size: 13px; font-weight: 650; }
 .project-list-name small { font-size: 11px; margin-top: 2px; }
@@ -334,3 +334,32 @@ button:disabled { box-shadow: none; }
 .saving-shield.is-complete .saving-progress::before { width: 100%; animation: none; }
 @keyframes save-flow { from { transform: translateX(-100%); } to { transform: translateX(434%); } }
 @media (prefers-reduced-motion: reduce) { .saving-progress::before { animation: none; width: 100%; opacity: .6; } }
+
+/* Compact actions retain the glass controls without a heavy red fill. */
+.editor-actions button.danger, [data-theme="dark"] .editor-actions button.danger {
+  background: rgba(175, 90, 101, .24); background-image: var(--selected-sheen);
+  border-color: rgba(226, 145, 156, .55); color: #ffdce1; box-shadow: var(--control-shadow);
+}
+.editor-actions button.danger:hover:enabled { background-color: rgba(175, 90, 101, .36); }
+.icon-button.icon-close:not(.window-close) { background: none; border: none; box-shadow: none; }
+.icon-button.icon-close:not(.window-close):hover:enabled { background: var(--hover); }
+.reminder-notice { padding: 10px 20px; margin-bottom: 0; background: #effb3a1c; }
+.ui-switch { transition: background-color 160ms ease, border-color 160ms ease; }
+.ui-switch [data-slot="switch-thumb"] { transform: translateX(0); transition: transform 160ms ease, background-color 160ms ease; }
+.gantt-name-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.gantt-name-line > .text-button { min-width: 0; flex: 0 1 auto; }
+.sharing-badge { flex: 0 0 auto; background: #ab75632b; border: 1px solid #dc9b7d8c; border-radius: 4px; color: #f4d4c2; padding: 0 4px; font-size: 10px; line-height: 16px; }
+.gantt-name-line .reminder-shortcut { flex: 0 0 auto; width: 20px; height: 20px; padding: 2px; background: transparent; border: 0; box-shadow: none; color: var(--accent); }
+.reminder-shortcut .icon { width: 15px; height: 15px; }
+.quick-reminder-backdrop { position: fixed; inset: 48px 0 0; z-index: 80; background: transparent; }
+.quick-reminder-popup { position: fixed; width: min(340px, calc(100vw - 16px)); max-height: calc(100vh - 64px); overflow: auto; padding: 16px; border: 1px solid var(--rim); border-radius: 14px; background: var(--popup-glass); backdrop-filter: blur(10px); box-shadow: var(--popup-shadow); }
+.quick-reminder-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.quick-reminder-heading h2 { font-size: 16px; margin: 0; }
+.quick-reminder-schedule { color: var(--muted); margin: 4px 0 12px; overflow-wrap: anywhere; }
+.quick-reminder-popup fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.quick-reminder-popup input { background: var(--control); color: var(--text); border: 1px solid var(--control-border); }
+.quick-reminder-popup input[aria-invalid="true"] { border-color: var(--danger-border); }
+.quick-reminder-popup .editor-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.quick-reminder-popup .editor-actions button { min-width: 76px; }
+@media(prefers-reduced-motion: reduce) { .ui-switch, .ui-switch [data-slot="switch-thumb"] { transition: none; } }
+@media(forced-colors: active) { .sharing-badge, .quick-reminder-popup { background: Canvas; color: CanvasText; border-color: CanvasText; } }

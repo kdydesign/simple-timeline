@@ -57,6 +57,7 @@ SQL은 준비된 문장에 값을 바인딩하고 renderer 문자열을 SQL 구�
 | `createSchedule` / `schedule:create` | `{projectId, name, startDate, endDate}` | 저장된 `Schedule` |
 | `updateSchedule` / `schedule:update` | `{id, name, startDate, endDate}` | 저장된 `Schedule` |
 | `deleteSchedule` / `schedule:delete` | `{id}` | `{id}` |
+| `updateScheduleReminder` / `schedule:reminder` (0.6.8) | `{id, reminder}` | 저장된 `Schedule` |
 
 - 모두 입력은 plain object, 필드 형식·필수값·알 수 없는 필드 거부를 main에서 검사한다.
   인자 없는 API에는 추가 인자를 허용하지 않는다. 식별자는 양의 64비트 정수의 정규 십진 문자열이다.
@@ -84,7 +85,7 @@ SQL은 준비된 문장에 값을 바인딩하고 renderer 문자열을 SQL 구�
 [close guard](../../src/main/close.ts)·[main 수명주기](../../src/main/bootstrap.ts)가 이 구분을 소유하며,
 복원·종료를 위해 renderer의 범용 권한이나 새 트레이 IPC를 추가하지 않았다.
 구현은 [창 IPC](../../src/main/window-ipc.ts), [타입](../../src/shared/window-api.ts)에 있다.
-아래 오류 DTO와 저장 계약은 기존 8개 업무 API의 계약이다.
+아래 오류 DTO와 저장 계약은 현재 9개 업무 API에 적용한다.
 
 ## 응답·오류와 화면 상태
 
@@ -146,7 +147,7 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 공식 근거와 확인 범위는 [Electron·SQLite 조사](../research/2026-11-03-electron-sqlite.md)를 참조한다.
 사용자는 2026-11-03 ‘설계 승인, 스테이지 2 마무리’를 선택하여 문서 전체를 승인했다.
 현재 구현은 [main 진입](../../src/main/bootstrap.ts), [창 권한](../../src/main/window.ts),
-[preload](../../src/preload/index.ts), [8개 API 타입·채널](../../src/shared/api.ts), [화면 상태](../../src/renderer/state/useTimeline.ts)에 있다.
+[preload](../../src/preload/index.ts), [API 타입·채널](../../src/shared/api.ts), [화면 상태](../../src/renderer/state/useTimeline.ts)에 있다.
 IPC 거부·오류 변환·원자 삭제·저장 실패 검증은 [스테이지 5 기록](../implementation/stage-05.md)과
 [현재 검증 경로](../harness/validation.md)를 따른다. 자동화 통과를 별도의 침투 테스트 결과로 확대하지 않는다.
 Planrail 0.3.0은 [당시 구현 기록](../implementation/2026-11-05-planrail.md),
@@ -174,7 +175,7 @@ main은 실행·30초 간격·절전 복귀·업무 commit 후 후보를 평가�
 ## LAN 공유 경계 (0.6.0)
 
 main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본·별도 수신 캐시·핀 검증 HTTPS를 소유한다.
-preload는 기존 8개 `simpleTimeline` 메서드를 유지하고 별도 고정 `timelineSharing` facade를 제공한다.
+0.6.0의 preload는 당시 8개 `simpleTimeline` 메서드를 유지하고 별도 고정 `timelineSharing` facade를 제공한다.
 허용된 14개 메서드는 [공유 계약](../../src/shared/sharing.ts)에 있으며 채널·URL·SQL·자격·키를 받거나 노출하지 않는다.
 샌드박스·CSP·최상위 frame 검증을 유지한다. 호스트가 지정한 IPv4 한 곳에만 바인딩하며 기본 포트는 TCP47831이다.
 
@@ -188,3 +189,10 @@ preload는 기존 8개 `simpleTimeline` 메서드를 유지하고 별도 고정 
 멤버 제목 상태는 Planrail 옆, 수동 동기화는 간트/달력 왼쪽이다. 공유 설정은 기존 편집 입력과 초기·복귀·중첩 포커스를 보존한다.
 종료는 요청을 먼저 무효화하고 서버·타이머·알림을 정리한 뒤 DB를 닫는다.
 [실행 기록](../implementation/2026-11-10-lan-sharing.md)은 Linux loopback·시험 vault와 실제 Windows/LAN 인수를 구분한다.
+
+
+### 알림 간편 편집 경계 (0.6.8)
+
+0.6.8에서 `simpleTimeline`은 알림 전용 명령을 포함한9개 메서드다. `TimelineApi.updateScheduleReminder({id, reminder})`는 개인·호스트의 저장된 일정에서 알림 설정만 수정한다. main의 엄격한 입력·발신자 검증과 DB 트랜잭션을 거치며 현재 DB의 시작·종료일을 기준으로 알림 날짜를 검증한다. 일정 이름·날짜를 요청에 포함하지 않는다. 멤버 수신 자료의 알림은 기존 `SharingApi.saveReminder`를 사용한다. 스키마·공유 권한 변경은 없다.
+
+날짜 선택기의 월 Select만 `.saving-content`로 포털을 이동하여 부모 backdrop-filter/overflow의 잘림을 피한다. `overlayOwnership`이 트리거 ID를 통해 논리적 소유권을 확인하므로 바깥 클릭/포커스 이탈과 중첩 Escape 동작은 유지한다. 다른 Select는 기존 지역 포털을 유지한다.

@@ -27,6 +27,7 @@ import {
 } from "../../visualization/presentation";
 import { isWeekend } from "../../visualization/weekends";
 import { GanttNavigation } from "./GanttNavigation";
+import {IconButton} from './Icon';
 export interface GanttHandle {
   focusItem(key: string): boolean;
 }
@@ -34,6 +35,7 @@ import { useGanttNavigation } from "../state/useGanttNavigation";
 import { useScheduleDrag, type DragActions } from "../state/useScheduleDrag";
 export interface GanttProps extends DragActions {
   hideEmptyChrome?:boolean;
+  onReminder?:(schedule:Schedule,caller:HTMLElement)=>void;
   selectedDate?: string;
   dayWidth?: number;
   onDayWidth?: (width:number) => void;
@@ -69,6 +71,7 @@ export function GanttView({
   disabled = false,
   active = true,
   hideEmptyChrome=false,
+  onReminder,
   ref,
 }: GanttProps) {
   const root = useRef<HTMLElement>(null);
@@ -444,7 +447,7 @@ export function GanttView({
                       style={{ backgroundColor: r.project.color }}
                     />
                     <div>
-                      <button
+                      <div className="gantt-name-line"><button
                         className="text-button"
                         data-focus={r.key}
                         disabled={disabled}
@@ -471,10 +474,12 @@ export function GanttView({
                       >
                         {r.label}
                       </button>
+                      {!s&&r.project.sharing&&<span className="sharing-badge" aria-label={r.project.sharing==='member'?'공유 · 조회 전용':'공유'}>공유</span>}
+                      {s&&(s.reminder?.start||s.reminder?.end)&&onReminder&&<IconButton icon="bell" data-focus={`reminder:${s.id}`} className="reminder-shortcut" label={`${r.label} 알림 설정`} disabled={disabled} onClick={e=>onReminder(s,e.currentTarget)}/>}
+                      </div>
                       {s ? <small>{s.startDate} — {s.endDate}</small> : (
                         <small className="project-meta">
 
-                          {r.project.sharing&&<span>{r.project.sharing==='member'?'공유 · 조회 전용':'공유'}</span>}
                           {!index.byProject.get(r.project.id)?.length && <span className="empty-row">일정 없음</span>}
                         </small>
                       )}

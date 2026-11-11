@@ -64,6 +64,7 @@ const keys: Record<string, readonly string[]> = {
   createSchedule: ['projectId', 'name', 'startDate', 'endDate'],
   updateSchedule: ['id', 'name', 'startDate', 'endDate'],
   deleteSchedule: ['id'],
+  updateScheduleReminder: ['id', 'reminder'],
 }
 function input(method: string, args: readonly unknown[]): unknown {
   if (method === 'getStatus' || method === 'getSnapshot') {
@@ -89,6 +90,11 @@ function input(method: string, args: readonly unknown[]): unknown {
     method.startsWith('update') || method.startsWith('delete')
       ? validateId(v.id)
       : undefined
+  if (method === 'updateScheduleReminder') {
+    if (!v.reminder) throw new DomainValidationError('reminder')
+    // Shape validation here; actual saved dates are checked inside the DB transaction.
+    return {id, reminder: normalizeReminder(v.reminder, '9999-12-31', '9999-12-31')}
+  }
   if (method.startsWith('delete')) {
     if (method === 'deleteProject' && v.confirmed !== true)
       throw new DomainValidationError('confirmed')

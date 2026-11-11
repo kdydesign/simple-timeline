@@ -202,12 +202,12 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       }),
     {
       hide: tray ? () => window.hide() : undefined,
-      chooseClose: () => options.chooseClose ? options.chooseClose(!!tray) : (async () => {
-        const choices: CloseChoice[] = tray ? ['hide', 'quit', 'cancel'] : ['quit', 'cancel']
+      chooseClose: tray ? undefined : () => options.chooseClose ? options.chooseClose(!!tray) : (async () => {
+        const choices: CloseChoice[] = ['quit', 'cancel']
         const result = await dialog.showMessageBox(window, {
           type: 'question', title: 'Planrail 닫기', message: '어떻게 닫을까요?',
           detail: '트레이에서는 일정 알림과 편집 중인 입력이 유지됩니다. 완전히 종료하면 일정 알림이 제공되지 않습니다.' + (tray ? '' : '\n트레이를 사용할 수 없습니다.'),
-          buttons: tray ? ['트레이로 보내기', '완전 종료', '취소'] : ['완전 종료', '취소'],
+          buttons: ['완전 종료', '취소'],
           defaultId: choices.length - 1, cancelId: choices.length - 1, noLink: true,
         })
         return choices[result.response] ?? 'cancel'

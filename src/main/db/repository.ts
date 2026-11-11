@@ -7,6 +7,7 @@ import type {
   ProjectInput,
   ScheduleInput,
   ScheduleUpdate,
+  ReminderSettings,
 } from '../../shared/types'
 import {
   normalizeName,
@@ -179,6 +180,13 @@ export function createRepository(
       db.prepare(
         'UPDATE schedules SET name=?,start_date=?,end_date=?,updated_at=?,reminder_days=?,reminder_time=?,reminder_start=?,reminder_end=? WHERE id=?',
       ).run(v.name, v.startDate, v.endDate, clock(), reminder.daysBefore,reminder.time,Number(reminder.start),Number(reminder.end),BigInt(id))
+      return getSchedule(id)
+    }),
+    updateScheduleReminder: db.transaction(({id,reminder}: {id:string;reminder:ReminderSettings}) => {
+      const current=getSchedule(validateId(id))
+      const r=normalizeReminder(reminder,current.startDate,current.endDate)
+      db.prepare('UPDATE schedules SET reminder_days=?,reminder_time=?,reminder_start=?,reminder_end=?,updated_at=? WHERE id=?')
+        .run(r.daysBefore,r.time,Number(r.start),Number(r.end),clock(),BigInt(id))
       return getSchedule(id)
     }),
     deleteSchedule: db.transaction(({ id }: { id: string }) => {

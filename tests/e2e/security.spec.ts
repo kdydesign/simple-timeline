@@ -8,7 +8,7 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
     sharingKeys: Object.keys(window.timelineSharing!),
   }))
   expect(shape.node).toBe('undefined')
-  expect(shape.keys).toHaveLength(8)
+  expect(shape.keys.sort()).toEqual(['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort())
   expect(shape.keys).not.toContain('invoke')
   expect(shape.sharingKeys.sort()).toEqual(['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','onChange'].sort())
   const sandbox = await d.app.evaluate(({app,BrowserWindow})=>({disabled:app.commandLine.hasSwitch('no-sandbox'),renderer:(BrowserWindow.getAllWindows()[0].webContents as unknown as {getLastWebPreferences():{sandbox?:boolean}}).getLastWebPreferences().sandbox}))

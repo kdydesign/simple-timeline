@@ -28,7 +28,7 @@ it('opens a date picker and supports year 0001 without auto-saving', async () =>
   const picker=screen.getByRole('group',{name:'시작일 달력'})
   fireEvent.change(within(picker).getByLabelText('달력 연도'),{target:{value:'1'}})
   await u.click(within(picker).getByRole('combobox',{name:'달력 월'}))
-  await u.click(within(picker).getByRole('option',{name:'1월'}))
+  await u.click(screen.getByRole('option',{name:'1월'}))
   await u.click(within(picker).getByRole('button',{name:'0001-01-02'}))
   expect(screen.getByLabelText('시작일')).toHaveValue('0001-01-02')
   expect(screen.queryByRole('group',{name:'시작일 달력'})).not.toBeInTheDocument()

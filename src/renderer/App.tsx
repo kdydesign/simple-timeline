@@ -1,4 +1,5 @@
 import {validateEditor,fieldId,type FieldErrors} from './state/formValidation';
+import {QuickReminder} from './components/QuickReminder';
 import {SavingOverlay} from './components/SavingOverlay';
 import {sharingDescription,showMemberSharingControls} from '../shared/sharing-status';
 import {useSharingView} from './state/useSharingView';
@@ -10,7 +11,7 @@ import {normalizeReminder} from '../domain/reminder';
 import {useReminders} from './state/useReminders';
 import { useEffect, useRef, useState, useLayoutEffect } from "react";
 import type { TimelineApi } from "../shared/api";
-import type { ApiError, YearMonth, Result, Id, Schedule } from "../shared/types";
+import type { ApiError, YearMonth, Result, Id, Schedule, Project, ReminderSettings } from "../shared/types";
 import {
   normalizeName,
   normalizeColor,
@@ -57,6 +58,8 @@ export function App({
     editor = useEditor();
   const sharing = useSharing(timeline.reconcile,timeline.phase === 'ready');
   const [settingsDirty,setSettingsDirty]=useState(false);
+  const [quickReminder,setQuickReminder]=useState<{id:string;caller:HTMLElement}|null>(null);
+  const [quickDirty,setQuickDirty]=useState(false);
   const [saveShieldActive,setSaveShieldActive]=useState(false);
   const [filter,setFilter]=useState<'all'|'personal'|'shared'>('all');
   const sharingView=useSharingView(timeline.snapshot,filter);
@@ -110,7 +113,7 @@ export function App({
   const model = editor.editor,
     canEdit = timeline.phase === "ready",
     saving = timeline.phase === "saving" || sharing.busy;
-  const settingsVisible=sharing.settingsOpen&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
+  const settingsVisible=sharing.settingsOpen&&!quickReminder&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
   useEffect(()=>{setFieldErrors({});serverFieldErrors.current={};pendingFieldFocus.current=null;setValidationActive(false)},[model?.session]);
   const patchForm:typeof editor.patch=(update)=>{
     editor.patch(update);
@@ -134,20 +137,20 @@ export function App({
     return () => window.removeEventListener("resize", resize);
   }, []);
   useLayoutEffect(() => {
-    document.documentElement.dataset.editorDirty = String(editor.dirty || settingsDirty);
+    document.documentElement.dataset.editorDirty = String(editor.dirty || settingsDirty || quickDirty);
     document.documentElement.dataset.saving = String(saving);
     document.documentElement.dataset.timelinePhase = timeline.phase;
-  }, [editor.dirty, settingsDirty, saving, timeline.phase]);
+  }, [editor.dirty, settingsDirty, quickDirty, saving, timeline.phase]);
   useEffect(() => {
     const prevent = (event: BeforeUnloadEvent) => {
-      if (editor.dirty || settingsDirty || saving) {
+      if (editor.dirty || settingsDirty || quickDirty || saving) {
         event.preventDefault();
         event.returnValue = false;
       }
     };
     window.addEventListener("beforeunload", prevent);
     return () => window.removeEventListener("beforeunload", prevent);
-  }, [editor.dirty, settingsDirty, saving, timeline.phase]);
+  }, [editor.dirty, settingsDirty, quickDirty, saving, timeline.phase]);
   useEffect(() => {
     if (model?.saved && timeline.phase === "ready"&&!saveShieldActive) editor.close();
   }, [model?.saved, timeline.phase,saveShieldActive]);
@@ -344,9 +347,55 @@ export function App({
       },
     });
   }
+  const quickFocus=useRef<{id:string;caller:HTMLElement}|null>(null);
+  useLayoutEffect(()=>{
+    if(quickReminder||saveShieldActive||saving||!quickFocus.current)return;
+    const {id,caller}=quickFocus.current;quickFocus.current=null;
+    const target=document.querySelector<HTMLElement>(`[data-focus="reminder:${id}"]`)??(caller.isConnected?caller:null)??document.querySelector<HTMLElement>(`[data-focus="schedule:${id}"]`)??document.querySelector<HTMLElement>('[data-focus="schedule-add"]');
+    if(target&&!target.matches(':disabled'))restoreFocus(target);
+  },[quickReminder,saveShieldActive,saving]);
+  const closeQuick = () => {
+    quickFocus.current=quickReminder;
+    setQuickReminder(null);setQuickDirty(false);
+  };
+  const requestCloseQuick = () => {
+    if(saving||saveShieldActive)return;
+    if(quickDirty)confirm({title:'변경 내용을 버릴까요?',message:'저장하지 않은 알림 설정이 사라집니다.',confirmLabel:'변경 버리기',cancelLabel:'계속 편집',run:()=>{setConfirmation(null);closeQuick()}});
+    else closeQuick();
+  };
+  const allowQuickAction = () => {
+    if(!canEdit||saving||saveShieldActive||confirmation||quickReminder)return false;
+    if(editor.dirty||settingsDirty){setFormError({code:'VALIDATION_ERROR',message:'먼저 저장하거나 변경을 버려주세요.'});return false}
+    setFormError(null);return true;
+  };
+  const listDeleteFocus=useRef(false);
+  useLayoutEffect(()=>{
+    if(!listDeleteFocus.current||saving||saveShieldActive||timeline.mutation==='pending'||model?.saved)return;
+    listDeleteFocus.current=false;
+    restoreFocus(document.querySelector<HTMLElement>('[data-project-trigger]'));
+  },[saving,saveShieldActive,timeline.mutation,model?.saved]);
+  const deleteListedProject = async (project:Project) => {
+    if(project.sharing==='member'||!allowQuickAction())return;
+    listDeleteFocus.current=true;setProjectsOpen(false);setNotice('');
+    const result=await timeline.mutate('deleteProject',{id:project.id,confirmed:true});
+    if(result.ok){
+      if(model&&(model.kind==='project'?model.id===project.id:model.draft.projectId===project.id))editor.markSaved();
+      setNotice('프로젝트와 하위 일정을 삭제했습니다.');
+    }
+  };
+  const saveQuickReminder = async (reminder:ReminderSettings):Promise<Result<Schedule>> => {
+    const current=timeline.snapshot?.schedules.find(s=>s.id===quickReminder?.id);
+    if(!current)return {ok:false,error:{code:'NOT_FOUND',message:'삭제되거나 공유가 해제된 일정입니다.'}};
+    const result=current.sharing==='member'
+      ? sharing.api ? await timeline.mutateExternal(()=>sharing.run(()=>sharing.api!.saveReminder({id:current.id,reminder})))
+        : {ok:false as const,error:{code:'IPC_UNAVAILABLE' as const,message:'공유 알림을 저장할 수 없습니다.'}}
+      : await timeline.mutate('updateScheduleReminder',{id:current.id,reminder});
+    if(result.ok){editor.syncSchedule(result.data);setNotice('알림을 수정했습니다.')}
+    return result;
+  };
   const dragActions = {
     onDragStart: () => {
-      if (!canEdit || confirmation) return false;
+      if (!canEdit || confirmation || quickReminder) return false;
       if (editor.dirty) {
         setFormError({code:"VALIDATION_ERROR",message:"먼저 저장하거나 변경을 버려주세요."});
         return false;
@@ -383,7 +432,7 @@ export function App({
   };
   useEffect(()=>{
     const target=reminders.openRequest;
-    if(!target||handledReminder.current===target.token||!canEdit||confirmation||dayModalOpen||model?.saved)return;
+    if(!target||handledReminder.current===target.token||!canEdit||confirmation||dayModalOpen||quickReminder||model?.saved)return;
     let cancelled=false;
     void api.getSnapshot().then(result=>{
       if(cancelled)return;
@@ -395,7 +444,7 @@ export function App({
       request(caller=>{setFilter('all');navigateDate(schedule.startDate);editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller)});
     }).catch(()=>{if(!cancelled)setFormError({code:'IPC_UNAVAILABLE',message:'알림의 일정을 조회하지 못했습니다. 다시 조회해 주세요.'})});
     return()=>{cancelled=true};
-  },[reminders.openRequest,canEdit,confirmation,dayModalOpen,model?.saved,editor.dirty,api]);
+  },[reminders.openRequest,canEdit,confirmation,dayModalOpen,quickReminder,model?.saved,editor.dirty,api]);
   const reminderCorrections = (timeline.snapshot?.schedules??[]).filter(schedule=>{
     if(schedule.sharing!=='member')return false;
     const settings=model?.kind==='schedule'&&model.id===schedule.id?model.draft.reminder:schedule.reminder;
@@ -436,8 +485,8 @@ export function App({
       <div className="saving-content">
       <div
         className="app-shell"
-        aria-hidden={settingsVisible || !!confirmation || dayModalOpen || (narrow && !!model)}
-        inert={settingsVisible || !!confirmation || dayModalOpen || (narrow && !!model)}
+        aria-hidden={settingsVisible || !!quickReminder || !!confirmation || dayModalOpen || (narrow && !!model)}
+        inert={settingsVisible || !!quickReminder || !!confirmation || dayModalOpen || (narrow && !!model)}
       >
         <Toolbar
           filter={filter} onFilter={value=>request(()=>setFilter(value))}
@@ -457,6 +506,7 @@ export function App({
           canEdit={canEdit}
           hasProjects={!!editableProjects.length}
           projectList={visibleSnapshot&&<ProjectList snapshot={visibleSnapshot} disabled={!canEdit}
+            onDelete={p=>void deleteListedProject(p)}
             onProject={p=>{setProjectsOpen(false);request(caller=>openProject(p,caller))}}
             onAdd={p=>{setProjectsOpen(false);request(caller=>editor.openSchedule(month,p.id,undefined,caller))}}/>}
           projectsOpen={projectsOpen}
@@ -480,8 +530,8 @@ export function App({
       <div className="workspace">
         <main
           className={mode === "gantt" ? "gantt-workspace" : undefined}
-          aria-hidden={settingsVisible || !!confirmation || (narrow && !!model)}
-          inert={settingsVisible || !!confirmation || (narrow && !!model)}
+          aria-hidden={settingsVisible || !!quickReminder || !!confirmation || (narrow && !!model)}
+          inert={settingsVisible || !!quickReminder || !!confirmation || (narrow && !!model)}
           aria-label="프로젝트와 일정"
         >
           {timeline.snapshot ? (
@@ -498,6 +548,7 @@ export function App({
                 selectedMonth={month}
                 selectedDate={selectedDate}
                 disabled={!canEdit || sharingView.dragInvalidated}
+                onReminder={(s,caller)=>{if(allowQuickAction())setQuickReminder({id:s.id,caller})}}
                 onEditProject={(p) =>
                   request((caller) => openProject(p, caller))
                 }
@@ -558,7 +609,7 @@ export function App({
             disabled={!canEdit || model.saved || sharedMissing}
             busy={saving}
             narrow={narrow}
-            covered={!!confirmation || dayModalOpen || settingsVisible}
+            covered={!!confirmation || !!quickReminder || dayModalOpen || settingsVisible}
             error={sharedMissing?{code:'NOT_FOUND',message:'더 이상 공유되지 않거나 삭제된 항목입니다. 개인 알림을 저장할 수 없습니다.'}:formError ?? (timeline.error?.code==='VALIDATION_ERROR'&&timeline.error.field?null:timeline.error)}
             status={narrow ? statusView : null}
           />
@@ -566,6 +617,8 @@ export function App({
       </div>
       <div className="toast" role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
       {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
+      {quickReminder&&<QuickReminder key={quickReminder.id} schedule={timeline.snapshot?.schedules.find(s=>s.id===quickReminder.id)} caller={quickReminder.caller}
+        disabled={!canEdit||saving||saveShieldActive} busy={saving||saveShieldActive} covered={!!confirmation} onRefresh={()=>void timeline.refresh()} onGuard={setQuickDirty} onClose={requestCloseQuick} onSave={saveQuickReminder}/>}
       {confirmation && (
         <ConfirmDialog
           title={confirmation.title}

@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes } from 'react';
 import {Button} from './ui/button';
 import {Tooltip,TooltipTrigger,TooltipContent} from './ui/tooltip';
 const paths = {
+ trash:'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7', bell:'M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9M10 21h4',
  refresh:'M20 7v5h-5M4 17v-5h5M6 8a7 7 0 0 1 12-2l2 3M4 15l2 3a7 7 0 0 0 12-2', connection:'M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Z M9 12l2 2 4-4',
  gantt:'M3 6h9M8 12h9M13 18h9', calendar:'M4 5h16v16H4Z M8 2v6m8-6v6M4 10h16M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01',
  folder:'M3 7V4h7l3 3h8v13H3Z', project:'M3 7V4h7l3 3h8v13H3Z M12 11v6m-3-3h6',
@@ -14,6 +15,6 @@ const paths = {
 export type IconName = keyof typeof paths;
 export function Icon({name}: {name: IconName}) {return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name==='gantt'?3:1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>}
 export function IconButton({icon,label,tooltip=false,description,onFocus,className='',...props}: {icon:IconName;label:string;tooltip?:boolean;description?:string}&ButtonHTMLAttributes<HTMLButtonElement>) {
- const button=<Button type="button" variant="ghost" size="icon" {...props} onFocus={e=>{onFocus?.(e);if(isRestoringFocus())e.preventDefault()}} className={`icon-button ${className}`} aria-label={label} aria-description={description??props['aria-description']}><Icon name={icon}/></Button>;
+ const button=<Button type="button" variant="ghost" size="icon" {...props} onFocus={e=>{onFocus?.(e);if(isRestoringFocus())e.preventDefault()}} className={`icon-button ${icon==='close'?'icon-close':''} ${className}`} aria-label={label} aria-description={description??props['aria-description']}><Icon name={icon}/></Button>;
  return tooltip ? <Tooltip><TooltipTrigger asChild>{button}</TooltipTrigger><TooltipContent side="bottom" align="center" sideOffset={8} collisionPadding={8} className="app-tooltip">{description?`${label} · ${description}`:label}</TooltipContent></Tooltip> : button;
 }

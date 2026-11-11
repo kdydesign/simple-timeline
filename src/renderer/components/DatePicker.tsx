@@ -1,3 +1,4 @@
+import {ownsOverlayTarget} from '../state/overlayOwnership';
 import {Button} from './ui/button';
 import {Input} from './ui/input';
 import { useState, useRef } from 'react'
@@ -21,7 +22,7 @@ export function DatePicker({id, label, value, onChange, invalid, describedBy, no
   const show=()=>{const m=monthOf(value);setMonth(m);setYearText(String(m.year));setOpen(true)}
   const navigate=(m:YearMonth)=>{setMonth(m);setYearText(String(m.year))}
   const close=(restore=true)=>{setOpen(false);if(restore)input.current?.focus()}
-  return <div className="date-picker" onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false)}}
+  return <div className="date-picker" onBlur={e=>{if(!ownsOverlayTarget(e.currentTarget,e.relatedTarget)) setOpen(false)}}
     onKeyDown={e=>{if(open && e.key==='Escape'){e.stopPropagation();close()}}}>
     <div ref={anchor} className="date-input"><Input ref={input} id={id} aria-label={noIcon ? label : undefined} placeholder="YYYY-MM-DD" value={value}
       aria-invalid={invalid || undefined} aria-describedby={describedBy}
@@ -32,7 +33,7 @@ export function DatePicker({id, label, value, onChange, invalid, describedBy, no
       <div className="picker-navigation">
         <IconButton icon="left" label="달력 이전 달" disabled={!shiftMonth(month,-1)} onClick={()=>navigate(shiftMonth(month,-1)!)}/>
         <Input aria-label="달력 연도" type="number" min="1" max="9999" value={yearText} onBlur={()=>setYearText(String(month.year))} onChange={e=>{setYearText(e.target.value);const y=Number(e.target.value);if(Number.isInteger(y)&&y>=1&&y<=9999)setMonth({...month,year:y})}}/>
-        <Select label="달력 월" value={String(month.month)} onChange={v=>setMonth({...month,month:Number(v)})}
+        <Select escapeClipping label="달력 월" value={String(month.month)} onChange={v=>setMonth({...month,month:Number(v)})}
           options={Array.from({length:12},(_,i)=>({value:String(i+1),label:`${i+1}월`}))}/>
         <IconButton icon="right" label="달력 다음 달" disabled={!shiftMonth(month,1)} onClick={()=>navigate(shiftMonth(month,1)!)}/>
       </div>

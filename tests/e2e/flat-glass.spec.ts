@@ -6,7 +6,7 @@ test('custom titlebar keeps dirty close protection and isolated window API',asyn
  const p=d.page;
  await expect(p.getByRole('button',{name:'최소화',exact:true})).toBeVisible();
  expect(await p.evaluate(()=>window.timelineWindow!.command('invalid' as never))).toEqual({ok:false});
- const before=await p.evaluate(()=>Object.keys(window.simpleTimeline));expect(before).toHaveLength(8);
+ const before=await p.evaluate(()=>Object.keys(window.simpleTimeline));expect(before.sort()).toEqual(['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort());
  await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
  await p.getByLabel('프로젝트 이름',{exact:true}).fill('미저장 보호');
  // Hidden windows may defer the renderer's input acknowledgement until restored.

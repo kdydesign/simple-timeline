@@ -65,6 +65,12 @@ export function memoryApi(
         data: snapshot.schedules.find((s) => s.id === input.id)!,
       }
     },
+    async updateScheduleReminder({id,reminder}) {
+      const s=snapshot.schedules.find(s=>s.id===id)
+      if(!s)return {ok:false,error:{code:'NOT_FOUND',message:'삭제된 일정입니다.'}}
+      s.reminder=reminder
+      return {ok:true,data:structuredClone(s)}
+    },
     async deleteSchedule({ id }) {
       snapshot.schedules = snapshot.schedules.filter((s) => s.id !== id)
       return { ok: true, data: { id } }
