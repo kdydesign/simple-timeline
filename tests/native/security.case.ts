@@ -46,7 +46,7 @@ export const cases: NativeCase[] = [
       assert.equal(result.node, 'undefined')
       assert.deepEqual(result.keys.sort(), ['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort())
       assert.equal(result.keys.includes('invoke'), false)
-      assert.deepEqual(result.sharing.sort(),['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','onChange'].sort())
+      assert.deepEqual(result.sharing.sort(),['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','deleteDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','onChange'].sort())
     },
   },
 ]

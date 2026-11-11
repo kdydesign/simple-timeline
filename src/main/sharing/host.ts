@@ -155,7 +155,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       const bound = instance.address(); if (!bound || typeof bound === 'string') throw new SharingNetworkError('UNAVAILABLE')
       return { address, port: bound.port }
     },
-    pending(): PendingPair[] { expire(); return [...attempts.values()].filter(a => !a.acknowledged).map(publicPair) },
+    pending(): PendingPair[] { expire(); for(const a of attempts.values())if(store.getDevice(a.deviceId).revoked)discard(a); return [...attempts.values()].filter(a => !a.acknowledged).map(publicPair) },
     approve(pairId: string) {
       const a = attempts.get(pairId)
       if (!a) fail('PAIR_EXPIRED', 410)

@@ -115,7 +115,7 @@ export const cases:NativeCase[]=[
    const ref=createSharingStore(db).getConfig().credentialRef
    const edited=await service.connect(target);assert.equal(edited.status,'connected');assert.equal(edited.pendingPair,null);assert.equal(createSharingStore(db).getConfig().credentialRef,ref)
    assert.equal(await service.authorizeReminder(),true)
-   hostStore.revokeDevice({id:device.id});await service.sync();assert.equal(service.getState().status,'revoked');assert.equal(service.memberSnapshot().projects.length,0)
+   hostStore.deleteDevice({id:device.id});assert.equal(hostStore.listDevices().length,0);await service.sync();assert.equal(service.getState().status,'revoked');assert.equal(service.memberSnapshot().projects.length,0)
    assert.equal(await service.authorizeReminder(),false)
    const replacement=await createHostIdentity(identity.hostId)
    await assert.rejects(pinnedRequest({address:target,trust:replacement,path:'/v1/identity'}),(error:any)=>error.code==='TLS_UNTRUSTED')

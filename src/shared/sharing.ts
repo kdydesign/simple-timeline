@@ -44,6 +44,7 @@ export interface SharingApi {
   confirmHost(input: { pairId: string; confirmed: true }): Promise<Result<SharingState>>
   approve(input: { pairId: string; confirmed: true }): Promise<Result<SharingState>>
   saveDevice(input: { id?: string; name: string; ip: string }): Promise<Result<ApprovedDevice>>
+  deleteDevice(input: { id: string }): Promise<Result<SharingState>>
   revokeDevice(input: { id: string }): Promise<Result<SharingState>>
   saveProject(input: SharedProjectInput): Promise<Result<Project>>
   saveReminder(input: { id: string; reminder: ReminderSettings }): Promise<Result<Schedule>>

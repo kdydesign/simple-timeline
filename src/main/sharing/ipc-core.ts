@@ -8,7 +8,7 @@ import type {Result} from '../../shared/types'
 const shapes:Record<string,{required:string[];optional?:string[]}>= {
   configureHost:{required:['address','port']},setHosting:{required:['enabled']},connect:{required:['address','port']},
   confirmHost:{required:['pairId','confirmed']},approve:{required:['pairId','confirmed']},saveDevice:{required:['name','ip'],optional:['id']},
-  revokeDevice:{required:['id']},saveProject:{required:['name','color','participants'],optional:['id']},
+  deleteDevice:{required:['id']},revokeDevice:{required:['id']},saveProject:{required:['name','color','participants'],optional:['id']},
   saveReminder:{required:['id','reminder']},disconnect:{required:['confirmed']},acknowledgeSettings:{required:['token']},
 }
 function object(value:unknown,required:string[],optional:string[]=[]):Record<string,unknown>{

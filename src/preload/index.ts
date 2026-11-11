@@ -54,7 +54,7 @@ const sharingInvoke=async(command:string,...args:unknown[])=>{
 const sharingApi={
   getState:()=>sharingInvoke('getState'),configureHost:(v)=>sharingInvoke('configureHost',v),setHosting:(v)=>sharingInvoke('setHosting',v),
   connect:(v)=>sharingInvoke('connect',v),confirmHost:(v)=>sharingInvoke('confirmHost',v),approve:(v)=>sharingInvoke('approve',v),
-  saveDevice:(v)=>sharingInvoke('saveDevice',v),revokeDevice:(v)=>sharingInvoke('revokeDevice',v),saveProject:(v)=>sharingInvoke('saveProject',v),
+  saveDevice:(v)=>sharingInvoke('saveDevice',v),revokeDevice:(v)=>sharingInvoke('revokeDevice',v),deleteDevice:(v)=>sharingInvoke('deleteDevice',v),saveProject:(v)=>sharingInvoke('saveProject',v),
   saveReminder:(v)=>sharingInvoke('saveReminder',v),sync:()=>sharingInvoke('sync'),disconnect:(v)=>sharingInvoke('disconnect',v),acknowledgeSettings:(v)=>sharingInvoke('acknowledgeSettings',v),
   onChange:(callback)=>{const listener=(_event:unknown,state:SharingState)=>callback(state);ipcRenderer.on(sharingChanged,listener);return ()=>ipcRenderer.removeListener(sharingChanged,listener)},
 } satisfies SharingApi

@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import {initializeStorage} from '../../src/main/db/lifecycle'
+import {migrations} from '../../src/main/db/migrations'
 import { setup, type NativeCase } from './helpers'
 import { createSharingStore } from '../../src/main/db/sharing/store'
 import { createSharedReminderStore } from '../../src/main/db/sharing/cache'
@@ -9,6 +11,39 @@ import type { WireSnapshot } from '../../src/shared/sharing'
 const hostId='11111111-1111-4111-8111-111111111111',datasetId='22222222-2222-4222-8222-222222222222'
 const snapshot=():WireSnapshot=>({protocolVersion:1,hostId,datasetId,projects:[{id:'1',name:'Remote',color:'#2563EB',participants:['Member'],createdAt:'t',updatedAt:'t'}],schedules:[{id:'1',projectId:'1',name:'Remote S',startDate:'2026-11-11',endDate:'2026-11-11',createdAt:'t',updatedAt:'t'}]})
 export const cases:NativeCase[]=[
+{name:'v3 participant registrations and sharing survive the deletion migration',async run(ctx){
+ const old=await initializeStorage(ctx.tempDir,migrations.slice(0,3));assert.equal(old.state,'ready');if(old.state!=='ready')return
+ const store=createSharingStore(old.db);store.configureHost({address:'127.0.0.1',port:47831})
+ const d=store.saveDevice({name:'Existing',ip:'127.0.0.2'})
+ store.saveProject({name:'Shared',color:'#2563EB',participants:[{name:'Existing',deviceId:d.id}]})
+ old.db.close()
+ const next=await initializeStorage(ctx.tempDir);assert.equal(next.state,'ready');if(next.state!=='ready')return
+ ctx.defer(()=>next.db.close());const upgraded=createSharingStore(next.db)
+ assert.equal(next.db.pragma('user_version',{simple:true}),4n);assert.deepEqual(upgraded.listDevices(),[d]);assert.equal(upgraded.getWireSnapshot(d.id).projects.length,1)
+ upgraded.deleteDevice({id:d.id});assert.equal(upgraded.listDevices().length,0);assert.equal(next.repository.getSnapshot().projects.length,1)
+}},
+
+{name:'participant deletion revokes all access, survives reopening, and preserves projects and schedules',run(ctx){
+ const {db,repo}=setup(ctx),store=createSharingStore(db)
+ const remove=(id:string)=>(store as typeof store & {deleteDevice(input:{id:string}):void}).deleteDevice({id})
+ assert.throws(()=>remove('missing'))
+ store.configureHost({address:'127.0.0.1',port:47831})
+ const a=store.saveDevice({name:'A',ip:'127.0.0.2'}),b=store.saveDevice({name:'B',ip:'127.0.0.3'})
+ const p=store.saveProject({name:'Shared',color:'#2563EB',participants:[{name:'A',deviceId:a.id},{name:'B',deviceId:b.id}]})
+ repo.createSchedule({projectId:p.id,name:'S',startDate:'2026-11-11',endDate:'2026-11-11'})
+ const before=repo.getSnapshot();store.putCredential({deviceId:a.id,hash:'9'.repeat(64)});store.activateCredential('9'.repeat(64))
+ db.exec("CREATE TRIGGER fail_remove BEFORE DELETE ON sharing_recipients BEGIN SELECT RAISE(ABORT,'simulated disk failure'); END")
+ assert.throws(()=>remove(a.id));assert.equal(store.getDevice(a.id).revoked,false);assert.equal(store.findCredential('9'.repeat(64))?.status,'active');assert.equal(store.listDevices().length,2)
+ db.exec('DROP TRIGGER fail_remove')
+ remove(a.id)
+ assert.deepEqual(repo.getSnapshot(),before);assert.equal(store.getWireSnapshot(b.id).projects.length,1)
+ assert.equal(store.findCredential('9'.repeat(64))?.status,'revoked');assert.throws(()=>store.getWireSnapshot(a.id));assert.throws(()=>store.activateCredential('9'.repeat(64)))
+ assert.deepEqual(createSharingStore(db).listDevices().map(d=>d.id),[b.id]);assert.equal(store.listSharedProjects()[0].participants.length,1)
+ assert.throws(()=>store.saveDevice({id:a.id,name:'Again',ip:'127.0.0.2'}))
+ const again=store.saveDevice({name:'A new',ip:'127.0.0.2'});assert.notEqual(again.id,a.id);assert.equal(again.approved,false)
+ store.revokeDevice({id:again.id});remove(again.id);assert.deepEqual(store.listDevices().map(d=>d.id),[b.id])
+}},
+
 {name:'pending credential cancellation preserves active credentials and denies abandoned activation',run(ctx){
  const {db}=setup(ctx),store=createSharingStore(db)
  store.configureHost({address:'127.0.0.1',port:47831})

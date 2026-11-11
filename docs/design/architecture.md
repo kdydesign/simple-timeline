@@ -176,7 +176,7 @@ main은 실행·30초 간격·절전 복귀·업무 commit 후 후보를 평가�
 
 main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본·별도 수신 캐시·핀 검증 HTTPS를 소유한다.
 0.6.0의 preload는 당시 8개 `simpleTimeline` 메서드를 유지하고 별도 고정 `timelineSharing` facade를 제공한다.
-허용된 14개 메서드는 [공유 계약](../../src/shared/sharing.ts)에 있으며 채널·URL·SQL·자격·키를 받거나 노출하지 않는다.
+현재 허용된 15개 메서드는 [공유 계약](../../src/shared/sharing.ts)에 있으며 채널·URL·SQL·자격·키를 받거나 노출하지 않는다.
 샌드박스·CSP·최상위 frame 검증을 유지한다. 호스트가 지정한 IPv4 한 곳에만 바인딩하며 기본 포트는 TCP47831이다.
 
 호스트는 원본과 프로젝트별 수신 권한을 수정한다. 멤버는 출처 ID가 있는 읽기 전용 수신본과 자기 PC의 알림만 관리한다.
@@ -196,3 +196,5 @@ main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본�
 0.6.8에서 `simpleTimeline`은 알림 전용 명령을 포함한9개 메서드다. `TimelineApi.updateScheduleReminder({id, reminder})`는 개인·호스트의 저장된 일정에서 알림 설정만 수정한다. main의 엄격한 입력·발신자 검증과 DB 트랜잭션을 거치며 현재 DB의 시작·종료일을 기준으로 알림 날짜를 검증한다. 일정 이름·날짜를 요청에 포함하지 않는다. 멤버 수신 자료의 알림은 기존 `SharingApi.saveReminder`를 사용한다. 스키마·공유 권한 변경은 없다.
 
 날짜 선택기의 월 Select만 `.saving-content`로 포털을 이동하여 부모 backdrop-filter/overflow의 잘림을 피한다. `overlayOwnership`이 트리거 ID를 통해 논리적 소유권을 확인하므로 바깥 클릭/포커스 이탈과 중첩 Escape 동작은 유지한다. 다른 Select는 기존 지역 포털을 유지한다.
+
+0.6.9의 `timelineSharing.deleteDevice({id})`는 호스트 전용 참여자 등록 삭제·권한 회수다. main에서 역할과 ID를 검증하고 [schema v4](storage.md)의 transaction으로 처리한다. renderer는 자격이나 DB에 직접 접근하지 않는다.

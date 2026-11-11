@@ -1,6 +1,6 @@
 {
   "name": "simple-timeline",
-  "version": "0.6.8",
+  "version": "0.6.9",
   "private": true,
   "description": "Offline project timeline for Windows",
   "main": "out/main/index.cjs",

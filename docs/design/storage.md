@@ -122,7 +122,7 @@ DB 파일은 평문이며 Windows 사용자 파일 권한을 따른다. 별도 �
 
 ## 검증과 남은 범위
 
-현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1·v2·v3를 지원한다.
+현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1·v2·v3·v4를 지원한다.
 [알림 native 회귀](../../tests/native/reminders.case.ts)는 실제 v1→v2 데이터 보존을,
 [native lifecycle 회귀](../../tests/native/lifecycle.case.ts)는 현재 버전 이후의 시험용 추가 버전으로 성공·실패를 검사한다.
 0.1.0→검증용 0.1.1 설치는 같은 schema이므로 실제 제품 schema 업그레이드의 증거가 아니다.
@@ -168,3 +168,9 @@ v3를 연 프로필을 구버전 앱으로 되돌리는 것은 지원하지 않�
 인증서 개인키와 멤버 접속 자격은 `sharing-secrets` 아래 OS 보호 저장소로 암호화한 파일에 둔다.
 Windows는 Electron safeStorage의 사용자 보호를 사용하며 SQLite에는 참조/해시만 둔다. DB의 일정 자체는 평문이다.
 Linux basic_text backend는 거부한다. 자동 테스트의 격리 AES vault는 OS 보호 저장소·DPAPI 인수 증거가 아니다.
+
+## 참여자 삭제 schema v4 (0.6.9)
+
+`sharing_devices.deleted`(0/1, 기본 0)를 추가한다. 삭제 시 revoked=1과 deleted=1, 자격 회수, 모든 sharing_recipients 제거를 한 transaction에서 처리한다. 기존 프로젝트·일정·표시용 참여자 이름은 유지한다. 삭제 등록은 목록·공유 대상·신규 승인에서 제외되며 같은 IP는 새 등록·승인으로 다시 사용할 수 있다.
+
+논리 삭제된 내부 PC 식별자·IP·회수된 자격 hash는 구 승인 PC에 `REVOKED`를 응답하기 위해 남긴다. 단순 물리 삭제로 `UNAUTHORIZED`가 되어 멤버 캐시 회수가 누락되는 것을 피한다. 디스크에서 이름/IP의 모든 흔적을 지우는 기능은 아니다. v3→v4는 기존 migration 사본·원자 적용을 따르며 구 버전으로의 다운그레이드는 지원하지 않는다. [native 검증](../../tests/native/sharing.case.ts)은 v3 등록/ACL 보존과 삭제 실패 rollback을 확인한다.

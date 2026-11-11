@@ -10,7 +10,7 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
   expect(shape.node).toBe('undefined')
   expect(shape.keys.sort()).toEqual(['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort())
   expect(shape.keys).not.toContain('invoke')
-  expect(shape.sharingKeys.sort()).toEqual(['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','onChange'].sort())
+  expect(shape.sharingKeys.sort()).toEqual(['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','deleteDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','onChange'].sort())
   const sandbox = await d.app.evaluate(({app,BrowserWindow})=>({disabled:app.commandLine.hasSwitch('no-sandbox'),renderer:(BrowserWindow.getAllWindows()[0].webContents as unknown as {getLastWebPreferences():{sandbox?:boolean}}).getLastWebPreferences().sandbox}))
   expect(sandbox).toEqual({disabled:false,renderer:true})
   const malformedSharing = await d.page.evaluate(()=>window.timelineSharing!.connect({address:'https://example.com',port:47831,token:'forged'} as never))

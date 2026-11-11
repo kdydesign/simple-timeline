@@ -93,3 +93,24 @@ it('uses an unsaved host-only sharing switch when adding a project',async()=>{
  expect(toggle).not.toBeChecked();await u.click(toggle);expect(toggle).toBeChecked();
  expect(f.api.saveProject).not.toHaveBeenCalled();
 });
+
+it('validates participant names and IPv4 beside their inputs before sending a save',async()=>{
+ const f=sharingFixture({role:'host',settingsRequestToken:'settings',devices:[{id:'9',name:'민수',ip:'192.168.0.20',approved:true,revoked:false}]}),u=userEvent.setup();
+ render(<App api={memoryApi().api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});
+ const name=within(dialog).getByLabelText('새 참여자 이름'),ip=within(dialog).getByLabelText('새 참여자 IP');
+ expect(name).toHaveAttribute('placeholder','참여자 이름');
+ await u.type(ip,'192.168.0.999');await u.click(within(dialog).getByRole('button',{name:'등록'}));
+ expect(name).toHaveAttribute('aria-invalid','true');expect(name).toHaveFocus();expect(ip).toHaveAttribute('aria-invalid','true');expect(ip).toHaveAccessibleDescription(/IPv4/);expect(f.api.saveDevice).not.toHaveBeenCalled();
+ await u.type(name,'영희');await u.clear(ip);await u.type(ip,'192.168.0.20');expect(ip).toHaveAccessibleDescription(/이미 등록/);
+ await u.clear(ip);await u.type(ip,'192.168.0.21');expect(ip).toHaveAttribute('aria-invalid','false');expect(name).toHaveAttribute('aria-invalid','false');
+});
+it('confirms participant removal with affected projects and permits removing revoked registrations',async()=>{
+ const f=sharingFixture({role:'host',settingsRequestToken:'settings',devices:[{id:'9',name:'민수',ip:'192.168.0.20',approved:false,revoked:true}],projects:[{id:'1',participants:[{name:'민수',deviceId:'9'}]}]}),u=userEvent.setup();
+ render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});
+ await u.click(within(dialog).getByRole('button',{name:'민수 참여자 삭제'}));
+ expect(screen.getByRole('alertdialog')).toHaveTextContent(hotfix.projects[0].name);expect(screen.getByRole('alertdialog')).toHaveTextContent('프로젝트와 일정은 유지');
+ await u.click(screen.getByRole('button',{name:'취소'}));expect(within(dialog).getByLabelText('민수 IP')).toHaveValue('192.168.0.20');
+ f.api.deleteDevice=vi.fn(async()=>{f.emit({devices:[],projects:[],snapshotRevision:1});return{ok:true as const,data:{...personalState,role:'host' as const}}});
+ await u.click(within(dialog).getByRole('button',{name:'민수 참여자 삭제'}));await u.click(screen.getByRole('button',{name:'참여자 삭제'}));
+ await waitFor(()=>expect(within(dialog).queryByLabelText('민수 IP')).not.toBeInTheDocument());expect(f.api.deleteDevice).toHaveBeenCalledWith({id:'9'});
+});

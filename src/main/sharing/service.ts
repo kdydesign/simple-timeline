@@ -175,6 +175,7 @@ export function createSharingService(o:Options){
   function approve(input:{pairId:string;confirmed:true}){if(input.confirmed!==true||!host)throw failure('FORBIDDEN');host.approve(input.pairId);changed();return getState()}
   function saveDevice(input:{id?:string;name:string;ip:string}){if(disposed)throw failure('FORBIDDEN');const value=store.saveDevice(input);changed();return value}
   function revokeDevice(input:{id:string}){if(disposed)throw failure('FORBIDDEN');store.revokeDevice(input);changed();return getState()}
+  function deleteDevice(input:{id:string}){if(disposed)throw failure('FORBIDDEN');store.deleteDevice(input);snapshotRevision++;changed();return getState()}
   function saveProject(input:SharedProjectInput){if(disposed)throw failure('FORBIDDEN');const value=store.saveProject(input);snapshotRevision++;changed();return value}
   function saveReminder(input:{id:string;reminder:ReminderSettings}){if(disposed)throw failure('FORBIDDEN');const value=store.saveReminder(input);snapshotRevision++;changed();return value}
   async function disconnect(input:{confirmed:true}){
@@ -194,7 +195,7 @@ export function createSharingService(o:Options){
     try{await drain;if(current(generation))await start()}catch(error){if(current(generation))setStatus('error',error)}
   }
   function dispose(){if(closing)return closing;disposed=true;closing=invalidate();return closing}
-  return {getState,start,configureHost,setHosting,connect,confirmHost,approve,saveDevice,revokeDevice,saveProject,saveReminder,disconnect,
+  return {getState,start,configureHost,setHosting,connect,confirmHost,approve,saveDevice,revokeDevice,deleteDevice,saveProject,saveReminder,disconnect,
     sync:async()=>{if(disposed)throw failure('FORBIDDEN');const generation=epoch;await syncController?.refresh(true);check(generation);return getState()},
     authorizeReminder:async()=>{const generation=epoch,active=syncController;if(!active||disposed||suspended)return false;const allowed=await active.authorize();return current(generation)&&active===syncController&&allowed&&store.getConfig().role==='member'},
     notifyLocalMutation(){if(!disposed){snapshotRevision++;changed()}},

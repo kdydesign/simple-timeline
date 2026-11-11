@@ -1,3 +1,4 @@
+import {Icon} from './Icon'
 import type {ReminderSettings,ApiError} from '../../shared/types'
 import {DEFAULT_REMINDER} from '../../domain/reminder'
 import {Input} from './ui/input'
@@ -10,8 +11,8 @@ export function ReminderFields({value=DEFAULT_REMINDER,onChange,error,errors={},
    <label htmlFor={`${idPrefix}-reminderTime`}>알림 시각<Input id={`${idPrefix}-reminderTime`} aria-label="알림 시각" type="text" inputMode="numeric" placeholder="HH:mm" maxLength={5} value={value.time} aria-invalid={!!errors.reminderTime} aria-describedby={errors.reminderTime?`${idPrefix}-reminderTime-error`:undefined} onChange={e=>onChange({...value,time:e.target.value})}/>{errors.reminderTime&&<p className="field-error" id={`${idPrefix}-reminderTime-error`} role="alert">{errors.reminderTime}</p>}</label>
   </div>
   <div className="reminder-options">
-   <label htmlFor={`${idPrefix}-reminderStart`}><Switch id={`${idPrefix}-reminderStart`} checked={value.start} onCheckedChange={start=>onChange({...value,start})}/>시작일 알림</label>
-   <label htmlFor={`${idPrefix}-reminderEnd`}><Switch id={`${idPrefix}-reminderEnd`} checked={value.end} onCheckedChange={end=>onChange({...value,end})}/>종료일 알림</label>
+   <label htmlFor={`${idPrefix}-reminderStart`}><Icon name="bell"/><Switch className="reminder-switch" id={`${idPrefix}-reminderStart`} checked={value.start} onCheckedChange={start=>onChange({...value,start})}/>시작일 알림</label>
+   <label htmlFor={`${idPrefix}-reminderEnd`}><Icon name="bell"/><Switch className="reminder-switch" id={`${idPrefix}-reminderEnd`} checked={value.end} onCheckedChange={end=>onChange({...value,end})}/>종료일 알림</label>
   </div>
  </section>
 }

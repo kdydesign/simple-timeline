@@ -42,7 +42,7 @@ export function createSharingStore(db:DatabaseHandle) {
     if(!r)throw new RepositoryError()
     return deviceDto(r)
   }
-  const listDevices=():ApprovedDevice[]=>(db.prepare("SELECT d.*,EXISTS(SELECT 1 FROM sharing_credentials c WHERE c.device_id=d.id AND c.status='active' AND d.revoked=0) AS approved FROM sharing_devices d ORDER BY d.rowid").all() as Row[]).map(deviceDto)
+  const listDevices=():ApprovedDevice[]=>(db.prepare("SELECT d.*,EXISTS(SELECT 1 FROM sharing_credentials c WHERE c.device_id=d.id AND c.status='active' AND d.revoked=0) AS approved FROM sharing_devices d WHERE d.deleted=0 ORDER BY d.rowid").all() as Row[]).map(deviceDto)
   const listSharedProjects=db.transaction(():SharedProjectMapping[]=>{
     const result=new Map<string,SharedProjectMapping>()
     for(const r of db.prepare('SELECT project_id FROM sharing_projects ORDER BY project_id').all() as Row[])result.set(String(r.project_id),{id:String(r.project_id),participants:[]})
@@ -104,6 +104,8 @@ export function createSharingStore(db:DatabaseHandle) {
     saveDevice:db.transaction((input:{id?:string;name:string;ip:string;installationId?:string})=>{
       requireHost()
       const name=normalizeName(input.name),ip=normalizeIPv4(input.ip)
+      const duplicate=db.prepare('SELECT id FROM sharing_devices WHERE ip=? AND revoked=0 AND id<>?').get(ip,input.id??'')
+      if(duplicate)throw new DomainValidationError('ip','이미 등록된 IP입니다. 다른 참여자의 IP를 입력해 주세요.')
       const installationId=input.installationId===undefined?null:validateSharingIdentity(input.installationId)
       if(input.id!==undefined){const d=getDevice(input.id);if(d.revoked)throw new Error('SHARING_DEVICE_REVOKED')
         db.prepare('UPDATE sharing_devices SET name=?,ip=?,installation_id=COALESCE(?,installation_id) WHERE id=?').run(name,ip,installationId,d.id)
@@ -119,6 +121,13 @@ export function createSharingStore(db:DatabaseHandle) {
       db.prepare("UPDATE sharing_credentials SET status='revoked' WHERE device_id=?").run(id)
       db.prepare('DELETE FROM sharing_recipients WHERE device_id=?').run(id)
       return getDevice(id)
+    }),
+    deleteDevice:db.transaction(({id}:{id:string})=>{
+      requireHost();getDevice(id)
+      // Keep a revoked identity so previously paired PCs receive REVOKED and clear their cache.
+      db.prepare('UPDATE sharing_devices SET revoked=1,deleted=1 WHERE id=?').run(id)
+      db.prepare("UPDATE sharing_credentials SET status='revoked' WHERE device_id=?").run(id)
+      db.prepare('DELETE FROM sharing_recipients WHERE device_id=?').run(id)
     }),
     putCredential:db.transaction((input:{deviceId:string;hash:string})=>{
       requireHost();const device=getDevice(input.deviceId);if(device.revoked)throw new Error('SHARING_DEVICE_REVOKED')
