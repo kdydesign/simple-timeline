@@ -1,4 +1,4 @@
-import { afterEach, expect, it } from 'vitest'
+import { afterEach, expect, it, vi } from 'vitest'
 import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -80,4 +80,34 @@ it('cancellation closes the internal feed before updater preparation can complet
   setFeedURL:(v:{url:string})=>{feedUrl=v.url},checkForUpdates:async()=>{started();await gate;await fetch(feedUrl+'latest.yml')},downloadUpdate:async()=>[join(f.directory,'Planrail.exe')],quitAndInstall:()=>{}}
  const preparing=prepareUpdater({...f,current:()=>!controller.signal.aborted,signal:controller.signal},updater)
  await start;controller.abort();release();await expect(preparing).rejects.toThrow()
+})
+
+it('suppresses pinned updater error logging before exposing the capability feed URL',async()=>{
+ const {NsisUpdater}=await import('electron-updater/out/NsisUpdater')
+ const {prepareUpdater}=await import('../../src/main/updates/installer'),f=await fixture()
+ const updater=new NsisUpdater(undefined,{version:'0.7.0',name:'Planrail',isPackaged:true,appUpdateConfigPath:join(f.directory,'unused.yml'),userDataPath:f.directory,baseCachePath:f.directory,whenReady:async()=>{},quit:()=>{},relaunch:()=>{},onQuit:()=>{}})
+ let url=''
+ vi.spyOn(updater,'setFeedURL').mockImplementation(options=>{url=typeof options==='string'?options:'url' in options?String(options.url):''})
+ vi.spyOn(updater,'checkForUpdates').mockImplementation(async()=>{const failure=Error('HTTP 403 '+url+'latest.yml');updater.emit('error',failure);throw failure})
+ const logged=vi.spyOn(console,'error').mockImplementation(()=>{})
+ try{
+  await expect(prepareUpdater({...f,current:()=>true},updater)).rejects.toThrow('HTTP 403')
+  expect(url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/[a-f0-9]{64}\/$/)
+  expect(logged).not.toHaveBeenCalled()
+ }finally{vi.restoreAllMocks()}
+})
+it('redacts capability paths in enabled runtime HTTP request and error-response debug logs',async()=>{
+ const {createRequire}=await import('node:module'),require=createRequire(import.meta.url)
+ const {HttpExecutor}=require('builder-util-runtime/out/httpExecutor'),debug=require('debug'),http=await import('node:http')
+ const {prepareUpdater}=await import('../../src/main/updates/installer'),f=await fixture(),logs:string[]=[]
+ class NodeExecutor extends HttpExecutor {createRequest(options:any,callback:any){return http.request(options,callback)}}
+ const executor=new NodeExecutor();let url=''
+ const updater={autoDownload:true,autoInstallOnAppQuit:true,allowPrerelease:true,allowDowngrade:true,disableDifferentialDownload:false,disableWebInstaller:false,autoRunAppAfterInstall:false,
+  setFeedURL:(v:{url:string})=>{url=v.url},checkForUpdates:async()=>{const target=new URL(url+'missing');return executor.request({protocol:target.protocol,hostname:target.hostname,port:target.port,path:target.pathname})},downloadUpdate:async()=>[],quitAndInstall:()=>{}}
+ const previous=debug.disable();debug.enable('electron-builder');const log=vi.spyOn(debug,'log').mockImplementation((...args:unknown[])=>{logs.push(args.map(String).join(' '))})
+ try{
+  await expect(prepareUpdater({...f,current:()=>true},updater)).rejects.toThrow('404')
+  expect(logs.join('\n')).toContain('Request:');expect(logs.join('\n')).toContain('Response:')
+  expect(logs.join('\n')).not.toContain(new URL(url).pathname)
+ }finally{log.mockRestore();debug.enable(previous)}
 })

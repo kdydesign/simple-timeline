@@ -64,3 +64,7 @@ test('custom running-app gate waits for exact current-installation path and neve
  assert.doesNotMatch(gate,/taskkill|Stop-Process|KILL_PROCESS|nsProcess::Kill/i)
  assert.match(gate,/SetEnvironmentVariableW/)
 })
+test('updater HTTP redaction uses the external runtime registry shared with electron-updater',async()=>{
+ const {default:config}=await import('../../electron.vite.config.mts')
+ assert.ok(config.main.build.rollupOptions.external?.includes('builder-util-runtime/out/httpExecutor'), 'Bundling this module would create a second redaction registry and leave updater debug logging unprotected')
+})

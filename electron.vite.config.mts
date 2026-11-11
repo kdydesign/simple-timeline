@@ -8,6 +8,8 @@ export default defineConfig({
       outDir: 'out/main',
       rollupOptions: {
         input: resolve('src/main/index.ts'),
+        // Share the pinned updater's redaction registry rather than bundling a second copy.
+        external: ['builder-util-runtime/out/httpExecutor'],
         output: { entryFileNames: 'index.cjs', format: 'cjs' },
       },
     },

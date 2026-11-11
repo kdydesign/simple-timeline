@@ -1,3 +1,4 @@
+import { addSensitiveFieldPattern } from 'builder-util-runtime/out/httpExecutor'
 import { spawn, type ChildProcess, type SpawnOptions } from 'node:child_process'
 import { join } from 'node:path'
 import { hashUpdateFile } from './bundle'
@@ -39,11 +40,18 @@ export async function launchPerUserInstaller(path:string,launch:(path:string,arg
  })
 }
 export interface UpdaterAdapter {
+ logger?: import('electron-updater').Logger | null
  autoDownload:boolean;autoInstallOnAppQuit:boolean;allowPrerelease:boolean;allowDowngrade:boolean;disableDifferentialDownload:boolean;disableWebInstaller:boolean;autoRunAppAfterInstall:boolean
  setFeedURL(options:{provider:'generic';url:string;useMultipleRangeRequest:boolean}):void
  checkForUpdates():Promise<unknown>;downloadUpdate():Promise<string[]>;quitAndInstall(silent:boolean,relaunch:boolean):void
 }
+let runtimeLoggingProtected=false
 export async function prepareUpdater(input:InstallInput,updater:UpdaterAdapter,handoff?:()=>Promise<void>):Promise<PreparedInstaller>{
+ // The pinned updater logs error stacks (including capability URLs) through this setter.
+ updater.logger=null
+ // The runtime's separate DEBUG logger serializes request options independently.
+ // Its documented redaction registry avoids intercepting process-wide logging.
+ if(!runtimeLoggingProtected){addSensitiveFieldPattern('path');addSensitiveFieldPattern('url');runtimeLoggingProtected=true}
  updater.autoDownload=false;updater.autoInstallOnAppQuit=false;updater.allowPrerelease=false;updater.allowDowngrade=false;updater.disableDifferentialDownload=true;updater.disableWebInstaller=true;updater.autoRunAppAfterInstall=true
  const feed=await createLoopbackFeed(input)
  const abort=()=>{void feed.close()}

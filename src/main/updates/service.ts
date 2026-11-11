@@ -35,12 +35,32 @@ export async function createUpdateService(o:Options){
  if((await lstat(o.root)).isSymbolicLink())throw Error('Invalid member update directory')
  let context:UpdateSharingContext={role:'personal',connected:false},trust:string|undefined,publication:UpdatePublication|null=null,ready:Ready|undefined
  let phase:UpdateState['phase']='idle',error:UpdateErrorCode|null=null,connected=false,explicit=false,received=0,revision=0,generation=0,disposed=false,importing=false,installing=false
- let completedReady:Ready|undefined
- let statusRevision=-1,catalog:UpdateCatalog|undefined,downloadTask:Promise<void>|undefined,checkTask:Promise<void>|undefined,installTask:Promise<void>|undefined
+ let completedReady:Ready|undefined,cleanupFailed=false
+ let observed:Record<string,number>={}
+ let catalog:UpdateCatalog|undefined,downloadTask:Promise<void>|undefined,checkTask:Promise<void>|undefined,installTask:Promise<void>|undefined
  let abort:AbortController|undefined,checkAbort:AbortController|undefined,io:Promise<unknown>=Promise.resolve()
  const listeners=new Set<(state:UpdateState)=>void>()
  const serialize=<T>(f:()=>Promise<T>):Promise<T>=>{const work=io.then(f);io=work.catch(()=>{});return work}
- const readyPath=join(o.root,'ready.json')
+ const readyPath=join(o.root,'ready.json'),observedPath=join(o.root,'observed.json')
+ async function observe(binding:string,value:number){
+  if(value<=(observed[binding]??-1))return
+  const floors={...observed,[binding]:value},record={schemaVersion:1,floors}
+  try{
+   if(Buffer.byteLength(JSON.stringify(record))>1024*1024)throw Error('Observation limit exceeded')
+   await serialize(async()=>{await atomicUpdateRecord(observedPath,record);observed=floors})
+  }catch{throw Object.assign(Error('Unable to persist update revision'),{code:'STORAGE_IO'})}
+ }
+ try{
+  const info=await lstat(observedPath)
+  if(!info.isFile()||info.isSymbolicLink()||info.size>1024*1024)throw Error('Invalid update observations')
+  const saved=JSON.parse(await readFile(observedPath,'utf8'))
+  if(saved?.schemaVersion!==1||!saved.floors||typeof saved.floors!=='object'||Array.isArray(saved.floors))throw Error('Invalid update observations')
+  for(const [binding,value] of Object.entries(saved.floors)){
+   if(!/^[a-f0-9]{64}$/.test(binding)||!Number.isSafeInteger(value)||Number(value)<0)throw Error('Invalid update observation')
+  }
+  observed={...saved.floors}
+ }catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw Error('Update revision storage unavailable')}
+
  const persist=()=>{const value=ready?structuredClone(ready):undefined;return serialize(()=>value?atomicUpdateRecord(readyPath,value):rm(readyPath,{force:true}))}
  function getState():UpdateState{
   const h=catalog?.status(),file=publication?.manifest.files.find(f=>f.id==='installer'),busy=phase==='downloading'||phase==='verifying'||installing
@@ -60,9 +80,11 @@ export async function createUpdateService(o:Options){
   const r=JSON.parse(await readFile(readyPath,'utf8')) as Ready
   if(r.schemaVersion!==1||!/^[a-f0-9-]{36}$/.test(r.directory)||!/^[a-f0-9]{64}$/.test(r.trust))throw Error('Invalid ready record')
   r.publication=parseUpdateStatus({protocolVersion:1,hostId:r.publication.hostId,revision:r.publication.revision,publication:r.publication},r.publication.hostId).publication!
+  if(r.publication.revision<(observed[r.trust]??-1))throw new SharingNetworkError('INVALID_RESPONSE')
+  await observe(r.trust,r.publication.revision)
   if(compareStableVersions(r.publication.manifest.version,o.version)>0){await verify(r);ready=r;publication=r.publication;phase='waiting';explicit=true}
   else completedReady=r
- }catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT'){phase='error';error='storage'}}
+ }catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT'){phase='error';error=e instanceof SharingNetworkError?'integrity':'storage'}}
  try{const attempt=JSON.parse(await readFile(join(o.root,'attempt.json'),'utf8'));if(ready&&attempt.schemaVersion===1&&attempt.stage==='handoff'&&attempt.fromVersion===o.version&&attempt.targetVersion===ready.publication.manifest.version)error='install'}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT'){error='storage'}}
  // Only update-owned stage directories and temporary records are touched.
  for(const name of await readdir(o.root))if((/^[a-f0-9-]{36}$/.test(name)&&name!==ready?.directory&&name!==completedReady?.directory)||name.endsWith('.tmp'))await rm(join(o.root,name),{recursive:true,force:true})
@@ -76,8 +98,9 @@ export async function createUpdateService(o:Options){
     let status:UpdateStatus
     try{status=parseUpdateStatus(response,c.trust.hostId)}catch{throw new SharingNetworkError('INVALID_RESPONSE')}
     if(!current(g))return
-    if(status.revision<statusRevision)throw new SharingNetworkError('INVALID_RESPONSE')
-    statusRevision=status.revision;connected=true
+    if(status.revision<(observed[fingerprint(c)]??-1))throw new SharingNetworkError('INVALID_RESPONSE')
+    await observe(fingerprint(c),status.revision);if(!current(g))return
+    connected=true
     const next=status.publication&&compareStableVersions(status.publication.manifest.version,o.version)>0?status.publication:null
     if(publication&&publication.publicationId!==next?.publicationId){const clear=invalidate(next?'replaced':'withdrawn'),nextGeneration=generation;await clear;if(!current(nextGeneration))return}
     else if(publication&&next&&JSON.stringify(publication)!==JSON.stringify(next))throw new SharingNetworkError('INVALID_RESPONSE')
@@ -87,6 +110,7 @@ export async function createUpdateService(o:Options){
    }catch(e){if(!current(g))return;connected=false
     const code=(e as {code?:string}).code
     if(['UNAUTHORIZED','REVOKED','TLS_UNTRUSTED'].includes(code??'')){await invalidate('trust-changed');context={...context,revoked:true}}
+    else if(code==='STORAGE_IO'){await invalidate('storage')}
     else if(['INVALID_RESPONSE','UNSUPPORTED','PROTOCOL_MISMATCH'].includes(code??'')){await invalidate(code==='UNSUPPORTED'?'unsupported':'integrity')}
     else{if(!publication){phase='error';error='network'}changed()}
    }
@@ -100,7 +124,7 @@ export async function createUpdateService(o:Options){
   if(next.trustPending){changed();return}
   const changedTrust=(trust!==undefined&&trust!==nextTrust)||(ready&&ready.trust!==nextTrust)||next.revoked
   trust=nextTrust
-  if(changedTrust){statusRevision=-1;await invalidate('trust-changed')}
+  if(changedTrust){await invalidate('trust-changed')}
   if(context!==next)return
   if(old.connected&&!next.connected)connected=false
   connected=next.role==='host'?next.connected:connected&&!!nextTrust
@@ -167,18 +191,30 @@ export async function createUpdateService(o:Options){
    await atomicUpdateRecord(join(o.root,'attempt.json'),{schemaVersion:1,id:randomUUID(),fromVersion:o.version,targetVersion:input.publication.manifest.version,releaseId:input.publication.releaseId,sha256:input.publication.manifest.files.find(f=>f.id==='installer')!.sha256,stage:'handoff',cacheFiles})
   },
   async confirmHealthyStartup(){
-   // Called only after existing profile storage AND the ready renderer are healthy.
-   if(completedReady&&completedReady.publication.manifest.version===o.version){await rm(join(o.root,completedReady.directory),{recursive:true,force:true});completedReady=undefined;await persist()}
+   // The entire best-effort cleanup is contained: the ready-UI caller intentionally does not await it.
    try{
-    const attempt=JSON.parse(await readFile(join(o.root,'attempt.json'),'utf8'))
-    if(attempt.schemaVersion!==1||attempt.targetVersion!==o.version)return
-    if(!Array.isArray(attempt.cacheFiles))throw Error('Invalid install attempt')
-    for(const path of attempt.cacheFiles){
-     if(typeof path!=='string'||!o.updaterCacheRoot||dirname(path)!==join(o.updaterCacheRoot,'pending'))throw Error('Invalid cache path')
-     try{if((await hashUpdateFile(path)).sha256===attempt.sha256)await rm(path,{force:true})}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e}
+    if(completedReady&&completedReady.publication.manifest.version===o.version){
+     await rm(join(o.root,completedReady.directory),{recursive:true,force:true})
+     await persist()
+     // Retain the in-memory retry obligation until the durable ready record was removed too.
+     completedReady=undefined
     }
-    await atomicUpdateRecord(join(o.root,'attempt.json'),{...attempt,stage:'healthy',cacheFiles:[]})
-   }catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT'){error='storage';changed()}}
+    let attemptText:string|undefined
+    try{attemptText=await readFile(join(o.root,'attempt.json'),'utf8')}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e}
+    if(attemptText!==undefined){
+     const attempt=JSON.parse(attemptText)
+     if(attempt.schemaVersion!==1)throw Error('Invalid install attempt')
+     if(attempt.targetVersion===o.version){
+      if(!Array.isArray(attempt.cacheFiles))throw Error('Invalid install attempt')
+      for(const path of attempt.cacheFiles){
+       if(typeof path!=='string'||!o.updaterCacheRoot||dirname(path)!==join(o.updaterCacheRoot,'pending'))throw Error('Invalid cache path')
+       try{if((await hashUpdateFile(path)).sha256===attempt.sha256)await rm(path,{force:true})}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT')throw e}
+      }
+      await atomicUpdateRecord(join(o.root,'attempt.json'),{...attempt,stage:'healthy',cacheFiles:[]})
+     }
+    }
+    if(cleanupFailed){cleanupFailed=false;if(error==='storage')error=null;changed()}
+   }catch{cleanupFailed=true;error='storage';changed()}
   },
   subscribe(listener:(s:UpdateState)=>void){listeners.add(listener);return ()=>{listeners.delete(listener)}},
   importBundle:()=>hostCommand('import'),publish:()=>hostCommand('publish'),withdraw:()=>hostCommand('withdraw'),
