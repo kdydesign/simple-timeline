@@ -407,7 +407,6 @@ export function GanttView({
       >
         {!rows.length && <div className="empty"><h3>프로젝트를 추가해 일정을 관리하세요</h3></div>}
         <div className="gantt-spacer" style={{ height: Math.max(size.height, prefix.at(-1)!) }}>
-          <div className="gantt-tail" aria-hidden="true" style={{top:prefix.at(-1),height:Math.max(0,size.height-prefix.at(-1)!),width:size.width}}>{nonworkingColumns}</div>
           {[...visible]
             .sort((a, b) => a - b)
             .map((i) => {

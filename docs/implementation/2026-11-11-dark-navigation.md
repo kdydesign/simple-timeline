@@ -47,3 +47,19 @@ HEAD `363ac6ff28f06b07d05352baedaebc6e16e5a907`, dirty=true인 구현 작업 트
 배포15, 날짜 단위118×3시간대, UI120, native41, Electron80개 통과.
 하네스7개와 whitespace 검사도 통과했다. 공휴일만 보류하는 사용자 승인에 따라 나머지 변경을 main 직접 커밋·push 대상으로 확정했다. 최종 커밋과 원격 CI 상태는 전달 결과에 기록한다.
 증거: `artifacts/dark-navigation/verified-app.json`, `verify-app.log`, `verify-app-first.json` 및 개별 RED/GREEN 로그.
+
+
+## 0.6.6 후속 수정 — 트랙 경계와 그룹 구분
+
+기준: `3d87ff3deaaed4b044539f2776d79ea105d5127e` + 작업 트리 변경. 사용자가 제공한 설치 화면에서 주말 강조가 실제 행 아래 빈 공간까지 이어지는 문제를 확인했다. 0.6.5의 `.gantt-tail`이 남은 본문 높이에 주말 열을 추가로 그린 것이 원인이다. 해당 렌더링과 전용 스타일을 제거하고 트랙 내부 강조만 유지했다. 간트의 남은 작업 공간과 하단 고정 배치는 유지한다.
+
+기존 Electron 검사를 표시 경계 검사로 보정했다. 수정 전 마지막 행 하단438px보다 강조 하단836px가 커서 실패했고, 수정 후 일반 행·프로젝트 접힘·빈 공유 필터에서 통과했다. 날짜 눈금 강조, 기존20:80 배율·가로 이동, 스크롤바 검사까지 관련4개 테스트가 통과했다.
+
+CSS 구분선은 하단 두 영역 사이와 상단 세 그룹 경계에 추가했다. 기존 반응형 간격에 맞추고 고대비에서는 시스템 테두리 색을 사용한다. 포인터·키보드 조작과 배율 값은 변경하지 않는다. `documentation-and-adrs` 지침에 따라 별도 ADR 없이 기존 설계와 이 기록을 보정했다.
+
+Linux Electron 캡처에서 빈 영역의 붉은 배경 제거와 상·하단 구분선을 확인했다. Windows 설치본 실기 확인은 미검증이다. 공휴일은 여전히 보류이며 현재 붉은 강조는 토요일·일요일에만 적용된다.
+
+
+전체 검증 첫 실행은 타입·배포·날짜 검사를 통과했으나 UI119/120에서 중단됐다. `tests/ui/gantt.test.tsx`의 기존 `.gantt-tail` 존재 기대가 새 승인 범위와 충돌했다. 이를 모든 본문 강조가 실제 트랙 안에 속하는지 확인하도록 보정했다. 최초 실패 증거는 `artifacts/track-boundaries/verify-app-first.{log,json}`에 보존했다. 테스트 생략·제한 시간 확대는 하지 않았다.
+
+최종 전체 재검증은 `DISPLAY=:95 npm run verify:app` 7단계 모두 통과했다. Linux x64/Node24.22.1, 기준 HEAD `3d87ff3deaaed4b044539f2776d79ea105d5127e` + dirty 작업 트리, UTC `2026-11-11T03:39:21.157Z` → `2026-11-11T03:43:32.312Z`. UI120·Electron80개와 타입·배포15·날짜118×3시간대·native41 검사를 통과했다. 하네스7개와 `git diff --check`도 통과했다. 증거는 `artifacts/track-boundaries/verified-app.json`, `verify-app.log`, `screens/`에 보존한다.

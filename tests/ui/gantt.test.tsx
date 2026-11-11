@@ -153,5 +153,7 @@ it('marks visible weekend headings and row columns without changing schedule pai
  expect(container.querySelector('[data-day="2026-11-07"]')).toHaveClass('nonworking-day');
  expect(container.querySelector('[data-day="2026-11-06"]')).not.toHaveClass('nonworking-day');
  expect(container.querySelector('[data-row="project:1"] [data-nonworking="2026-11-07"]')).toBeInTheDocument();
- expect(container.querySelector('.gantt-tail [data-nonworking="2026-11-07"]')).toBeInTheDocument();
+ for(const highlight of container.querySelectorAll('.gantt-body [data-nonworking]')) {
+  expect(highlight.closest('.gantt-track')).not.toBeNull();
+ }
 });

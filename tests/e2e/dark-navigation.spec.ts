@@ -50,9 +50,17 @@ test('weekend shading fills headings and rows while blank shared results stay ce
  await expect(day).toHaveCSS('background-color','rgba(236, 112, 126, 0.09)')
  const d=(await day.boundingBox())!,c=(await column.boundingBox())!
  expect(Math.abs(d.x-c.x)).toBeLessThan(1);expect(c.width).toBe(28)
- await expect(p.locator('.gantt-tail [data-nonworking="2026-11-07"]')).toBeVisible()
+ const lastRow=(await p.locator('.gantt-row').last().boundingBox())!
+ const highlights=await p.locator('.gantt-body [data-nonworking]').evaluateAll(nodes=>nodes.map(e=>e.getBoundingClientRect().bottom))
+ expect(highlights.length).toBeGreaterThan(0)
+ expect(Math.max(...highlights)).toBeLessThanOrEqual(lastRow.y+lastRow.height)
+ await p.locator('.collapse-project').first().click()
+ const collapsedLast=(await p.locator('.gantt-row').last().boundingBox())!
+ const collapsedBottom=await p.locator('.gantt-body [data-nonworking]').evaluateAll(nodes=>Math.max(...nodes.map(e=>e.getBoundingClientRect().bottom)))
+ expect(collapsedBottom).toBeLessThanOrEqual(collapsedLast.y+collapsedLast.height)
  await p.screenshot({path:test.info().outputPath('weekends.png')})
  await p.getByRole('button',{name:'공유',exact:true}).click()
+ await expect(p.locator('.gantt-body [data-nonworking]')).toHaveCount(0)
  const body=(await p.locator('.gantt-body').boundingBox())!,text=(await p.locator('.gantt-body .empty h3').boundingBox())!
  expect(Math.abs(text.y+text.height/2-body.y-body.height/2)).toBeLessThan(2)
  expect(Math.abs(text.x+text.width/2-body.x-body.width/2)).toBeLessThan(6)

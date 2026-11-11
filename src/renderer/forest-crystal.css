@@ -295,7 +295,34 @@ button:disabled { box-shadow: none; }
 .day-tick.nonworking-day[aria-current="date"] { --date-base: var(--today); }
 .day-tick.nonworking-day[aria-pressed="true"] { --date-base: var(--selected-date); }
 .date-highlight.nonworking { background: var(--nonworking-day); }
-.gantt-tail { position: absolute; right: 0; overflow: clip; pointer-events: none; }
 @media (forced-colors: active) {
   .day-tick.nonworking-day { text-decoration: underline; }
+}
+
+/* Separate controls without taking space from the 20:80 navigation columns. */
+.gantt-horizontal, .toolbar .month-controls, .toolbar .sharing-filter, .toolbar .header-actions { position: relative; }
+.gantt-horizontal::before, .toolbar .month-controls::before,
+.toolbar .sharing-filter::before, .toolbar .header-actions::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  height: 24px;
+  transform: translateY(-50%);
+  border-left: 1px solid var(--border);
+  pointer-events: none;
+}
+.gantt-horizontal::before { left: -8px; }
+.toolbar .month-controls::before, .toolbar .sharing-filter::before,
+.toolbar .header-actions::before { left: -6px; }
+@media (max-width: 1100px) {
+  .toolbar .month-controls::before, .toolbar .sharing-filter::before,
+  .toolbar .header-actions::before { left: -4px; }
+}
+@media (max-width: 850px) {
+  .toolbar .month-controls::before, .toolbar .sharing-filter::before,
+  .toolbar .header-actions::before { left: -3px; }
+}
+@media (forced-colors: active) {
+  .gantt-horizontal::before, .toolbar .month-controls::before,
+  .toolbar .sharing-filter::before, .toolbar .header-actions::before { border-color: CanvasText; }
 }
