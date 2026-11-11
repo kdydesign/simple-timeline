@@ -14,6 +14,7 @@ export function createChangeDelivery(o:Options){
  async function drain(){
   while(pending&&!stopped){
    pending=false
+   storageError=false
    try{
     const settings=o.inbox.settings()
     if(!settings.enabled||settings.baselining)continue
@@ -45,7 +46,6 @@ export function createChangeDelivery(o:Options){
      // A sync while sending can replace remaining pending payloads. Read those again.
      if(pending)break
     }
-    storageError=false
    }catch{storageError=true;pending=false}
    changed()
   }

@@ -26,3 +26,11 @@ it('native callbacks never throw when authorization storage becomes unavailable'
  // The real service reads SQLite for authorization; callback exceptions must be contained.
  f.breakSettings();expect(()=>f.fail()).not.toThrow();expect(()=>f.click()).not.toThrow();expect(f.engine.issues().storageError).toBe(true);f.engine.dispose()
 })
+it('retains a caught authorization error until a later successful drain iteration',async()=>{
+ let broken=true,sends=0
+ const statuses:boolean[]=[]
+ const inbox={recover:()=>{},settings:()=>({enabled:true,baselining:false}),pending:()=>[notice],claim:()=>true,finish:()=>{},issues:()=>({failed:0,unknown:0}),retry:()=>{}}
+ const engine=createChangeDelivery({inbox:inbox as any,generation:()=>0,authorized:()=>{if(broken)throw Error('authorization storage unavailable');return true},send:async()=>{sends++;return 'submitted'},onClick:()=>{},onChange:()=>{statuses.push(engine.issues().storageError)}})
+ await engine.evaluate();expect(sends).toBe(0);expect(engine.issues().storageError).toBe(true);expect(statuses).toEqual([true])
+ broken=false;await engine.evaluate();expect(sends).toBe(1);expect(engine.issues().storageError).toBe(false);expect(statuses).toEqual([true,false]);engine.dispose()
+})
