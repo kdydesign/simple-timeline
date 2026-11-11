@@ -31,7 +31,7 @@ export function createChangeInbox(db:DatabaseHandle) {
  }
  const put=(notice:ChangeNotice,projectId:string|null,baseline:string|null,window:string)=>{
   // A cancelled pending window may be recomputed; terminal deliveries never become pending.
-  db.prepare("INSERT INTO sharing_change_inbox(id,project_id,payload,state,baseline,window_cursor,updated_at) VALUES(?,?,?,'pending',?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload,baseline=excluded.baseline,window_cursor=excluded.window_cursor,state=CASE WHEN sharing_change_inbox.state='cancelled' THEN 'pending' ELSE sharing_change_inbox.state END,updated_at=excluded.updated_at").run(notice.id,projectId,JSON.stringify(notice),baseline,window,new Date().toISOString())
+  db.prepare("INSERT INTO sharing_change_inbox(id,project_id,payload,state,baseline,window_cursor,updated_at) VALUES(?,?,?,'pending',?,?,?) ON CONFLICT(id) DO UPDATE SET project_id=excluded.project_id,payload=excluded.payload,baseline=excluded.baseline,window_cursor=excluded.window_cursor,state=CASE WHEN sharing_change_inbox.state='cancelled' THEN 'pending' ELSE sharing_change_inbox.state END,updated_at=excluded.updated_at").run(notice.id,projectId,JSON.stringify(notice),baseline,window,new Date().toISOString())
  }
  // Once authorization ends, retain only delivery identity/state, never historical names or dates.
  const scrubUnauthorized=(allowed:Set<string>)=>{
@@ -46,7 +46,7 @@ export function createChangeInbox(db:DatabaseHandle) {
   cache.apply(e.snapshot)
   const allowed=new Set(e.snapshot.projects.map(p=>p.id)),confirmedEnded=previous.projects.some(p=>!allowed.has(p.id))
   const continuing=new Set(allowed)
-  for(const n of e.notices)if(n.projectId!==null&&n.body===`${e.snapshot.projects.find(p=>p.id===n.projectId)!.name} 프로젝트가 공유되었습니다.`)continuing.delete(n.projectId)
+  for(const n of e.notices)if(old.cursor!==e.cursor&&n.projectId!==null&&n.body===`${e.snapshot.projects.find(p=>p.id===n.projectId)!.name} 프로젝트가 공유되었습니다.`)continuing.delete(n.projectId)
   scrubUnauthorized(e.mode==='reset'?new Set():continuing)
   db.prepare('UPDATE sharing_change_settings SET cursor=?,baselining=0,revoked=0 WHERE singleton=1').run(e.cursor)
   if(!old.enabled||old.baselining){db.prepare("UPDATE sharing_change_inbox SET state='cancelled' WHERE state IN ('pending','failed')").run();return}
@@ -83,7 +83,7 @@ export function createChangeInbox(db:DatabaseHandle) {
  const valid=(row:Row,retry=false):boolean=>{
   const n=JSON.parse(row.payload) as ChangeNotice,c=config()
   if(c.role!=='member')return false
-  if(n.projectId===null)return !retry||row.baseline!=='ended'||!!settingsRow().revoked
+  if(n.projectId===null)return true
   if(!db.prepare('SELECT 1 FROM sharing_cache_projects WHERE id=?').get(n.projectId))return false
   if(n.target.kind==='schedule')return !!db.prepare('SELECT 1 FROM sharing_cache_schedules WHERE id=? AND project_id=?').get(n.target.id,n.projectId)
   return !retry||n.target.kind!=='list'

@@ -159,3 +159,25 @@ cases.push({name:'change reconnect with unchanged cursor reaggregates an unclaim
  const m=member(ctx),base=envelope('a');base.notices=[];m.inbox.apply(base);const e=envelope('b','Updated');m.inbox.apply(e);assert.equal(m.inbox.pending()[0].target.kind,'schedule')
  const apply=m.inbox.apply as (e:ChangeEnvelope,reconnecting?:boolean)=>void;apply({...e,notices:[]},true);assert.equal(m.inbox.pending()[0].target.kind,'project');assert.match(m.inbox.pending()[0].body,/변경1건/)
 }})
+
+for(const reconnecting of [false,true])cases.push({name:`change grant envelope replay preserves pending association (${reconnecting?'reconnecting':'ordinary'}) and aggregates later delta`,run(ctx){
+ const m=member(ctx),base=envelope('a');base.mode='initial';base.snapshot.projects=[];base.snapshot.schedules=[];base.notices=[];m.inbox.apply(base)
+ const grant=envelope('b','Current');grant.notices=[{id:'grant-replay',projectId:'1',title:'P',body:'P 프로젝트가 공유되었습니다.',target:{kind:'project',id:'1'}}];m.inbox.apply(grant);m.inbox.apply(grant,reconnecting)
+ assert.deepEqual(m.inbox.pending().map(n=>n.id),['grant-replay'])
+ const row=m.db.prepare('SELECT project_id,baseline FROM sharing_change_inbox WHERE id=?').get('grant-replay') as {project_id:string|null;baseline:string|null};assert.equal(row.project_id,'1');assert.equal(row.baseline,'null')
+ const later=envelope('c','Latest');later.snapshot.projects[0].name='Later P';m.inbox.apply(later)
+ assert.deepEqual(m.inbox.pending().map(n=>n.id),['grant-replay']);assert.equal(m.inbox.pending()[0].title,'Later P');assert.equal(m.inbox.pending()[0].body,'Later P 프로젝트가 공유되었습니다.')
+}})
+
+import { mkdirSync } from 'node:fs'
+for(const removal of ['partial ACL','project deletion'] as const)cases.push({name:`change confirmed generic termination after ${removal} permits explicit failed retry while still connected`,run(ctx){
+ const h=host(ctx),removedProject=h.save();h.save(undefined,'Still shared');const baseline=h.store.getChangeSnapshot(h.a.id,null,false)
+ const receiverDir=`${ctx.tempDir}/receiver`;mkdirSync(receiverDir);const state=setup({...ctx,tempDir:receiverDir}),store=createSharingStore(state.db),inbox=createChangeInbox(state.db)
+ store.connectMember({address:'127.0.0.1',port:47831,hostId:baseline.snapshot.hostId,datasetId:baseline.snapshot.datasetId,certificatePin:'pin',credentialRef:'ref'});inbox.apply(baseline)
+ for(const n of inbox.pending()){inbox.claim(n.id);inbox.finish(n.id,'submitted')}
+ if(removal==='partial ACL')h.save(removedProject.id,'P',[h.b]);else h.repo.deleteProject({id:removedProject.id,confirmed:true})
+ const ended=h.store.getChangeSnapshot(h.a.id,baseline.cursor,false);inbox.apply(ended);assert.equal(store.readCache().projects.length,1);assert.equal(inbox.pending().length,1)
+ const notice=inbox.pending()[0];assert.equal(notice.projectId,null);assert.deepEqual(notice.target,{kind:'list'});assert.equal(notice.body,'공유가 종료되었습니다.');assert.equal(inbox.claim(notice.id),true);inbox.finish(notice.id,'failed')
+ assert.equal((state.db.prepare('SELECT revoked FROM sharing_change_settings WHERE singleton=1').get() as {revoked:bigint}).revoked,0n)
+ inbox.retry();assert.deepEqual(inbox.pending(),[notice]);assert.equal(inbox.claim(notice.id),true);inbox.finish(notice.id,'submitted');inbox.apply(ended);assert.equal(inbox.pending().length,0)
+}})
