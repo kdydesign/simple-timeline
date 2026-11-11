@@ -28,6 +28,10 @@ Windows packaged 검사는 기존 수동 설치 lifecycle과 별도로 `packaged
 
 ## 최종 검증 기록
 
+최종 브랜치 검토의 I1·M1·M2를 한 차례 보정했다. renderer는 명시적 release와 main의 편집 차단 해제를 모두 확인해야 잠금을 푼다. cache 재검증·시도 기록 실패처럼 teardown 전 복구 가능한 오류는 편집을 재개하고, clean acknowledgment 뒤 이른 `editingBlocked:false`만으로는 해제하지 않는다. 일부 teardown 실패는 계속 차단한다. 취소는 선택한 publication을 동기식으로 유지하면서 전송만 무효화하며, 파일 정리를 기다리는 동안 관측한 배포 중지·교체·신뢰 변경을 뒤늦은 취소 완료가 덮어쓰지 않는다. catalog의 버전·소스 불일치는 형식화한 오류로 service에 전달해 기존 호스트 불일치 안내를 표시하고 거부한 공개 요청은 현재 배포를 보존한다.
+
+이 보정은 기준 `66199045d2837c381536b82d197f446a175fcf50` + 수정 작업 트리, Linux x64·Node24.22.1에서 RED→GREEN을 확인했다. 실제 coordinator·service·renderer 가드를 연결한 cache/시도 기록 실패2개가 원본에서는 잠금을 유지해 실패했고, 수정 후 편집·inert가 복구됐다. 부분 teardown과 명시적 release 없는 조기 해제 방지도 통과했다. 취소 중 stage/ready 삭제를 지연한 배포 중지·교체·신뢰 변경4개, 호스트 버전·소스 불일치2개도 원본 실패→수정 통과를 확인했다. 최종 focused service/installer/catalog 단위67개·업데이트 UI14개·typecheck·저장소 하네스22개가 통과했다. 전체 `verify:app`은 이번 보정에서 재실행하지 않았으며 아래240초 aggregate 실패와 분할87개 결과를 대체하지 않는다. 정확한 최종 SHA의 전체 CI와 Windows 실기 검증은 후속 실행으로 남긴다.
+
 최종 전체 실행은 Linux x64·Node24.22.1, HEAD `48256763d2d27281201033c096187808c5e60d81` + Task3 dirty tree에서 수행했다. 타입·release22·3개 시간대 각각 unit210·UI165·제품 build·native70은 통과했다. `verify:app`의 순차 Electron E2E는87개 중72개 통과 후 전체240초 제한으로 중단됐다. 새 update 테스트에 도달하기 전이며 개별 실패는 없었다. **전체 verify:app 통과로 기록하지 않는다.** 전체 제한과 개별 제한은 변경하지 않았다.
 
 남은15개를 별도로 실행해14개가 통과했고 기존 sharing E2E의 `uncheck()`가 클릭 직후 상태를 요구해 실패했다. 공유 변경 알림 스위치는 영속 IPC 성공 뒤에만 checked 상태를 바꾼다. 기존 UI의 pending-save 계약 검사를 단독 실행해 이 동작을 확인했다. E2E를 클릭 → 화면 checked 상태 대기 → 기존 영속 상태 poll로 보정했으며, 실패를 감추는 retry나 시간 제한 완화는 추가하지 않았다. 최종 공유+업데이트3개가45.1초에 통과했다(공유36.8초, 손상 공유 메타데이터2.4초, 업데이트4.9초). 따라서87개 개별 경로는 분할 실행에서 통과 근거를 갖지만,240초 전체 실행은 통과하지 못했다. 전체 단일 실행 성공과 분할 경로 검증을 구분하고, 최종 SHA의 Windows/Linux CI는 후속 실행으로 남긴다. 중간 전체 검사에서 버전 상승 후 release 테스트의0.7.0 고정 기대값 실패를0.8.0으로 갱신했다. 다음 전체 UI 실행에서는 기존 `shared-change-notifications.test.tsx`의 “preserves new input typed while the accepted notification is still reading its target” 한 개가5000ms 제한으로 실패했다(나머지163개 통과). 해당 검사는 수정 없이 단독 실행과 관련29개 묶음 실행에서 통과했다. 제한·assertion을 완화하지 않았으며 최종 전체 실행 결과와 별도로 이 실패를 보존한다.

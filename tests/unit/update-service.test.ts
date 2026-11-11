@@ -6,16 +6,16 @@ import { createHash } from 'node:crypto'
 import { createUpdateService, type UpdateSharingContext } from '../../src/main/updates/service'
 import { createInstallCoordinator, createMutationBarrier } from '../../src/main/updates/installer'
 import type { UpdatePublication, UpdateStatus } from '../../src/shared/updates'
-const fsFaults=vi.hoisted(()=>({removePath:null as string|null,renamePath:null as string|null,renameWaitPath:null as string|null,renameWait:null as Promise<void>|null,renameStarted:null as (()=>void)|null}))
+const fsFaults=vi.hoisted(()=>({removePath:null as string|null,removeWaitPath:null as string|null,removeWait:null as Promise<void>|null,removeStarted:null as (()=>void)|null,renamePath:null as string|null,renameWaitPath:null as string|null,renameWait:null as Promise<void>|null,renameStarted:null as (()=>void)|null}))
 vi.mock('node:fs/promises',async importOriginal=>{
  const actual=await importOriginal<typeof import('node:fs/promises')>()
  return {...actual,
-  rm:async(...args:Parameters<typeof actual.rm>)=>{if(String(args[0])===fsFaults.removePath)throw Object.assign(Error('file locked'),{code:'EPERM'});return actual.rm(...args)},
+  rm:async(...args:Parameters<typeof actual.rm>)=>{if(String(args[0])===fsFaults.removeWaitPath){fsFaults.removeStarted?.();await fsFaults.removeWait}if(String(args[0])===fsFaults.removePath)throw Object.assign(Error('file locked'),{code:'EPERM'});return actual.rm(...args)},
   rename:async(...args:Parameters<typeof actual.rename>)=>{if(String(args[1])===fsFaults.renameWaitPath){fsFaults.renameStarted?.();await fsFaults.renameWait}if(String(args[1])===fsFaults.renamePath)throw Object.assign(Error('rename denied'),{code:'EACCES'});return actual.rename(...args)},
  }
 })
 const roots:string[]=[];const services:Awaited<ReturnType<typeof createUpdateService>>[]=[]
-afterEach(async()=>{fsFaults.removePath=null;fsFaults.renamePath=null;fsFaults.renameWaitPath=null;fsFaults.renameWait=null;fsFaults.renameStarted=null;for(const s of services.splice(0))await s.dispose();for(const r of roots.splice(0))await rm(r,{recursive:true,force:true})})
+afterEach(async()=>{fsFaults.removePath=null;fsFaults.removeWaitPath=null;fsFaults.removeWait=null;fsFaults.removeStarted=null;fsFaults.renamePath=null;fsFaults.renameWaitPath=null;fsFaults.renameWait=null;fsFaults.renameStarted=null;for(const s of services.splice(0))await s.dispose();for(const r of roots.splice(0))await rm(r,{recursive:true,force:true})})
 async function fixture(initialRevision=1){
  const root=await mkdtemp(join(tmpdir(),'planrail-update-state-'));roots.push(root)
  const contents=new Map([['installer',Buffer.from('MZ fake')],['metadata',Buffer.from('metadata')],['blockmap',Buffer.from('blockmap')]])
@@ -86,6 +86,30 @@ it('cancel during installer preparation invalidates the attempt before handoff',
  const restored=await createUpdateService({...f.options,install:async(input)=>{started();await gate;currentAfterCancel=input.current();return 'dirty' as const}});services.push(restored);await restored.setSharing(f.context)
  const installing=restored.install();await startedPromise;await restored.cancel();finish();await installing
  expect(currentAfterCancel).toBe(false);expect(restored.getState().canInstall).toBe(false)
+})
+it.each(['withdrawal','replacement','trust change'] as const)('cancel cleanup cannot overwrite %s observed during stage deletion',async transition=>{
+ const f=await fixture();f.setDirty();await f.service.download()
+ const record=JSON.parse(await readFile(join(f.root,'ready.json'),'utf8'))
+ let started!:()=>void,finish!:()=>void
+ const deleting=new Promise<void>(resolve=>{started=resolve}),gate=new Promise<void>(resolve=>{finish=resolve})
+ fsFaults.removeWaitPath=join(f.root,record.directory);fsFaults.removeWait=gate;fsFaults.removeStarted=started
+ const canceling=f.service.cancel();await deleting
+ try{
+  if(transition==='trust change')await f.service.setSharing({...f.context,revoked:true})
+  else{f.setStatus({protocolVersion:1,hostId:'host',revision:2,publication:transition==='withdrawal'?null:{...f.publication,revision:2,publicationId:'22222222-2222-4222-8222-222222222222',manifest:{...f.publication.manifest,version:'0.9.0'}}});await f.service.check()}
+ }finally{finish();await canceling}
+ expect(f.service.getState()).toMatchObject(transition==='replacement'?{phase:'available',version:'0.9.0',canDownload:true,canInstall:false}:{version:null,canDownload:false,canInstall:false})
+ expect(f.installed()).toBe(0)
+})
+it('withdrawal during ready-record deletion cannot be resurrected by cancel completion',async()=>{
+ const f=await fixture();f.setDirty();await f.service.download()
+ let started!:()=>void,finish!:()=>void
+ const deleting=new Promise<void>(resolve=>{started=resolve}),gate=new Promise<void>(resolve=>{finish=resolve})
+ fsFaults.removeWaitPath=join(f.root,'ready.json');fsFaults.removeWait=gate;fsFaults.removeStarted=started
+ const canceling=f.service.cancel();await deleting
+ f.setStatus({protocolVersion:1,hostId:'host',revision:2,publication:null});const checking=f.service.check()
+ try{await Promise.resolve()}finally{finish();await Promise.all([canceling,checking])}
+ expect(f.service.getState()).toMatchObject({version:null,canDownload:false,canInstall:false})
 })
 it('checks authenticated update status with active credentials even when snapshot sharing is disconnected',async()=>{
  const f=await fixture();await f.service.dispose()

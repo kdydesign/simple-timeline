@@ -6,6 +6,13 @@ import type {UpdateApi,UpdateGuardRequest,UpdateState} from '../../src/shared/up
 import {memoryApi} from './fake-api'
 import {hotfix} from '../fixtures/timeline'
 import {sharingFixture} from './sharing-fixture'
+import {mkdtemp,mkdir,rm,writeFile} from 'node:fs/promises'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {createHash} from 'node:crypto'
+import {createUpdateService} from '../../src/main/updates/service'
+import {createInstallCoordinator,createMutationBarrier} from '../../src/main/updates/installer'
+import type {UpdatePublication} from '../../src/shared/updates'
 const available:UpdateState={revision:1,role:'member',phase:'available',version:'0.9.0',totalBytes:100,receivedBytes:0,connected:true,editingBlocked:false,requiresExplicitInstall:false,canDownload:true,canCancel:false,canRetry:false,canInstall:false,error:null,host:null}
 function updates(initial:Partial<UpdateState>={}){
  let state={...available,...initial},guard:((r:UpdateGuardRequest)=>boolean|Promise<boolean>)|undefined
@@ -15,6 +22,40 @@ function updates(initial:Partial<UpdateState>={}){
  return{api,emit(patch:Partial<UpdateState>){state={...state,...patch,revision:state.revision+1};listeners.forEach(fn=>fn(state))},freeze:()=>guard!({requestId:'nonce',action:'freeze'}),release:()=>guard!({requestId:'nonce',action:'release'})}
 }
 afterEach(()=>{delete window.timelineUpdates})
+it.each(['cache','attempt record','partial teardown'] as const)('coordinates renderer recovery after %s failure with the real service and installer',async failure=>{
+ const f=updates(),root=await mkdtemp(join(tmpdir(),'planrail-update-guard-')),barrier=createMutationBarrier()
+ const contents=new Map([['installer',Buffer.from('MZ fixture')],['metadata',Buffer.from('metadata')],['blockmap',Buffer.from('blockmap')]])
+ const publication:UpdatePublication={protocolVersion:1,hostId:'host',revision:1,publicationId:'11111111-1111-4111-8111-111111111111',releaseId:'a'.repeat(64),manifest:{schemaVersion:1,appId:'com.kdydesign.simpletimeline',version:'0.9.0',sourceSha:'a'.repeat(40),platform:'win32',arch:'x64',installerType:'nsis',installScope:'per-user',signed:false,validationUpdateOnly:false,files:[...contents].map(([id,b])=>({id:id as 'installer'|'metadata'|'blockmap',name:id==='installer'?'Planrail.exe':id==='metadata'?'latest.yml':'Planrail.exe.blockmap',size:b.length,sha256:createHash('sha256').update(b).digest('hex'),sha512:createHash('sha512').update(b).digest('base64')}))}}
+ let validations=0,handoffs=0,releases=0,shutdowns=0
+ const coordinator=createInstallCoordinator({barrier,
+  prepare:async()=>({validate:async()=>{if(++validations===2&&failure==='cache')throw Error('cache changed')},handoff:()=>{handoffs++},dispose:async()=>{}}),
+  freezeRenderer:async()=>f.freeze(),releaseRenderer:()=>{releases++;void f.release()},
+  record:(input,files)=>service.recordAttempt(input,files),shutdown:async()=>{shutdowns++;throw Error('partial close failure')},
+ })
+ const service=await createUpdateService({root,version:'0.8.0',editingBlocked:()=>barrier.blocked(),changed:s=>f.emit(s),install:input=>coordinator.install(input),
+  readStatus:async()=>({protocolVersion:1,hostId:'host',revision:1,publication}),downloadFile:async input=>{await writeFile(input.destination,contents.get(input.file.id)!)}
+ })
+ try{
+  if(failure==='attempt record')await mkdir(join(root,'attempt.json'))
+  render(<App api={memoryApi().api}/>);const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled())
+  await act(async()=>{await service.setSharing({role:'member',connected:true,connection:{address:{address:'127.0.0.1',port:1234},trust:{hostId:'host',serverName:'host',certificate:'test',pin:'pin'},token:'test'}});await service.check();await service.download()})
+  expect(handoffs).toBe(0)
+  if(failure==='partial teardown'){
+   expect(service.getState()).toMatchObject({editingBlocked:true,error:'shutdown'});expect(releases).toBe(0);expect(shutdowns).toBe(1)
+   expect(document.documentElement).toHaveAttribute('data-update-frozen','true');expect(document.querySelector('.saving-content')).toHaveAttribute('inert')
+  }else{
+   expect(service.getState()).toMatchObject({phase:'waiting',editingBlocked:false,error:'install',canInstall:true});expect(releases).toBe(1);expect(shutdowns).toBe(0)
+   expect(document.documentElement).toHaveAttribute('data-update-frozen','false');expect(document.querySelector('.saving-content')).not.toHaveAttribute('inert')
+   await userEvent.click(add);expect(await screen.findByLabelText('프로젝트 이름')).toBeEnabled()
+  }
+ }finally{await service.dispose();await rm(root,{recursive:true,force:true})}
+})
+it('an unlocked snapshot cannot thaw a clean acknowledged guard without explicit release',async()=>{
+ const f=updates();render(<App api={memoryApi().api}/>);const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled())
+ let clean=false;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true)
+ act(()=>f.emit({editingBlocked:false,phase:'verifying'}));expect(document.documentElement).toHaveAttribute('data-update-frozen','true');expect(document.querySelector('.saving-content')).toHaveAttribute('inert')
+ await act(async()=>{await f.release()});expect(document.documentElement).toHaveAttribute('data-update-frozen','false')
+})
 it('shows UPDATE only for member releases, disables an offline download, and permits verified offline install',async()=>{
  const f=updates({role:'personal',version:null});render(<App api={memoryApi().api}/>);await screen.findByRole('button',{name:'프로젝트 추가'});expect(screen.queryByRole('button',{name:'UPDATE'})).toBeNull()
  act(()=>f.emit({...available,connected:false,canDownload:false}));expect(await screen.findByRole('button',{name:'UPDATE'})).toBeDisabled()
@@ -42,6 +83,7 @@ it('host import is separate from publish and errors retain the current release',
  const f=updates({role:'host',host:{importing:false,currentVersion:'0.8.0',candidateVersion:null,candidateBytes:0,publishing:true,canPublish:false}});sharingFixture({role:'host',settingsRequestToken:'settings'});render(<App api={memoryApi().api}/>);await userEvent.click(await screen.findByRole('button',{name:'업데이트 ZIP 가져오기'}));expect(f.api.importBundle).toHaveBeenCalledOnce();expect(f.api.publish).not.toHaveBeenCalled()
  act(()=>f.emit({host:{importing:false,currentVersion:'0.8.0',candidateVersion:'0.8.0',candidateBytes:1024,publishing:true,canPublish:true}}));await userEvent.click(screen.getByRole('button',{name:'배포 시작'}));expect(f.api.publish).toHaveBeenCalledOnce()
  act(()=>f.emit({error:'invalid-bundle'}));expect(screen.getByText(/ZIP/,{selector:'p[role="alert"]'})).toBeVisible();expect(screen.getByText('현재 배포: 0.8.0')).toBeVisible()
+ act(()=>f.emit({error:'host-mismatch'}));expect(screen.getByText('호스트에 설치된 버전·소스와 같은 배포 파일이 필요합니다.')).toBeVisible();expect(screen.getByText('현재 배포: 0.8.0')).toBeVisible()
 })
 it('allows cancellation while the original download IPC is still pending',async()=>{
  const f=updates();let finish!:(r:Awaited<ReturnType<UpdateApi['download']>>)=>void;f.api.download=vi.fn(()=>new Promise<Awaited<ReturnType<UpdateApi['download']>>>(r=>{finish=r}));render(<App api={memoryApi().api}/>);await userEvent.click(await screen.findByRole('button',{name:'UPDATE'}));act(()=>f.emit({phase:'downloading',canDownload:false,canCancel:true}));await userEvent.click(screen.getByRole('button',{name:'다운로드 취소'}));expect(f.api.cancel).toHaveBeenCalledOnce();await act(async()=>finish({ok:true,data:available}))

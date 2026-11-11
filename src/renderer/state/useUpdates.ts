@@ -6,10 +6,10 @@ export interface UpdateSafety {known:boolean;dirty:boolean;saving:boolean}
 /** Synchronous capture also covers Radix portals outside the application root. */
 export function useUpdateGuard(safety:UpdateSafety,api:UpdateApi|undefined=window.timelineUpdates){
  const [frozen,setFrozen]=useState(false),[editingBlocked,setEditingBlocked]=useState(false)
- const latest=useRef<UpdateState|null>(null),safetyRef=useRef(safety),frozenRef=useRef(false),guardGeneration=useRef(0),alive=useRef(true)
+ const latest=useRef<UpdateState|null>(null),safetyRef=useRef(safety),frozenRef=useRef(false),releasePending=useRef(false),guardGeneration=useRef(0),alive=useRef(true)
  useLayoutEffect(()=>{safetyRef.current=safety},[safety.known,safety.dirty,safety.saving])
  const freeze=useCallback((value:boolean)=>{frozenRef.current=value;document.documentElement.dataset.updateFrozen=String(value);setFrozen(value)},[])
- const accept=useCallback((next:UpdateState)=>{if(!alive.current||(latest.current&&next.revision<latest.current.revision))return;latest.current=next;setEditingBlocked(next.editingBlocked);if(next.editingBlocked)freeze(true)},[freeze])
+ const accept=useCallback((next:UpdateState)=>{if(!alive.current||(latest.current&&next.revision<latest.current.revision))return;latest.current=next;setEditingBlocked(next.editingBlocked);if(next.editingBlocked)freeze(true);else if(releasePending.current){releasePending.current=false;freeze(false)}},[freeze])
  useEffect(()=>{
   alive.current=true
   const block=(event:Event)=>{if(!frozenRef.current)return;const target=event.target;if(target instanceof Element&&target.closest('.update-ui,.window-controls'))return;event.preventDefault();event.stopImmediatePropagation()}
@@ -19,7 +19,10 @@ export function useUpdateGuard(safety:UpdateSafety,api:UpdateApi|undefined=windo
   const off=api.onChange(accept)
   const guard=api.onInstallGuard(async request=>{
    const generation=++guardGeneration.current
-   if(request.action==='release'){if(!latest.current?.editingBlocked)flushSync(()=>freeze(false));return false}
+   // Recovery release can precede the service's unlocked snapshot. Both are
+   // required: a pre-barrier false snapshot alone must not undo a clean ack.
+   if(request.action==='release'){releasePending.current=true;if(!latest.current?.editingBlocked){releasePending.current=false;flushSync(()=>freeze(false))}return false}
+   releasePending.current=false
    flushSync(()=>freeze(true))
    const deadline=Date.now()+28000
    while(alive.current&&generation===guardGeneration.current&&safetyRef.current.saving&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,20))

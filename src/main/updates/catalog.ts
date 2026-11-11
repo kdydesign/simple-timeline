@@ -7,6 +7,10 @@ import { extractUpdateBundle, hashUpdateFile, parseUpdateManifest, validateBundl
 
 export interface UpdateCatalogOptions { root: string; hostId: string; hostVersion: string; hostSourceSha: string }
 export interface UpdateFileLease { file: UpdateFile; stream: ReadStream; release(): void }
+export class UpdateHostMismatchError extends Error {
+  readonly code = 'HOST_MISMATCH'
+  constructor() { super('Update must match installed host version and source') }
+}
 interface StoredCatalog { schemaVersion: 1; revision: number; current: UpdateRelease | null; candidate: UpdateRelease | null; publication: UpdatePublication | null; fingerprints: Record<string, string> }
 const emptyCatalog = (): StoredCatalog => ({ schemaVersion: 1, revision: 0, current: null, candidate: null, publication: null, fingerprints: {} })
 const clone = <T>(value: T): T => structuredClone(value)
@@ -98,7 +102,8 @@ export class UpdateCatalog {
   publish(): Promise<UpdatePublication> {
     return this.exclusive(async () => {
       const release = this.data.candidate ?? this.data.current
-      if (!release || !this.matchesHost(release)) throw new Error('Update must match installed host version and source')
+      if (!release) throw new Error('No registered update')
+      if (!this.matchesHost(release)) throw new UpdateHostMismatchError()
       const verified = await validateBundleDirectory(join(this.options.root, release.manifest.version))
       if (verified.releaseId !== release.releaseId) throw new Error('Registered update files changed')
       const next = clone(this.data); next.revision++

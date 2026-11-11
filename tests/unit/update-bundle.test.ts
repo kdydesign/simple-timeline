@@ -6,6 +6,7 @@ import { createHash } from 'node:crypto'
 import { createRequire } from 'node:module'
 import { UpdateCatalog } from '../../src/main/updates/catalog'
 import { compareStableVersions } from '../../src/shared/updates'
+import { createUpdateService } from '../../src/main/updates/service'
 const { ZipFile } = createRequire(import.meta.url)('yazl')
 const roots: string[] = []
 afterEach(async () => { await Promise.all(roots.splice(0).map(p => rm(p, { recursive: true, force: true }))) })
@@ -28,6 +29,24 @@ async function bundle(dir: string, options: { version?: string; content?: string
 }
 async function setup() { const dir = await root(); return { dir, catalog: await UpdateCatalog.open({ root: join(dir, 'updates'), hostId: 'host-1', hostVersion: '0.8.0', hostSourceSha: sha }) } }
 describe('immutable update bundles', () => {
+  it.each(['version', 'source'] as const)('reports host %s mismatch through the service and preserves the active publication', async mismatch => {
+    const { dir, catalog } = await setup(); await catalog.importBundle(await bundle(dir)); const published = await catalog.publish()
+    let activeCatalog = catalog
+    if (mismatch === 'version') await catalog.importBundle(await bundle(dir, { version: '0.9.0' }))
+    else {
+      // A retained current release can outlive a manual host upgrade.
+      activeCatalog = await UpdateCatalog.open({ root: join(dir, 'updates'), hostId: 'host-1', hostVersion: '0.8.0', hostSourceSha: 'b'.repeat(40) })
+    }
+    const before = activeCatalog.status().publication
+    const service = await createUpdateService({ root: join(dir, 'member-state'), version: '0.8.0', catalog: async () => activeCatalog, install: async () => 'dirty' })
+    try {
+      await service.setSharing({ role: 'host', connected: true }); await service.publish()
+      expect(service.getState()).toMatchObject({ error: 'host-mismatch', host: { currentVersion: '0.8.0', candidateVersion: mismatch === 'version' ? '0.9.0' : null, publishing: mismatch === 'version' } })
+      expect(activeCatalog.status().publication).toEqual(before)
+      if (mismatch === 'version') expect(before).toEqual(published)
+      await expect(activeCatalog.publish()).rejects.toMatchObject({ code: 'HOST_MISMATCH' })
+    } finally { await service.dispose() }
+  })
   it('imports privately, publishes explicitly, serves verified files and restores publication', async () => {
     const { dir, catalog } = await setup(); await catalog.importBundle(await bundle(dir)); expect(catalog.status().publication).toBeNull()
     const publication = await catalog.publish(); expect(publication.manifest.version).toBe('0.8.0')

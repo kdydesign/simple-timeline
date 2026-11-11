@@ -4,7 +4,7 @@ import { mkdir, open, readFile, readdir, rename, rm, lstat, statfs } from 'node:
 import { join, dirname } from 'node:path'
 import { compareStableVersions, type UpdateState, type UpdatePublication, type UpdateStatus, type UpdateErrorCode } from '../../shared/updates'
 import { parseUpdateManifest, hashUpdateFile } from './bundle'
-import type { UpdateCatalog } from './catalog'
+import { UpdateHostMismatchError, type UpdateCatalog } from './catalog'
 import { readUpdateStatus, downloadUpdateFile, type UpdateConnection } from './transport'
 import type { InstallInput } from './installer'
 export interface UpdateSharingContext {role:UpdateState['role'];connected:boolean;connection?:UpdateConnection;revoked?:boolean;trustPending?:boolean}
@@ -71,7 +71,7 @@ export async function createUpdateService(o:Options){
  }
  function changed(){revision++;const s=getState();try{o.changed?.(s)}catch{/* Observers do not change committed state. */}for(const listener of listeners)try{listener(s)}catch{/* Ignore detached views. */}}
  const current=(g:number)=>!disposed&&generation===g
- async function invalidate(code:UpdateErrorCode|null){const obsolete=ready;generation++;abort?.abort();checkAbort?.abort();ready=undefined;publication=null;received=0;explicit=false;phase=code?'error':'idle';error=code;changed();await persist();if(obsolete)try{await rm(join(o.root,obsolete.directory),{recursive:true,force:true})}catch{error='storage';changed()}}
+ async function invalidate(code:UpdateErrorCode|null,keepPublication=false){const obsolete=ready;generation++;abort?.abort();checkAbort?.abort();ready=undefined;if(!keepPublication)publication=null;received=0;explicit=false;phase=code?'error':publication?'available':'idle';error=code;changed();await persist();if(obsolete)try{await rm(join(o.root,obsolete.directory),{recursive:true,force:true})}catch{error='storage';changed()}}
  async function verify(value:Ready){
   for(const f of value.publication.manifest.files){const hash=await hashUpdateFile(join(o.root,value.directory,f.name),f.size);if(hash.size!==f.size||hash.sha256!==f.sha256||hash.sha512!==f.sha512)throw Error('Staged integrity mismatch')}
  }
@@ -188,7 +188,7 @@ export async function createUpdateService(o:Options){
    else if(command==='publish'){if(!context.connected)throw Error('Host stopped');await catalog.publish()}
    else await catalog.withdraw()
    error=null
-  }catch{error=command==='import'?'invalid-bundle':'storage'}finally{importing=false;changed()}
+  }catch(e){error=e instanceof UpdateHostMismatchError?'host-mismatch':command==='import'?'invalid-bundle':'storage'}finally{importing=false;changed()}
  }
  const timer=setInterval(()=>{void check()},300000);timer.unref()
  return {getState,check,setSharing,download,install,
@@ -224,7 +224,9 @@ export async function createUpdateService(o:Options){
   },
   subscribe(listener:(s:UpdateState)=>void){listeners.add(listener);return ()=>{listeners.delete(listener)}},
   importBundle:()=>hostCommand('import'),publish:()=>hostCommand('publish'),withdraw:()=>hostCommand('withdraw'),
-  async cancel(){if(phase==='installing'||o.editingBlocked?.())return;const selected=publication;await invalidate(null);publication=selected;phase=selected?'available':'idle';changed()},
+  // Cancel only the transfer; authoritative status/trust observations remain
+  // free to replace this publication while the old files are being removed.
+  async cancel(){if(phase==='installing'||o.editingBlocked?.())return;await invalidate(null,true)},
   async retry(){await check();await download()},
   async dispose(){if(disposed)return;disposed=true;generation++;abort?.abort();checkAbort?.abort();clearInterval(timer);await Promise.allSettled([downloadTask,checkTask]);await io;listeners.clear()},
  }
