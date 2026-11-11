@@ -37,3 +37,10 @@ test('rejects incomplete release input', async t => {
   const input = await fixture(t); await rm(join(input.directory, input.manifest.installer + '.blockmap'))
   await assert.rejects(createUpdateBundle(input)); assert.equal((await readdir(input.directory)).filter(n => n.endsWith('.zip')).length, 0)
 })
+test('rejects a numeric releaseDate before producing a ZIP the importer would reject', async t => {
+  const input = await fixture(t), metadataPath = join(input.directory, 'latest.yml')
+  const metadata = await readFile(metadataPath, 'utf8')
+  await writeFile(metadataPath, metadata.replace(/releaseDate:.*\n/, 'releaseDate: 123\n'))
+  await assert.rejects(createUpdateBundle(input), /metadata/i)
+  assert.equal((await readdir(input.directory)).filter(name => name.endsWith('.zip')).length, 0)
+})
