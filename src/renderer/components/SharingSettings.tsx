@@ -7,6 +7,7 @@ import type {ApiError,Project,Result} from '../../shared/types'
 import {AlertDialog,AlertDialogContent,AlertDialogTitle,AlertDialogDescription} from './ui/alert-dialog'
 import {Button} from './ui/button'
 import {Input} from './ui/input'
+import {Switch} from './ui/switch'
 import {Select} from './Select'
 import {ConfirmDialog} from './ConfirmDialog'
 import {restoreFocus} from '../state/restoreFocus'
@@ -65,6 +66,12 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
  {state.role==='host'&&<Button type="button" onClick={()=>void run(()=>api.setHosting({enabled:!state.hostingEnabled}))}>{state.hostingEnabled?'공유 중지':'공유 시작'}</Button>}
  </fieldset>}
  {state.pendingPair&&<section><h3>호스트 확인</h3><p>호스트 화면의 전체 지문과 일치하는지 확인하세요.</p><code className="sharing-fingerprint">{state.pendingPair.fingerprint}</code><p>만료: {state.pendingPair.expiresAt}</p><Button type="button" disabled={busy} onClick={()=>void run(()=>api.confirmHost({pairId:state.pendingPair!.pairId,confirmed:true}))}>전체 지문 일치 확인</Button></section>}
+ {state.role==='member'&&<section>
+ <div className="reminder-options"><label htmlFor="sharing-change-notifications"><Switch className="reminder-switch" id="sharing-change-notifications" checked={state.changeNotifications?.enabled??true} disabled={busy} onCheckedChange={enabled=>void run(()=>api.setChangeNotifications({enabled}))}/>공유 변경 알림</label></div>
+ <p className="help">공유받은 프로젝트와 일정의 변경을 Windows 알림으로 받습니다.</p>
+ {state.changeNotifications?.baselining&&<p role="status">다음 동기화부터 새 변경 알림을 받습니다.</p>}
+ {state.changeNotifications?.supported===false&&<p role="status">변경 알림을 사용하려면 호스트와 멤버를 업데이트하세요.</p>}
+ </section>}
  {state.role==='host'&&<><section><h3>참여자 이름 · IP</h3><p className="help">공유 프로젝트의 참여자에 연결할 PC를 등록하세요.</p>
  {state.devices.map(device=><SharingDeviceForm devices={state.devices} key={device.id} device={device} disabled={busy} onDirty={value=>setDirtyDevices(v=>v[device.id]===value?v:{...v,[device.id]:value})} onSave={(name,ip)=>new Promise<Result<ApprovedDevice>>(resolve=>{const save=()=>void saveDevice({id:device.id,name,ip}).then(resolve);if(ip!==device.ip)ask('참여자 IP를 수정할까요?',`영향받는 공유 프로젝트: ${affected(device.id)}. 기존 PC는 새 IP로 승인된 요청만 허용됩니다.`,'IP 수정',save);else save()})} onDelete={()=>ask('참여자를 삭제할까요?',`${device.name} (${device.ip})의 등록과 모든 공유 권한을 제거합니다. 영향받는 공유 프로젝트: ${affected(device.id)}. 프로젝트와 일정은 유지됩니다. 다시 연결하려면 재등록·승인이 필요합니다.`,'참여자 삭제',()=>void run(()=>api.deleteDevice({id:device.id})))} onRevoke={()=>ask('이 PC의 승인을 취소할까요?',`영향받는 공유 프로젝트: ${affected(device.id)}. 이 PC는 더 이상 공유 자료를 받을 수 없습니다.`,'승인 취소',()=>void run(()=>api.revokeDevice({id:device.id})))}/>)}
  <SharingDeviceForm devices={state.devices} disabled={busy} onDirty={value=>setDirtyDevices(v=>v.new===value?v:{...v,new:value})} onSave={(name,ip)=>saveDevice({name,ip})}/>

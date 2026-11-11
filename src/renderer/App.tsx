@@ -4,6 +4,7 @@ import {SavingOverlay} from './components/SavingOverlay';
 import {sharingDescription,showMemberSharingControls} from '../shared/sharing-status';
 import {useSharingView} from './state/useSharingView';
 import {useSharing} from './state/useSharing';
+import type {ChangeTarget} from '../shared/change-notifications';
 import {SharingSettings} from './components/SharingSettings';
 import {IconButton} from './components/Icon';
 import {restoreFocus} from './state/restoreFocus';
@@ -82,6 +83,9 @@ export function App({
     [dayModalOpen, setDayModalOpen] = useState(false),
     [narrow, setNarrow] = useState(window.innerWidth < 1100);
   const [month,setMonth] = useState(() => monthOf(localDate(today)));
+  const handledChange=useRef<string|null>(null);
+  const [changeToOpen,setChangeToOpen]=useState<{target:ChangeTarget;caller:HTMLElement|null;draftKey:string}|null>(null);
+  const [projectToReveal,setProjectToReveal]=useState<string|null>(null);
   const preferences = usePreferences();
   const recentProject = useRef<string | null>(null);
   const [todayRequest, setTodayRequest] = useState<{date:string;token:number}>(() => ({date:localDate(today),token:0}));
@@ -445,6 +449,67 @@ export function App({
     }).catch(()=>{if(!cancelled)setFormError({code:'IPC_UNAVAILABLE',message:'알림의 일정을 조회하지 못했습니다. 다시 조회해 주세요.'})});
     return()=>{cancelled=true};
   },[reminders.openRequest,canEdit,confirmation,dayModalOpen,quickReminder,model?.saved,editor.dirty,api]);
+  const changeNotifications=sharing.state?.changeNotifications;
+  const changeDraftKey=JSON.stringify(model?{session:model.session,draft:model.kind==='schedule'&&model.sharing==='member'?model.draft.reminder:model.draft}:null);
+  const changeNavigationBlocked=!canEdit||saving||saveShieldActive||!!confirmation||dayModalOpen||!!quickReminder||sharing.settingsOpen||settingsDirty||quickDirty||!!model?.saved;
+  useEffect(()=>{
+    const open=changeNotifications?.openRequest;
+    if(!open||handledChange.current===open.token||changeNavigationBlocked||!sharing.api)return;
+    // Dialogs restore focus on their closing frame before navigation takes over.
+    const frame=requestAnimationFrame(()=>{
+      handledChange.current=open.token;
+      void sharing.api!.acknowledgeChange({token:open.token}).catch(()=>{});
+      request(caller=>setChangeToOpen({target:open.target,caller,draftKey:changeDraftKey}));
+    });
+    return()=>cancelAnimationFrame(frame);
+  },[changeNotifications?.openRequest,changeNavigationBlocked,editor.dirty,changeDraftKey,sharing.api]);
+  useEffect(()=>{
+    if(!changeToOpen||changeNavigationBlocked)return;
+    // The confirmation authorizes only the draft that was shown to the user.
+    if(changeNotifications?.enabled===false||(editor.dirty&&changeDraftKey!==changeToOpen.draftKey)){setChangeToOpen(null);return;}
+    let cancelled=false;
+    void (async()=>{
+      if(!await timeline.reconcile()){if(!cancelled){setChangeToOpen(null);setFormError({code:'IPC_UNAVAILABLE',message:'공유 알림의 대상을 조회하지 못했습니다. 다시 동기화해 주세요.'});}return;}
+      const result=await api.getSnapshot();
+      if(cancelled)return;
+      setChangeToOpen(null);
+      if(!result.ok){setFormError(result.error);return;}
+      const target=changeToOpen.target;
+      const allowed=sharing.state?.role==='member'&&sharing.state.status!=='revoked';
+      const projectId=target.kind==='project'?target.id:target.kind==='schedule'?target.projectId:null;
+      const project=allowed?result.data.projects.find(p=>p.id===projectId&&p.sharing==='member'):undefined;
+      const schedule=project&&target.kind==='schedule'?result.data.schedules.find(s=>s.id===target.id&&s.projectId===project.id&&s.sharing==='member'):undefined;
+      setFilter('all');setFormError(null);
+      if(schedule){
+        navigateDate(schedule.startDate);
+        if(preferences.collapsed.includes(schedule.projectId))preferences.toggleProject(schedule.projectId);
+        editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,changeToOpen.caller);
+      }else if(project&&target.kind==='project'){
+        editor.close();
+        const date=result.data.schedules.filter(s=>s.projectId===project.id).map(s=>s.startDate).sort()[0];
+        if(date)navigateDate(date);
+        if(preferences.collapsed.includes(project.id))preferences.toggleProject(project.id);
+        if(mode==='calendar')setProjectsOpen(true);
+        setProjectToReveal(project.id);
+      }else{
+        editor.close();setProjectsOpen(true);
+        if(target.kind!=='list')setNotice('공유 대상이 삭제되거나 공유가 해제되어 현재 프로젝트 목록을 표시합니다.');
+      }
+    })().catch(()=>{if(!cancelled){setChangeToOpen(null);setFormError({code:'IPC_UNAVAILABLE',message:'공유 알림의 대상을 조회하지 못했습니다. 다시 동기화해 주세요.'});}});
+    return()=>{cancelled=true;};
+  },[changeToOpen,changeNavigationBlocked,changeNotifications?.enabled,sharing.state?.role,sharing.state?.status,changeDraftKey,editor.dirty,api,timeline.reconcile,mode,preferences.collapsed]);
+  useEffect(()=>{
+    if(!projectToReveal||model||confirmation||sharing.settingsOpen||quickReminder)return;
+    const frame=requestAnimationFrame(()=>{
+      if(mode==='gantt'){
+        if(gantt.current?.focusItem(`project:${projectToReveal}`))setProjectToReveal(null);
+      }else{
+        const target=[...document.querySelectorAll<HTMLElement>('.project-popup [data-focus]')].find(el=>el.dataset.focus===`project:${projectToReveal}`);
+        if(target){target.scrollIntoView({block:'nearest'});restoreFocus(target);setProjectToReveal(null);}
+      }
+    });
+    return()=>cancelAnimationFrame(frame);
+  },[projectToReveal,visibleSnapshot,mode,model,confirmation,sharing.settingsOpen,quickReminder,projectsOpen]);
   const reminderCorrections = (timeline.snapshot?.schedules??[]).filter(schedule=>{
     if(schedule.sharing!=='member')return false;
     const settings=model?.kind==='schedule'&&model.id===schedule.id?model.draft.reminder:schedule.reminder;
@@ -460,6 +525,12 @@ export function App({
   </div>:null;
   const statusView = (<>
     {reminderNotice}
+    {sharing.state?.role==='member'&&changeNotifications&&(changeNotifications.failed>0||changeNotifications.unknown>0||changeNotifications.storageError)&&<div className="reminder-notice" role="alert">
+      {changeNotifications.storageError&&<p>공유 변경 알림 처리 기록을 저장하지 못했습니다. 알림을 보내지 않았거나 전송 결과가 불명확할 수 있습니다.</p>}
+      {changeNotifications.unknown>0&&<p>공유 변경 알림 전송 결과를 확인하지 못했습니다. 중복 방지를 위해 다시 보내지 않습니다.</p>}
+      {changeNotifications.failed>0&&<p>공유 변경 알림 전송에 실패했습니다. Windows 알림 설정을 확인해 주세요.</p>}
+      {changeNotifications.failed>0&&sharing.api&&<button type="button" disabled={sharing.busy||!changeNotifications.enabled} onClick={()=>void sharing.run(()=>sharing.api!.retryChangeNotifications())}>실패한 공유 변경 알림 재시도</button>}
+    </div>}
     {reminderCorrections.map(schedule=><div key={schedule.id} className="reminder-notice" role="alert">
       <p>{schedule.name}: 알림 날짜가 0001-01-01 이전입니다. 며칠 전을 줄이거나 해당 알림을 끈 뒤 저장해 주세요. 수정 전까지 해당 알림을 보류합니다.</p>
       <button type="button" onClick={()=>{
