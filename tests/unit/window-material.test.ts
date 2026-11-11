@@ -8,6 +8,6 @@ describe('resizable Windows backdrop selection', () => {
     expect(windowMaterial('win32', '10.0.26100')).not.toHaveProperty('transparent')
   })
   it.each([['win32','10.0.19045'], ['win32','10.0.22000'], ['win32','unknown'], ['linux','6.18.57'], ['darwin','24.0.0']])('keeps an opaque native fallback on %s %s', (platform, release) => {
-    expect(windowMaterial(platform, release)).toEqual({backgroundColor:'#DCECE6'})
+    expect(windowMaterial(platform, release)).toEqual({backgroundColor:'#D3D6DB'})
   })
 })

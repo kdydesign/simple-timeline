@@ -1,6 +1,30 @@
 import {test,expect} from './fixture';
 test.use({seed:'hotfix'});
 
+test('approved graphite glass fills square window corners with a single fine border and blue actions',async({desktop:{page:p}})=>{
+ await p.getByRole('button',{name:'다크 모드',exact:true}).click();
+ await p.locator('[data-focus="schedule-add"]').click();
+ const paint=await p.evaluate(()=>{
+  const css=(s:string)=>getComputedStyle(document.querySelector(s)!);
+  const root=css('#root'),panel=css('.toolbar'),button=css('.editor-actions .primary');
+  return {radius:root.borderRadius,border:root.borderTopWidth,shadow:root.boxShadow,
+   before:getComputedStyle(document.querySelector('#root')!,'::before').content,
+   after:getComputedStyle(document.querySelector('#root')!,'::after').content,
+   root:root.backgroundColor,panel:panel.backgroundColor,button:button.backgroundColor,
+   blur:getComputedStyle(document.querySelector('.toolbar')!,'::before').backdropFilter,
+   opacity:css('.editor').opacity};
+ });
+ expect(paint.radius).toBe('0px');expect(paint.border).toBe('1px');expect(paint.shadow).toBe('none');
+ expect(paint.before).toBe('none');expect(paint.after).toBe('none');
+ expect(paint.root).toBe('rgba(32, 34, 37, 0.42)');
+ expect(paint.panel).toBe('rgba(43, 46, 49, 0.56)');
+ expect(paint.button).toBe('rgba(71, 127, 174, 0.3)');
+ expect(paint.blur).toBe('blur(2px)');expect(paint.opacity).toBe('1');
+ const box=(await p.locator('#root').boundingBox())!;
+ expect(box.x).toBe(0);expect(box.y).toBe(0);
+ expect(box.width).toBe(await p.evaluate(()=>innerWidth));
+});
+
 test('brand uses the P icon',async({desktop:{page:p}})=>{
  await expect(p.locator('.brand-mark img')).toBeVisible();
  await expect.poll(()=>p.locator('.brand-mark img').evaluate((el:HTMLImageElement)=>el.complete&&el.naturalWidth>0)).toBe(true);

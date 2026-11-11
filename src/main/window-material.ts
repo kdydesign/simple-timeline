@@ -6,5 +6,5 @@ export function windowMaterial(platform: string, release: string): Pick<BrowserW
   if (platform === 'win32' && version && Number(version[1]) >= 10 && Number(version[3]) >= 22621) {
     return {backgroundMaterial:'acrylic',backgroundColor:'#00000000'}
   }
-  return {backgroundColor:'#DCECE6'}
+  return {backgroundColor:'#D3D6DB'}
 }

@@ -6,7 +6,7 @@
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
 | 현재 작업 상태·인수 범위 | [STATUS](../wayfinder/STATUS.md), [MVP 사용자 인수](../release/user-acceptance.md) |
-| 최신 화면 재질·디자인 | [Forest Crystal 승인 설계](../design/forest-crystal.md), [0.6.3 행 밀도·알림 스위치](../implementation/2026-11-10-compact-rows.md), [0.6.2 투과·P 아이콘](../implementation/2026-11-10-glass-correction.md). 기존 C안 배치와 기능을 유지하며 색상·재질은 이 설계를 우선 |
+| 최신 화면 재질·디자인 | [Forest Crystal 승인 설계](../design/forest-crystal.md), [0.6.4 딥 그레이·스틸 블루](../implementation/2026-11-11-steel-blue.md), [0.6.3 행 밀도·알림 스위치](../implementation/2026-11-10-compact-rows.md), [0.6.2 투과·P 아이콘](../implementation/2026-11-10-glass-correction.md). 기존 C안 배치와 기능을 유지하며 색상·재질은 이 설계를 우선 |
 | 용어·전체 요구사항 | [CONTEXT](../../CONTEXT.md)는 용어만, [전체 설계](../superpowers/specs/2026-11-03-simple-timeline-design.md)는 요구사항 인덱스 |
 | Planrail 후속 변경 | [확정 설계](../design/planrail-improvements.md), [구현·검증 기록](../implementation/2026-11-05-planrail.md). 명시된 이름·탐색·트레이·화면 변경은 이전 후속 설계보다 우선 |
 | 일정 알림·간트 계층 개선 | [확정 설계](../design/reminders-and-hierarchy.md). Q15 전체 승인. [구현·검증](../implementation/2026-11-05-reminders.md), 실제 Windows 알림 실기는 미검증 |

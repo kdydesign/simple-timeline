@@ -8,6 +8,7 @@ import {createNativeReminderSender} from './reminders/native'
 import {registerReminderIpc} from './reminders/ipc'
 import { app, dialog, powerMonitor } from 'electron'
 import icon from '../../resources/icon.png?asset'
+import windowsIcon from '../../resources/icon.ico?asset'
 import { startupRecorder, rendererStartupProbe, observeStartupRequests } from './startup'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
@@ -23,6 +24,8 @@ import { installCloseGuard, type CloseChoice } from './close'
 import { createTray, updateSharingTray } from './tray'
 import { toPublicError } from './errors'
 import type { Result } from '../shared/types'
+const desktopIcon = process.platform === 'win32' ? windowsIcon : icon
+
 export interface BootstrapOptions {
   sharingTransport?: Partial<SharingTransport>
   sharingSecrets?: (profile:string)=>Promise<ProtectedSecrets>
@@ -88,7 +91,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     options.preloadPath ?? join(__dirname, '../preload/index.cjs'),
     rendererUrl,
     () => startup.mark('window-shown'),
-    icon,
+    desktopIcon,
     { mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
   let evaluateReminders = () => {}
@@ -178,7 +181,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     requestClose()
   }
   try {
-    tray = (options.createTray ?? createTray)(icon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState())
+    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState())
   } catch {
     if (options.notifyTrayFailure) options.notifyTrayFailure()
     else dialog.showErrorBox('트레이를 만들지 못했습니다', '창 닫기로 앱을 종료할 수 있습니다. 저장하지 않은 입력은 종료 전에 확인합니다.')

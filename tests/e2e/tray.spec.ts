@@ -10,9 +10,12 @@ test('close hides dirty form and restore/minimize/second-instance retain it', as
  const p=d.page;
  await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
  await p.getByLabel('프로젝트 이름',{exact:true}).fill('숨겨도 유지');
- await p.getByRole('button',{name:'창 닫기',exact:true}).click();
+ // Native hide may suspend the renderer before CDP acknowledges the click.
+ // Observe main's hidden state, restore, then require that the real click finished.
+ const closing=p.getByRole('button',{name:'창 닫기',exact:true}).click().then(()=>null,error=>error);
  await expect.poll(()=>visible(d)).toBe(false);
  await control(d,'show');
+ expect(await closing).toBeNull();
  await expect.poll(()=>visible(d)).toBe(true);
  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('숨겨도 유지');
  await d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].minimize());

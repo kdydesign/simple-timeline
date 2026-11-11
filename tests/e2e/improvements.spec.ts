@@ -101,10 +101,16 @@ test.describe('drag navigation and failure protection',()=>{
 })
 test('success toast disappears after two seconds',async({desktop:d})=>{
   const p=d.page
+  // Control renderer time rather than relying on host load/background timer scheduling.
+  await p.clock.install({time:new Date('2026-11-11T09:00:00')})
+  await p.clock.pauseAt(new Date('2026-11-11T09:00:01'))
   await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click()
   await p.getByLabel('프로젝트 이름',{exact:true}).fill('토스트 확인')
   await p.getByRole('button',{name:'저장',exact:true}).click()
   await expect(p.locator('.toast')).toContainText('프로젝트를 추가했습니다.')
+  await p.clock.runFor(1999)
+  await expect(p.locator('.toast')).toContainText('프로젝트를 추가했습니다.')
+  await p.clock.runFor(1)
   await expect(p.locator('.toast')).toBeEmpty({timeout:3000})
   await expect(p.locator('.status')).not.toContainText('추가했습니다')
 })

@@ -1,4 +1,4 @@
-/* Forest Crystal. Material layer only: timeline geometry and interaction stay in
+/* Forest Crystal / Steel Blue. Material layer only: timeline geometry and interaction stay in
    the existing layout. Blur lives on pseudo-elements, never a fixed portal's ancestor. */
 :root {
   --text: #082c23;
@@ -10,9 +10,9 @@
   --hover: #ffffff73;
   --accent: #075e54;
   --accent-foreground: #123b32;
-  --glass: rgba(239, 249, 244, .54);
+  --glass: rgba(239, 249, 244, .56);
   --popup-glass: rgba(232, 248, 239, .64);
-  --control: rgba(247, 255, 250, .34);
+  --control: rgba(247, 255, 250, .3);
   --control-border: #ffffffb3;
   --selected-control: rgba(142, 215, 183, .56);
   --selected-border: #348872;
@@ -20,7 +20,12 @@
   --selected-date: #32b79228;
   --date-hover: #075e5410;
   --schedule-tint: 50%;
-  --rim: #ffffffc9;
+  --rim: #ffffff80;
+  --window-glass: rgba(239, 249, 244, .42);
+  --window-border: #54776c80;
+  --glass-blur: 2px;
+  --control-sheen: linear-gradient(155deg, #ffffff35, transparent 65%);
+  --selected-sheen: var(--control-sheen);
   --panel-shadow: 0 5px 12px #174b3820, inset 0 1px 0 #ffffffc9, inset 0 -1px 0 #237a5b24;
   --control-shadow: 0 3px 5px #1a55432b, inset 0 1px 1px #ffffffe0, inset 0 -1px 1px #237a5b33;
   --popup-shadow: 0 12px 30px #153e3438, inset 0 1px 0 #ffffffb3;
@@ -29,29 +34,33 @@
   --danger-border: #c86d78;
 }
 :root[data-theme="dark"] {
-  --text: #ecf6f1;
-  --muted: #b1c9bd;
-  --page: #142d27;
-  --surface: #1d3930;
-  --subtle: #b3e3ca0a;
-  --border: #acd6c52e;
-  --hover: #b8edd51a;
-  --accent: #a6dfc2;
-  --accent-foreground: #092d22;
-  --glass: rgba(12, 43, 35, .46);
-  --popup-glass: rgba(12, 43, 35, .62);
-  --control: rgba(187, 227, 205, .08);
-  --control-border: #b9e5ce42;
-  --selected-control: rgba(155, 220, 184, .8);
-  --selected-border: #aadcc2;
-  --today: #a6dfc213;
-  --selected-date: #80dcb83a;
-  --date-hover: #b7ead41a;
+  --text: #f1f2f3;
+  --muted: #c0c5cb;
+  --page: #202225;
+  --surface: #2b2e31;
+  --subtle: #c6cbd10a;
+  --border: #b4bfc430;
+  --hover: #b4c8dc26;
+  --accent: #8bc1eb;
+  --accent-foreground: #f1f6fc;
+  --glass: rgba(43, 46, 49, .56);
+  --popup-glass: rgba(43, 46, 49, .84);
+  --control: rgba(110, 115, 120, .3);
+  --control-border: #b4bfc449;
+  --selected-control: rgba(71, 127, 174, .3);
+  --selected-border: #8bc1eb;
+  --selected-sheen: linear-gradient(155deg, #5796cd55, #24507840 65%);
+  --control-sheen: linear-gradient(155deg, #ffffff18, transparent 65%);
+  --today: #8bc1eb18;
+  --selected-date: #5796cd38;
+  --date-hover: #b4c8dc1f;
   --schedule-tint: 50%;
-  --rim: #c5f4df5c;
-  --panel-shadow: 0 5px 16px #0003, inset 0 1px 0 #d5ffe224;
-  --control-shadow: 0 2px 3px #0003, inset 0 1px 0 #e0fff01f;
-  --popup-shadow: 0 14px 36px #0006, inset 0 1px 0 #d5ffe233;
+  --rim: #b4bfc449;
+  --window-glass: rgba(32, 34, 37, .42);
+  --window-border: #c0c8d466;
+  --panel-shadow: 0 4px 12px #0002, inset 0 1px 0 #ffffff12;
+  --control-shadow: 0 1px 2px #0003, inset 0 1px 0 #ffffff20;
+  --popup-shadow: 0 12px 30px #0006, inset 0 1px 0 #ffffff20;
   --danger: #ffe3e7;
   --danger-surface: #86454ddd;
   --danger-border: #dc929b;
@@ -60,43 +69,16 @@ html, body { background: transparent; }
 #root {
   position: relative;
   isolation: isolate;
-  padding: 6px 10px 10px;
-  border: 1px solid var(--rim);
-  border-radius: 24px;
-  background: linear-gradient(125deg, #eafff51f, #00a9870d 55%, #eafff51f);
-  box-shadow: inset 0 0 0 3px #ffffff30, inset 0 0 0 6px #b1ead638;
-}
-#root::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border: 6px solid transparent;
-  border-radius: 23px;
-  background: conic-gradient(from 24deg, #78dfc68c, #edfff9, #168d7270 17%, #d5fff6 21%, #68cbb35c 32%, #f6fffc 43%, #23be9b80 48%, #e8fff8 59%, #5dc4a580 72%, #f2fff9 78%, #288d7270 86%, #c1fff0);
-  mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  pointer-events: none;
-  z-index: 100;
-}
-#root::after {
-  content: "";
-  position: absolute;
-  inset: 7px;
-  border: 1px solid #e4fffbb3;
-  border-radius: 17px;
-  box-shadow: 0 1px 2px #00543f55, inset 0 1px 2px #ffffff66;
-  pointer-events: none;
-  z-index: 100;
-}
-[data-theme="dark"] #root {
-  background: linear-gradient(125deg, #06261ca3, #073b2ca3 55%, #06261ca3);
-  box-shadow: inset 0 0 0 3px #d2ffe818, inset 0 0 0 6px #3d856d18;
+  padding: 0;
+  border: 1px solid var(--window-border);
+  border-radius: 0;
+  background: var(--window-glass);
+  box-shadow: none;
 }
 .titlebar { height: 42px; padding: 0 14px; border: 0; background: transparent; }
 .titlebar .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: -.5px; }
 .titlebar .brand-mark { width: 30px; height: 30px; background: transparent; box-shadow: none; }
 .titlebar .brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
-[data-theme="dark"] #root::before { opacity: .45; }
 .window-controls { gap: 4px; }
 .window-controls .icon-button { width: 40px; height: 34px; align-self: center; border-radius: 9px; }
 .app-shell { margin: 6px 10px 0; }
@@ -105,7 +87,7 @@ html, body { background: transparent; }
   isolation: isolate;
   background: var(--glass);
   border: 1px solid var(--rim);
-  border-radius: 18px;
+  border-radius: 12px;
   box-shadow: var(--panel-shadow);
 }
 .toolbar::before, .workspace > main::before, .editor::before,
@@ -114,7 +96,7 @@ html, body { background: transparent; }
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(var(--glass-blur));
   pointer-events: none;
   z-index: -1;
 }
@@ -130,7 +112,7 @@ html, body { background: transparent; }
 .confirm .actions button, .sharing-settings button {
   border: 1px solid var(--control-border);
   background: var(--control);
-  background-image: linear-gradient(155deg, #ffffff35, transparent 65%);
+  background-image: var(--control-sheen);
   box-shadow: var(--control-shadow);
   border-radius: 10px;
   color: var(--text);
@@ -143,7 +125,7 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 .mode-switch button[aria-pressed="true"], .sharing-filter button[aria-pressed="true"],
 .sharing-role button[aria-pressed="true"] {
   background-color: var(--selected-control);
-  background-image: linear-gradient(155deg, #ffffff35, transparent 65%);
+  background-image: var(--selected-sheen);
   border: 1px solid var(--selected-border);
   color: var(--accent-foreground);
   box-shadow: var(--control-shadow);
@@ -181,9 +163,9 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
   background-image: linear-gradient(180deg,#ffffff88,#ffffff55 45%,#ffffff66);
   box-shadow: inset 0 1px 0 #ffffff45, 0 2px 3px #153f3020;
 }
-[data-theme="dark"] .gantt-bar, [data-theme="dark"] .calendar-bar { border-top-color:#d7ffe94d; background-image:linear-gradient(180deg,#071f1944,#071f1955 55%,#071f1966); }
+[data-theme="dark"] .gantt-bar, [data-theme="dark"] .calendar-bar { border-top-color:#dce4ed4d; background-image:linear-gradient(180deg,#171a2044,#171a2055 55%,#171a2066); }
 .gantt-bar:hover:enabled, .calendar-bar:hover:enabled { filter: brightness(1.04); }
-.calendar-top { border-radius: 0; background: transparent; backdrop-filter: blur(20px); }
+.calendar-top { border-radius: 0; background: transparent; backdrop-filter: blur(var(--glass-blur)); }
 .calendar-top .view-heading { padding: 16px 20px 12px; }
 .calendar-top h2 { font-size: 18px; font-weight: 700; }
 .weekdays { background: transparent; color: var(--text); border-top: 0; }
@@ -226,7 +208,7 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 .select-popover [role="option"][data-highlighted] { background: var(--hover); }
 .confirm, .sharing-settings, .day-dialog { background: var(--popup-glass); border: 1px solid var(--rim); border-radius: 18px; backdrop-filter: blur(28px); }
 .sharing-settings { backdrop-filter: none; }
-.confirm-overlay, .scrim { background: #102c245c; }
+.confirm-overlay, .scrim { background: #20222570; }
 .app-tooltip, .toast { background: var(--text); color: var(--surface); }
 .status [role="alert"], .reminder-notice { margin-inline: 20px; }
 button:focus-visible, input:focus-visible, [role="option"]:focus-visible { outline-color: var(--accent); }
@@ -241,7 +223,6 @@ button:disabled { box-shadow: none; }
   .workspace { gap: 12px; }
 }
 @media (max-width: 850px) {
-  #root { padding-inline: 6px; }
   .app-shell { margin-inline: 6px; }
   .workspace { padding: 12px 6px 4px; }
   .toolbar { gap: 5px; }
