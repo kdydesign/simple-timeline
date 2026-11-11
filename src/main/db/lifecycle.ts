@@ -1,3 +1,4 @@
+import { checkChangeSchema } from './sharing/change-schema'
 import Database from 'better-sqlite3'
 import {
   mkdirSync,
@@ -127,6 +128,12 @@ export async function initializeStorage(
       try { createSharingStore(db).getConfig() }
       catch (error) {
         if (['DB_BUSY','STORAGE_IO','STORAGE_FULL'].includes(toPublicError(error).code)) throw error
+        throw failure('DB_CORRUPT')
+      }
+    }
+    if(target>=5){
+      try{checkChangeSchema(db)}catch(error){
+        if(['DB_BUSY','STORAGE_IO','STORAGE_FULL'].includes(toPublicError(error).code))throw error
         throw failure('DB_CORRUPT')
       }
     }

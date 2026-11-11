@@ -19,7 +19,7 @@ export const cases:NativeCase[]=[
  old.db.close()
  const next=await initializeStorage(ctx.tempDir);assert.equal(next.state,'ready');if(next.state!=='ready')return
  ctx.defer(()=>next.db.close());const upgraded=createSharingStore(next.db)
- assert.equal(next.db.pragma('user_version',{simple:true}),4n);assert.deepEqual(upgraded.listDevices(),[d]);assert.equal(upgraded.getWireSnapshot(d.id).projects.length,1)
+ assert.equal(next.db.pragma('user_version',{simple:true}),5n);assert.deepEqual(upgraded.listDevices(),[d]);assert.equal(upgraded.getWireSnapshot(d.id).projects.length,1)
  upgraded.deleteDevice({id:d.id});assert.equal(upgraded.listDevices().length,0);assert.equal(next.repository.getSnapshot().projects.length,1)
 }},
 

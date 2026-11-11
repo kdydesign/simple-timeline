@@ -1,4 +1,5 @@
 import Database from 'better-sqlite3'
+import { changeTransaction } from './sharing/changes'
 import { normalizeReminder } from '../../domain/reminder'
 import type { TimelineApi } from '../../shared/api'
 import type {
@@ -133,7 +134,7 @@ export function createRepository(
         schedules: (snapshotSchedules.all() as Row[]).map(scheduleDto),
       }
     }),
-    createProject: db.transaction((input: ProjectInput) => {
+    createProject: changeTransaction(db, (input: ProjectInput) => {
       const v = projectValues(input),
         now = clock()
       const info = db
@@ -145,7 +146,7 @@ export function createRepository(
       putParticipants(id, v.participants)
       return getProject(id)
     }),
-    updateProject: db.transaction((input: ProjectInput & { id: string }) => {
+    updateProject: changeTransaction(db, (input: ProjectInput & { id: string }) => {
       const id = validateId(input.id)
       getProject(id)
       const v = projectValues(input)
@@ -155,12 +156,12 @@ export function createRepository(
       putParticipants(id, v.participants)
       return getProject(id)
     }),
-    deleteProject: db.transaction(({ id }: { id: string; confirmed: true }) => {
+    deleteProject: changeTransaction(db, ({ id }: { id: string; confirmed: true }) => {
       getProject(id)
       db.prepare('DELETE FROM projects WHERE id=?').run(BigInt(id))
       return { id }
     }),
-    createSchedule: db.transaction((input: ScheduleInput) => {
+    createSchedule: changeTransaction(db, (input: ScheduleInput) => {
       getProject(input.projectId)
       const v = dates(input),
         reminder = normalizeReminder(input.reminder,v.startDate,v.endDate),
@@ -172,7 +173,7 @@ export function createRepository(
         .run(BigInt(input.projectId), v.name, v.startDate, v.endDate, now, now, reminder.daysBefore,reminder.time,Number(reminder.start),Number(reminder.end))
       return getSchedule(String(info.lastInsertRowid))
     }),
-    updateSchedule: db.transaction((input: ScheduleUpdate) => {
+    updateSchedule: changeTransaction(db, (input: ScheduleUpdate) => {
       const id = validateId(input.id)
       const current = getSchedule(id)
       const v = dates(input)
@@ -182,14 +183,14 @@ export function createRepository(
       ).run(v.name, v.startDate, v.endDate, clock(), reminder.daysBefore,reminder.time,Number(reminder.start),Number(reminder.end),BigInt(id))
       return getSchedule(id)
     }),
-    updateScheduleReminder: db.transaction(({id,reminder}: {id:string;reminder:ReminderSettings}) => {
+    updateScheduleReminder: changeTransaction(db, ({id,reminder}: {id:string;reminder:ReminderSettings}) => {
       const current=getSchedule(validateId(id))
       const r=normalizeReminder(reminder,current.startDate,current.endDate)
       db.prepare('UPDATE schedules SET reminder_days=?,reminder_time=?,reminder_start=?,reminder_end=?,updated_at=? WHERE id=?')
         .run(r.daysBefore,r.time,Number(r.start),Number(r.end),clock(),BigInt(id))
       return getSchedule(id)
     }),
-    deleteSchedule: db.transaction(({ id }: { id: string }) => {
+    deleteSchedule: changeTransaction(db, ({ id }: { id: string }) => {
       getSchedule(id)
       db.prepare('DELETE FROM schedules WHERE id=?').run(BigInt(id))
       return { id }

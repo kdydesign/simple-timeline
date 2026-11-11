@@ -1,3 +1,5 @@
+import { createChangeInbox } from './change-inbox'
+import { changeTransaction, getChangeSnapshot } from './changes'
 import { randomUUID } from 'node:crypto'
 import { createRepository, RepositoryError, type DatabaseHandle } from '../repository'
 import { createMemberCache } from './cache'
@@ -51,6 +53,7 @@ export function createSharingStore(db:DatabaseHandle) {
   })
   return {
     getConfig,getDevice,listDevices,listSharedProjects,
+    getChangeSnapshot:(deviceId:string,cursor:string|null,reconnecting:boolean)=>getChangeSnapshot(db,deviceId,cursor,reconnecting,()=>createSharingStore(db).getWireSnapshot(deviceId)),
     getDeviceInstallationId:(id:string):string|null=>{
       getDevice(id)
       const row=db.prepare('SELECT installation_id FROM sharing_devices WHERE id=?').get(id) as Row
@@ -90,7 +93,8 @@ export function createSharingStore(db:DatabaseHandle) {
     disconnectMember:db.transaction((input:{confirmed:true})=>{
       if(input.confirmed!==true)throw new DomainValidationError('confirmed')
       if(getConfig().role!=='member')throw new Error('SHARING_ROLE_FORBIDDEN')
-      cache.clear()
+      if(db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sharing_change_settings'").get())createChangeInbox(db).reset()
+      else cache.clear()
       db.prepare("UPDATE sharing_config SET role='personal',hosting_enabled=0,remote_dataset_id=NULL,pending_credential_delete_ref=COALESCE(credential_ref,pending_credential_delete_ref),credential_ref=NULL WHERE singleton=1").run()
       return getConfig()
     }),
@@ -101,7 +105,7 @@ export function createSharingStore(db:DatabaseHandle) {
       db.prepare('UPDATE sharing_config SET pending_credential_delete_ref=NULL WHERE singleton=1').run()
       return getConfig()
     }),
-    saveDevice:db.transaction((input:{id?:string;name:string;ip:string;installationId?:string})=>{
+    saveDevice:changeTransaction(db,(input:{id?:string;name:string;ip:string;installationId?:string})=>{
       requireHost()
       const name=normalizeName(input.name),ip=normalizeIPv4(input.ip)
       const duplicate=db.prepare('SELECT id FROM sharing_devices WHERE ip=? AND revoked=0 AND id<>?').get(ip,input.id??'')
@@ -115,14 +119,14 @@ export function createSharingStore(db:DatabaseHandle) {
       db.prepare('INSERT INTO sharing_devices(id,name,ip,installation_id) VALUES(?,?,?,?)').run(id,name,ip,installationId)
       return getDevice(id)
     }),
-    revokeDevice:db.transaction(({id}:{id:string})=>{
+    revokeDevice:changeTransaction(db,({id}:{id:string})=>{
       requireHost();getDevice(id)
       db.prepare('UPDATE sharing_devices SET revoked=1 WHERE id=?').run(id)
       db.prepare("UPDATE sharing_credentials SET status='revoked' WHERE device_id=?").run(id)
       db.prepare('DELETE FROM sharing_recipients WHERE device_id=?').run(id)
       return getDevice(id)
     }),
-    deleteDevice:db.transaction(({id}:{id:string})=>{
+    deleteDevice:changeTransaction(db,({id}:{id:string})=>{
       requireHost();getDevice(id)
       // Keep a revoked identity so previously paired PCs receive REVOKED and clear their cache.
       db.prepare('UPDATE sharing_devices SET revoked=1,deleted=1 WHERE id=?').run(id)
@@ -152,7 +156,7 @@ export function createSharingStore(db:DatabaseHandle) {
       const r=db.prepare('SELECT * FROM sharing_credentials WHERE hash=?').get(hash) as Row|undefined
       return r?{hash:String(r.hash),deviceId:String(r.device_id),status:r.status as CredentialRecord['status']}:undefined
     },
-    saveProject:db.transaction((input:SharedProjectInput)=>{
+    saveProject:changeTransaction(db,(input:SharedProjectInput)=>{
       requireHost()
       if(!Array.isArray(input.participants))throw new DomainValidationError('participants')
       const name=normalizeName(input.name),color=normalizeColor(input.color)
