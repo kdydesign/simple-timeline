@@ -189,5 +189,5 @@ it("uses the current mode and month when an outstanding save completes", async (
     ),
   );
   expect(month).toHaveValue("2027-03-01");
-  expect(document.querySelector('[data-focus="schedule-add"]')).toHaveFocus();
+  await waitFor(()=>expect(document.querySelector('[data-focus="schedule-add"]')).toHaveFocus());
 });

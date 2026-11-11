@@ -1,3 +1,5 @@
+import {validateEditor,fieldId,type FieldErrors} from './state/formValidation';
+import {SavingOverlay} from './components/SavingOverlay';
 import {sharingDescription,showMemberSharingControls} from '../shared/sharing-status';
 import {useSharingView} from './state/useSharingView';
 import {useSharing} from './state/useSharing';
@@ -55,6 +57,7 @@ export function App({
     editor = useEditor();
   const sharing = useSharing(timeline.reconcile,timeline.phase === 'ready');
   const [settingsDirty,setSettingsDirty]=useState(false);
+  const [saveShieldActive,setSaveShieldActive]=useState(false);
   const [filter,setFilter]=useState<'all'|'personal'|'shared'>('all');
   const sharingView=useSharingView(timeline.snapshot,filter);
   const {editableProjects,snapshot:visibleSnapshot}=sharingView;
@@ -67,6 +70,8 @@ export function App({
   };
   const [selectedDate, setSelectedDate] = useState(() => localDate(today)),
     [confirmation, setConfirmation] = useState<Confirmation | null>(null),
+    [fieldErrors,setFieldErrors]=useState<FieldErrors>({}),
+    [validationActive,setValidationActive]=useState(false),
     [formError, setFormError] = useState<ApiError | null>(null),
     [notice, setNotice] = useState(""),
     [projectsOpen, setProjectsOpen] = useState(false),
@@ -87,6 +92,14 @@ export function App({
     else if (editor.editor?.id) recentProject.current = editor.editor.id;
   }, [editor.editor]);
   const gantt = useRef<GanttHandle>(null);
+  const pendingFieldFocus=useRef<string|null>(null);
+  const serverFieldErrors=useRef<FieldErrors>({});
+  useLayoutEffect(()=>{
+    if(pendingFieldFocus.current&&!saveShieldActive&&timeline.mutation!=='pending'){
+      const target=document.getElementById(fieldId(pendingFieldFocus.current));
+      if(target&&!target.closest('[inert]')){restoreFocus(target);pendingFieldFocus.current=null;}
+    }
+  },[fieldErrors,saveShieldActive,timeline.mutation]);
   const focusTarget = useRef<string | null>(null),
     dialogCaller = useRef<HTMLElement | null>(null);
   const completionView = useRef({ mode, month });
@@ -97,6 +110,23 @@ export function App({
   const model = editor.editor,
     canEdit = timeline.phase === "ready",
     saving = timeline.phase === "saving" || sharing.busy;
+  const settingsVisible=sharing.settingsOpen&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
+  useEffect(()=>{setFieldErrors({});serverFieldErrors.current={};pendingFieldFocus.current=null;setValidationActive(false)},[model?.session]);
+  const patchForm:typeof editor.patch=(update)=>{
+    editor.patch(update);
+    if(validationActive&&model){
+      const next={...model,draft:{...model.draft,...update}} as typeof model;
+      const remaining={...serverFieldErrors.current};
+      for(const key of Object.keys(remaining)){
+        const changed=key==='participants'||key.startsWith('participant-')||key.startsWith('recipient-')
+          ? 'participants' in update||'recipientIds' in update||'shared' in update
+          : ['daysBefore','reminderTime','reminder'].includes(key)?'reminder' in update:key in update;
+        if(changed)delete remaining[key];
+      }
+      serverFieldErrors.current=remaining;
+      setFieldErrors({...remaining,...validateEditor(next,timeline.snapshot?.projects??[])});
+    }
+  };
   const sharedMissing=!!model?.id&&model.sharing==='member'&&!!timeline.snapshot&&!(model.kind==='project'?timeline.snapshot.projects:timeline.snapshot.schedules).some(item=>item.id===model.id);
   useEffect(() => {
     const resize = () => setNarrow(window.innerWidth < 1100);
@@ -119,8 +149,8 @@ export function App({
     return () => window.removeEventListener("beforeunload", prevent);
   }, [editor.dirty, settingsDirty, saving, timeline.phase]);
   useEffect(() => {
-    if (model?.saved && timeline.phase === "ready") editor.close();
-  }, [model?.saved, timeline.phase]);
+    if (model?.saved && timeline.phase === "ready"&&!saveShieldActive) editor.close();
+  }, [model?.saved, timeline.phase,saveShieldActive]);
   useEffect(() => {
     if (!model && focusTarget.current) {
       const key = focusTarget.current;
@@ -203,11 +233,14 @@ export function App({
             code: "INTERNAL_ERROR" as const,
             message: "입력값을 확인해 주세요.",
           };
-    setFormError(error);
-    document.getElementById(`editor-${error.field}`)?.focus();
+    if(error.field){pendingFieldFocus.current=error.field;setFieldErrors({[error.field]:error.message});document.getElementById(fieldId(error.field))?.focus();}
+    else setFormError(error);
   };
   async function save(convertConfirmed=false) {
     if (!model || !canEdit || model.saved || sharedMissing) return;
+    const errors=validateEditor(model,timeline.snapshot?.projects??[]);
+    setValidationActive(true);serverFieldErrors.current={};setFieldErrors(errors);setFormError(null);
+    if(Object.keys(errors).length){pendingFieldFocus.current=Object.keys(errors)[0];document.getElementById(fieldId(Object.keys(errors)[0]))?.focus();return;}
     if(model.kind==='project'&&model.draft.shared&&model.sharing!=='host'&&!convertConfirmed){
       const participants=model.draft.participants.map((name,i)=>`${name}: ${sharing.state?.devices.find(d=>d.id===model.draft.recipientIds?.[i])?.ip??'PC 미선택'}`).join(', ');
       const removed=model.original.participants.filter(name=>!model.draft.participants.includes(name)).join(', ')||'없음';
@@ -269,8 +302,7 @@ export function App({
       )
         setProjectsOpen(true);
       editor.markSaved();
-    } else {setFormError(result.error);if (result.error.field)
-      document.getElementById(`editor-${result.error.field}`)?.focus();}
+    } else {if(result.error.code==='VALIDATION_ERROR'&&result.error.field){pendingFieldFocus.current=result.error.field;serverFieldErrors.current={[result.error.field]:result.error.message};setFieldErrors(serverFieldErrors.current);document.getElementById(fieldId(result.error.field))?.focus();}else setFormError(result.error);}
   }
   function remove() {
     if (!model?.id || !canEdit || model.sharing==='member') return;
@@ -386,11 +418,11 @@ export function App({
         else request(caller=>editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller));
       }}>{schedule.name} 알림 설정</button>
     </div>)}
-    {sharing.error&&<p className="reminder-notice" role="alert">{sharing.error.message}</p>}
+    {sharing.error&&sharing.error.message!==timeline.error?.message&&!(sharing.error.code==='VALIDATION_ERROR'&&sharing.error.field)&&<p className="reminder-notice" role="alert">{sharing.error.message}</p>}
     {sharing.state&&["error","revoked","disconnected"].includes(sharing.state.status)&&sharing.error?.message!==sharingDescription(sharing.state)&&<p className="reminder-notice" role="alert">{sharingDescription(sharing.state)}</p>}
     <StatusNotice
       phase={timeline.phase}
-      error={formError ?? timeline.error}
+      error={formError ?? (timeline.error?.code==='VALIDATION_ERROR'&&timeline.error.field?null:timeline.error)}
       notice=""
       onRefresh={() => {
         setFormError(null);
@@ -401,10 +433,11 @@ export function App({
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
       <Titlebar sharing={sharing.state}/>
+      <div className="saving-content">
       <div
         className="app-shell"
-        aria-hidden={sharing.settingsOpen || !!confirmation || dayModalOpen || (narrow && !!model)}
-        inert={sharing.settingsOpen || !!confirmation || dayModalOpen || (narrow && !!model)}
+        aria-hidden={settingsVisible || !!confirmation || dayModalOpen || (narrow && !!model)}
+        inert={settingsVisible || !!confirmation || dayModalOpen || (narrow && !!model)}
       >
         <Toolbar
           filter={filter} onFilter={value=>request(()=>setFilter(value))}
@@ -447,8 +480,8 @@ export function App({
       <div className="workspace">
         <main
           className={mode === "gantt" ? "gantt-workspace" : undefined}
-          aria-hidden={sharing.settingsOpen || !!confirmation || (narrow && !!model)}
-          inert={sharing.settingsOpen || !!confirmation || (narrow && !!model)}
+          aria-hidden={settingsVisible || !!confirmation || (narrow && !!model)}
+          inert={settingsVisible || !!confirmation || (narrow && !!model)}
           aria-label="프로젝트와 일정"
         >
           {timeline.snapshot ? (
@@ -461,6 +494,7 @@ export function App({
                 dayWidth={preferences.dayWidth} onDayWidth={preferences.setDayWidth}
                 active={mode === "gantt"}
                 snapshot={visibleSnapshot!}
+                hideEmptyChrome={filter==='shared'&&!visibleSnapshot?.projects.length}
                 selectedMonth={month}
                 selectedDate={selectedDate}
                 disabled={!canEdit || sharingView.dragInvalidated}
@@ -516,21 +550,22 @@ export function App({
             sharing={sharing.state}
             editor={model}
             projects={timeline.snapshot?.projects ?? []}
-            patch={editor.patch}
+            patch={patchForm}
+            fieldErrors={fieldErrors}
             onSave={() => void save()}
             onDelete={remove}
             onClose={() => request(close)}
             disabled={!canEdit || model.saved || sharedMissing}
             busy={saving}
             narrow={narrow}
-            covered={!!confirmation || dayModalOpen || sharing.settingsOpen}
-            error={sharedMissing?{code:'NOT_FOUND',message:'더 이상 공유되지 않거나 삭제된 항목입니다. 개인 알림을 저장할 수 없습니다.'}:formError ?? timeline.error}
+            covered={!!confirmation || dayModalOpen || settingsVisible}
+            error={sharedMissing?{code:'NOT_FOUND',message:'더 이상 공유되지 않거나 삭제된 항목입니다. 개인 알림을 저장할 수 없습니다.'}:formError ?? (timeline.error?.code==='VALIDATION_ERROR'&&timeline.error.field?null:timeline.error)}
             status={narrow ? statusView : null}
           />
         )}
       </div>
       <div className="toast" role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
-      {sharing.settingsOpen&&sharing.state&&sharing.api&&<SharingSettings state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
+      {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
       {confirmation && (
         <ConfirmDialog
           title={confirmation.title}
@@ -541,6 +576,8 @@ export function App({
           onCancel={cancelConfirm}
         />
       )}
+      </div>
+      <SavingOverlay state={timeline.mutation} onBlockingChange={setSaveShieldActive}/>
     </TooltipProvider>
   );
 }

@@ -1,5 +1,5 @@
 import {DEFAULT_REMINDER} from '../../domain/reminder';
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type {
   Project,
   Schedule,
@@ -10,6 +10,7 @@ import type {
 import { monthBounds } from "../../domain/date";
 export type ProjectDraft = ProjectInput & { shared?: boolean; recipientIds?: string[] };
 interface Base {
+  session: number;
   id?: string;
   sharing?: "host" | "member";
   saved: boolean;
@@ -23,6 +24,7 @@ export type Editor = Base &
   );
 export function useEditor() {
   const [editor, setEditor] = useState<Editor | null>(null);
+  const nextSession = useRef(0);
   const openProject = (
     project?: Project,
     caller: HTMLElement | null = document.activeElement as HTMLElement,
@@ -37,6 +39,7 @@ export function useEditor() {
         }
       : { name: "", color: "#2563EB", participants: [] };
     setEditor({
+      session: ++nextSession.current,
       kind: "project",
       id: project?.id,
       sharing: project?.sharing,
@@ -70,6 +73,7 @@ export function useEditor() {
           endDate: date ?? monthBounds(ym).start,
         };
     setEditor({
+      session: ++nextSession.current,
       kind: "schedule",
       id: schedule?.id,
       sharing: schedule?.sharing,

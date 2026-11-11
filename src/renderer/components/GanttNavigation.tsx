@@ -1,6 +1,7 @@
 import type { CSSProperties, KeyboardEvent } from 'react'
 
 interface Props {
+  hidden?:boolean
   bodyId: string
   offset: number
   min: number
@@ -18,7 +19,7 @@ interface Props {
 // exceed Chromium's layout limits for the supported 0001–9999 date range.
 export function GanttNavigation(p: Props) {
   const percent = p.dayWidth / 28 * 100
-  return <div className="gantt-navigation">
+  return <div className="gantt-navigation" hidden={p.hidden}>
     <div className="gantt-zoom">
       <button type="button" className="zoom-percent" aria-label="간트 배율 100%로 초기화"
         disabled={p.zoomDisabled} onClick={() => p.onZoom(28)}>{Math.round(percent)}%</button>

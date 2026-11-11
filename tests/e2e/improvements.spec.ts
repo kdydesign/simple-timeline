@@ -3,7 +3,10 @@ import type { Page, Locator } from 'playwright'
 async function choose(p:Page,m:string){await p.getByLabel('선택 날짜',{exact:true}).fill(m.length === 7 ? m+'-01' : m);await p.getByLabel('선택 날짜',{exact:true}).press('Enter')}
 async function box(l:Locator){const b=await l.boundingBox();if(!b)throw Error('Missing box');return b}
 async function drag(p:Page,l:Locator,dx:number,part='move'){
-  const b=await box(part==='move'?l:l.locator(`[data-resize="${part}"]`))
+  const target=part==='move'?l:l.locator(`[data-resize="${part}"]`)
+  // A refreshed bar can appear before the confirmed-save shield releases it.
+  await target.click({trial:true})
+  const b=await box(target)
   const x=b.x+b.width/2,y=b.y+b.height/2
   await p.mouse.move(x,y);await p.mouse.down();await p.mouse.move(x+dx,y,{steps:5});await p.mouse.up()
 }
@@ -26,6 +29,7 @@ test.describe('approved improvements',()=>{
     await expect(bar).toHaveAttribute('data-days','1')
     await drag(p,bar,56,'end');await expect(bar).toHaveAttribute('data-days','3')
     await drag(p,bar,-28);await expect(bar).toHaveAttribute('aria-label',/2026-12-17 — 2026-12-19/)
+    await bar.click({trial:true})
     const b=await box(bar);await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down();await p.mouse.move(b.x+b.width/2-56,b.y+b.height/2,{steps:5})
     await p.keyboard.press('Escape');await p.mouse.up();await expect(bar).toHaveAttribute('aria-label',/2026-12-17 — 2026-12-19/)
     await expect(p.getByRole('dialog')).toHaveCount(0)

@@ -17,7 +17,7 @@ export function updateSharingTray(tray:Tray,state?:SharingState) {
  rendered.set(tray,key)
  tray.setToolTip(`Planrail · ${label}`)
  tray.setContextMenu(Menu.buildFromTemplate([
-  {label:'● 연결 상태',icon:statusIcon(state?.role==='personal'||!state?'gray':normal?'green':'red'),click:callback.settings},
+  {label:'연결 상태',icon:statusIcon(state?.role==='personal'||!state?'gray':normal?'green':'red'),click:callback.settings},
   {type:'separator'}, {label:'About',click:callback.about}, {type:'separator'},
   {label:'Open',click:callback.show}, {label:'Exit',click:callback.quit},
  ]))

@@ -16,12 +16,12 @@ test('dark-only surfaces, project popup and independent row background match the
  await p.screenshot({path:test.info().outputPath('projects.png')})
 })
 
-test('20:80 navigation keeps the left date on zoom and reveals a rounded horizontal thumb',async({desktop:{page:p}})=>{
+test('1:8 navigation keeps the left date on zoom and reveals a rounded horizontal thumb',async({desktop:{page:p}})=>{
  await p.setViewportSize({width:1440,height:900})
  const date=p.getByLabel('선택 날짜',{exact:true});await date.fill('2026-11-06');await date.press('Enter')
  const zoom=p.getByRole('slider',{name:'간트 배율'}),scroll=p.getByRole('scrollbar',{name:'간트 가로 이동'})
  const z=(await p.locator('.gantt-zoom').boundingBox())!,h=(await p.locator('.gantt-horizontal').boundingBox())!
- expect(h.width/z.width).toBeCloseTo(4,1)
+ expect(h.width/z.width).toBeCloseTo(8,1)
  const before=Number(await scroll.inputValue())/28
  await zoom.focus();await zoom.press('End')
  await expect(zoom).toHaveValue('300');expect(Number(await scroll.inputValue())/84).toBeCloseTo(before,5)
@@ -61,10 +61,17 @@ test('weekend shading fills headings and rows while blank shared results stay ce
  await p.screenshot({path:test.info().outputPath('weekends.png')})
  await p.getByRole('button',{name:'공유',exact:true}).click()
  await expect(p.locator('.gantt-body [data-nonworking]')).toHaveCount(0)
+ await expect(p.locator('.gantt > .view-heading')).toBeHidden()
+ await expect(p.locator('.gantt-heading')).toBeHidden()
+ await expect(p.locator('.gantt-navigation')).toBeHidden()
  const body=(await p.locator('.gantt-body').boundingBox())!,text=(await p.locator('.gantt-body .empty h3').boundingBox())!
  expect(Math.abs(text.y+text.height/2-body.y-body.height/2)).toBeLessThan(2)
  expect(Math.abs(text.x+text.width/2-body.x-body.width/2)).toBeLessThan(6)
  await p.screenshot({path:test.info().outputPath('empty-shared.png')})
+ await p.getByRole('button',{name:'전체',exact:true}).click()
+ await expect(p.locator('.gantt > .view-heading')).toBeVisible()
+ await expect(p.locator('.gantt-heading')).toBeVisible()
+ await expect(p.locator('.gantt-navigation')).toBeVisible()
 })
 
 test('native vertical scrollbar reveals on hover and focus and remains draggable',async({desktop:{page:p}})=>{

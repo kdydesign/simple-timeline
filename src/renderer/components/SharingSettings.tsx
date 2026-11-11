@@ -1,3 +1,4 @@
+import {IconButton} from './Icon'
 import {sharingDescription} from '../../shared/sharing-status'
 import {useEffect,useState,useRef} from 'react'
 import type {SharingApi,SharingState,ApprovedDevice} from '../../shared/sharing'
@@ -54,7 +55,7 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
   const target=original?.isConnected&&original.tabIndex>=0&&!original.closest('[inert],[hidden]')&&!original.matches(':disabled')?original:[...document.querySelectorAll<HTMLElement>('#editor-name,[aria-label="편집 닫기"],[data-focus="project-add"]')].find(el=>!el.closest('[inert],[hidden]')&&!el.matches(':disabled'));
   restoreFocus(target);
  }}>
- <div className="editor-title"><AlertDialogTitle>공유 설정</AlertDialogTitle><Button type="button" disabled={busy} aria-label="공유 설정 닫기" onClick={close}>닫기</Button></div>
+ <div className="editor-title"><AlertDialogTitle>공유 설정</AlertDialogTitle><IconButton icon="close" disabled={busy} label="공유 설정 닫기" onClick={close}/></div>
  <AlertDialogDescription>같은 사내망에서 프로젝트를 공유합니다. 개인 일정은 이 PC에 보관합니다.</AlertDialogDescription>
  <div className="sharing-settings-scroll">
  <p role="status">{state.role==='host'?'호스트':state.role==='member'||state.pendingPair?'멤버':'개인 전용'} · {sharingDescription(state)}</p>

@@ -11,8 +11,8 @@ function monthOf(value: string): YearMonth {
   try { parseBusinessDate(value); return {year:Number(value.slice(0,4)), month:Number(value.slice(5,7))} }
   catch { const d=new Date(); return {year:d.getFullYear(),month:d.getMonth()+1} }
 }
-export function DatePicker({id, label, value, onChange, invalid, noIcon, onCommit}: {
-  id: string; label: string; value: string; onChange:(v:string)=>void; invalid?: boolean; noIcon?: boolean; onCommit?:(value:string, origin?:"blur")=>void
+export function DatePicker({id, label, value, onChange, invalid, describedBy, noIcon, onCommit}: {
+  id: string; label: string; value: string; onChange:(v:string)=>void; invalid?: boolean; describedBy?:string; noIcon?: boolean; onCommit?:(value:string, origin?:"blur")=>void
 }) {
   const [open,setOpen]=useState(false), [month,setMonth]=useState(()=>monthOf(value))
   const [yearText,setYearText]=useState(String(month.year))
@@ -24,7 +24,7 @@ export function DatePicker({id, label, value, onChange, invalid, noIcon, onCommi
   return <div className="date-picker" onBlur={e=>{if(!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false)}}
     onKeyDown={e=>{if(open && e.key==='Escape'){e.stopPropagation();close()}}}>
     <div ref={anchor} className="date-input"><Input ref={input} id={id} aria-label={noIcon ? label : undefined} placeholder="YYYY-MM-DD" value={value}
-      aria-invalid={invalid || undefined} aria-describedby={invalid ? 'form-error' : undefined}
+      aria-invalid={invalid || undefined} aria-describedby={describedBy}
       aria-expanded={open} aria-controls={`${id}-calendar`}
       onClick={show} onChange={e=>onChange(e.target.value)} onBlur={()=>onCommit?.(value,"blur")} onKeyDown={e=>{if(e.key==='Enter')onCommit?.(value);if(e.altKey && e.key==='ArrowDown'){e.preventDefault();show()}}}/>
       {!noIcon && <IconButton icon="calendar" label={`${label} 달력 열기`} onClick={()=>open ? close() : show()}/>}</div>

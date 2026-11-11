@@ -1,3 +1,4 @@
+import {fieldId,type FieldErrors} from '../state/formValidation';
 import {Switch} from './ui/switch';
 import {ReminderFields} from './ReminderFields';
 import {Button} from './ui/button';
@@ -27,6 +28,7 @@ export function EditorPanel({
   narrow,
   covered,
   error,
+  fieldErrors={},
   status,
   sharing,
   unavailable=false,
@@ -42,6 +44,7 @@ export function EditorPanel({
   narrow: boolean;
   covered: boolean;
   error: ApiError | null;
+  fieldErrors?:FieldErrors;
   status?: ReactNode;
   unavailable?:boolean;
   sharing?: import("../../shared/sharing").SharingState|null;
@@ -49,17 +52,16 @@ export function EditorPanel({
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
     panel.current?.querySelector<HTMLInputElement>("#editor-name")?.focus();
-  }, [editor.kind, editor.id]);
+  }, [editor.session]);
   useEffect(() => {
     if (narrow && !covered && !panel.current?.contains(document.activeElement))
       panel.current?.querySelector<HTMLInputElement>("#editor-name")?.focus();
   }, [narrow, covered]);
   const member = editor.sharing === "member";
   const host = sharing?.role === "host";
-  const invalid = (field: string) =>
-    error?.field === field
-      ? { "aria-invalid": true as const, "aria-describedby": "form-error" }
-      : {};
+  const errors={...(error?.code==='VALIDATION_ERROR'&&error.field?{[error.field]:error.message}:{}),...fieldErrors};
+  const invalid=(field:string)=>errors[field]?{'aria-invalid':true as const,'aria-describedby':`${fieldId(field)}-error`}:{};
+  const message=(field:string)=>errors[field]?<p className="field-error" id={`${fieldId(field)}-error`} role="alert">{errors[field]}</p>:null;
   let period = "";
   if (editor.kind === "schedule") {
     try {
@@ -91,7 +93,7 @@ export function EditorPanel({
       </div>
       {status}
       {unavailable&&<p role="alert">더 이상 공유되지 않거나 삭제된 항목입니다. 알림을 저장할 수 없습니다.</p>}
-      <form
+      <form noValidate
         onSubmit={(e) => {
           e.preventDefault();
           onSave();
@@ -108,6 +110,7 @@ export function EditorPanel({
             {...invalid("name")}
             onChange={(e) => patch({ name: e.target.value })}
           />
+          {message("name")}
           {editor.kind === "project" ? (
             <>
               <label htmlFor="editor-color">표시 색상</label>
@@ -135,7 +138,9 @@ export function EditorPanel({
                   onChange={(e) => patch({ color: e.target.value })}
                 />
               </div>
-              <label>
+              {message("color")}
+              <hr className="editor-separator"/>
+              <label id="editor-participants" tabIndex={-1} {...invalid("participants")}>
                 참여자 <small>(선택)</small>
               </label>
               {editor.draft.participants.map((name, i) => (
@@ -146,6 +151,7 @@ export function EditorPanel({
                   <Input
                     readOnly={!host || member}
                     id={`participant-${i}`}
+                    {...invalid(`participant-${i}`)}
                     value={name}
                     onChange={(e) => {
                       const names = [...editor.draft.participants];
@@ -153,6 +159,7 @@ export function EditorPanel({
                       patch({ participants: names });
                     }}
                   />
+                  {message(`participant-${i}`)}
                   {host&&!member&&<Button
                     type="button"
                     aria-label={`참여자 ${i + 1} 삭제`}
@@ -169,6 +176,7 @@ export function EditorPanel({
                   </Button>}
                 </div>
               ))}
+              {message("participants")}
               {host&&!member&&<Button
                 type="button"
                 onClick={() =>
@@ -178,9 +186,9 @@ export function EditorPanel({
                 참여자 이름 추가
               </Button>}
               <p className="help">{host?'참여자 입력 순서를 유지합니다.':'참여자는 호스트만 수정할 수 있습니다.'}</p>
-              {host&&<><label className="sharing-switch" htmlFor="project-shared"><Switch id="project-shared" checked={!!editor.draft.shared} disabled={editor.sharing==='host'} onCheckedChange={shared=>patch({shared})}/>{editor.sharing==='host'?'공유 프로젝트':'공유 프로젝트로 저장'}</label>
-              {editor.draft.shared&&editor.draft.participants.map((name,i)=><div key={i}><label htmlFor={`recipient-${i}`}>{name||`참여자 ${i+1}`} PC</label><Select id={`recipient-${i}`} label={`${name||`참여자 ${i+1}`} PC`} value={editor.draft.recipientIds?.[i]??''} onChange={id=>{const ids=[...(editor.draft.recipientIds??[])];ids[i]=id;patch({recipientIds:ids})}} options={(sharing?.devices??[]).filter(d=>!d.revoked).map(d=>({value:d.id,label:`${d.name} · ${d.ip}`}))}/></div>)}</>}
-              {member&&<p className="help">공유 프로젝트 · 조회 전용</p>}
+              {host&&<><hr className="editor-separator"/><label className="sharing-switch" htmlFor="project-shared"><Switch id="project-shared" checked={!!editor.draft.shared} disabled={editor.sharing==='host'} onCheckedChange={shared=>patch({shared})}/>{editor.sharing==='host'?'공유 프로젝트':'공유 프로젝트로 저장'}</label>
+              {editor.draft.shared&&editor.draft.participants.map((name,i)=><div key={i} className="recipient-field"><label htmlFor={`recipient-${i}`}>{name||`참여자 ${i+1}`} PC</label><Select {...invalid(`recipient-${i}`)} id={`recipient-${i}`} label={`${name||`참여자 ${i+1}`} PC`} value={editor.draft.recipientIds?.[i]??''} onChange={id=>{const ids=[...(editor.draft.recipientIds??[])];ids[i]=id;patch({recipientIds:ids})}} options={(sharing?.devices??[]).filter(d=>!d.revoked).map(d=>({value:d.id,label:`${d.name} · ${d.ip}`}))}/>{message(`recipient-${i}`)}</div>)}</>}
+              {member&&<><hr className="editor-separator"/><p className="help">공유 프로젝트 · 조회 전용</p></>}
             </>
           ) : (
             <>
@@ -190,28 +198,31 @@ export function EditorPanel({
                   {projects.find((p) => p.id === editor.draft.projectId)?.name}
                 </p>
               ) : (
-                <Select id="editor-project" label="소속 프로젝트" value={editor.draft.projectId}
+                <Select id="editor-project" {...invalid("projectId")} label="소속 프로젝트" value={editor.draft.projectId}
                   onChange={projectId=>patch({projectId})} disabled={disabled}
                   options={projects.filter(p=>p.sharing!=="member").map(p=>({value:p.id,label:`${p.name} · #${p.id}`,color:p.color}))}/>
 
               )}
+              {message("projectId")}
               <fieldset disabled={member} className="schedule-dates">
               <div className="schedule-date-field">
               <label htmlFor="editor-startDate">시작일</label>
               <DatePicker id="editor-startDate" label="시작일" value={editor.draft.startDate}
-                invalid={error?.field === "startDate"} onChange={value => patch({ startDate: value })} />
+                invalid={!!errors.startDate} describedBy={errors.startDate?"editor-startDate-error":undefined} onChange={value => patch({ startDate: value })} />
+              {message("startDate")}
               </div>
               <div className="schedule-date-field">
               <label htmlFor="editor-endDate">종료일</label>
               <DatePicker id="editor-endDate" label="종료일" value={editor.draft.endDate}
-                invalid={error?.field === "endDate"} onChange={value => patch({ endDate: value })} />
+                invalid={!!errors.endDate} describedBy={errors.endDate?"editor-endDate-error":undefined} onChange={value => patch({ endDate: value })} />
+              {message("endDate")}
               </div>
               <p className="help">
                 YYYY-MM-DD · 시작일과 종료일을 모두 포함합니다.
               </p>
               </fieldset>
               {member&&<p className="help">공유 일정 · 조회 전용. 알림은 이 PC에서만 적용합니다.</p>}
-              <ReminderFields value={editor.draft.reminder} onChange={reminder=>patch({reminder})} error={error}/>
+              <ReminderFields value={editor.draft.reminder} onChange={reminder=>patch({reminder})} error={error} errors={errors}/>
               <p className="period">{period}</p>
             </>
           )}

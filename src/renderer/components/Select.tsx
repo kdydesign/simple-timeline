@@ -1,7 +1,7 @@
 import {useRef,useState} from 'react';
 import {Select as Root,SelectTrigger,SelectValue,SelectContent,SelectItem} from './ui/select';
 export interface SelectOption {value:string;label:string;color?:string}
-export function Select({id,label,value,options,onChange,disabled=false}:{id?:string;label:string;value:string;options:SelectOption[];onChange:(value:string)=>void;disabled?:boolean}) {
+export function Select({id,label,value,options,onChange,disabled=false,...accessibility}:{id?:string;label:string;value:string;options:SelectOption[];onChange:(value:string)=>void;disabled?:boolean; "aria-invalid"?:boolean; "aria-describedby"?:string}) {
  const button=useRef<HTMLButtonElement>(null),nextFocus=useRef<HTMLElement|null>(null),opening=useRef(0);
  const [open,setOpen]=useState(false),[container,setContainer]=useState<HTMLSpanElement|null>(null);
  const tab=(reverse:boolean)=>{
@@ -11,7 +11,7 @@ export function Select({id,label,value,options,onChange,disabled=false}:{id?:str
  };
  const currentOpening=opening.current;
  return <div className="custom-select"><Root value={value} onValueChange={onChange} disabled={disabled} open={open} onOpenChange={value=>{if(value){opening.current++;nextFocus.current=null}setOpen(value)}}>
-  <SelectTrigger ref={button} id={id} aria-label={label} className="select-trigger"><SelectValue/></SelectTrigger>
+  <SelectTrigger {...accessibility} ref={button} id={id} aria-label={label} className="select-trigger"><SelectValue/></SelectTrigger>
   <span ref={setContainer} data-overlay-container=""/>
   {container&&<SelectContent container={container} position="popper" align="start" sideOffset={6} collisionPadding={{top:48,bottom:9,left:9,right:9}} className="select-popover" aria-label={label}
    onEscapeKeyDown={e=>e.stopPropagation()}

@@ -69,7 +69,9 @@ test.describe('Planrail zoom and Space pan',()=>{
       ['start',14,'2026-12-19 — 2026-12-19'],
       ['body',-14,'2026-12-18 — 2026-12-18'],
     ] as const){
-      const box=await (part==='body'?bar:bar.locator(`[data-resize="${part}"]`)).boundingBox()
+      const target=part==='body'?bar:bar.locator(`[data-resize="${part}"]`)
+      await target.click({trial:true})
+      const box=await target.boundingBox()
       await p.mouse.move(box!.x+box!.width/2,box!.y+box!.height/2);await p.mouse.down()
       await p.mouse.move(box!.x+box!.width/2+delta,box!.y+box!.height/2,{steps:4});await p.mouse.up()
       await expect(bar).toHaveAttribute('aria-label',new RegExp(dates))

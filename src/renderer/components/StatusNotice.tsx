@@ -13,7 +13,7 @@ export function StatusNotice({
 }) {
   return (
     <div className="status">
-      <p aria-live="polite">
+      <p aria-live="polite" className={phase === 'saving' ? 'sr-only' : undefined}>
         {phase === 'loading'
           ? '조회 중…'
           : phase === 'saving'

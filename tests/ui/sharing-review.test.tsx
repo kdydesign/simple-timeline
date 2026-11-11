@@ -23,7 +23,7 @@ for(const revoked of [0,1])it(`keeps participant slots after ${names[revoked]} r
  // A later mapped participant must never appear in the revoked participant's slot.
  expect(screen.getByRole('combobox',{name:`${names[revoked]} PC`})).not.toHaveTextContent(`PC-${names[revoked+1]}`)
  await u.click(screen.getByRole('button',{name:'취소'}));await u.click(screen.getByRole('button',{name:'1.1.1 핫픽스 편집'}))
- await u.click(screen.getByRole('button',{name:'저장'}));await waitFor(()=>expect(f.api.saveProject).toHaveBeenCalledWith(expect.objectContaining({participants:recipients.map((p,i)=>({...p,deviceId:i===revoked?'':p.deviceId}))})));expect(m.snapshot.projects[0].participants).toEqual(names)
+ await u.click(screen.getByRole('button',{name:'저장'}));expect(f.api.saveProject).not.toHaveBeenCalled();expect(screen.getByRole('combobox',{name:`${names[revoked]} PC`})).toHaveAttribute('aria-invalid','true');expect(m.snapshot.projects[0].participants).toEqual(names)
  await u.click(screen.getByRole('button',{name:`참여자 ${revoked+1} 삭제`}));await u.click(screen.getByRole('button',{name:'저장'}))
  await waitFor(()=>expect(f.api.saveProject).toHaveBeenCalledWith(expect.objectContaining({participants:remaining})))
  expect(m.snapshot.projects[0].participants).toEqual(remaining.map(p=>p.name))

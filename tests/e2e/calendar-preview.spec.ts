@@ -20,7 +20,9 @@ test.describe('calendar live preview',()=>{
  test('resizing both ends draws split week previews and saves only on release',async({desktop:d})=>{
   const p=d.page;await p.setViewportSize({width:1280,height:1000});await choose(p,'2026-12-01');await p.getByRole('button',{name:'달력',exact:true}).click()
   for(const [part,date] of [['end','2026-12-22'],['start','2026-12-16']] as const){
-   const handle=await box(p.locator(`[data-segment="3"] [data-resize="${part}"]`)),target=await box(p.locator(`[data-date="${date}"]`))
+   const resize=p.locator(`[data-segment="3"] [data-resize="${part}"]`)
+   await resize.click({trial:true})
+   const handle=await box(resize),target=await box(p.locator(`[data-date="${date}"]`))
    await p.mouse.move(handle.x+handle.width/2,handle.y+handle.height/2);await p.mouse.down();await p.mouse.move(target.x+target.width/2,target.y+55,{steps:5})
    const preview=p.locator('[data-calendar-preview="3"]');await expect(preview).toHaveCount(2)
    await expect(preview.first()).toHaveAttribute(part==='end'?'data-end':'data-start',date)

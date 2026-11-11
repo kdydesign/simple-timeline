@@ -71,3 +71,9 @@ it('marks lost responses uncertain and never automatically resends create', asyn
   expect(result.current.snapshot?.projects).toHaveLength(1)
   expect(m.creates).toBe(1)
 })
+it('records a confirmed commit even when storage status blocks the following refresh', async()=>{
+ const m=memoryApi(),{result}=renderHook(()=>useTimeline(m.api));await waitFor(()=>expect(result.current.phase).toBe('ready'));
+ m.api.getStatus=async()=>({ok:true,data:{state:'blocked',errorCode:'DB_NOT_READY'}});
+ await act(async()=>{await result.current.mutate('createProject',input)});
+ expect(result.current.mutation).toBe('confirmed');expect(result.current.phase).toBe('blocked');expect(result.current.error?.message).toMatch(/저장.*완료.*새로고침/);expect(m.creates).toBe(1);
+});

@@ -15,7 +15,8 @@ const transport: ApiError = {
 export function useTimeline(api: TimelineApi) {
   const [snapshot, setSnapshot] = useState<TimelineSnapshot | null>(null),
     [phase, setPhase] = useState<TimelinePhase>('loading'),
-    [error, setError] = useState<ApiError | null>(null)
+    [error, setError] = useState<ApiError | null>(null),
+    [mutation, setMutation] = useState<'idle'|'pending'|'confirmed'|'failed'>('idle')
   const phaseRef = useRef<TimelinePhase>('loading'),
     alive = useRef(true),
     generation = useRef(0)
@@ -34,7 +35,7 @@ export function useTimeline(api: TimelineApi) {
           setError({
             code: status.data.errorCode ?? 'DB_NOT_READY',
             message:
-              '저장소를 사용할 수 없습니다. 원본을 보존하고 종료 후 다시 실행해 주세요.',
+              (committed ? '저장은 완료했지만 새로고침에 실패했습니다. ' : '') + '저장소를 사용할 수 없습니다. 원본을 보존하고 종료 후 다시 실행해 주세요.',
           })
           change('blocked')
           return false
@@ -93,6 +94,7 @@ export function useTimeline(api: TimelineApi) {
       }
     generation.current++
     change('saving')
+    setMutation('pending')
     setError(null)
     let result: Result<T>
     try {
@@ -102,8 +104,10 @@ export function useTimeline(api: TimelineApi) {
     }
     if (!alive.current) return result
     if (result.ok) {
+      setMutation('confirmed')
       await read(true)
     } else {
+      setMutation('failed')
       setError(result.error)
       change(
         result.error.code === 'IPC_UNAVAILABLE'
@@ -131,5 +135,5 @@ export function useTimeline(api: TimelineApi) {
       return true
     } catch { return false }
   }, [api])
-  return { snapshot, phase, error, refresh, mutate, mutateExternal, reconcile }
+  return { snapshot, phase, error, mutation, refresh, mutate, mutateExternal, reconcile }
 }

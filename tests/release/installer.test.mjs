@@ -45,7 +45,7 @@ test('Planrail rename preserves installer identity and offers directory selectio
  assert.match(c.artifactName,/^Planrail-/)
  assert.equal(c.appId,'com.kdydesign.simpletimeline')
  assert.equal(pkg.name,'simple-timeline')
- assert.equal(pkg.version,'0.6.6')
+ assert.equal(pkg.version,'0.6.7')
  const lock=JSON.parse(readFileSync('package-lock.json','utf8'))
  assert.equal(lock.version,pkg.version)
  assert.equal(lock.packages[''].version,pkg.version)

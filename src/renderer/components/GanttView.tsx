@@ -33,6 +33,7 @@ export interface GanttHandle {
 import { useGanttNavigation } from "../state/useGanttNavigation";
 import { useScheduleDrag, type DragActions } from "../state/useScheduleDrag";
 export interface GanttProps extends DragActions {
+  hideEmptyChrome?:boolean;
   selectedDate?: string;
   dayWidth?: number;
   onDayWidth?: (width:number) => void;
@@ -67,6 +68,7 @@ export function GanttView({
   onAddSchedule,
   disabled = false,
   active = true,
+  hideEmptyChrome=false,
   ref,
 }: GanttProps) {
   const root = useRef<HTMLElement>(null);
@@ -343,7 +345,7 @@ export function GanttView({
       onPointerLeave={() => setHoveredDate(null)}
       aria-label="간트" hidden={!active}>
       {drag.preview && <div className="drag-preview" role="status">{drag.preview.startDate} — {drag.preview.endDate} · 놓아서 저장 · Esc 취소</div>}
-      <div className="view-heading">
+      <div className="view-heading" hidden={hideEmptyChrome}>
         <div>
           <h2>전체 일정</h2>
           <p data-range>
@@ -352,7 +354,7 @@ export function GanttView({
         </div>
 
       </div>
-      {outside && (
+      {outside && !hideEmptyChrome && (
         <p className="range-notice" role="status">
           선택 월은 전체 일정 범위 밖입니다
         </p>
@@ -361,7 +363,7 @@ export function GanttView({
         가로 이동: 좌우 하루, PageUp/PageDown 한 화면, Home/End 처음과 끝. 이름
         버튼에서 위아래 키로 모든 행 이동.
       </p>
-      <div className="gantt-heading" style={{paddingRight:size.gutter}}>
+      <div className="gantt-heading" hidden={hideEmptyChrome} style={{paddingRight:size.gutter}}>
         <div className="gantt-name-heading">프로젝트 / 일정</div>
         <div className="gantt-date-heading" ref={dateArea}>
           {months
@@ -535,7 +537,7 @@ export function GanttView({
             })}
         </div>
       </div>
-      <GanttNavigation bodyId={bodyId} offset={x} min={min} max={max} viewport={size.width} dayWidth={P}
+      <GanttNavigation hidden={hideEmptyChrome} bodyId={bodyId} offset={x} min={min} max={max} viewport={size.width} dayWidth={P}
         zoomDisabled={!onDayWidth || navigation.panning || !!drag.preview}
         onMove={move} onHorizontalKey={keyboard}
         onZoom={width => {if(drag.isActive() || navigation.panning || !onDayWidth)return;move(x/P*width,width);onDayWidth(width)}}

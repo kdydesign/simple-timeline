@@ -20,7 +20,7 @@ it('edits reminder defaults with the schedule, keeps empty numeric input and val
  fireEvent.change(screen.getByLabelText('알림 시각'),{target:{value:'13:45'}})
  await u.click(screen.getByRole('button',{name:'저장'}))
  await waitFor(()=>expect(m.snapshot.schedules.at(-1)?.reminder).toEqual({daysBefore:0,time:'13:45',start:true,end:true}))
- await u.click(screen.getByRole('button',{name:'알림 테스트 편집'}))
+ await u.click(await screen.findByRole('button',{name:'알림 테스트 편집'}))
  expect(screen.getByRole('switch',{name:'시작일 알림'})).toBeChecked()
  expect(screen.getByRole('switch',{name:'종료일 알림'})).toBeChecked()
  await u.click(screen.getByRole('switch',{name:'시작일 알림'}))
