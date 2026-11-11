@@ -6,7 +6,7 @@
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
 | 현재 작업 상태·인수 범위 | [STATUS](../wayfinder/STATUS.md), [MVP 사용자 인수](../release/user-acceptance.md) |
-| 최신 화면 재질·디자인 | [0.6.9 참여자·알림 컨트롤](../implementation/2026-11-11-sharing-participants.md), [0.6.8 목록·알림 간편 편집](../implementation/2026-11-11-quick-actions.md), [0.6.7 저장 진행·필드 오류·공유 설정](../implementation/2026-11-11-form-experience.md), [0.6.5~0.6.6 다크 전용·간트 탐색·트랙 경계 구현 기록](../implementation/2026-11-11-dark-navigation.md), [Forest Crystal 승인 설계](../design/forest-crystal.md), [0.6.4 딥 그레이·스틸 블루](../implementation/2026-11-11-steel-blue.md), [0.6.3 행 밀도·알림 스위치](../implementation/2026-11-10-compact-rows.md), [0.6.2 투과·P 아이콘](../implementation/2026-11-10-glass-correction.md). 기존 C안 배치와 기능을 유지하며 색상·재질은 이 설계를 우선 |
+| 최신 화면 재질·디자인 | [0.6.10 참여자 한 줄 배치](../implementation/2026-11-11-participant-row.md), [0.6.9 참여자·알림 컨트롤](../implementation/2026-11-11-sharing-participants.md), [0.6.8 목록·알림 간편 편집](../implementation/2026-11-11-quick-actions.md), [0.6.7 저장 진행·필드 오류·공유 설정](../implementation/2026-11-11-form-experience.md), [0.6.5~0.6.6 다크 전용·간트 탐색·트랙 경계 구현 기록](../implementation/2026-11-11-dark-navigation.md), [Forest Crystal 승인 설계](../design/forest-crystal.md), [0.6.4 딥 그레이·스틸 블루](../implementation/2026-11-11-steel-blue.md), [0.6.3 행 밀도·알림 스위치](../implementation/2026-11-10-compact-rows.md), [0.6.2 투과·P 아이콘](../implementation/2026-11-10-glass-correction.md). 기존 C안 배치와 기능을 유지하며 색상·재질은 이 설계를 우선 |
 | 용어·전체 요구사항 | [CONTEXT](../../CONTEXT.md)는 용어만, [전체 설계](../superpowers/specs/2026-11-03-simple-timeline-design.md)는 요구사항 인덱스 |
 | Planrail 후속 변경 | [확정 설계](../design/planrail-improvements.md), [구현·검증 기록](../implementation/2026-11-05-planrail.md). 명시된 이름·탐색·트레이·화면 변경은 이전 후속 설계보다 우선 |
 | 일정 알림·간트 계층 개선 | [확정 설계](../design/reminders-and-hierarchy.md). Q15 전체 승인. [구현·검증](../implementation/2026-11-05-reminders.md), 실제 Windows 알림 실기는 미검증 |
@@ -17,6 +17,7 @@
 | 승인된 화면·날짜 배치 | 기능 배치는 [Planrail 화면](../design/planrail-improvements.md), 재질은 [Forest Crystal](../design/forest-crystal.md)이 우선. [C안](../design/flat-glass-redesign.md)·[MVP 화면](../design/experience.md)·[시각화](../design/visualization.md)는 대체되지 않은 계약과 당시 결정 근거. 실제 코드는 [renderer](../../src/renderer/)·[계산 함수](../../src/visualization/) |
 | 공통 UI·스타일 수정 | [renderer 구성](../design/architecture.md#renderer-공통-ui와-스타일). 소속 프로젝트 Select·날짜 선택기·포털·테마의 실제 연결과 회귀 경로 |
 | 도구·명령·검증 범위 | [package.json](../../package.json), [CI](../../.github/workflows/), [검증 안내](../harness/validation.md) |
+| 공유 변경 Windows 알림 | [승인 설계](../design/shared-change-notifications.md). Q1~Q13 전체 확정·미구현. 기존 날짜 알림과 별개 |
 | 사내 프로젝트 공유·동기화 | [설계·검토](../design/lan-project-sharing.md). Q1~Q27·후속 참여자 권한·UI 위치 확정. 보안·상태·알림 계약 검토 보정 완료. 트레이 상태 클릭으로 공유 설정 진입·필터별 간트 기간 확정. 0.6.0 [구현·검증 기록](../implementation/2026-11-10-lan-sharing.md), 실제 Windows·사내망 인수는 별도 |
 | 설치·사용·보존 정책 | [배포 정책](../release/policy.md), [사용 안내](../release/user-guide.md) |
 | 당시 실행 증거 | [구현 기록](../implementation/), [Windows 검증](../release/windows-validation.md), [단계 인수인계](../wayfinder/handoffs/)의 SHA·환경·한계 |

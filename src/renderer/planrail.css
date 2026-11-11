@@ -70,13 +70,16 @@ button.ui-switch[data-state="checked"],button.ui-switch[data-state="checked"]:ho
 .sharing-settings fieldset, .sharing-settings form { display: grid; gap: 8px; min-width: 0; }
 .sharing-settings .sharing-role { display: flex; gap: 8px; margin-bottom: 8px; }
 .sharing-settings .sharing-device { gap: 10px; padding: 12px 0; border-bottom: 1px solid var(--border); }
-.sharing-device-inputs { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
+.sharing-device-row { display: grid; grid-template-columns: minmax(90px, 1fr) minmax(135px, 1.2fr) auto auto; align-items: start; gap: 8px; }
+.sharing-device-inputs { display: contents; }
+.sharing-device-label { line-height: 18px; }
 .sharing-device-inputs label { display: grid; align-content: start; gap: 6px; font-size: 13px; min-width: 0; }
-.sharing-device-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.sharing-device-actions { display: flex; gap: 8px; align-items: center; }
+.sharing-device-status { margin-top: 33px; white-space: nowrap; }
+.sharing-device-actions { display: flex; gap: 6px; align-items: center; margin-top: 24px; white-space: nowrap; }
+.sharing-device-actions button:not(.icon-button) { padding-inline: 8px; }
+.sharing-device-new .sharing-device-row { grid-template-columns: minmax(90px, 1fr) minmax(135px, 1.2fr) auto; }
 .sharing-settings .sharing-device-new { margin-top: 8px; padding-top: 16px; border-bottom: 0; }
 .sharing-device-new h4 { font-size: 13px; margin: 0; }
-.sharing-device small { grid-column: 1 / -1; color: var(--muted); }
 .sharing-fingerprint { display: block; white-space: normal; overflow-wrap: anywhere; user-select: text; padding: 8px; background: var(--subtle); font-size: 13px; line-height: 1.7; }
 .sharing-settings [role=alert] { color: var(--danger); }
 .sync-busy svg { opacity: .5; }

@@ -33,12 +33,12 @@ export function SharingDeviceForm({device,devices,disabled,onSave,onRevoke,onDel
  }
  return <form ref={form} className={`sharing-device ${device?'':'sharing-device-new'}`} noValidate onSubmit={e=>{e.preventDefault();submit()}}>
   {!device&&<h4>새 참여자</h4>}
+  <div className="sharing-device-row">
   <div className="sharing-device-inputs">
-   <label htmlFor={`${prefix}-name`}>이름<Input id={`${prefix}-name`} data-device-name aria-label={device?`${device.name} 이름`:'새 참여자 이름'} value={name} onChange={e=>{setName(e.target.value);setServerError(null)}} placeholder="참여자 이름" disabled={disabled||device?.revoked} aria-invalid={!!errors.name} aria-describedby={errors.name?`${prefix}-name-error`:undefined}/>{errors.name&&<p id={`${prefix}-name-error`} className="field-error" role="alert">{errors.name}</p>}</label>
-   <label htmlFor={`${prefix}-ip`}>IP 주소<Input id={`${prefix}-ip`} data-device-ip aria-label={device?`${device.name} IP`:'새 참여자 IP'} value={ip} onChange={e=>{setIp(e.target.value);setServerError(null)}} placeholder="192.168.0.20" disabled={disabled||device?.revoked} aria-invalid={!!errors.ip} aria-describedby={errors.ip?`${prefix}-ip-error`:undefined}/>{errors.ip&&<p id={`${prefix}-ip-error`} className="field-error" role="alert">{errors.ip}</p>}</label>
+   <label htmlFor={`${prefix}-name`}><span className="sharing-device-label">이름</span><Input id={`${prefix}-name`} data-device-name aria-label={device?`${device.name} 이름`:'새 참여자 이름'} value={name} onChange={e=>{setName(e.target.value);setServerError(null)}} placeholder="참여자 이름" disabled={disabled||device?.revoked} aria-invalid={!!errors.name} aria-describedby={errors.name?`${prefix}-name-error`:undefined}/>{errors.name&&<p id={`${prefix}-name-error`} className="field-error" role="alert">{errors.name}</p>}</label>
+   <label htmlFor={`${prefix}-ip`}><span className="sharing-device-label">IP 주소</span><Input id={`${prefix}-ip`} data-device-ip aria-label={device?`${device.name} IP`:'새 참여자 IP'} value={ip} onChange={e=>{setIp(e.target.value);setServerError(null)}} placeholder="192.168.0.20" disabled={disabled||device?.revoked} aria-invalid={!!errors.ip} aria-describedby={errors.ip?`${prefix}-ip-error`:undefined}/>{errors.ip&&<p id={`${prefix}-ip-error`} className="field-error" role="alert">{errors.ip}</p>}</label>
   </div>
-  <div className="sharing-device-footer">
-   <small>{device&&(device.revoked?'승인 취소됨':device.approved?'승인됨':'연결 승인 대기')}</small>
+  {device&&<span className="sharing-badge sharing-device-status" aria-label={device.revoked?'승인 취소됨':device.approved?'승인됨':'연결 승인 대기'}>{device.revoked?'승인 취소':device.approved?'승인':'승인 대기'}</span>}
    <div className="sharing-device-actions">
     <Button type="submit" disabled={disabled||!!device?.revoked||(!dirty&&!!device)}>{device?'수정':'등록'}</Button>
     {onRevoke&&<Button type="button" disabled={disabled||device?.revoked} onClick={onRevoke}>승인 취소</Button>}

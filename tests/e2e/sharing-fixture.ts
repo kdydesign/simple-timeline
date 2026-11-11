@@ -26,7 +26,14 @@ export async function launchMember(info: TestInfo): Promise<Desktop & { dispose(
   return desktop;
 }
 export async function settings(d: Desktop) {
-  await d.app.evaluate(() => (globalThis as any).desktopController.openSharingSettings());
+  // Inspector evaluation can interrupt a synchronous SQLite query. Queue the
+  // tray action on the normal event loop instead of re-entering that query.
+  await d.app.evaluate(() => new Promise<void>((resolve, reject) => {
+    setImmediate(() => {
+      try { (globalThis as any).desktopController.openSharingSettings(); resolve(); }
+      catch (error) { reject(error); }
+    });
+  }));
   return d.page.getByRole('dialog',{name:'공유 설정'});
 }
 export const sharingState = (d: Desktop) => d.page.evaluate(async () => {
