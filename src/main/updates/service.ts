@@ -92,6 +92,7 @@ export async function createUpdateService(o:Options){
   if(disposed||phase==='installing'||context.role!=='member'||!context.connection||context.revoked)return
   if(checkTask)return checkTask
   const g=generation,c=context.connection,controller=new AbortController();checkAbort=controller
+  let requestGeneration=g
   const work=(async()=>{
    try{
     const response=await (o.readStatus??readUpdateStatus)({...c,signal:controller.signal})
@@ -99,15 +100,20 @@ export async function createUpdateService(o:Options){
     try{status=parseUpdateStatus(response,c.trust.hostId)}catch{throw new SharingNetworkError('INVALID_RESPONSE')}
     if(!current(g))return
     if(status.revision<(observed[fingerprint(c)]??-1))throw new SharingNetworkError('INVALID_RESPONSE')
-    await observe(fingerprint(c),status.revision);if(!current(g))return
-    connected=true
     const next=status.publication&&compareStableVersions(status.publication.manifest.version,o.version)>0?status.publication:null
-    if(publication&&publication.publicationId!==next?.publicationId){const clear=invalidate(next?'replaced':'withdrawn'),nextGeneration=generation;await clear;if(!current(nextGeneration))return}
-    else if(publication&&next&&JSON.stringify(publication)!==JSON.stringify(next))throw new SharingNetworkError('INVALID_RESPONSE')
+    let invalidating:Promise<void>|undefined
+    if(publication&&publication.publicationId!==next?.publicationId){
+     // Fence/abort the old attempt before any filesystem await; an authenticated
+     // withdrawal/replacement is already observed even if its durable write stalls.
+     invalidating=invalidate(next?'replaced':'withdrawn');requestGeneration=g+1
+    }else if(publication&&next&&JSON.stringify(publication)!==JSON.stringify(next))throw new SharingNetworkError('INVALID_RESPONSE')
+    await Promise.all([invalidating,observe(fingerprint(c),status.revision)])
+    if(!current(requestGeneration))return
+    connected=true
     if(next&&!publication){publication=next;phase='available';error=null;received=0}
     if(!next&&!publication&&phase!=='error')phase='idle'
     changed()
-   }catch(e){if(!current(g))return;connected=false
+   }catch(e){if(!current(requestGeneration))return;connected=false
     const code=(e as {code?:string}).code
     if(['UNAUTHORIZED','REVOKED','TLS_UNTRUSTED'].includes(code??'')){await invalidate('trust-changed');context={...context,revoked:true}}
     else if(code==='STORAGE_IO'){await invalidate('storage')}
