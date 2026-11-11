@@ -5,6 +5,7 @@ import { join } from 'node:path'
 export interface NativeContext {
   tempDir: string
   defer(cleanup: () => void): void
+  step(name: string): void
 }
 export interface NativeCase {
   name: string

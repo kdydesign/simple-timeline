@@ -48,7 +48,7 @@ async function run() {
       const cleanups = [], timing = { setupMs: elapsed(caseStarted), runMs: 0, cleanupMs: 0, totalMs: 0 }
       const runStarted = performance.now()
       try {
-        await test.run({ tempDir, defer: (f) => cleanups.push(f) })
+        await test.run({ tempDir, defer: (f) => cleanups.push(f), step: (name) => phase('case:step', { ...identity, step: name }) })
         timing.runMs = elapsed(runStarted)
         results.push({ ...identity, passed: true, timing })
         console.log('PASS', test.name, `(run ${timing.runMs} ms)`)

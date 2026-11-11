@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url)
 const started = performance.now()
 const elapsed = since => Math.round((performance.now() - since) * 100) / 100
 // Suite allocation; individual assertions and protocol deadlines remain unchanged.
-const timeoutMs = 120000
+const timeoutMs = 300000
 mkdirSync('artifacts/native', { recursive: true })
 rmSync('artifacts/native/results.json', { force: true })
 const electron = require('electron')

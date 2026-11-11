@@ -97,6 +97,7 @@ export const cases:NativeCase[]=[
   finally{clearTimeout(release);encryption.resolve(Buffer.from('cipher'));await service.dispose()}
  }},
  {name:'real host/member service pairs, commits a filtered cache, forces sync and purges on pinned revocation',async run(ctx){
+  ctx.step('host database and fixtures')
   const hostProfile=join(ctx.tempDir,'host');mkdirSync(hostProfile)
   const hostDb=setup({...ctx,tempDir:hostProfile}),hostStore=createSharingStore(hostDb.db)
   hostStore.configureHost({address:'127.0.0.1',port:47831})
@@ -104,22 +105,33 @@ export const cases:NativeCase[]=[
   const project=hostStore.saveProject({name:'LAN',color:'#2563EB',participants:[{name:'Member',deviceId:device.id}]})
   hostDb.repo.createSchedule({projectId:project.id,name:'Shared alarm',startDate:'2026-11-11',endDate:'2026-11-11'})
   hostDb.repo.createProject({name:'Private',color:'#2563EB',participants:[]})
+  ctx.step('host identity')
   const identity=await createHostIdentity(hostStore.getConfig().hostId),host=createSharingHost({identity,store:hostStore})
+  ctx.step('host listen')
   const target=await host.start('127.0.0.1',0)
+  ctx.step('member database and service')
   const {db,repo}=setup(ctx),service=createSharingService({storage:{state:'ready',db,repository:repo},profile:ctx.tempDir,changed:()=>{},secrets:async()=>createProtectedSecrets(ctx.tempDir,vault)})
   try{
+   ctx.step('connect and approve')
    const pairing=await service.connect(target);assert(pairing.pendingPair);host.approve(pairing.pendingPair.pairId)
+   ctx.step('confirm and initial cache')
    const state=await service.confirmHost({pairId:pairing.pendingPair.pairId,confirmed:true});assert.equal(state.status,'connected')
    assert.equal(service.memberSnapshot().projects.length,1);assert.equal(service.memberSnapshot().projects[0].name,'LAN')
+   ctx.step('unchanged snapshot sync')
    const revision=state.snapshotRevision;await service.sync();assert.equal(service.getState().snapshotRevision,revision)
    const ref=createSharingStore(db).getConfig().credentialRef
+   ctx.step('reconnect')
    const edited=await service.connect(target);assert.equal(edited.status,'connected');assert.equal(edited.pendingPair,null);assert.equal(createSharingStore(db).getConfig().credentialRef,ref)
+   ctx.step('reminder authorization')
    assert.equal(await service.authorizeReminder(),true)
+   ctx.step('revoke and sync')
    hostStore.deleteDevice({id:device.id});assert.equal(hostStore.listDevices().length,0);await service.sync();assert.equal(service.getState().status,'revoked');assert.equal(service.memberSnapshot().projects.length,0)
    assert.equal(await service.authorizeReminder(),false)
+   ctx.step('replacement identity')
    const replacement=await createHostIdentity(identity.hostId)
+   ctx.step('reject changed TLS pin')
    await assert.rejects(pinnedRequest({address:target,trust:replacement,path:'/v1/identity'}),(error:any)=>error.code==='TLS_UNTRUSTED')
-  }finally{await service.dispose();await host.stop()}
+  }finally{ctx.step('member dispose');await service.dispose();ctx.step('host stop');await host.stop()}
  }},
  {name:'resume discards an old response and refreshes before shared reminder authorization',async run(ctx){
   const {db,repo}=setup(ctx),store=createSharingStore(db),identity=await createHostIdentity(hostId),protectedSecrets=createProtectedSecrets(ctx.tempDir,vault),ref='a'.repeat(32)

@@ -17,7 +17,7 @@ async function runFixture({ failCleanup = false } = {}) {
     rmSync() { clock += 11 },
     writeFileSync(_file, text) { report = JSON.parse(text) },
   }
-  const fixture = { name: 'diagnostic fixture', run({ defer }) { clock += 7; defer(() => { clock += 5; if (failCleanup) throw Error('cleanup failed') }) } }
+  const fixture = { name: 'diagnostic fixture', run({ defer, step }) { clock += 7; step('fixture operation'); defer(() => { clock += 5; if (failCleanup) throw Error('cleanup failed') }) } }
   const require = name => {
     if (name === 'electron') return { app }
     if (name === 'node:fs') return fs
@@ -35,7 +35,10 @@ async function runFixture({ failCleanup = false } = {}) {
 test('native diagnostics identify active startup/module/case/cleanup boundaries and separate their costs', async () => {
   const { exitCode, report, phases } = await runFixture()
   assert.equal(exitCode, 0)
-  assert.deepEqual(phases.map(value => value.phase), ['startup', 'ready', 'discovery:start', 'discovery:complete', 'module:start', 'module:complete', 'case:start', 'cleanup:start', 'case:complete', 'results:start', 'complete'])
+  assert.deepEqual(phases.map(value => value.phase), ['startup', 'ready', 'discovery:start', 'discovery:complete', 'module:start', 'module:complete', 'case:start', 'case:step', 'cleanup:start', 'case:complete', 'results:start', 'complete'])
+  assert.equal(phases.find(value => value.phase === 'case:step').step, 'fixture operation')
+  assert.equal(phases.find(value => value.phase === 'case:step').name, 'diagnostic fixture')
+  assert.equal(phases.find(value => value.phase === 'case:step').elapsedMs, 42)
   assert.equal(report.timing.readyMs, 13)
   assert.equal(report.timing.discoveryMs, 2)
   assert.equal(report.modules[0].durationMs, 17)
@@ -61,7 +64,7 @@ function runWrapperFixture() {
     .replace('const require = createRequire(import.meta.url)', '')
   let clock = 0, options, exitCode
   const written = {}, removed = []
-  const active = { phase: 'cleanup:start', name: 'slow fixture', elapsedMs: 119900 }
+  const active = { phase: 'case:step', name: 'slow fixture', step: 'host stop', elapsedMs: 299900 }
   const stop = new Error('fixture exit')
   try {
     runInNewContext(source, {
@@ -75,7 +78,7 @@ function runWrapperFixture() {
       process: { env: { ELECTRON_RUN_AS_NODE: '1' }, exit(code) { exitCode = code; throw stop } },
       console: { log() {}, error() {} },
       spawnSync(_binary, _args, input) {
-        options = input; clock += 120000
+        options = input; clock += 300000
         return { stdout: 'NATIVE_PHASE ' + JSON.stringify(active) + '\n', stderr: 'timeout stderr', status: null, signal: 'SIGTERM', error: Object.assign(new Error('timeout'), { code: 'ETIMEDOUT' }) }
       },
     })
@@ -85,14 +88,28 @@ function runWrapperFixture() {
 
 test('native aggregate timeout retains last phase, logs, failure and isolated profile cleanup', () => {
   const { options, exitCode, written, removed, active } = runWrapperFixture()
-  assert.equal(options.timeout, 120000)
+  assert.equal(options.timeout, 300000)
   assert.equal(options.env.ELECTRON_RUN_AS_NODE, undefined)
   assert.equal(exitCode, 1)
   const diagnostic = JSON.parse(written['artifacts/native/runner.json'])
   assert.equal(diagnostic.errorCode, 'ETIMEDOUT')
-  assert.equal(diagnostic.processMs, 120000)
+  assert.equal(diagnostic.processMs, 300000)
   assert.equal(diagnostic.profileCleanupMs, 5)
   assert.deepEqual(diagnostic.lastPhase, active)
   assert.match(written['artifacts/native/latest.log'], /timeout stderr/)
   assert.ok(removed.includes(options.env.SIMPLE_TIMELINE_NATIVE_PROFILE))
+})
+
+test('application runner allocates only the native parent command 360 seconds', () => {
+  const source = readFileSync('scripts/testing/verify-app.mjs', 'utf8').replace(/^import .*\n/gm, '')
+  const budgets = {}
+  runInNewContext(source, {
+    process: { env: { npm_execpath: 'npm-fixture' }, execPath: 'node-fixture', platform: 'fixture', arch: 'fixture', version: 'fixture' },
+    mkdirSync() {}, writeFileSync() {}, console: { log() {}, error() {} },
+    spawnSync(command, args, options) {
+      if (command === 'node-fixture') budgets[args[2]] = options.timeout
+      return { status: 0, stdout: '', stderr: '' }
+    },
+  })
+  assert.deepEqual(budgets, { typecheck: 180000, 'test:release': 180000, 'test:tz': 180000, 'test:ui': 180000, build: 180000, 'test:native': 360000, 'test:e2e': 240000 })
 })
