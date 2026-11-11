@@ -43,3 +43,11 @@ Windows packaged 검사는 기존 수동 설치 lifecycle과 별도로 `packaged
 Windows CI에서 알림으로 일정 편집창을 연 뒤 배경 ‘달력’ 버튼을 찾던 기존 공유 검사가 실패했다. 기준 `24439a489ace18184dd300486cc931abe39c4638`에서 멤버 viewport만1024×768로 지정하고 원래 assertion을 유지해 Linux/Xvfb에서도 같은 실패를 재현했다(23.8초). 진단값은 `innerWidth=1024`, 편집창 `aria-modal=true`, 배경 도구막대 `inert=true`·`aria-hidden=true`였다.1100px 미만의 정상 모달 동작을 테스트가 비모달 화면처럼 조회한 것이 원인이다.
 
 테스트만 보정했다. 알림·미저장 입력 보존·읽기 전용 검사는 유지하고, 좁은 모달과 접근성에서 제외된 배경을 명시적으로 확인한다. 편집창 캡처 뒤 정상 ‘편집 닫기’로 닫은 다음 기존 달력 모드·전체 필터의 `aria-pressed=true` assertion을 수행한다. 숨은 컨트롤 클릭·강제 클릭·재시도·timeout 완화·제품 코드 변경은 없다. 이 좁은 viewport 경로를 모든 플랫폼에서 실행해 회귀를 방지한다. focused 공유 E2E2개가35.5초에 통과했다(32.6초·1.8초). 이 보정의 Windows CI 재실행과 패키지 설치 결과는 별도 확인하며 Linux 재현을 Windows 실기 인수로 확대하지 않는다.
+
+### Windows CI 시작 오류 검사의 준비 경계 보정
+
+CI `43055632996`의 Windows E2E는87개 중86개가 통과했고, 기존 missing-renderer 검사는5초 뒤 `load-failed`가 `undefined`여서 실패했다. 당시 검사는 프로세스 spawn 직후부터5초를 계산하고 stdout/stderr를 버린 뒤 임시 프로필을 삭제했다. 실제 Windows 지연·실패 원인은 남은 증거만으로 확정할 수 없다.
+
+기준 `ad44f6cdb847e2d85d75889d6eab514fb7c276ca`에서 시험용 진입점이 실제 bootstrap을5.5초 늦추도록 해 동일한 `Expected -6, Received undefined` 실패를 재현했다. 제품 코드·기록기는 변경하지 않았다. 테스트는 기존 Electron fixture와 같은30초 launch 예산 안에 실제 `load-requested` 기록을 기다린 후, 기존5초 `load-failed=-6` assertion을 시작한다. 즉시 시작과 지연 시작을 모두 실행하며 `ui-ready` 부재·프로필 경로 비노출 검사를 유지한다. 전체 E2E240초·개별 테스트45초 제한과 오류 assertion5초는 유지했다.
+
+실패 원인을 다음 실행에서 확인할 수 있도록 성공·실패 모두 프로필 삭제 전에 마지막 시작 보고서·프로세스 상태·준비 관측 시각과 각65,536자 이내 stdout/stderr를 첨부한다. 로그의 임시 프로필 경로는 치환하고 spawn 오류·조기 종료도 기록하며, spawn 오류에서 발생하지 않을 수 있는 `exit` 대신 `close`로 정리를 기다린다. Linux x64·Node24.22.1·Electron45.2.1·sandbox 유지 Xvfb에서 focused 시작 E2E4개가11.1초에 통과했다. 지연 사례의 실제 `load-requested`는5,738ms, `load-failed=-6`은5,820ms였다. 새 회귀1개로 전체 대상은88개이며, 이 보정의 Windows CI와 전체 단일 실행은 아직 재실행하지 않았다.
