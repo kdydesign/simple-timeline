@@ -18,7 +18,7 @@ test.describe("scale and extreme years", () => {
       window.simpleTimeline.getSnapshot(),
     );
     expect(snapshot.ok && snapshot.data.schedules).toHaveLength(10000);
-    const slider = p.getByRole("slider", { name: "간트 가로 이동" });
+    const slider = p.getByRole("scrollbar", { name: "간트 가로 이동" });
     await slider.focus();
     await p.keyboard.press("Home");
     await expect(slider).toHaveAttribute("aria-valuetext", /0001-01/);

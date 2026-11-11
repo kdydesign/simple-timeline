@@ -1,3 +1,4 @@
+import {Switch} from './ui/switch';
 import {ReminderFields} from './ReminderFields';
 import {Button} from './ui/button';
 import {Input} from './ui/input';
@@ -177,7 +178,7 @@ export function EditorPanel({
                 참여자 이름 추가
               </Button>}
               <p className="help">{host?'참여자 입력 순서를 유지합니다.':'참여자는 호스트만 수정할 수 있습니다.'}</p>
-              {host&&<><label><input type="checkbox" checked={!!editor.draft.shared} disabled={editor.sharing==='host'} onChange={e=>patch({shared:e.target.checked})}/>{editor.sharing==='host'?'공유 프로젝트':'공유 프로젝트로 저장'}</label>
+              {host&&<><label className="sharing-switch" htmlFor="project-shared"><Switch id="project-shared" checked={!!editor.draft.shared} disabled={editor.sharing==='host'} onCheckedChange={shared=>patch({shared})}/>{editor.sharing==='host'?'공유 프로젝트':'공유 프로젝트로 저장'}</label>
               {editor.draft.shared&&editor.draft.participants.map((name,i)=><div key={i}><label htmlFor={`recipient-${i}`}>{name||`참여자 ${i+1}`} PC</label><Select id={`recipient-${i}`} label={`${name||`참여자 ${i+1}`} PC`} value={editor.draft.recipientIds?.[i]??''} onChange={id=>{const ids=[...(editor.draft.recipientIds??[])];ids[i]=id;patch({recipientIds:ids})}} options={(sharing?.devices??[]).filter(d=>!d.revoked).map(d=>({value:d.id,label:`${d.name} · ${d.ip}`}))}/></div>)}</>}
               {member&&<p className="help">공유 프로젝트 · 조회 전용</p>}
             </>

@@ -42,10 +42,10 @@ test('empty project guidance belongs to project metadata and month input keeps i
   await expect(p.locator('[data-row="project:2"] .gantt-name .empty-row')).toHaveText('일정 없음');
   await expect(p.locator('[data-row="project:2"] .gantt-track')).not.toContainText('일정 없음');
 });
-test('today and hovered dates remain distinguishable in both views and themes', async ({ desktop: d }) => {
+test('today and hovered dates remain distinguishable in both views', async ({ desktop: d }) => {
   const p = d.page; await p.setViewportSize({ width: 1440, height: 900 }); await november(p);
-  for (const theme of ['light', 'dark']) {
-    if (theme === 'dark') await p.getByRole('button', { name: '다크 모드', exact: true }).click();
+  for (const theme of ['dark']) {
+
     await p.getByRole('button', { name: '간트', exact: true }).click();
     const today = p.locator('[data-day="2026-11-04"]');
     await expect(today).toHaveAttribute('aria-current', 'date');

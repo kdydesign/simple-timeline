@@ -17,7 +17,7 @@ test.describe("two-mode hotfix", () => {
     const color = await bar.evaluate(
       (el) => getComputedStyle(el).backgroundColor,
     );
-    const slider = gantt.getByRole("slider");
+    const slider = gantt.getByRole("scrollbar",{name:"간트 가로 이동"});
     await slider.focus();
     await p.keyboard.press("Home");
     await p.keyboard.press("ArrowRight");

@@ -35,7 +35,7 @@ it('rejects invalid direct entry and preserves selection and the visible anchor'
 })
 it('shares selection across views, preserves it on dirty cancel, and does not jump on date creation', async () => {
   const u=userEvent.setup(); await ready(); enter('2026-11-30')
-  const slider=screen.getByRole('slider',{name:'간트 가로 이동'})
+  const slider=screen.getByRole('scrollbar',{name:'간트 가로 이동'})
   const before=(slider as HTMLInputElement).value
   fireEvent.click(document.querySelector('[data-day="2026-12-18"]')!)
   expect(slider).toHaveValue(before)
@@ -77,7 +77,7 @@ it('selects a clicked date even before there is a project to receive a new sched
 })
 it('does not navigate on blur of unchanged toolbar text after the viewport was moved',async()=>{
   await ready();enter('2026-11-30')
-  const slider=screen.getByRole('slider',{name:'간트 가로 이동'})
+  const slider=screen.getByRole('scrollbar',{name:'간트 가로 이동'})
   fireEvent.change(slider,{target:{value:'900'}})
   fireEvent.blur(screen.getByLabelText('선택 날짜'))
   expect(slider).toHaveValue('900')

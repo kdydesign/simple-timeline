@@ -85,3 +85,11 @@ it('shows member-intent red status and disabled sync while the first pairing sti
  expect(screen.getByRole('button',{name:/공유 연결 상태/})).toHaveClass('unavailable');
  expect(sync).toHaveAccessibleDescription('설정과 연결 승인이 필요합니다.');
 });
+
+it('uses an unsaved host-only sharing switch when adding a project',async()=>{
+ const f=sharingFixture({role:'host'}),u=userEvent.setup();render(<App api={memoryApi().api}/>);
+ const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await u.click(add);
+ const toggle=screen.getByRole('switch',{name:'공유 프로젝트로 저장'});
+ expect(toggle).not.toBeChecked();await u.click(toggle);expect(toggle).toBeChecked();
+ expect(f.api.saveProject).not.toHaveBeenCalled();
+});

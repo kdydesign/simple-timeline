@@ -184,8 +184,8 @@ test("real production package installs, works offline, updates and retains DB af
         page.getByRole("button", { name: name + " 편집", exact: true }),
       ).toBeVisible();
     }
-    // Preserve a real legacy preference payload as well as the SQLite content.
-    await page.getByRole('button', { name: '다크 모드', exact: true }).click();
+    // Preserve legacy light/collapse preferences; the new version migrates theme to dark.
+
     await page.getByRole('button', { name: '1.1.1 핫픽스 접기', exact: true }).click();
     const preferences = await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1'));
     expect(preferences).not.toBeNull();
@@ -224,7 +224,7 @@ test("real production package installs, works offline, updates and retains DB af
     console.log("Packaged Windows environment: "+JSON.stringify(system));
 
     page = await launch(installed, base.version);
-    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1')))!) ).toEqual({...JSON.parse(preferences!),dayWidth:28});
+    expect(JSON.parse((await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1')))!) ).toEqual({...JSON.parse(preferences!),theme:"dark",dayWidth:28});
     expect(await snapshot(page)).toEqual({...before,schedules:before.schedules.map(s=>({...s,reminder:{daysBefore:2,time:'09:00',start:false,end:false}}))});
     expect((await readFile(db)).readUInt32BE(60)).toBe(3);
     evidence.schemaVersion = 3;

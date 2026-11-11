@@ -34,7 +34,7 @@ test.describe('Planrail zoom and Space pan',()=>{
   test('anchors wheel zoom, persists it and pans a focused bar without schedule changes',async({desktop:d})=>{
     const p=d.page
     await choose(p,'2026-12-01')
-    const area=await p.locator('.gantt-date-heading').boundingBox(), slider=p.getByRole('slider')
+    const area=await p.locator('.gantt-date-heading').boundingBox(), slider=p.getByRole('scrollbar',{name:'간트 가로 이동'})
     const before=Number(await slider.inputValue()), pointer=100
     await p.mouse.move(area!.x+pointer,area!.y+40)
     await p.keyboard.down('Control');await p.mouse.wheel(0,-100);await p.keyboard.up('Control')

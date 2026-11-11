@@ -13,7 +13,7 @@ test.describe('calendar live preview',()=>{
   expect((await box(preview)).x).toBeCloseTo(target.x+3,0)
   await expect(p.locator('[data-segment="3"]')).toHaveClass(/drag-origin/)
   const data=await p.evaluate(()=>window.simpleTimeline.getSnapshot());expect(data.ok&&data.data.schedules.find(s=>s.id==='3')?.startDate).toBe('2026-12-18')
-  await p.screenshot({path:test.info().outputPath('calendar-preview-light.png')});
+  await p.screenshot({path:test.info().outputPath('calendar-preview-default.png')});
   await p.keyboard.press('Escape');await p.mouse.up();await expect(preview).toHaveCount(0)
   await expect(p.locator('[data-segment="3"]')).not.toHaveClass(/drag-origin/)
  })
@@ -35,7 +35,7 @@ test.describe('calendar overlap preview',()=>{
  test('overflow cannot hide preview and invalid drop never saves',async({desktop:d})=>{
   await d.page.evaluate(async()=>{for(let i=0;i<4;i++)await window.simpleTimeline.createSchedule({projectId:'1',name:'겹침 '+i,startDate:'2026-12-15',endDate:'2026-12-15'})})
   await d.restart();const p=d.page;await p.setViewportSize({width:1280,height:1000});await choose(p,'2026-12-01')
-  await p.getByRole('button',{name:'다크 모드',exact:true}).click();await p.getByRole('button',{name:'달력',exact:true}).click()
+  await p.getByRole('button',{name:'달력',exact:true}).click()
   const count=await p.locator('[data-focus="more:2026-12-15"]').textContent()
   const b=await box(p.locator('[data-segment="3"]')),target=await box(p.locator('[data-date="2026-12-15"]'))
   await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down();await p.mouse.move(target.x+target.width/2,target.y+55,{steps:5})

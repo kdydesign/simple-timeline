@@ -8,7 +8,7 @@ test.describe('uncertain drag recovery',()=>{
     const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p);await p.locator('[data-bar="3"]').click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
     await expect(p.locator('main')).not.toHaveAttribute('inert')
-    await p.getByRole('slider').focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
+    await p.getByRole('scrollbar',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     const b=await box(p.locator('[data-bar="3"] [data-resize="end"]'))
     await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down();await p.mouse.move(b.x+b.width/2+28,b.y+b.height/2,{steps:4});await p.mouse.up()
     await expect(p.getByRole('alert')).toContainText('결과')

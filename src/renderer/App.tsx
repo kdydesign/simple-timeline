@@ -412,7 +412,6 @@ export function App({
           selectedDate={selectedDate}
           mode={mode}
           onMode={setMode}
-          theme={preferences.theme} onTheme={preferences.toggleTheme}
           onToday={() => navigateDate(localDate(new Date()))}
           onDate={navigateDate}
           onInvalid={() =>

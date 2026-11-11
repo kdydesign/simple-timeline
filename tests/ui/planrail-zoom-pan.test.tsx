@@ -21,7 +21,7 @@ function setup(width=28, persisted=false) {
   const view=render(<View/>), area=view.container.querySelector('.gantt-date-heading')!, body=view.container.querySelector('.gantt-body')!
   vi.spyOn(area,'getBoundingClientRect').mockReturnValue({left:0,right:1000,top:0,bottom:60,width:1000,height:60} as DOMRect)
   vi.spyOn(body,'getBoundingClientRect').mockReturnValue({left:0,right:1260,top:60,bottom:500,width:1260,height:440} as DOMRect)
-  const slider=screen.getByRole('slider') as HTMLInputElement
+  const slider=screen.getByRole('scrollbar',{name:'간트 가로 이동'}) as HTMLInputElement
   const tick=()=>view.container.querySelector<HTMLElement>('[data-day="2026-12-18"]')!
   return {...view,area,body,slider,tick,edit,commit,add}
 }
@@ -120,4 +120,20 @@ it('resets a fractional zoom to 100% without moving the left date or changing da
  expect(screen.getByRole('button',{name:'간트 배율 100%로 초기화'})).toHaveTextContent('100%')
  expect(Number(v.slider.value)/28).toBeCloseTo(before,6)
  expect(v.commit).not.toHaveBeenCalled();expect(v.edit).not.toHaveBeenCalled();expect(v.add).not.toHaveBeenCalled()
+})
+
+it('zooms from the new slider without moving the left date and keeps horizontal keyboard independent',()=>{
+ const v=setup(),zoom=screen.getByRole('slider',{name:'간트 배율'}) as HTMLInputElement
+ const date=Number(v.slider.value)/28
+ expect(zoom.min).toBe('50');expect(zoom.max).toBe('300')
+ fireEvent.change(zoom,{target:{value:'150'}})
+ expect(v.tick().style.width).toBe('42px');expect(Number(v.slider.value)/42).toBeCloseTo(date,6)
+ fireEvent.keyDown(zoom,{key:'ArrowRight'});const width=parseFloat(v.tick().style.width)
+ expect(Number(v.slider.value)/width).toBeCloseTo(date,6)
+ const x=Number(v.slider.value);fireEvent.keyDown(v.slider,{key:'ArrowRight'});expect(Number(v.slider.value)).toBeCloseTo(x+width,6)
+ expect(v.slider).toHaveAttribute('aria-controls',v.body.id)
+})
+it('keeps the empty project message inside the available gantt body',()=>{
+ const v=render(<GanttView snapshot={{projects:[],schedules:[]}} selectedMonth={{year:2026,month:11}} onEditProject={()=>{}} onEditSchedule={()=>{}} onAddSchedule={()=>{}} />)
+ expect(v.container.querySelector('.gantt-body')).toContainElement(screen.getByText('프로젝트를 추가해 일정을 관리하세요'))
 })

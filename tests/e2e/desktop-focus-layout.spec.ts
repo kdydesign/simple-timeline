@@ -30,7 +30,7 @@ test('Gantt navigation stays at its panel bottom near the viewport edge in tall 
    expect(geometry.height-geometry.bottom).toBeGreaterThanOrEqual(0)
    expect(geometry.height-geometry.bottom).toBeLessThanOrEqual(24)
    expect(Math.abs(geometry.bottom-geometry.mainBottom)).toBeLessThanOrEqual(2)
-   await expect(p.getByRole('slider',{name:'간트 가로 이동'})).toBeVisible()
+   await expect(p.getByRole('scrollbar',{name:'간트 가로 이동'})).toBeVisible()
    await p.locator('.gantt-body').evaluate(el=>{el.scrollTop=el.scrollHeight})
    await expect(p.locator('[data-row="schedule:3"]')).toBeVisible()
    if(editor)await p.getByRole('button',{name:'편집 닫기',exact:true}).click()

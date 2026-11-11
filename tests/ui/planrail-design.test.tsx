@@ -5,11 +5,11 @@ import {App} from '../../src/renderer/App';
 import {memoryApi} from './fake-api';
 import {hotfix} from '../fixtures/timeline';
 import {ConfirmDialog} from '../../src/renderer/components/ConfirmDialog';
-it('opts in exactly seven header tooltip triggers and removes native titles',async()=>{
+it('opts in exactly six header tooltip triggers and removes native titles',async()=>{
  render(<App api={memoryApi(hotfix).api}/>);
  await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled());
  const triggers=Array.from(document.querySelectorAll('[data-slot="tooltip-trigger"]'));
- expect(triggers.map(e=>e.getAttribute('aria-label')).sort()).toEqual(['프로젝트 목록','간트','달력','오늘','다크 모드','프로젝트 추가','일정 추가'].sort());
+ expect(triggers.map(e=>e.getAttribute('aria-label')).sort()).toEqual(['프로젝트 목록','간트','달력','오늘','프로젝트 추가','일정 추가'].sort());
  expect(document.querySelectorAll('[title]')).toHaveLength(0);
 });
 it('uses the source based input and button in the actual editor',async()=>{

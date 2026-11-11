@@ -11,7 +11,7 @@ test.describe('approved improvements',()=>{
   test.use({seed:'hotfix'})
   test('theme and collapse survive restart without filtering calendar',async({desktop:d})=>{
     const p=d.page
-    await p.getByRole('button',{name:'다크 모드',exact:true}).click()
+
     await p.getByRole('button',{name:'1.1.1 핫픽스 접기',exact:true}).click()
     await expect(p.locator('[data-row="schedule:1"]')).toHaveCount(0)
     await d.restart()
@@ -87,7 +87,7 @@ test.describe('drag navigation and failure protection',()=>{
     const bar=p.locator('[data-bar="3"]');await bar.click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
     await expect(p.locator('main')).not.toHaveAttribute('inert')
-    await p.getByRole('slider',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
+    await p.getByRole('scrollbar',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     await d.app.evaluate(({ipcMain})=>{
       ipcMain.removeHandler('schedule:update')
       ipcMain.handle('schedule:update',()=>({ok:false,error:{code:'STORAGE_FULL',message:'드래그 저장 실패'}}))
@@ -133,7 +133,7 @@ test.describe('drag bounds and editor synchronization',()=>{
     const bar=p.locator('[data-bar="3"]');await bar.click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
     await expect(p.locator('main')).not.toHaveAttribute('inert')
-    await p.getByRole('slider',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
+    await p.getByRole('scrollbar',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     await drag(p,bar,28,'end')
     await expect(p.getByLabel('종료일',{exact:true})).toHaveValue('2026-12-19')
     await expect(p.locator('html')).toHaveAttribute('data-editor-dirty','false')

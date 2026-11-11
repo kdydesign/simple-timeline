@@ -11,9 +11,9 @@ const nativeWindowStates=process.platform!=='linux'||(()=>{
  }catch{return false}
 })();
 test.use({seed:'hotfix'});
-test('only the seven approved header controls show aligned shadcn tooltips',async({desktop:{page:p}})=>{
+test('only the six approved header controls show aligned shadcn tooltips',async({desktop:{page:p}})=>{
  await p.setViewportSize({width:1440,height:900});
- const allowed=['프로젝트 목록','간트','달력','오늘','다크 모드','프로젝트 추가','일정 추가'];
+ const allowed=['프로젝트 목록','간트','달력','오늘','프로젝트 추가','일정 추가'];
  for(const name of allowed){
   const button=p.locator('.toolbar').getByRole('button',{name,exact:true});
   await button.hover();
@@ -75,13 +75,13 @@ test('portalled controls retain real editor focus and nested Escape at a short v
  await end.scrollIntoViewIfNeeded();await end.click();const bounds=(await p.getByRole('group',{name:'종료일 달력',exact:true}).boundingBox())!;
  expect(bounds.y).toBeGreaterThanOrEqual(8);expect(bounds.y+bounds.height).toBeLessThanOrEqual(492);
 });
-test('approved material tokens distinguish selected dates and today in light and dark',async({desktop:{page:p}})=>{
- for(const theme of ['light','dark']){
+test('approved material tokens distinguish selected dates and today in dark mode',async({desktop:{page:p}})=>{
+ for(const theme of ['dark']){
   await expect(p.locator('.gantt-name small').first()).toHaveCSS('font-size','12px');
   await expect(p.locator('.gantt-bar').first()).toHaveCSS('font-size','13px');
   await expect(p.getByRole('button',{name:'간트 배율 100%로 초기화'})).toHaveCSS('font-size','12px');
-  if(theme==='dark')await p.getByRole('button',{name:'다크 모드',exact:true}).click();
-  const expected=theme==='light'?'#082c23':'#f1f2f3';
+
+  const expected='#f1f2f3';
   expect(await p.evaluate(()=>getComputedStyle(document.documentElement).getPropertyValue('--text').trim())).toBe(expected);
   const date=p.getByLabel('선택 날짜',{exact:true});await date.fill('2026-11-13');await date.press('Enter');
   await p.getByRole('button',{name:'달력',exact:true}).click();

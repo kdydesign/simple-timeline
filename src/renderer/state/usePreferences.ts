@@ -1,13 +1,13 @@
 import { useState, useLayoutEffect } from 'react'
 import {validDayWidth} from '../../visualization/ganttNavigation'
 const KEY = 'simple-timeline.preferences.v1'
-interface Preferences { theme: 'light' | 'dark'; collapsed: string[]; dayWidth:number }
+interface Preferences { theme: 'dark'; collapsed: string[]; dayWidth:number }
 function read(): Preferences {
   try {
     const value = JSON.parse(localStorage.getItem(KEY) ?? 'null')
-    return { dayWidth:validDayWidth(value?.dayWidth), theme: value?.theme === 'dark' ? 'dark' : 'light',
+    return { dayWidth:validDayWidth(value?.dayWidth), theme: 'dark',
       collapsed: Array.isArray(value?.collapsed) ? value.collapsed.filter((id: unknown) => typeof id === 'string') : [] }
-  } catch { return { dayWidth:28, theme:'light', collapsed:[] } }
+  } catch { return { dayWidth:28, theme:'dark', collapsed:[] } }
 }
 export function usePreferences() {
   const [value, setValue] = useState(read)
@@ -17,7 +17,6 @@ export function usePreferences() {
   }, [value])
   return { ...value,
     setDayWidth: (width:number) => setValue(v => ({...v,dayWidth:validDayWidth(width)})),
-    toggleTheme: () => setValue(v => ({...v, theme:v.theme === 'light' ? 'dark' : 'light'})),
     toggleProject: (id: string) => setValue(v => ({...v, collapsed: v.collapsed.includes(id) ? v.collapsed.filter(x => x !== id) : [...v.collapsed, id]})),
   }
 }

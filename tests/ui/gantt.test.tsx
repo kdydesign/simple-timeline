@@ -23,7 +23,7 @@ it("bounds date DOM and CSS coordinates even when moving to the last year", asyn
   expect(document.querySelector("[data-range]")).toHaveTextContent(
     "0001-01-01 — 9999-12-31",
   );
-  const slider = screen.getByRole("slider", { name: "간트 가로 이동" });
+  const slider = screen.getByRole("scrollbar", { name: "간트 가로 이동" });
   slider.focus();
   await u.keyboard("{End}");
   expect(slider).toHaveAttribute(
@@ -47,7 +47,7 @@ it("shows empty projects and selected-month union, and preserves anchors on rang
   );
   expect(document.querySelector("[data-range]")).toHaveTextContent("2026-11-01 — 2027-03-31");
   expect(screen.getByRole("button", { name: "일정 없음 편집" })).toBeVisible();
-  const slider = screen.getByRole("slider", { name: "간트 가로 이동" });
+  const slider = screen.getByRole("scrollbar", { name: "간트 가로 이동" });
   fireEvent.change(slider, { target: { value: "280" } });
   const changed = {
     ...hotfix,
@@ -107,7 +107,7 @@ it("clamps an anchor when deleting the last schedule without changing selected m
   expect(document.querySelector("[data-range]")).toHaveTextContent(
     "2027-03-01 — 2027-03-31",
   );
-  expect(screen.getByRole("slider", { name: "간트 가로 이동" })).toHaveValue(
+  expect(screen.getByRole("scrollbar", { name: "간트 가로 이동" })).toHaveValue(
     "0",
   );
   expect(
@@ -147,4 +147,11 @@ it("keeps the visible portion of a month heading readable at a viewport edge", (
   expect(
     parseFloat(december.style.left) + parseFloat(december.style.width),
   ).toBeLessThanOrEqual(1000);
+});
+it('marks visible weekend headings and row columns without changing schedule paint',()=>{
+ const {container}=render(<GanttView snapshot={hotfix} selectedMonth={{year:2026,month:11}} {...callbacks}/>);
+ expect(container.querySelector('[data-day="2026-11-07"]')).toHaveClass('nonworking-day');
+ expect(container.querySelector('[data-day="2026-11-06"]')).not.toHaveClass('nonworking-day');
+ expect(container.querySelector('[data-row="project:1"] [data-nonworking="2026-11-07"]')).toBeInTheDocument();
+ expect(container.querySelector('.gantt-tail [data-nonworking="2026-11-07"]')).toBeInTheDocument();
 });

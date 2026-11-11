@@ -9,9 +9,11 @@ test('custom titlebar keeps dirty close protection and isolated window API',asyn
  const before=await p.evaluate(()=>Object.keys(window.simpleTimeline));expect(before).toHaveLength(8);
  await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
  await p.getByLabel('프로젝트 이름',{exact:true}).fill('미저장 보호');
- await p.getByRole('button',{name:'창 닫기',exact:true}).click();
+ // Hidden windows may defer the renderer's input acknowledgement until restored.
+ const closing=p.getByRole('button',{name:'창 닫기',exact:true}).click().then(()=>null,error=>error);
  await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false);
  await d.app.evaluate(()=> (globalThis as any).desktopController.show());
+ expect(await closing).toBeNull();
  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('미저장 보호');
  await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().length)).toBe(1);
 });

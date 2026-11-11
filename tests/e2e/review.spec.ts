@@ -9,7 +9,7 @@ test.describe("final-review gantt interactions", () => {
     const input = p.getByLabel("선택 날짜", { exact: true });
     await input.fill("2026-11-01");
     await input.press("Enter");
-    const slider = p.getByRole("slider", { name: "간트 가로 이동" });
+    const slider = p.getByRole("scrollbar", { name: "간트 가로 이동" });
     await slider.focus();
     await p.keyboard.press("Home");
     await p.getByRole("button", { name: "QA 편집", exact: true }).focus();
@@ -28,7 +28,7 @@ test.describe("final-review gantt interactions", () => {
     const input = p.getByLabel("선택 날짜", { exact: true });
     await input.fill("2026-11-01");
     await input.press("Enter");
-    const slider = p.getByRole("slider", { name: "간트 가로 이동" });
+    const slider = p.getByRole("scrollbar", { name: "간트 가로 이동" });
     await slider.focus();
     await p.keyboard.press("Home");
     const bar = p.locator('[data-bar="1"]');

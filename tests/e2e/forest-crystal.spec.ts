@@ -2,7 +2,7 @@ import {test,expect} from './fixture';
 test.use({seed:'hotfix'});
 
 test('approved graphite glass fills square window corners with a single fine border and blue actions',async({desktop:{page:p}})=>{
- await p.getByRole('button',{name:'다크 모드',exact:true}).click();
+
  await p.locator('[data-focus="schedule-add"]').click();
  const paint=await p.evaluate(()=>{
   const css=(s:string)=>getComputedStyle(document.querySelector(s)!);
@@ -17,7 +17,7 @@ test('approved graphite glass fills square window corners with a single fine bor
  expect(paint.radius).toBe('0px');expect(paint.border).toBe('1px');expect(paint.shadow).toBe('none');
  expect(paint.before).toBe('none');expect(paint.after).toBe('none');
  expect(paint.root).toBe('rgba(32, 34, 37, 0.42)');
- expect(paint.panel).toBe('rgba(43, 46, 49, 0.56)');
+ expect(paint.panel).toBe('rgba(43, 46, 49, 0.5)');
  expect(paint.button).toBe('rgba(71, 127, 174, 0.3)');
  expect(paint.blur).toBe('blur(2px)');expect(paint.opacity).toBe('1');
  const box=(await p.locator('#root').boundingBox())!;
@@ -39,8 +39,8 @@ test('schedule paint and the composed panels transmit their backdrop',async({des
   expect(alpha).toBeGreaterThan(0);expect(alpha).toBeLessThan(255);
  }
  await p.getByRole('button',{name:'간트',exact:true}).click();
- for(const theme of ['light','dark']){
-  if(theme==='dark')await p.getByRole('button',{name:'다크 모드',exact:true}).click();
+ for(const theme of ['dark']){
+
   const b=(await p.locator('.gantt-track').first().boundingBox())!;
   const values:number[]=[];
   for(const color of ['#000000','#FFFFFF']){
@@ -73,11 +73,11 @@ test('project popup stays below its button with an accessible right-aligned icon
  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toBeFocused();
 });
 
-test('calendar shares toolbar glass without a second painted panel in both themes',async({desktop:{page:p}})=>{
+test('calendar shares toolbar glass without a second painted panel in dark mode',async({desktop:{page:p}})=>{
  await p.setViewportSize({width:1440,height:900});
  await p.getByRole('button',{name:'달력',exact:true}).click();
- for(const theme of ['light','dark']){
-  if(theme==='dark')await p.getByRole('button',{name:'다크 모드',exact:true}).click();
+ for(const theme of ['dark']){
+
   const surfaces=await p.evaluate(()=>{
    const css=(s:string)=>getComputedStyle(document.querySelector(s)!);
    return {toolbar:css('.toolbar').backgroundColor,main:css('main').backgroundColor,
@@ -102,9 +102,9 @@ test('calendar shares toolbar glass without a second painted panel in both theme
  }
 });
 
-test('invalid fields retain a visible error border in both themes',async({desktop:{page:p}})=>{
- for(const theme of ['light','dark']){
-  if(theme==='dark')await p.getByRole('button',{name:'다크 모드',exact:true}).click();
+test('invalid fields retain a visible error border in dark mode',async({desktop:{page:p}})=>{
+ for(const theme of ['dark']){
+
   await p.locator('[data-focus="schedule-add"]').click();
   const name=p.getByLabel('일정 이름',{exact:true});
   const normal=await name.evaluate(el=>getComputedStyle(el).borderColor);
@@ -115,7 +115,7 @@ test('invalid fields retain a visible error border in both themes',async({deskto
  }
 });
 
-test('schedule text remains legible for extreme project colors in both views and themes',async({desktop:d})=>{
+test('schedule text remains legible for extreme project colors in both views',async({desktop:d})=>{
  const p=d.page;
  await p.setViewportSize({width:1440,height:900});
  for(const color of ['#000000','#FFFFFF']){
@@ -125,9 +125,7 @@ test('schedule text remains legible for extreme project colors in both views and
    const r=await api.updateProject({id,name,participants,color});if(!r.ok)throw Error(r.error.message);
   },color);
   await p.reload();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-01');await p.getByLabel('선택 날짜',{exact:true}).press('Enter');
-  for(const theme of ['light','dark']){
-   if(await p.locator('html').getAttribute('data-theme')!==theme)
-    await p.getByRole('button',{name:theme==='light'?'라이트 모드':'다크 모드',exact:true}).click();
+  for(const theme of ['dark']){
    for(const mode of ['간트','달력']){
     await p.getByRole('button',{name:mode,exact:true}).click();
     const bar=p.locator(mode==='간트'?'[data-bar="1"]':'[data-segment="1"]').first();

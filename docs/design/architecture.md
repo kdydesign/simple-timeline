@@ -128,9 +128,9 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 | 일정 추가의 소속 프로젝트 | [EditorPanel](../../src/renderer/components/EditorPanel.tsx) → [앱 Select](../../src/renderer/components/Select.tsx) → [shadcn Select](../../src/renderer/components/ui/select.tsx) → Radix. 프로젝트 색상·이름·키보드 이동을 연결한다. 일정 편집에서는 읽기 전용이다. |
 | 날짜 입력·선택 달력 | [DatePicker](../../src/renderer/components/DatePicker.tsx)는 shadcn Input·Button·Popover·Select를 조합한다. 날짜 격자는 기존 [calendarGrid](../../src/visualization/calendar.ts)를 사용하며 shadcn Calendar/React DayPicker로 교체하지 않았다. 한국어·월요일 시작·0001~9999년 계약을 유지하기 위한 구성이다. |
 | 프로젝트 목록·날짜 팝오버 | [앱 Popover](../../src/renderer/components/Popover.tsx)가 shadcn/Radix 위치 계산과 로컬 portal container를 연결한다. 편집 패널 안의 중첩 선택기도 같은 DOM 포커스 범위를 유지한다. |
-| 아이콘 버튼·툴팁 | [IconButton](../../src/renderer/components/Icon.tsx)은 shadcn Button을 사용하고 tooltip을 명시적으로 켠 상단 7개 버튼만 Tooltip으로 감싼다. [App](../../src/renderer/App.tsx)의 Provider가 250ms 지연을 설정한다. |
+| 아이콘 버튼·툴팁 | [IconButton](../../src/renderer/components/Icon.tsx)은 shadcn Button을 사용하고 tooltip을 명시적으로 켠 상단 6개 버튼만 Tooltip으로 감싼다. [App](../../src/renderer/App.tsx)의 Provider가 250ms 지연을 설정한다. |
 | 삭제·변경 버리기 확인 | [ConfirmDialog](../../src/renderer/components/ConfirmDialog.tsx)는 shadcn AlertDialog를 사용한다. 제목 표시줄은 모달 중에도 클릭 가능하지만 본문 차단과 확인창 포커스 보호는 유지한다. 실제 앱 종료의 확인은 main의 Electron 대화상자다. |
-| 시작일·종료일 알림 | [ReminderFields](../../src/renderer/components/ReminderFields.tsx) → [로컬 Switch](../../src/renderer/components/ui/switch.tsx) → 기존 `radix-ui`의 Switch. shadcn 원문 복사 없이 작성한 래퍼이며 별도 의존성을 추가하지 않는다. 두 알림 값과 저장 흐름은 유지한다. |
+| 시작일·종료일 알림·공유 프로젝트로 저장 | [ReminderFields](../../src/renderer/components/ReminderFields.tsx) → [로컬 Switch](../../src/renderer/components/ui/switch.tsx) → 기존 `radix-ui`의 Switch. shadcn 원문 복사 없이 작성한 래퍼이며 별도 의존성을 추가하지 않는다. 두 알림 값과 저장 흐름은 유지한다. |
 
 스타일은 [App](../../src/renderer/App.tsx)에서 `shadcn.css` → `styles.css` → `flat-glass.css` → `planrail.css` → `forest-crystal.css` 순서로 가져온다.
 [Tailwind 토큰](../../src/renderer/shadcn.css)은 theme/utilities만 사용하며 preflight는 적용하지 않는다.
@@ -138,7 +138,7 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 [Planrail 상태·동작 스타일](../../src/renderer/planrail.css), [Forest Crystal 재질](../../src/renderer/forest-crystal.css)을 적용한다.
 팝오버를 포함하는 패널의 블러는 별도 가상 요소에 둔다. 조상에 직접 `backdrop-filter`를 적용하면 fixed 포털의 기준 좌표가 바뀔 수 있다.
 기존 전역 규칙과 Tailwind 규칙이 함께 있으므로
-공통 스타일 수정 시 라이트/다크, 간트/달력, 편집 패널·중첩 팝오버를 함께 확인한다.
+0.6.5는 다크 전용이며 테마 전환 버튼을 제공하지 않는다. 공통 스타일 수정 시 간트/달력, 편집 패널·중첩 팝오버를 함께 확인한다.
 회귀 위치와 실제 검증 범위는 [검증 안내](../harness/validation.md)를 따른다.
 
 ## 근거·승인·현재 검증

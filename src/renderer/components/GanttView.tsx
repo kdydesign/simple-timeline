@@ -1,5 +1,6 @@
 import {
   useMemo,
+  useId,
   useEffect,
   useState,
   useRef,
@@ -24,6 +25,8 @@ import {
   indexSnapshot,
   scheduleDescription,
 } from "../../visualization/presentation";
+import { isWeekend } from "../../visualization/weekends";
+import { GanttNavigation } from "./GanttNavigation";
 export interface GanttHandle {
   focusItem(key: string): boolean;
 }
@@ -67,6 +70,7 @@ export function GanttView({
   ref,
 }: GanttProps) {
   const root = useRef<HTMLElement>(null);
+  const bodyId = useId();
   const now = new Date();
   const today = `${String(now.getFullYear()).padStart(4, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const todayOrdinal = toOrdinal(today), selectedOrdinal = selectedDate ? toOrdinal(selectedDate) : null;
@@ -307,7 +311,10 @@ export function GanttView({
   const dates = Array.from({ length: last - first }, (_, i) => ({
     i: i + first,
     date: fromOrdinal(start + i + first),
+    nonworking: isWeekend(start + i + first),
   }));
+  const nonworkingColumns = dates.filter(d => d.nonworking && (d.i+1)*P>x && d.i*P<x+size.width).map(d =>
+    <span key={d.date} aria-hidden="true" data-nonworking={d.date} className="date-highlight nonworking" style={{left:d.i*P-x,width:P}} />);
   const months: { label: string; left: number; width: number }[] = [];
   for (const d of dates) {
     const label = d.date.slice(0, 7),
@@ -381,7 +388,7 @@ export function GanttView({
               onClick={() => onAddDate?.(d.date)}
               aria-pressed={d.date === selectedDate}
               aria-current={d.date === today ? "date" : undefined}
-              className={"day-tick" + (hoveredDate === start + d.i ? " date-hovered" : "")}
+              className={"day-tick" + (d.nonworking ? " nonworking-day" : "") + (hoveredDate === start + d.i ? " date-hovered" : "")}
               data-day={d.date}
               data-focus={`date:${d.date}`}
               key={d.date}
@@ -393,11 +400,14 @@ export function GanttView({
         </div>
       </div>
       <div
-        className="gantt-body"
+        id={bodyId}
+        className={"gantt-body" + (!rows.length ? " is-empty" : "")}
         ref={scroller}
         onScroll={(e) => setTop(e.currentTarget.scrollTop)}
       >
-        <div className="gantt-spacer" style={{ height: prefix.at(-1) }}>
+        {!rows.length && <div className="empty"><h3>프로젝트를 추가해 일정을 관리하세요</h3></div>}
+        <div className="gantt-spacer" style={{ height: Math.max(size.height, prefix.at(-1)!) }}>
+          <div className="gantt-tail" aria-hidden="true" style={{top:prefix.at(-1),height:Math.max(0,size.height-prefix.at(-1)!),width:size.width}}>{nonworkingColumns}</div>
           {[...visible]
             .sort((a, b) => a - b)
             .map((i) => {
@@ -489,6 +499,7 @@ export function GanttView({
                     }}
                     style={{ backgroundPositionX: -x % P, backgroundSize: `${P}px 100%` }}
                   >
+                    {nonworkingColumns}
                     {todayOrdinal >= start && todayOrdinal < start + days && (todayOrdinal-start+1)*P > x && (todayOrdinal-start)*P < x+size.width && (
                       <span aria-hidden="true" className="date-highlight today" style={{ left: (todayOrdinal - start) * P - x, width: P }} />
                     )}
@@ -525,28 +536,11 @@ export function GanttView({
             })}
         </div>
       </div>
-      {!rows.length && (
-        <div className="empty">
-          <h3>프로젝트를 추가해 일정을 관리하세요</h3>
-        </div>
-      )}
-      <div className="gantt-navigation" onKeyDown={keyboard}>
-        {active&&<button type="button" className="zoom-percent" aria-label="간트 배율 100%로 초기화" disabled={!onDayWidth||navigation.panning} onClick={()=>{
-          if(drag.isActive()||navigation.panning||!onDayWidth)return;
-          move(x/P*28,28);onDayWidth(28);
-        }}>{Math.round(P/28*100)}%</button>}
-        <input
-          type="range"
-          aria-label="간트 가로 이동"
-          aria-describedby="gantt-help"
-          min={min}
-          max={max}
-          step="any"
-          value={x}
-          onChange={(e) => move(Number(e.target.value))}
-          aria-valuetext={`${fromOrdinal(Math.min(start + days - 1, Math.max(start, start + Math.floor(x / P))))} — ${fromOrdinal(Math.max(start, Math.min(start + days - 1, start + Math.floor((x + size.width - 1) / P))))}`}
-        />
-      </div>
+      <GanttNavigation bodyId={bodyId} offset={x} min={min} max={max} viewport={size.width} dayWidth={P}
+        zoomDisabled={!onDayWidth || navigation.panning || !!drag.preview}
+        onMove={move} onHorizontalKey={keyboard}
+        onZoom={width => {if(drag.isActive() || navigation.panning || !onDayWidth)return;move(x/P*width,width);onDayWidth(width)}}
+        rangeText={`${fromOrdinal(Math.min(start + days - 1, Math.max(start, start + Math.floor(x / P))))} — ${fromOrdinal(Math.max(start, Math.min(start + days - 1, start + Math.floor((x + size.width - 1) / P))))}`}/>
     </section>
   );
 }

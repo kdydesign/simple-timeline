@@ -11,13 +11,15 @@ async function ready() {
   await waitFor(() => expect(screen.getByRole('button', {name:'프로젝트 추가'})).toBeEnabled())
   return {m, ...view}
 }
-it('starts light and persists a manual dark theme on remount', async () => {
-  const u=userEvent.setup(), v=await ready()
-  expect(document.documentElement.dataset.theme).toBe('light')
-  await u.click(screen.getByRole('button',{name:'다크 모드'}))
+it('forces dark on first mount and remount while preserving saved zoom and collapsed projects', async () => {
+  localStorage.setItem('simple-timeline.preferences.v1',JSON.stringify({theme:'light',dayWidth:42,collapsed:['1']}))
+  const v=await ready()
   expect(document.documentElement.dataset.theme).toBe('dark')
+  expect(screen.queryByRole('button',{name:/^(다크|라이트) 모드$/})).not.toBeInTheDocument()
+  expect(JSON.parse(localStorage.getItem('simple-timeline.preferences.v1')!)).toMatchObject({theme:'dark',dayWidth:42,collapsed:['1']})
   v.unmount(); await ready()
   expect(document.documentElement.dataset.theme).toBe('dark')
+  expect(screen.getByRole('button',{name:'1.1.1 핫픽스 펼치기'})).toBeInTheDocument()
 })
 it('opens a date picker and supports year 0001 without auto-saving', async () => {
   const u=userEvent.setup(); await ready()

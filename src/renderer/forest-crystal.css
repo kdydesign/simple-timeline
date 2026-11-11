@@ -43,9 +43,10 @@
   --hover: #b4c8dc26;
   --accent: #8bc1eb;
   --accent-foreground: #f1f6fc;
-  --glass: rgba(43, 46, 49, .56);
-  --popup-glass: rgba(43, 46, 49, .84);
+  --glass: rgba(43, 46, 49, .5);
+  --popup-glass: rgba(43, 46, 49, .5);
   --control: rgba(110, 115, 120, .3);
+  --list-control: rgba(110, 115, 120, .6);
   --control-border: #b4bfc449;
   --selected-control: rgba(71, 127, 174, .3);
   --selected-border: #8bc1eb;
@@ -81,7 +82,7 @@ html, body { background: transparent; }
 .titlebar .brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .window-controls { gap: 4px; }
 .window-controls .icon-button { width: 40px; height: 34px; align-self: center; border-radius: 9px; }
-.app-shell { margin: 6px 10px 0; }
+.app-shell { margin: 6px 14px 0; }
 .toolbar, .workspace > main, .editor {
   position: relative;
   isolation: isolate;
@@ -141,12 +142,12 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 }
 .month-input .date-input input { width: 132px; }
 .editor input[aria-invalid="true"] { border-color: var(--danger-border); }
-.workspace { gap: 18px; padding: 18px 10px 6px; }
+.workspace { gap: 18px; padding: 14px 14px 14px; }
 .workspace > main { --workspace-padding: 0px; padding: 0; }
 .gantt, .calendar { background: transparent; border: 0; border-radius: 0; }
 .gantt > .view-heading { padding: 12px 18px; min-height: 42px; border-bottom: 0; }
 .gantt-heading { background: transparent; border-bottom: 1px solid var(--border); }
-.gantt-name-heading { color: var(--text); padding-inline: 18px; }
+.gantt-name-heading { color: var(--text); padding: 0 18px; display: flex; align-items: center; justify-content: center; }
 .month-tick { font-size: 13px; font-weight: 600; color: var(--text); }
 .gantt-row { border-bottom-color: color-mix(in srgb, var(--border) 60%, transparent); }
 .gantt-name { background: transparent; }
@@ -196,7 +197,7 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 .project-popup { padding: 14px 10px 10px; }
 .project-popup-heading { padding: 0 4px 12px; }
 .project-popup-heading h2 { font-size: 15px; font-weight: 700; }
-.project-list-row { align-items: center; padding: 10px 8px; margin-bottom: 5px; border: 1px solid #ffffff40; border-radius: 11px; background: var(--control); }
+.project-list-row { align-items: center; padding: 10px 8px; margin-bottom: 5px; border: 1px solid #ffffff40; border-radius: 11px; background: var(--list-control); }
 .project-list-row > .color-dot { margin-top: 0; }
 .project-list-name strong { font-size: 13px; font-weight: 650; }
 .project-list-name small { font-size: 11px; margin-top: 2px; }
@@ -223,8 +224,8 @@ button:disabled { box-shadow: none; }
   .workspace { gap: 12px; }
 }
 @media (max-width: 850px) {
-  .app-shell { margin-inline: 6px; }
-  .workspace { padding: 12px 6px 4px; }
+  .app-shell { margin-inline: 14px; }
+  .workspace { padding: 14px; }
   .toolbar { gap: 5px; }
   .toolbar .mode-switch { gap: 3px; }
   .toolbar .mode-switch .icon-button { width: 30px; }
@@ -237,4 +238,64 @@ button:disabled { box-shadow: none; }
   #root, .toolbar, .workspace > main, .editor, .floating-popover, .select-popover { background: Canvas; border-color: CanvasText; box-shadow: none; }
   #root::before, #root::after, .toolbar::before, .workspace > main::before, .editor::before, .floating-popover::before, .select-popover::before { display: none; }
   button.primary, .mode-switch button[aria-pressed="true"], .sharing-filter button[aria-pressed="true"] { border: 2px solid Highlight; }
+}
+
+.project-list-name:hover:enabled { background: transparent; }
+.sharing-switch { display: flex; align-items: center; gap: 10px; }
+
+/* Navigation keeps its own height; revealing scroll thumbs never shifts content. */
+.gantt-navigation { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 4fr); gap: 16px; }
+.gantt-zoom, .gantt-horizontal { display: flex; align-items: center; min-width: 0; gap: 8px; }
+.gantt-navigation input { width: 100%; min-width: 0; margin: 0; }
+.gantt-zoom .zoom-percent { padding: 4px 0; min-width: 40px; font-variant-numeric: tabular-nums; }
+.gantt-navigation .zoom-slider { height: 24px; padding: 0; border: 0; box-shadow: none; background: transparent; cursor: pointer; }
+.gantt-body.is-empty { position: relative; }
+.gantt-body.is-empty > .empty { position: absolute; inset: 0; display: grid; place-content: center; padding: 20px; text-align: center; }
+.gantt-body.is-empty > .empty h3 { margin: 0; font-size: 15px; font-weight: 500; }
+
+@property --scroll-thumb-color {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: transparent;
+}
+:where(main, .gantt-body, .calendar, .editor, .project-scroll, .floating-popover, .select-popover,
+  .sharing-settings-scroll, .day-dialog, .confirm, .gantt-horizontal) {
+  --scroll-thumb-color: transparent;
+  transition: --scroll-thumb-color 180ms ease;
+}
+:where(main, .gantt-body, .calendar, .editor, .project-scroll, .floating-popover, .select-popover,
+  .sharing-settings-scroll, .day-dialog, .confirm, .gantt-horizontal):is(:hover, :focus-within),
+.gantt:is(:hover, :focus-within) .gantt-horizontal { --scroll-thumb-color: rgba(180, 196, 210, .42); }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-track, *::-webkit-scrollbar-corner { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--scroll-thumb-color, transparent); border: 2px solid transparent; background-clip: padding-box; border-radius: 999px; }
+*::-webkit-scrollbar-thumb:active { background-color: rgba(180, 196, 210, .68); }
+*::-webkit-scrollbar-button { display: none; }
+.gantt-navigation .horizontal-scrollbar {
+  appearance: none; height: 24px; padding: 0; border: 0; border-radius: 0;
+  background: transparent; box-shadow: none; cursor: pointer;
+}
+.horizontal-scrollbar::-webkit-slider-runnable-track { height: 6px; background: transparent; }
+.horizontal-scrollbar::-webkit-slider-thumb {
+  appearance: none; width: clamp(24px, var(--scroll-thumb-width), 100%); height: 6px;
+  border: 0; border-radius: 999px; background: var(--scroll-thumb-color); box-shadow: none;
+}
+.horizontal-scrollbar:active::-webkit-slider-thumb { background: rgba(180, 196, 210, .68); }
+@media (prefers-reduced-motion: reduce) {
+  :where(main, .gantt-body, .calendar, .editor, .project-scroll, .floating-popover, .select-popover,
+    .sharing-settings-scroll, .day-dialog, .confirm, .gantt-horizontal) { transition: none; }
+}
+@media (forced-colors: active) {
+  *::-webkit-scrollbar-thumb { background-color: ButtonText; }
+  .horizontal-scrollbar::-webkit-slider-thumb { background: ButtonText; }
+}
+
+:root { --nonworking-day: rgba(236, 112, 126, .09); }
+.day-tick.nonworking-day { --date-base: var(--nonworking-day); background-color: var(--date-base); }
+.day-tick.nonworking-day[aria-current="date"] { --date-base: var(--today); }
+.day-tick.nonworking-day[aria-pressed="true"] { --date-base: var(--selected-date); }
+.date-highlight.nonworking { background: var(--nonworking-day); }
+.gantt-tail { position: absolute; right: 0; overflow: clip; pointer-events: none; }
+@media (forced-colors: active) {
+  .day-tick.nonworking-day { text-decoration: underline; }
 }
