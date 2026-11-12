@@ -117,6 +117,17 @@ FunctionEnd
 !macroend
 
 !macro customCheckAppRunning
+  # A pwsh parent exports incompatible modules to Windows PowerShell. Clear only
+  # module discovery for this installer and its legacy-uninstaller children.
+  ReadEnvStr $0 "PSModulePath"
+  ClearErrors
+  ${If} $0 != ""
+    System::Call 'kernel32::SetEnvironmentVariableW(w "PSModulePath", p 0) i.r0'
+    ${If} $0 == 0
+      SetErrorLevel 2
+      Quit
+    ${EndIf}
+  ${EndIf}
   InitPluginsDir
   File /oname=$PLUGINSDIR\planrail-install-gate.ps1 "${PROJECT_DIR}\resources\windows\install-gate.ps1"
   System::Call 'kernel32::SetEnvironmentVariableW(w "PLANRAIL_INSTALL_TARGET", w "$INSTDIR\${APP_EXECUTABLE_FILENAME}") i.r0'

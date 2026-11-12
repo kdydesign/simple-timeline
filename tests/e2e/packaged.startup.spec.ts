@@ -5,9 +5,10 @@ import {existsSync} from 'node:fs'
 import {readFile,writeFile,mkdir,readdir,rm} from 'node:fs/promises'
 import {join,resolve} from 'node:path'
 import {createHash} from 'node:crypto'
+import {windowsPowerShellEnvironment} from '../../src/main/windows-login-startup'
 const powershell=join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe')
 const envFor=(extra:NodeJS.ProcessEnv={}):Record<string,string>=>Object.fromEntries(Object.entries({...process.env,...extra}).filter((entry):entry is [string,string]=>typeof entry[1]==='string'&&entry[0]!=='ELECTRON_RUN_AS_NODE'))
-const command=(script:string,extra:NodeJS.ProcessEnv={})=>execFileSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',script],{env:envFor(extra),encoding:'utf8',timeout:30000}).trim()
+const command=(script:string,extra:NodeJS.ProcessEnv={})=>execFileSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',script],{env:windowsPowerShellEnvironment(envFor(extra)),encoding:'utf8',timeout:30000}).trim()
 const waitExit=(child:ReturnType<typeof spawn>)=>new Promise<number|null>((done,reject)=>{const timer=setTimeout(()=>reject(Error('Child exit timeout')),15000);child.once('error',reject);child.once('exit',code=>{clearTimeout(timer);done(code)})})
 test('actual0.8.0 manual migration and assisted startup choices preserve OS disable, committed data, update and uninstall contracts',async({},info)=>{
  test.setTimeout(360000)
@@ -18,11 +19,14 @@ test('actual0.8.0 manual migration and assisted startup choices preserve OS disa
  expect(legacy.sourceSha).toBe('bde6edf63b8f16f6be4943f864aca2e585339245');expect(legacy.version).toBe('0.8.0')
  const directory=join(process.env.RUNNER_TEMP!,'Planrail startup path 🛤 '+Date.now()),exe=join(directory,'Planrail.exe'),installer=resolve('release',base.installer)
  const startupSource=await readFile('resources/windows/login-startup.ps1','utf8'),gateSource=await readFile('resources/windows/install-gate.ps1','utf8')
+ const foreignModules=execFileSync('pwsh.exe',['-NoProfile','-NonInteractive','-Command','[IO.Path]::Combine($PSHOME,"Modules")'],{env:envFor(),encoding:'utf8',timeout:30000}).trim()
+ const contaminated=(extra:NodeJS.ProcessEnv={})=>({...windowsPowerShellEnvironment(envFor(extra)),PSModulePath:foreignModules})
  const startup=(action:string)=>JSON.parse(command(startupSource,{PLANRAIL_STARTUP_ACTION:action,PLANRAIL_STARTUP_TARGET:exe}))
- const gate=(manual:boolean)=>spawnSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',gateSource],{env:envFor({PLANRAIL_INSTALL_TARGET:exe,PLANRAIL_INSTALL_MANUAL:manual?'1':'0'}),encoding:'utf8',timeout:55000})
- const silent=(file=installer,args:string[]=[])=>{const result=spawnSync(file,['/S',...args,'/D='+directory],{timeout:90000,encoding:'utf8'});expect(result.status,result.stderr).toBe(0)}
+ const gate=(manual:boolean)=>spawnSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',gateSource],{env:contaminated({PLANRAIL_INSTALL_TARGET:exe,PLANRAIL_INSTALL_MANUAL:manual?'1':'0'}),encoding:'utf8',timeout:55000})
+ const silent=(file=installer,args:string[]=[])=>{const result=spawnSync(file,['/S',...args,'/D='+directory],{env:windowsPowerShellEnvironment(envFor()),timeout:90000,encoding:'utf8'});expect(result.status,result.stderr).toBe(0)}
  const interactive=(startup:'On'|'Off'|'Keep'='Keep',expectFailure=false)=>JSON.parse(execFileSync('pwsh.exe',['-NoProfile','-NonInteractive','-File',resolve('scripts/testing/windows-installer-ui.ps1'),'-Installer',installer,'-Directory',directory,'-Startup',startup,...(expectFailure?['-ExpectFailure']:[])],{encoding:'utf8',timeout:140000}))
- const evidence:Record<string,unknown>={sourceSha:base.sourceSha,legacySourceSha:legacy.sourceSha,legacyInstallerSha256:legacy.sha256,executionPolicy:command('Get-ExecutionPolicy'),windowsPowerShell:command('$PSVersionTable.PSVersion.ToString()'),windowsAnsiCodePage:command('[Text.Encoding]::Default.CodePage'),unicodeInstallationPath:directory,cases:[]}
+ const windowsVersion=command('$PSVersionTable.PSVersion.ToString()');expect(windowsVersion).toMatch(/^5\.1\./)
+ const evidence:Record<string,unknown>={sourceSha:base.sourceSha,legacySourceSha:legacy.sourceSha,legacyInstallerSha256:legacy.sha256,executionPolicy:command('Get-ExecutionPolicy'),windowsPowerShell:windowsVersion,inheritedModulePath:process.env.PSModulePath??null,foreignModules,nativeModuleCommands:JSON.parse(command('Get-Command Add-Type,Get-CimInstance,Get-ExecutionPolicy,Get-Acl,Set-Acl,ConvertTo-Json | Select-Object Name,ModuleName,@{Name="ModulePath";Expression={$_.Module.Path}} | ConvertTo-Json -Compress')),windowsAnsiCodePage:command('[Text.Encoding]::Default.CodePage'),unicodeInstallationPath:directory,cases:[]}
  const cases=evidence.cases as unknown[]
  let instance:ElectronApplication|undefined,restoreAcl:string|undefined
  const launch=async(path=exe,args:string[]=[])=>{instance=await _electron.launch({chromiumSandbox:true,executablePath:path,args,env:envFor(),timeout:30000});const page=await instance.firstWindow();await page.getByRole('button',{name:'프로젝트 추가',exact:true}).waitFor();return page}
@@ -31,6 +35,10 @@ test('actual0.8.0 manual migration and assisted startup choices preserve OS disa
  const uninstall=async()=>{const file=(await readdir(directory)).find(p=>p.startsWith('Uninstall')&&p.endsWith('.exe'));if(!file)throw Error('Uninstaller missing');const result=spawnSync(join(directory,file),['/S'],{timeout:90000,encoding:'utf8'});expect(result.status,result.stderr).toBe(0);await expect.poll(()=>existsSync(exe),{timeout:30000}).toBe(false)}
  await mkdir(info.outputDir,{recursive:true})
  try{
+  // Actual WindowsPS5 helpers must resolve native modules even under a pwsh7 parent.
+  const contaminatedRead=spawnSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',startupSource],{env:contaminated({PLANRAIL_STARTUP_ACTION:'Read',PLANRAIL_STARTUP_TARGET:exe}),encoding:'utf8',timeout:30000})
+  expect(contaminatedRead.status,contaminatedRead.stderr).toBe(0)
+  expect(JSON.parse(contaminatedRead.stdout)).toMatchObject({selected:null,registered:false});cases.push('WindowsPS native modules under inherited pwsh module path')
   expect(startup('Read')).toMatchObject({selected:null,registered:false})
   silent(resolve('artifacts/windows-legacy-startup',legacy.installer));expect(startup('Read').registered).toBe(false)
   // A real old binary from a different path remains alive; helper only scopes its target.

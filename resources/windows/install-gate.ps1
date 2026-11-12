@@ -1,6 +1,8 @@
 # Only the approved 0.8.0 legacy version may be terminated.
 # Runs before NSIS replaces any installed file. No privilege or policy changes.
 param([string]$Target=$env:PLANRAIL_INSTALL_TARGET,[switch]$Manual)
+# A pwsh parent can export modules for a different engine. Use this engine's built-ins.
+$env:PSModulePath=[IO.Path]::Combine($PSHOME,'Modules')
 $ErrorActionPreference='Stop'
 if ($env:PLANRAIL_INSTALL_MANUAL -eq '1') { $Manual=$true }
 try {

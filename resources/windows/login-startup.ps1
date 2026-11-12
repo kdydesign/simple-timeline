@@ -4,6 +4,8 @@ param(
   [string]$Target = $env:PLANRAIL_STARTUP_TARGET,
   [switch]$InstallerState
 )
+# A pwsh parent can export modules for a different engine. Use this engine's built-ins.
+$env:PSModulePath=[IO.Path]::Combine($PSHOME,'Modules')
 $ErrorActionPreference = 'Stop'
 try {
   if (-not [IO.Path]::IsPathRooted($Target)) { throw 'Absolute executable required' }
