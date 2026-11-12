@@ -36,8 +36,8 @@ UPDATE: border `1px solid #f92d2de0`, radius `5px`, padding `0px 6px`, font `9px
 - [x] 범위가 제한된 공통 삭제 재질·enabled hover와 UPDATE 정확한 값 반영.
 - [x] 버전과 기존 release 기대값을 0.8.1로 변경. 의존성 변경 없음.
 - [x] 별도 임시 프로필 화면과 computed style로 기본·hover·disabled 확인. 단순 CSS 값을 반복하는 새 테스트는 추가하지 않는다.
-- [ ] `xvfb-run -a npm run verify:app`, `node scripts/harness/run.mjs verify`, `git diff --check` 통과 확인. 실제 Windows는 CI와 사용자 환경을 구분.
-- [ ] 독립 변경 검토, 결과 문서화, main 커밋·push.
+- [x] `xvfb-run -a npm run verify:app`, `node scripts/harness/run.mjs verify`, `git diff --check` 통과 확인. 실제 Windows는 CI와 사용자 환경을 구분.
+- [x] 독립 변경 검토, 결과 문서화, main 커밋·push.
 
 ### Task 2: Windows 자동 실행과 설치 종료 통합
 

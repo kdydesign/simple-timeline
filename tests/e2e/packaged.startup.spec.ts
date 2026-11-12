@@ -24,11 +24,12 @@ test('actual0.8.0 manual migration and assisted startup choices preserve OS disa
  const startup=(action:string)=>JSON.parse(command(startupSource,{PLANRAIL_STARTUP_ACTION:action,PLANRAIL_STARTUP_TARGET:exe}))
  const gate=(manual:boolean)=>spawnSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',gateSource],{env:contaminated({PLANRAIL_INSTALL_TARGET:exe,PLANRAIL_INSTALL_MANUAL:manual?'1':'0'}),encoding:'utf8',timeout:55000})
  const silent=(file=installer,args:string[]=[])=>{const result=spawnSync(file,['/S',...args,'/D='+directory],{env:windowsPowerShellEnvironment(envFor()),timeout:90000,encoding:'utf8'});expect(result.status,result.stderr).toBe(0)}
- const interactive=(startup:'On'|'Off'|'Keep'='Keep',expectFailure=false)=>JSON.parse(execFileSync('pwsh.exe',['-NoProfile','-NonInteractive','-File',resolve('scripts/testing/windows-installer-ui.ps1'),'-Installer',installer,'-Directory',directory,'-Startup',startup,...(expectFailure?['-ExpectFailure']:[])],{encoding:'utf8',timeout:140000}))
+ let interactiveAttempt=0
+ const interactive=(startup:'On'|'Off'|'Keep'='Keep',expectFailure=false)=>JSON.parse(execFileSync('pwsh.exe',['-NoProfile','-NonInteractive','-File',resolve('scripts/testing/windows-installer-ui.ps1'),'-Installer',installer,'-Directory',directory,'-Startup',startup,'-EvidenceDirectory',info.outputPath('installer-ui-'+(++interactiveAttempt)),...(expectFailure?['-ExpectFailure']:[])],{encoding:'utf8',timeout:140000}))
  const windowsVersion=command('$PSVersionTable.PSVersion.ToString()');expect(windowsVersion).toMatch(/^5\.1\./)
  const evidence:Record<string,unknown>={sourceSha:base.sourceSha,legacySourceSha:legacy.sourceSha,legacyInstallerSha256:legacy.sha256,executionPolicy:command('Get-ExecutionPolicy'),windowsPowerShell:windowsVersion,inheritedModulePath:process.env.PSModulePath??null,foreignModules,nativeModuleCommands:JSON.parse(command('Get-Command Add-Type,Get-CimInstance,Get-ExecutionPolicy,Get-Acl,Set-Acl,ConvertTo-Json | Select-Object Name,ModuleName,@{Name="ModulePath";Expression={$_.Module.Path}} | ConvertTo-Json -Compress')),windowsAnsiCodePage:command('[Text.Encoding]::Default.CodePage'),unicodeInstallationPath:directory,cases:[]}
  const cases=evidence.cases as unknown[]
- let instance:ElectronApplication|undefined,restoreAcl:string|undefined
+ let instance:ElectronApplication|undefined,restoreAcl:string|undefined,hadFailure=false
  const launch=async(path=exe,args:string[]=[])=>{instance=await _electron.launch({chromiumSandbox:true,executablePath:path,args,env:envFor(),timeout:30000});const page=await instance.firstWindow();await page.getByRole('button',{name:'프로젝트 추가',exact:true}).waitFor();return page}
  const close=async()=>{if(!instance)return;await instance.evaluate(({app})=>app.exit(0)).catch(()=>{});await instance.close().catch(()=>{});instance=undefined}
  const snapshot=async()=>{const page=await instance!.firstWindow();return page.evaluate(async()=>{const result=await window.simpleTimeline.getSnapshot();if(!result.ok)throw Error('DB unavailable');return result.data})}
@@ -105,10 +106,22 @@ try {
   await uninstall();expect(startup('Read')).toMatchObject({selected:null,registered:false});expect(createHash('sha256').update(await readFile(db)).digest('hex')).toBe(dbHash)
   expect(interactive('Off').initialChecked).toBe(true);expect(startup('Read')).toMatchObject({selected:false,registered:false});await uninstall();cases.push('actual uninstall cleans registration, retains DB; fresh unchecked install persists OFF')
   evidence.pass=true
+ }catch(error){
+  hadFailure=true
+  const child=error as {stdout?:unknown;stderr?:unknown}
+  evidence.failure={message:String(error),stdout:String(child.stdout??''),stderr:String(child.stderr??'')}
+  throw error
  }finally{
-  if(restoreAcl)command('$a=Get-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET;$a.SetSecurityDescriptorSddlForm($env:PLANRAIL_ACL_SDDL);Set-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET -AclObject $a',{PLANRAIL_ACL_TARGET:exe,PLANRAIL_ACL_SDDL:restoreAcl})
-  await close();await writeFile(info.outputPath('startup-manual-installer-validation.json'),JSON.stringify(evidence,null,2)+'\n')
+  const cleanupErrors:string[]=[]
+  const cleanup=async(label:string,action:()=>unknown|Promise<unknown>)=>{try{await action()}catch(error){cleanupErrors.push(`${label}: ${String(error)}`)}}
+  if(restoreAcl)await cleanup('restore image ACL',()=>command('$a=Get-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET;$a.SetSecurityDescriptorSddlForm($env:PLANRAIL_ACL_SDDL);Set-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET -AclObject $a',{PLANRAIL_ACL_TARGET:exe,PLANRAIL_ACL_SDDL:restoreAcl}))
+  await cleanup('close fixture app',close)
   // Only the fresh profile created in this disposable VM is removed.
-  await rm(profile,{recursive:true,force:true,maxRetries:10,retryDelay:200});await rm(directory,{recursive:true,force:true,maxRetries:10,retryDelay:200})
+  await cleanup('remove fixture profile',()=>rm(profile,{recursive:true,force:true,maxRetries:10,retryDelay:200}))
+  await cleanup('remove fixture install directory',()=>rm(directory,{recursive:true,force:true,maxRetries:10,retryDelay:200}))
+  evidence.cleanupErrors=cleanupErrors
+  if(cleanupErrors.length)evidence.pass=false
+  await cleanup('write evidence',()=>writeFile(info.outputPath('startup-manual-installer-validation.json'),JSON.stringify(evidence,null,2)+'\n'))
+  if(!hadFailure&&cleanupErrors.length)throw Error(cleanupErrors.join('\n'))
  }
 })
