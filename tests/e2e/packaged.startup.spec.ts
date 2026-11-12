@@ -43,14 +43,18 @@ test('actual0.8.0 manual migration and assisted startup choices preserve OS disa
   silent(resolve('artifacts/windows-legacy-startup',legacy.installer));expect(startup('Read').registered).toBe(false)
   // A real old binary from a different path remains alive; helper only scopes its target.
   let page=await launch(resolve('artifacts/windows-legacy-startup/win-unpacked/Planrail.exe'))
-  expect(gate(true).status).toBe(0);expect(instance!.process().exitCode).toBeNull();await close();cases.push('other-path process untouched')
+  const otherMainPid=await instance!.evaluate(()=>process.pid)
+  expect(gate(true).status).toBe(0);expect(await instance!.evaluate(()=>process.pid)).toBe(otherMainPid);expect(instance!.process().exitCode).toBeNull();await close();cases.push('other-path process untouched')
   page=await launch();expect(await instance!.evaluate(({app})=>app.getVersion())).toBe('0.8.0')
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('commit before manual install');await page.getByRole('button',{name:'저장',exact:true}).click();await expect(page.locator('.saving-shield')).toHaveCount(0)
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('discard old draft')
   const native=gateSource.match(/Add-Type -TypeDefinition @'\r?\n[\s\S]*?\r?\n'@/)![0]
   // GetFullPath retains aliases; independently resolve the installed image through Node.
   const nodeCanonical=realpathSync.native(exe)
-  evidence.nativeIdentity={rawRequestedPath:exe,nodeCanonical,expectedPid:instance!.process().pid}
+  // On Windows process() can be cmd.exe; inspector globals identify Electron main.
+  const electronMain=await instance!.evaluate(()=>({pid:process.pid,execPath:process.execPath}))
+  const launcherPid=instance!.process().pid
+  evidence.nativeIdentity={rawRequestedPath:exe,nodeCanonical,expectedPid:electronMain.pid,mainExecPath:electronMain.execPath,launcherPid}
   const encodedIdentity=command(native+`
 $p=[PlanrailProcess]::new([int]$env:PLANRAIL_TEST_PID,$true)
 try {
@@ -62,15 +66,16 @@ try {
  $report=@{requestedPath=$requested;canonicalTarget=$canonical;processPath=$p.Path;pid=$p.Id;owner=$p.Owner;currentOwner=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;created=[string]$p.Created;ownerDenied=$ownerDenied;timeDenied=$timeDenied}
  # ASCII transport preserves Unicode diagnostics under WindowsPS5's console code page.
  [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($report|ConvertTo-Json -Compress)))
-} finally {$p.Dispose()}`,{PLANRAIL_TEST_PID:String(instance!.process().pid),PLANRAIL_TEST_TARGET:exe})
+} finally {$p.Dispose()}`,{PLANRAIL_TEST_PID:String(electronMain.pid),PLANRAIL_TEST_TARGET:exe})
   const identity=JSON.parse(Buffer.from(encodedIdentity,'base64').toString('utf8'))
-  evidence.nativeIdentity={rawRequestedPath:exe,nodeCanonical,expectedPid:instance!.process().pid,...identity}
+  evidence.nativeIdentity={rawRequestedPath:exe,nodeCanonical,expectedPid:electronMain.pid,mainExecPath:electronMain.execPath,launcherPid,...identity}
   expect(nodeCanonical).toContain('🛤')
   expect(identity.canonicalTarget).toContain('🛤');expect(identity.processPath).toContain('🛤')
   expect(identity.canonicalTarget.toLowerCase()).toBe(nodeCanonical.toLowerCase())
   expect(identity.processPath.toLowerCase()).toBe(nodeCanonical.toLowerCase())
-  expect(identity.pid).toBe(instance!.process().pid);expect(identity.owner).toBe(identity.currentOwner)
+  expect(identity.pid).toBe(electronMain.pid);expect(identity.owner).toBe(identity.currentOwner)
   expect(identity.ownerDenied).toBe(true);expect(identity.timeDenied).toBe(true)
+  expect(await instance!.evaluate(()=>process.pid)).toBe(electronMain.pid)
   expect(instance!.process().exitCode).toBeNull();cases.push('non-ACP native process/final image paths match exact installation; owner and creation-time mismatches rejected')
   // Denied image inspection must abort BEFORE replacement and keep the old process alive.
   restoreAcl=command('(Get-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET).Sddl',{PLANRAIL_ACL_TARGET:exe})
