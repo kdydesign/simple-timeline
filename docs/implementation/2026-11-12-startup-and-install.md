@@ -50,3 +50,5 @@ Linux sandbox Electron·격리 임시 프로필에서 기존 편집 삭제 버�
 제품 커밋 `bb3da63f21847c0a53f3e01b6ad038c3f4e986b4`를 main에 반영했다. [Repository harness43135614569](https://github.com/kdydesign/simple-timeline/actions/runs/43135614569)는 Linux·Windows 모두 통과. [Application43135614492](https://github.com/kdydesign/simple-timeline/actions/runs/43135614492)의 Linux job130910118041은 깨끗한 checkout에서 `verify:app`7단계 전체 통과(01:36:30~01:42:20UTC). 로컬 간헐 실패 기록과 구분하며 Windows 결과는 이어 기록한다.
 
 Windows job130910118385는 타입·release·3TZ·UI·build·native를 모두 통과했다. Electron은 assertion 실패 없이82개 통과 후 전체240초 제한의 `ETIMEDOUT`/`SIGTERM`으로 중단됐다. artifact13907582301의 `app/latest.json`에서 clean `bb3da63`,win32 x64,Node24.22.1을 확인했다.93개 순차 검사에 맞춰 전체 E2E 예산만360초로 보정한다. 개별 테스트·요청 deadline과 assertion은 그대로다. Linux 전체 통과와 분리해 기록하며 새 CI에서 Windows 설치 단계까지 검증한다.
+
+예산 보정 커밋 `c6d3dd2`의 CI43137023832는 runtime 실행 전 release 검사에서 중단됐다. 기존 `tests/release/native-runner.test.mjs`의 E2E240초 기대값을 함께 갱신하지 않은 누락이었다. 예산 기대값·테스트 명칭을 보정하고 release26개 전체를 재검증한다. 제품 동작 변경은 없다.

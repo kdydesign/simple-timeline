@@ -100,7 +100,7 @@ test('native aggregate timeout retains last phase, logs, failure and isolated pr
   assert.ok(removed.includes(options.env.SIMPLE_TIMELINE_NATIVE_PROFILE))
 })
 
-test('application runner allocates only the native parent command 360 seconds', () => {
+test('application runner allocates 360 seconds to native and complete Electron suites', () => {
   const source = readFileSync('scripts/testing/verify-app.mjs', 'utf8').replace(/^import .*\n/gm, '')
   const budgets = {}
   runInNewContext(source, {
@@ -111,5 +111,5 @@ test('application runner allocates only the native parent command 360 seconds', 
       return { status: 0, stdout: '', stderr: '' }
     },
   })
-  assert.deepEqual(budgets, { typecheck: 180000, 'test:release': 180000, 'test:tz': 180000, 'test:ui': 180000, build: 180000, 'test:native': 360000, 'test:e2e': 240000 })
+  assert.deepEqual(budgets, { typecheck: 180000, 'test:release': 180000, 'test:tz': 180000, 'test:ui': 180000, build: 180000, 'test:native': 360000, 'test:e2e': 360000 })
 })
