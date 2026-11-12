@@ -57,10 +57,15 @@ public sealed class PlanrailProcess : IDisposable {
 }
 '@
   # Enumeration only discovers candidates. Authorization uses the held native handle.
-  function Find-Targets {
+  function Find-Targets($KnownHandles=@()) {
     $result=New-Object System.Collections.Generic.List[object]
     try {
       foreach($item in @(Get-CimInstance Win32_Process -Filter "Name = 'Planrail.exe'")) {
+        # Only exit verification supplies previously authorized, still-open handles.
+        # Windows reserves their PIDs until all handles close (PROCESS_INFORMATION).
+        $knownExited=$false
+        foreach($held in $KnownHandles){if($held.Id -eq $item.ProcessId -and $held.Exited){$knownExited=$true;break}}
+        if($knownExited){continue}
         if (-not $item.ExecutablePath) { throw "Cannot verify process path (PID $($item.ProcessId))" }
         if (-not [String]::Equals([PlanrailProcess]::Canonical($item.ExecutablePath),$canonical,[StringComparison]::OrdinalIgnoreCase)) { continue }
         $process=$null
@@ -117,7 +122,7 @@ public sealed class PlanrailProcess : IDisposable {
     $gateStage='verify-process-exit'
     $deadline=[DateTime]::UtcNow.AddSeconds(30)
     do {
-      $remaining=Find-Targets
+      $remaining=Find-Targets -KnownHandles ($handles.ToArray())
       try { $alive=@($handles | Where-Object {-not $_.Exited}).Count -gt 0 -or $remaining.Count -gt 0 }
       finally { foreach($process in $remaining){$process.Dispose()} }
       if(-not $alive){exit 0}

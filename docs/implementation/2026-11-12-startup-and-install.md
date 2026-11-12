@@ -82,3 +82,9 @@ Windows의 BM_CLICK은 비활성 대화상자에서 실패할 수 있어, 테스
 `20640d8`의 [Application43157196698](https://github.com/kdydesign/simple-timeline/actions/runs/43157196698)는 양 OS 앱 전체·빌드·기본 설치·자동 UPDATE를 통과했다. artifact13916872948에서 실제 옵션 페이지의 기본 체크와 ACL 거부 시 설치 중단·원본 보존까지 확인했다. 다음 실행 중0.8.0 교체는 UI timeout 없이 종료 확인 오류(exit2)로 중단됐다. 현재 NSIS가 helper의 구체적인 오류를 일반 안내로 대체하므로 정확한 종료 단계 원인은 미확정이다. helper 오류와32비트 WindowsPS 읽기 전용 진단을 확보하며, 프로세스 경로·SID·버전·핸들 검증을 완화하지 않는다.
 
 종료 확인 helper의 실패 단계·줄번호와 기존 캡처된 오류를 설치 실패 안내에 추가했다. 실제 설치기와 같은32비트 WindowsPS 및64비트 엔진에서 PE버전·CIM경로·네이티브 핸들 정보를 읽기만 하는 CI 진단도 추가했다. 이 변경은 실패 원인 확보용이며 종료 권한·동작·기한을 변경하지 않는다.
+
+`ad63c75`의 [Application43160569133](https://github.com/kdydesign/simple-timeline/actions/runs/43160569133)는 양 OS 앱 전체·빌드·기본 설치·자동 UPDATE를 통과했다. artifact13917549973의 실제 오류는 `verify-process-exit (line 64): Cannot verify process path (PID 6604)`였다. 사전32/64비트 진단에서 모두 PE ProductVersion0.8.0.0·같은 경로·SID·4개 유효 핸들을 확인했으며,6604는 종료 전 검증한 main이었다. 종료 후에도 보유한 프로세스 핸들 때문에 남은 CIM 항목의 빈 경로를 새로운 신원 확인 실패로 처리한 것이 원인이다.
+
+보정은 종료 전에 이미 검증한 핸들을 계속 보유하고, 그 핸들이 종료 신호를 낸 같은 PID의 잔류 항목만 건너뛰는 것으로 제한한다. [Microsoft PROCESS_INFORMATION 계약](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/ns-processthreadsapi-process_information)은 모든 핸들이 닫히고 프로세스 객체가 해제되기 전에는 PID가 재사용되지 않는다고 명시한다. 알 수 없는 PID·살아 있는 프로세스의 빈 경로는 기존처럼 거부하며, 대상/소유자/버전 확인을 생략하거나 종료 범위를 늘리지 않는다.
+
+실제 `Find-Targets` 함수를 추출한 `scripts/testing/windows-install-gate-state.test.ps1`에서 잔류 main/child 통과와 초기 발견·알 수 없는 PID·살아 있는 main/child의 빈 경로 거부를 검증했다. 원본 RED3개 실패→보정 GREEN6개 통과, root 재실행 및 하네스7개도 통과했다. 네이티브 핸들은 기존 outer finally까지 유지하며 강제 종료 조건은 그대로다. 실제 설치 재검증 결과는 후속 CI에 기록한다. 사용 안내의 이전 ‘로그인 자동 실행 없음’ 문구2곳도 현재0.8.1 정책과 일치시켰다.
