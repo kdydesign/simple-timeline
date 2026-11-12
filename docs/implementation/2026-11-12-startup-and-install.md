@@ -52,3 +52,7 @@ Linux sandbox Electron·격리 임시 프로필에서 기존 편집 삭제 버�
 Windows job130910118385는 타입·release·3TZ·UI·build·native를 모두 통과했다. Electron은 assertion 실패 없이82개 통과 후 전체240초 제한의 `ETIMEDOUT`/`SIGTERM`으로 중단됐다. artifact13907582301의 `app/latest.json`에서 clean `bb3da63`,win32 x64,Node24.22.1을 확인했다.93개 순차 검사에 맞춰 전체 E2E 예산만360초로 보정한다. 개별 테스트·요청 deadline과 assertion은 그대로다. Linux 전체 통과와 분리해 기록하며 새 CI에서 Windows 설치 단계까지 검증한다.
 
 예산 보정 커밋 `c6d3dd2`의 CI43137023832는 runtime 실행 전 release 검사에서 중단됐다. 기존 `tests/release/native-runner.test.mjs`의 E2E240초 기대값을 함께 갱신하지 않은 누락이었다. 예산 기대값·테스트 명칭을 보정하고 release26개 전체를 재검증한다. 제품 동작 변경은 없다.
+
+`73ed583`의 [Application43137367288](https://github.com/kdydesign/simple-timeline/actions/runs/43137367288)는 Linux 및 Windows `verify:app` 전체를 통과했다(Windows job130915813755,01:53:14~02:00:44UTC). 이어지는 실제 NSIS 컴파일에서 옵션 페이지의 top-level 함수가 플러그인/기본 변수 초기화 전에 확장되어 `StdUtils::TestParameter` plugin-not-found로 실패했다. 설치 산출물은 아직 제공하지 않았으며 함수 정의를 builder 초기화 뒤의 확장 지점으로 이동해 검증한다.
+
+NSIS 함수/변수 정의를 `customHeader`로 지연했다. builder26.18.0의 비동기 header 생성에서 custom include가 pluginDir보다 먼저 나올 수 있는 순서와 common.nsh의 실행 파일 정의 시점을 확인했다. `node --use-env-proxy scripts/testing/nsis-compile-smoke.mjs`는 pinned NSIS3.0.4.1/resources3.4.1과 실제 builder 설치·제거 템플릿으로 원본 RED 및 수정 GREEN을 확인한다. Linux 컴파일 전용이며 생성 EXE는 실행하지 않는다. Windows 설치 실행은 후속 CI에서 확인한다.

@@ -29,6 +29,9 @@
   ${EndIf}
 !macroend
 
+# The shared custom include can precede plugin directories and common.nsh.
+# Emit functions only after builder has initialized both through customHeader.
+!macro customHeader
 !ifndef BUILD_UNINSTALLER
 Var PlanrailStartupCheckbox
 Var PlanrailStartupInitial
@@ -84,6 +87,7 @@ Function PlanrailStartupLeave
   ${EndIf}
 FunctionEnd
 !endif
+!macroend
 
 # Keep the standard directory page: builder's sanitizer changes custom paths.
 !macro customPageAfterChangeDir

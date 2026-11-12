@@ -75,13 +75,16 @@ XDG_CONFIG_HOME="$ST_DOC_PROFILE" npm run dev
 headless에서는 준비된 DISPLAY가 추가로 필요하다. 이 예는 Linux용이며 Windows에 같은 환경변수를 적용하지 않는다.
 자동 native/E2E 검사는 자체 임시 DB·Chromium 프로필을 사용한다. 오류 주입은 별도 test main에만 있고
 제품 main에는 테스트용 프로필 override가 없다. 운영 DB 경로를 시험 경로로 넘기지 않는다.
-패키지 검사 전에 실제0.2.1 fixture가 필요하다. CI는 `pwsh -File scripts/release/build-legacy.ps1`로 별도 임시 worktree에서 준비한다.
+패키지 검사 전에 실제0.2.1 및0.8.0 fixture가 필요하다. CI는 `pwsh -File scripts/release/build-legacy.ps1`와 `pwsh -File scripts/release/build-legacy-startup.ps1`로 각각 고정 소스의 별도 임시 worktree에서 준비한다.
 패키지 검사는 실제 AppData·방화벽을 다루므로 기존 프로필 없는 일회성 GitHub-hosted Windows VM에서만 실행한다.
+
+NSIS include·확장 지점 변경은 `node --use-env-proxy scripts/testing/nsis-compile-smoke.mjs`로 설치·제거 템플릿을 먼저 컴파일할 수 있다. 처음에는 pinned builder의 체크섬 검증 toolset 다운로드가 필요하다. 실제 템플릿과 플러그인을 사용하되 payload는 비실행 placeholder이며 생성 EXE를 실행하지 않고 임시 결과를 삭제한다. Windows 제품 빌드·설치 실행 검증을 대체하지 않는다.
 
 앱 검사는 공유 artifact 디렉터리를 정리하므로 전체/개별 검사를 겹쳐 실행하지 않는다.
 verify:app의 순서는 typecheck → test:release → test:tz → test:ui → build → test:native → test:e2e다.
 각 명령은 기본180초 제한이며, `test:native` 전체는360초, `test:e2e` 전체는360초다. 첫 실패에서 멈추고 나머지를 `not-run`으로 기록한다.
 0.6.0의 순차 sandbox Electron 68개 회귀는 실제180초에64개 통과 뒤 종료된 근거로 전체 예산만 늘렸다.
+0.8.1은 Windows93개 검사 중82개 통과 후240초에 중단된 근거로 전체 E2E 예산을360초로 보정했다([0.8.1 기록](../implementation/2026-11-12-startup-and-install.md)).
 개별 테스트·assertion·네트워크 요청 제한은 유지한다. [실행 기록](../implementation/2026-11-10-lan-sharing.md)을 따른다.
 native 내부 Electron 실행 예산은300초다(상위 명령360초에 컴파일·프로필 정리 포함). Windows에서 이전 성공 단계58.45초 뒤 두 실행이 내부60초 제한으로 종료되어120초로 조정했으나, 시간 기록을 추가한 실행도 case51 도중 종료되었다. 첫50개는92.82초, 그중 케이스 실행92.55초였고 시작26ms·정리72ms로 실행 비용이 대부분이었다. 전체70개 중 남은20개의 완료 시간은 미확인이므로300초를 할당하고 case51 세부 단계도 기록한다. 이 조정은 Windows 통과 근거가 아니며, 시간 기록을 남긴 Windows 재실행 성공이 필요하다. 실제 멈춤의 감지는 이전120초보다 최대180초 늦어질 수 있다.
 개별 검사로 실패를 재현·수정한 뒤 변경에 필요한 통합 검사를 마친다. 실패·skip을 성공으로 바꾸지 않는다.
