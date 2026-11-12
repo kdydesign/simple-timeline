@@ -1,7 +1,7 @@
 import {test,expect} from '@playwright/test'
 import {_electron,type ElectronApplication} from 'playwright'
 import {execFileSync,spawn,spawnSync} from 'node:child_process'
-import {existsSync} from 'node:fs'
+import {existsSync,realpathSync} from 'node:fs'
 import {readFile,writeFile,mkdir,readdir,rm} from 'node:fs/promises'
 import {join,resolve} from 'node:path'
 import {createHash} from 'node:crypto'
@@ -48,8 +48,29 @@ test('actual0.8.0 manual migration and assisted startup choices preserve OS disa
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('commit before manual install');await page.getByRole('button',{name:'저장',exact:true}).click();await expect(page.locator('.saving-shield')).toHaveCount(0)
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('discard old draft')
   const native=gateSource.match(/Add-Type -TypeDefinition @'\r?\n[\s\S]*?\r?\n'@/)![0]
-  command(native+`
-$p=[PlanrailProcess]::new([int]$env:PLANRAIL_TEST_PID,$true);try{$expected=[IO.Path]::GetFullPath($env:PLANRAIL_TEST_TARGET);if(-not [String]::Equals($p.Path,$expected,[StringComparison]::OrdinalIgnoreCase) -or -not [String]::Equals([PlanrailProcess]::Canonical($expected),$expected,[StringComparison]::OrdinalIgnoreCase)){throw 'Unicode native process/final image paths do not match the exact installation'};$ownerDenied=$false;$timeDenied=$false;try{$p.StopLegacy($p.Path,'S-1-0-0',$p.Created)}catch{$ownerDenied=$_.Exception.InnerException -is [InvalidOperationException]};try{$p.StopLegacy($p.Path,$p.Owner,($p.Created+1))}catch{$timeDenied=$_.Exception.InnerException -is [InvalidOperationException]};if(-not $ownerDenied -or -not $timeDenied){throw 'Identity guard accepted mismatched owner or creation time'}}finally{$p.Dispose()}`,{PLANRAIL_TEST_PID:String(instance!.process().pid),PLANRAIL_TEST_TARGET:exe})
+  // GetFullPath retains aliases; independently resolve the installed image through Node.
+  const nodeCanonical=realpathSync.native(exe)
+  evidence.nativeIdentity={rawRequestedPath:exe,nodeCanonical,expectedPid:instance!.process().pid}
+  const encodedIdentity=command(native+`
+$p=[PlanrailProcess]::new([int]$env:PLANRAIL_TEST_PID,$true)
+try {
+ $requested=[IO.Path]::GetFullPath($env:PLANRAIL_TEST_TARGET)
+ $canonical=[PlanrailProcess]::Canonical($requested)
+ $ownerDenied=$false;$timeDenied=$false
+ try{$p.StopLegacy($p.Path,'S-1-0-0',$p.Created)}catch{$ownerDenied=$_.Exception.InnerException -is [InvalidOperationException]}
+ try{$p.StopLegacy($p.Path,$p.Owner,($p.Created+1))}catch{$timeDenied=$_.Exception.InnerException -is [InvalidOperationException]}
+ $report=@{requestedPath=$requested;canonicalTarget=$canonical;processPath=$p.Path;pid=$p.Id;owner=$p.Owner;currentOwner=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value;created=[string]$p.Created;ownerDenied=$ownerDenied;timeDenied=$timeDenied}
+ # ASCII transport preserves Unicode diagnostics under WindowsPS5's console code page.
+ [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($report|ConvertTo-Json -Compress)))
+} finally {$p.Dispose()}`,{PLANRAIL_TEST_PID:String(instance!.process().pid),PLANRAIL_TEST_TARGET:exe})
+  const identity=JSON.parse(Buffer.from(encodedIdentity,'base64').toString('utf8'))
+  evidence.nativeIdentity={rawRequestedPath:exe,nodeCanonical,expectedPid:instance!.process().pid,...identity}
+  expect(nodeCanonical).toContain('🛤')
+  expect(identity.canonicalTarget).toContain('🛤');expect(identity.processPath).toContain('🛤')
+  expect(identity.canonicalTarget.toLowerCase()).toBe(nodeCanonical.toLowerCase())
+  expect(identity.processPath.toLowerCase()).toBe(nodeCanonical.toLowerCase())
+  expect(identity.pid).toBe(instance!.process().pid);expect(identity.owner).toBe(identity.currentOwner)
+  expect(identity.ownerDenied).toBe(true);expect(identity.timeDenied).toBe(true)
   expect(instance!.process().exitCode).toBeNull();cases.push('non-ACP native process/final image paths match exact installation; owner and creation-time mismatches rejected')
   // Denied image inspection must abort BEFORE replacement and keep the old process alive.
   restoreAcl=command('(Get-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET).Sddl',{PLANRAIL_ACL_TARGET:exe})

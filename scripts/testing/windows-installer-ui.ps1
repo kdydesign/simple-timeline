@@ -14,12 +14,14 @@ public static class PlanrailInstallerUI {
  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h,out int id);
  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr h,StringBuilder text,int count);
  [DllImport("user32.dll",CharSet=CharSet.Unicode)] static extern int GetWindowText(IntPtr h,StringBuilder text,int count);
+ [DllImport("user32.dll",EntryPoint="GetWindowLongW",ExactSpelling=true)] static extern int GetWindowLong(IntPtr h,int index);
  [DllImport("user32.dll")] public static extern IntPtr GetDlgItem(IntPtr h,int id);
  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
  [DllImport("user32.dll")] public static extern bool IsWindowEnabled(IntPtr h);
  [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
  public static string Text(IntPtr h){var s=new StringBuilder(2048);GetWindowText(h,s,s.Capacity);return s.ToString();}
+ public static bool IsCheckbox(IntPtr h){var c=new StringBuilder(256);GetClassName(h,c,c.Capacity);return c.ToString()=="Button"&&(GetWindowLong(h,-16)&15)==3;}
  public static IntPtr[] Windows(int[] pids){var list=new List<IntPtr>();EnumWindows((h,d)=>{int pid;GetWindowThreadProcessId(h,out pid);var c=new StringBuilder(256);GetClassName(h,c,c.Capacity);if(Array.IndexOf(pids,pid)>=0&&c.ToString()=="#32770"&&IsWindowVisible(h))list.Add(h);return true;},IntPtr.Zero);return list.ToArray();}
  public static IntPtr[] Children(IntPtr parent){var list=new List<IntPtr>();EnumChildWindows(parent,(h,d)=>{if(IsWindowVisible(h))list.Add(h);return true;},IntPtr.Zero);return list.ToArray();}
 }
@@ -27,7 +29,7 @@ public static class PlanrailInstallerUI {
 $start=[Diagnostics.ProcessStartInfo]::new()
 $start.FileName=$Installer;$start.Arguments='/D='+$Directory;$start.UseShellExecute=$false
 $process=[Diagnostics.Process]::Start($start)
-$initial=$null;$visited=$false;$completed=$false;$lastAction='';$lastClick=[DateTime]::MinValue
+$initial=$null;$visited=$false;$completed=$false;$lastAction='';$lastClick=[DateTime]::MinValue;$runUnchecked=$false;$runLabel=$null
 try {
  $deadline=[DateTime]::UtcNow.AddSeconds(120)
  do {
@@ -44,11 +46,24 @@ try {
     if(-not $visited){$initial=[PlanrailInstallerUI]::SendMessage($checkbox[0],0xF0,[IntPtr]::Zero,[IntPtr]::Zero).ToInt64() -eq 1;$visited=$true}
     if($Startup -ne 'Keep'){$value=if($Startup -eq 'On'){1}else{0};[void][PlanrailInstallerUI]::SendMessage($checkbox[0],0xF1,[IntPtr]$value,[IntPtr]::Zero)}
    }
-   # The finish page uses id1204 for 'run now'; this is independent of startup.
-   $run=[PlanrailInstallerUI]::GetDlgItem($window,1204)
-   if($run -ne [IntPtr]::Zero -and [PlanrailInstallerUI]::IsWindowVisible($run)){[void][PlanrailInstallerUI]::SendMessage($run,0xF1,[IntPtr]::Zero,[IntPtr]::Zero)}
    $next=[PlanrailInstallerUI]::GetDlgItem($window,1)
-   if($next -ne [IntPtr]::Zero -and [PlanrailInstallerUI]::IsWindowEnabled($next)){
+   $mayAdvance=$true
+   if($next -ne [IntPtr]::Zero -and [PlanrailInstallerUI]::Text($next) -eq '마침'){
+    # Pinned MUI Finish.nsh creates a nested nsDialogs1044 checkbox dynamically.
+    # Korean.nsh defines its caption as '<name> 실행하기(&R)'; no fixed child id.
+    $run=@($children|Where-Object {[PlanrailInstallerUI]::IsCheckbox($_) -and [PlanrailInstallerUI]::Text($_).Contains('실행하기')})
+    if($run.Count -eq 0){
+     # Finish caption can change before the inner page controls finish creation.
+     $mayAdvance=$false;$lastAction='finish waiting for run checkbox; controls='+(@($children|ForEach-Object {[PlanrailInstallerUI]::Text($_)}) -join '|')
+    }elseif($run.Count -ne 1){throw 'Ambiguous finish run checkbox'}
+    else{
+     $runLabel=[PlanrailInstallerUI]::Text($run[0])
+     [void][PlanrailInstallerUI]::SendMessage($run[0],0xF1,[IntPtr]::Zero,[IntPtr]::Zero)
+     if([PlanrailInstallerUI]::SendMessage($run[0],0xF0,[IntPtr]::Zero,[IntPtr]::Zero).ToInt64() -ne 0){throw 'Finish run checkbox remained checked'}
+     $runUnchecked=$true
+    }
+   }
+   if($mayAdvance -and $next -ne [IntPtr]::Zero -and [PlanrailInstallerUI]::IsWindowEnabled($next)){
     $description=([PlanrailInstallerUI]::Text($window))+':'+([PlanrailInstallerUI]::Text($next))+':'+[string]$visited
     if($description -ne $lastAction -or ([DateTime]::UtcNow-$lastClick).TotalMilliseconds -gt 800){
      [void][PlanrailInstallerUI]::PostMessage($next,0xF5,[IntPtr]::Zero,[IntPtr]::Zero)
@@ -61,6 +76,6 @@ try {
  if(-not $completed){throw "NSIS UI lifecycle timed out; last=$lastAction; startupVisited=$visited"}
  $process.WaitForExit()
  if(-not $visited){throw 'Actual startup options page was not visited'}
- if($ExpectFailure){if($process.ExitCode -eq 0){throw 'Installer unexpectedly succeeded'}}elseif($process.ExitCode -ne 0){throw "Installer failed: $($process.ExitCode)"}
- @{initialChecked=$initial;startupPageVisited=$visited;exitCode=$process.ExitCode;startup=$Startup}|ConvertTo-Json -Compress
+ if($ExpectFailure){if($process.ExitCode -eq 0){throw 'Installer unexpectedly succeeded'}}elseif($process.ExitCode -ne 0){throw "Installer failed: $($process.ExitCode)"}elseif(-not $runUnchecked){throw 'Finish run-now choice was not verified unchecked'}
+ @{initialChecked=$initial;startupPageVisited=$visited;exitCode=$process.ExitCode;startup=$Startup;finishRunUnchecked=$runUnchecked;finishRunLabel=$runLabel}|ConvertTo-Json -Compress
 }finally{$process.Dispose()}
