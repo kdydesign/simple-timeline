@@ -35,7 +35,7 @@ export const test = base.extend<{
       const app = await _electron.launch({
         chromiumSandbox: true,
         executablePath: require("electron"),
-        args: [resolve("artifacts/test-app/main/index.cjs")],
+        args: [resolve("artifacts/test-app/main/index.cjs"), ...(fault.startsWith("autostart") ? ["--planrail-autostart"] : [])],
         env: {
           ...env,
           SIMPLE_TIMELINE_TEST_PROFILE: profile,

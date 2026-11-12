@@ -2,7 +2,7 @@ import { BrowserWindow, screen } from 'electron'
 import { initialWindowBounds } from './window-bounds'
 import { release } from 'node:os'
 import { windowMaterial } from './window-material'
-export function createWindow(preload: string, url: string, onShown?: () => void, icon?: string, startup?: { mark: (name: string, errorCode?: number) => void; observeRequests: (window: BrowserWindow) => void }): BrowserWindow {
+export function createWindow(preload: string, url: string, onShown?: () => void, icon?: string, startup?: { hidden?: boolean; mark: (name: string, errorCode?: number) => void; observeRequests: (window: BrowserWindow) => void }): BrowserWindow {
   const window = new BrowserWindow({
     icon,
     ...initialWindowBounds(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea),
@@ -18,14 +18,15 @@ export function createWindow(preload: string, url: string, onShown?: () => void,
       webviewTag: false,
     },
   })
+  const reveal = () => { if (!window.isDestroyed()) window.show() }
   startup?.mark('window-created')
   window.webContents.once('dom-ready', () => startup?.mark('dom-ready'))
   window.once('ready-to-show', () => startup?.mark('first-paint-ready'))
   window.webContents.on('did-fail-load', (_event, code, _description, _url, isMainFrame) => {
-    if (isMainFrame) startup?.mark('load-failed', code)
+    if (isMainFrame) { startup?.mark('load-failed', code); reveal() }
   })
-  window.webContents.once('preload-error', () => startup?.mark('preload-failed'))
-  window.webContents.once('render-process-gone', () => startup?.mark('renderer-exited'))
+  window.webContents.once('preload-error', () => { startup?.mark('preload-failed'); reveal() })
+  window.webContents.once('render-process-gone', () => { startup?.mark('renderer-exited'); reveal() })
   window.once('show', () => onShown?.())
   window.setMenu(null)
   window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
@@ -43,8 +44,8 @@ export function createWindow(preload: string, url: string, onShown?: () => void,
   startup?.mark('load-requested')
   void window
     .loadURL(url)
-    .catch((error) => console.error('UI load failed', String(error)))
+    .catch((error) => { console.error('UI load failed', String(error)); reveal() })
   // Make the window visible independently of the first renderer/GPU paint.
-  window.show()
+  if (!startup?.hidden) window.show()
   return window
 }

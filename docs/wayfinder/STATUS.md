@@ -1,7 +1,8 @@
 # 진행 상태
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
-최신 후속: 0.8.0 호스트 배포 기반 앱 업데이트를 구현했다. [승인 설계](../design/lan-app-updates.md)·[구현·검증 기록](../implementation/2026-11-11-lan-app-updates.md)에 로컬 검사와 실제 Windows 미검증 범위를 구분한다. 기존 MVP 완료 상태를 유지한다. 최종 SHA·CI 결과는 종료 메시지를 따른다.
+최신 후속: 0.8.1 버튼 재질·로그인 자동 실행·수동 설치 종료 구현 중. [확정 설계](../design/windows-login-startup.md)·[실행 기록](../implementation/2026-11-12-startup-and-install.md)을 따른다. MVP 단계 완료 상태는 유지한다.
+이전 후속: 0.8.0 호스트 배포 기반 앱 업데이트를 구현했다. [승인 설계](../design/lan-app-updates.md)·[구현·검증 기록](../implementation/2026-11-11-lan-app-updates.md)에 로컬 검사와 실제 Windows 미검증 범위를 구분한다. 기존 MVP 완료 상태를 유지한다. 최종 SHA·CI 결과는 종료 메시지를 따른다.
 이전 후속: 0.7.0 공유 변경 알림 구현·로컬 전체 검증 완료. [구현·검증 기록](../implementation/2026-11-11-shared-change-notifications.md)을 따른다.
 이전 후속: 0.6.10 참여자 한 줄 배치·상태 배지 보정. [구현·검증](../implementation/2026-11-11-participant-row.md)을 따른다.
 이전 후속: 0.6.9 참여자 필드 검증·삭제와 작은 알림 스위치를 반영했다. [구현·검증](../implementation/2026-11-11-sharing-participants.md)을 따른다.

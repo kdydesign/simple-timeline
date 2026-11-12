@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 import { createLoopbackFeed } from '../../src/main/updates/feed'
 import { createInstallCoordinator, createMutationBarrier } from '../../src/main/updates/installer'
+import { createInstallExit } from '../../src/main/install-exit'
 import type { UpdatePublication } from '../../src/shared/updates'
 const cleanup:(()=>Promise<unknown>)[]=[]
 afterEach(async()=>{for(const f of cleanup.splice(0).reverse())await f()})
@@ -110,4 +111,41 @@ it('redacts capability paths in enabled runtime HTTP request and error-response 
   expect(logs.join('\n')).toContain('Request:');expect(logs.join('\n')).toContain('Response:')
   expect(logs.join('\n')).not.toContain(new URL(url).pathname)
  }finally{log.mockRestore();debug.enable(previous)}
+})
+
+function deferred<T>(){let resolve!:(value:T|PromiseLike<T>)=>void,reject!:(error:Error)=>void;const promise=new Promise<T>((yes,no)=>{resolve=yes;reject=no});return {promise,resolve,reject}}
+for(const phase of ['preparing','frozen'] as const)it(`manual shutdown stays latched when concurrent UPDATE rolls back from ${phase}`,async()=>{
+ const f=await fixture(),barrier=createMutationBarrier(),events:string[]=[],save=deferred<void>(),preparing=deferred<void>(),updateFrozen=deferred<void>(),preparation=deferred<never>()
+ const accepted=barrier.run(async()=>{await save.promise;events.push('accepted commit')})
+ // Observe the real barrier's synchronous UPDATE freeze without replacing its behavior.
+ const freeze=barrier.freeze;barrier.freeze=()=>{const drained=freeze();updateFrozen.resolve();return drained}
+ let current=true,attempts=0
+ const update=createInstallCoordinator({barrier,prepare:async()=>{preparing.resolve();if(phase==='preparing')await preparation.promise;return {validate:async()=>{},handoff:()=>{events.push('unexpected handoff')},dispose:async()=>{}}},freezeRenderer:async()=>true,releaseRenderer:()=>{},record:async()=>{},shutdown:async()=>{events.push('unexpected update shutdown')}})
+ const updating=update.install({...f,current:()=>current})
+ const updateFailed=expect(updating).rejects.toThrow(phase==='preparing'?'preparation cancelled':'Update trust changed')
+ await (phase==='preparing'?preparing.promise:updateFrozen.promise)
+ const manual=createInstallExit(barrier)
+ manual.ready(async()=>{events.push('manual cleanup');if(++attempts===1)throw Error('manual cleanup failed')})
+ const manualFailed=expect(manual.request()).rejects.toThrow('manual cleanup failed')
+ expect(barrier.blocked()).toBe(true)
+ await expect(barrier.run(()=>{events.push('late write')})).rejects.toThrow()
+ if(phase==='preparing'){
+  preparation.reject(Error('preparation cancelled'));await updateFailed
+  // UPDATE releases before the accepted save completes; manual drain must stay closed.
+  expect(barrier.blocked()).toBe(true)
+  await expect(barrier.run(()=>{events.push('late write after update failure')})).rejects.toThrow()
+ }else current=false
+ expect(events).toEqual([])
+ save.resolve();await accepted;await updateFailed;await manualFailed
+ expect(events).toEqual(['accepted commit','manual cleanup']);expect(barrier.blocked()).toBe(true)
+ await expect(barrier.run(()=>{events.push('late write after manual failure')})).rejects.toThrow()
+ await expect(manual.request()).resolves.toBeUndefined();expect(attempts).toBe(2);expect(barrier.blocked()).toBe(true)
+ barrier.release();await expect(barrier.run(()=>{events.push('late write after unrelated release')})).rejects.toThrow()
+})
+it('ordinary UPDATE rollback after freezing releases editing when there is no manual shutdown',async()=>{
+ const f=await fixture(),barrier=createMutationBarrier();let current=true,checks=0,wasBlocked=false,released=0
+ const update=createInstallCoordinator({barrier,prepare:async()=>({validate:async()=>{if(++checks===2){wasBlocked=barrier.blocked();current=false}},handoff:()=>{throw Error('must not install')},dispose:async()=>{}}),freezeRenderer:async()=>true,releaseRenderer:()=>{released++},record:async()=>{},shutdown:async()=>{throw Error('must not shut down')}})
+ await expect(update.install({...f,current:()=>current})).rejects.toThrow('Update trust changed')
+ expect(wasBlocked).toBe(true);expect(released).toBe(1);expect(barrier.blocked()).toBe(false)
+ await expect(barrier.run(()=> 'saved after rollback')).resolves.toBe('saved after rollback')
 })

@@ -69,11 +69,11 @@ void bootstrap({
       return fault==='reminder-failed'&&g.reminderMessages.length===1 ? 'failed' as const : 'submitted' as const;
     },
   } : {}),
-  ...(fault?.startsWith("tray-failure") ? {
+  ...((fault?.startsWith("tray-failure") || fault === "autostart-tray-failure") ? {
     createTray: () => { throw Error("Injected tray creation failure") },
     notifyTrayFailure: () => writeFileSync(join(profile,"tray-error.txt"),"reported"),
   } : {}),
-  rendererUrl: fault === "missing-renderer" ? pathToFileURL(join(profile, "missing.html")).href : undefined,
+  rendererUrl: (fault === "missing-renderer" || fault === "autostart-renderer-failure") ? pathToFileURL(join(profile, "missing.html")).href : undefined,
   notifyBlocked(storage) {
     if (fault === "startup" && storage.state === "blocked")
       writeFileSync(
@@ -91,6 +91,7 @@ void bootstrap({
   async afterDispatch(method, result): Promise<Result<unknown>> {
     if (result.ok && !method.startsWith('get')) (globalThis as any).lastSourceCommitAt = Date.now();
     if (fault === "pending-save" && method === "createProject") await new Promise(resolve => setTimeout(resolve, 1000));
+    if (fault === "held-save" && method === "createProject") await new Promise<void>(resolve => { (globalThis as any).releasePendingSave = resolve });
     if (
       (method === "createProject" ||
         (method === "createSchedule" && fault?.startsWith("schedule-")) ||

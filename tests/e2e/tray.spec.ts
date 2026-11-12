@@ -50,7 +50,7 @@ test.describe('quit cancellation',()=>{
  });
 });
 test.describe('pending save',()=>{
- test.use({fault:'pending-save'});
+ test.use({fault:'held-save'});
  test('actual app.quit waits for a real pending save before exit',async({desktop:d})=>{
   await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
   await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('종료 전 저장');
@@ -58,13 +58,13 @@ test.describe('pending save',()=>{
   await expect(d.page.locator('html')).toHaveAttribute('data-saving','true');
   const closing=d.page.getByRole('button',{name:'창 닫기',exact:true}).click().then(()=>null,error=>error);
   await expect.poll(()=>visible(d)).toBe(false);
-  const began=Date.now(),exited=d.app.waitForEvent('close');
+  const exited=d.app.waitForEvent('close');
   await d.app.evaluate(({app})=>app.quit());
   expect(await closing).toBeNull();
   await new Promise(resolve=>setTimeout(resolve,200));
   expect(d.app.process().exitCode).toBeNull();
+  await d.app.evaluate(()=>(globalThis as any).releasePendingSave());
   await exited;
-  expect(Date.now()-began).toBeGreaterThanOrEqual(700);
   await d.restart();
   const data = await d.page.evaluate(()=>window.simpleTimeline.getSnapshot());
   expect(data.ok && data.data.projects.some(p=>p.name==='종료 전 저장')).toBe(true);

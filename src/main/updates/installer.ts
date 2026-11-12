@@ -5,10 +5,16 @@ import { hashUpdateFile } from './bundle'
 import { createLoopbackFeed } from './feed'
 import type { UpdatePublication } from '../../shared/updates'
 export function createMutationBarrier(){
- let locked=false;const active=new Set<Promise<unknown>>()
- return {blocked:()=>locked,
-  async run<T>(operation:()=>T|Promise<T>):Promise<T>{if(locked)throw Error('Update shutdown in progress');const work=Promise.resolve().then(operation);active.add(work);try{return await work}finally{active.delete(work)}},
-  async freeze(){locked=true;while(active.size)await Promise.allSettled([...active])},release(){locked=false},
+ let locked=false,shutdownLatched=false;const active=new Set<Promise<unknown>>()
+ const blocked=()=>locked||shutdownLatched
+ const drain=async()=>{while(active.size)await Promise.allSettled([...active])}
+ return {blocked,
+  async run<T>(operation:()=>T|Promise<T>):Promise<T>{if(blocked())throw Error('Update shutdown in progress');const work=Promise.resolve().then(operation);active.add(work);try{return await work}finally{active.delete(work)}},
+  async freeze(){locked=true;await drain()},
+  // Manual shutdown cannot be undone by an unrelated UPDATE rollback, even if
+  // UPDATE froze first. Failed cleanup and retry retain this lifetime latch.
+  async freezeForShutdown(){shutdownLatched=true;await drain()},
+  release(){locked=false},
  }
 }
 export type MutationBarrier=ReturnType<typeof createMutationBarrier>

@@ -8,6 +8,9 @@ files:
   - resources/icon.ico
   - resources/licenses/**/*
   - package.json
+extraResources:
+  - from: resources/windows/login-startup.ps1
+    to: windows/login-startup.ps1
 asar: true
 asarUnpack:
   - node_modules/better-sqlite3/**/*.node

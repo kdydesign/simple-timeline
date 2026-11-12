@@ -1,4 +1,6 @@
 /// <reference types="electron-vite/node" />
+import { windowsLoginStartup } from './windows-login-startup'
+import { parseInstallExit, createInstallExit } from './install-exit'
 import { UpdateCatalog } from './updates/catalog'
 import { createUpdateRoutes, type UpdateRoutes } from './updates/transport'
 import { createUpdateService, type UpdateService } from './updates/service'
@@ -56,9 +58,12 @@ export interface BootstrapOptions {
   chooseClose?: (canHide: boolean) => Promise<CloseChoice>
 }
 export async function bootstrap(options: BootstrapOptions = {}) {
+  const installRequest = parseInstallExit(process.argv, process.execPath)
+  if (installRequest === 'invalid') { app.exit(2); return null }
+  const autoStart = process.argv.includes('--planrail-autostart')
   const profile = options.profileDir ?? profileDirectory(app.getPath('appData'))
   try {
-    mkdirSync(profile, { recursive: true })
+    if (installRequest === 'none') mkdirSync(profile, { recursive: true })
     app.setName('Planrail')
     app.setPath('userData', profile)
   } catch (error) {
@@ -75,17 +80,45 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     app.exit(1)
     return null
   }
-  if (!app.requestSingleInstanceLock()) {
+  if (!app.requestSingleInstanceLock({planrailInstallTarget:installRequest === 'valid' ? process.execPath : null,planrailAutoStart:autoStart})) {
     app.quit()
     return null
+  }
+  // A cold request helper must never initialize services, SQLite, or a window.
+  if (installRequest === 'valid') { app.exit(0); return null }
+  const installExit = createInstallExit(appMutationBarrier)
+  let installPending = false, pendingShow = false, installExitFailed = false
+  let freezeInputs = () => {}
+  let showExisting = () => { pendingShow = true }
+  app.on('second-instance', (_event, argv, _cwd, data) => {
+    // Chromium reorders switches before positional arguments in second-instance.
+    // Transport the already validated separate CLI target through Electron's data.
+    const launchData = data as {planrailInstallTarget?:unknown;planrailAutoStart?:unknown} | undefined
+    const request = typeof launchData?.planrailInstallTarget === 'string'
+      ? parseInstallExit(['--planrail-install-exit','--planrail-install-target',launchData.planrailInstallTarget], process.execPath)
+      : parseInstallExit(argv, process.execPath)
+    if (request === 'valid') {
+      requestInstallExit()
+    } else if (request === 'none' && launchData?.planrailAutoStart !== true && !argv.includes('--planrail-autostart')) showExisting()
+  })
+  function requestInstallExit() {
+    installPending = true; installExitFailed = false
+    freezeInputs()
+    void installExit.request().catch(() => {
+      installExitFailed = true
+      showExisting()
+      dialog.showErrorBox('설치를 위한 종료를 완료하지 못했습니다', '저장소 정리가 완료되지 않아 설치를 중단했습니다. 데이터 보호를 위해 편집은 차단합니다. 트레이 Exit에서 안전한 종료를 다시 시도한 뒤 설치 프로그램을 실행해 주세요.')
+    })
   }
   const startup = startupRecorder(profile, app.getVersion())
   startup.mark('bootstrap')
   await app.whenReady()
   startup.mark('app-ready')
+  if (installPending) { app.exit(0); return null }
   if (process.platform === 'win32') app.setAppUserModelId('com.kdydesign.simpletimeline')
   const storage = await initializeStorage(profile)
   startup.mark('storage-' + storage.state)
+  if (installPending) { if (storage.state === 'ready' && storage.db.open) storage.db.close(); app.exit(0); return null }
   const rendererUrl =
     options.rendererUrl ??
     resolveRendererUrl(
@@ -102,8 +135,10 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     rendererUrl,
     () => startup.mark('window-shown'),
     desktopIcon,
-    { mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
+    { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
+  freezeInputs = () => { window.setEnabled(false); window.hide() }
+  let exiting = false, shutdownComplete = false, finishingShutdown = false
   const nativeReminders = createNativeReminderSender(icon)
   let evaluateReminders = () => {}
   let tray: ReturnType<typeof createTray> | undefined
@@ -174,9 +209,8 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         `${storage.error.message}\n원본을 보존합니다.\n${join(profile, 'data', 'timeline.sqlite3')}`,
       )
   }
-  let exiting = false
   function show() {
-    if (window.isDestroyed()) return
+    if (window.isDestroyed() || (installPending && !installExitFailed)) return
     if (window.isMinimized()) window.restore()
     window.show()
     window.focus()
@@ -214,13 +248,15 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const showAbout = createAbout(icon)
   const openSharingSettings=()=>{show();sharing?.requestSettings()}
   const requestQuit = () => {
+    if (installPending) { if (installExitFailed) requestInstallExit(); return }
     if (exiting) return
     show()
     requestClose()
   }
   try {
-    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState())
+    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState(), windowsLoginStartup(app.isPackaged), error => { show(); dialog.showErrorBox('Windows 시작 설정을 변경하지 못했습니다', String(error)) })
   } catch {
+    show()
     if (options.notifyTrayFailure) options.notifyTrayFailure()
     else dialog.showErrorBox('트레이를 만들지 못했습니다', '창 닫기로 앱을 종료할 수 있습니다. 저장하지 않은 입력은 종료 전에 확인합니다.')
   }
@@ -255,19 +291,20 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       afterClose: () => app.quit(),
     },
   )
-  app.on('second-instance', show)
+  window.webContents.on('before-input-event', (event) => { if (installPending) event.preventDefault() })
+  showExisting = show
+  if (pendingShow) show()
   app.on('before-quit', event => {
     if (exiting) return
     event.preventDefault()
     requestQuit()
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
-  let shutdownComplete=false,finishingShutdown=false
   async function finishShutdown(){
     powerMonitor.removeListener('resume',resume);powerMonitor.removeListener('suspend',suspend)
     nativeReminders.dispose()
     if(storage.state==='ready'&&storage.db.open)storage.db.close()
-    reminderIpc?.dispose();sharingIpc?.dispose();tray?.destroy();unregister()
+    reminderIpc?.dispose();sharingIpc?.dispose();if(tray&&!tray.isDestroyed())tray.destroy();unregister()
   }
   app.on('will-quit', event => {
     if(shutdownComplete)return
@@ -278,6 +315,20 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       finishingShutdown=false
       dialog.showErrorBox('앱 종료를 완료하지 못했습니다','저장소 정리가 완료되지 않아 업데이트 설치를 중단했습니다. 앱을 다시 종료한 뒤 실행해 주세요.')
     })
+  })
+  installExit.ready(async () => {
+    // Main blocks new IPC writes synchronously; the renderer is disabled without
+    // consulting its dirty guard. Accepted writes drain before services and DB.
+    exiting = true
+    window.setEnabled(false)
+    window.hide()
+    await updates?.dispose()
+    await stopServices()
+    await finishShutdown()
+    updatesIpc.dispose(); unregisterWindow()
+    shutdownComplete = true
+    window.destroy()
+    app.quit()
   })
   return { window, storage, profile, sharing, desktop: { show, requestQuit, showAbout, openSharingSettings } }
 }

@@ -32,6 +32,9 @@ jobs:
       - name: Build source-pinned actual Simple Timeline 0.2.1 for rename upgrade
         if: runner.os == 'Windows'
         run: ./scripts/release/build-legacy.ps1
+      - name: Build source-pinned actual Planrail 0.8.0 for manual installer migration
+        if: runner.os == 'Windows'
+        run: ./scripts/release/build-legacy-startup.ps1
       - name: Build a synthetic next-version installer for update verification
         if: runner.os == 'Windows'
         run: npm run dist:win:test-update
