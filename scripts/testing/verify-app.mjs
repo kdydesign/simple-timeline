@@ -37,10 +37,10 @@ const save = () =>
   );
 save();
 for (const step of steps) {
-  // E2E: 68 sequential sandboxed Electron cases exceeded 180s after 64 passes.
+  // E2E: Windows run43135614492 passed82/93 cases before the240s aggregate cap.
   // Native Windows first 50/70 cases took 92.8s; budget the remaining real DB/network work.
   // Keep individual test/request deadlines; only whole-suite allocations differ.
-  const timeoutMs = step === "test:native" ? 360000 : step === "test:e2e" ? 240000 : 180000;
+  const timeoutMs = step === "test:native" ? 360000 : step === "test:e2e" ? 360000 : 180000;
   const result = spawnSync(process.execPath, [npm, "run", step], {
     env: process.env,
     encoding: "utf8",

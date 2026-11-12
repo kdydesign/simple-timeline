@@ -44,3 +44,9 @@ Linux sandbox Electron·격리 임시 프로필에서 기존 편집 삭제 버�
 최종 코드의 개별 순차 확인: UI169개(100.86초),제품 build,native70개(14.48초) 통과.3개 시간대 단위230개씩은 직전 전체 실행에서 통과했고, 타입·release26개도 통과했다. Electron 전체 결과는 아래에 기록하고 Windows CI 결과는 후속 반영한다.
 
 최종 개별 순차 Electron93개도235.32초에 모두 통과했다(skip/flaky0). 최종 소스에 대해 typecheck,release26개,3개 시간대 단위230개씩,UI169개,build,native70개,Electron93개를 각각 확인했다. 다만 마지막 로컬 통합 wrapper의 간헐적 실패는 위 기록대로 유지하며, Windows 설치 및 깨끗한 Linux/Windows 통합 결과는 CI 대기다.
+
+## 커밋·CI
+
+제품 커밋 `bb3da63f21847c0a53f3e01b6ad038c3f4e986b4`를 main에 반영했다. [Repository harness43135614569](https://github.com/kdydesign/simple-timeline/actions/runs/43135614569)는 Linux·Windows 모두 통과. [Application43135614492](https://github.com/kdydesign/simple-timeline/actions/runs/43135614492)의 Linux job130910118041은 깨끗한 checkout에서 `verify:app`7단계 전체 통과(01:36:30~01:42:20UTC). 로컬 간헐 실패 기록과 구분하며 Windows 결과는 이어 기록한다.
+
+Windows job130910118385는 타입·release·3TZ·UI·build·native를 모두 통과했다. Electron은 assertion 실패 없이82개 통과 후 전체240초 제한의 `ETIMEDOUT`/`SIGTERM`으로 중단됐다. artifact13907582301의 `app/latest.json`에서 clean `bb3da63`,win32 x64,Node24.22.1을 확인했다.93개 순차 검사에 맞춰 전체 E2E 예산만360초로 보정한다. 개별 테스트·요청 deadline과 assertion은 그대로다. Linux 전체 통과와 분리해 기록하며 새 CI에서 Windows 설치 단계까지 검증한다.
