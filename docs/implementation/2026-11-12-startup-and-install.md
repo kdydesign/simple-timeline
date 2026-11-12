@@ -74,3 +74,7 @@ WindowsPS 자식의 PSModulePath만 대소문자 무관하게 제거하고, 묶�
 `cb30cf7`의 [Application43150331226](https://github.com/kdydesign/simple-timeline/actions/runs/43150331226)는 앱 전체·빌드·기본 설치 검사를 통과했다. artifact13914855452에서 실제 Electron PID7140(launcher5720), Node/파일핸들/프로세스핸들 경로 일치, Unicode·SID·생성시각 거부·실제 main 생존까지 확인했다. 첫 ACL-denied 설치 화면 검사는120초 뒤 `Planrail 설치:설치:True`에서 중단됐으며, 잔류 설치 프로세스 때문에 정리 EBUSY와 다음 UPDATE 설치 실패가 연쇄 발생했다. 설치 UI 상태 진단·실패 정리를 보강해 원인을 확인하며 전체 설치 검증 완료로 표시하지 않는다.
 
 Windows의 BM_CLICK은 비활성 대화상자에서 실패할 수 있어, 테스트 드라이버를 활성화 가능한 실제 버튼의 소유 대화상자로 보내는 WM_COMMAND/BN_CLICKED로 보정했다. 이전 artifact에 창 상태가 없어 그 원인으로 단정하지 않는다. 실패 때 소유 설치 프로세스/창/컨트롤/입력 이력·화면을 먼저 저장하고 일회성 VM에서 해당 설치 트리만5초 범위로 정리한다. 테스트 finally는 원래 오류를 보존하고 정리 실패를 별도 기록한다. ACL 거부 assertion·120초 기한·제품 종료 조건은 유지하며 독립 범위 검토를 통과했다.
+
+`26ef5f6`의 [Application43153912893](https://github.com/kdydesign/simple-timeline/actions/runs/43153912893)는 양 OS 앱 전체·빌드·기본 설치·자동 UPDATE를 통과했다. artifact13916395607의 설치 화면 진단으로 실패 원인을 확인했다: 예상한 권한 거부 안내가 정상 표시됐지만 OK 버튼 ID가2였고 드라이버는1만 찾았다. 또한 페이지 전환 중 queued 입력이 중복되어 옵션 페이지를 지나친 이력이 있었다. 설치 종료 보호 자체는 정상 작동했으며, 테스트 실패 정리는 오류 없이 완료돼 다음 UPDATE 검사는 통과했다. 단일 OK 모달 처리와 안정된 페이지별 한 번의 입력으로 검사 도구를 보정한다.
+
+드라이버는 실제 보이는 내부 페이지 HWND별로 안정된 컨트롤 스냅샷2개를 확인한 뒤 한 번만 진행하며, 제목/버튼 문구 변화로 재입력하지 않는다. 소유 모달의 유일한 활성 OK/확인 버튼은 컨트롤 번호와 무관하게 처리한다. 동기식 SendMessageTimeout으로 큐 중복을 막고, 실제 시작 옵션을 확인하기 전 설치를 진행하지 않는다. `pwsh -NoProfile -File scripts/testing/windows-installer-ui-state.test.ps1`로 실제 결정 클래스를 재현해 RED12실패→GREEN17확인을 기록했다. PowerShell구문4개/C#컴파일2개·diff 검사를 통과했고 제품·ACL 거부 조건·시간 제한은 변경하지 않았다.

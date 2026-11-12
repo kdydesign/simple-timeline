@@ -7,6 +7,21 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Runtime.InteropServices;
+public sealed class PlanrailPageAdvance {
+ readonly Dictionary<string,string> observed=new Dictionary<string,string>();
+ readonly HashSet<string> consumed=new HashSet<string>();
+ public bool Observe(string token,string fingerprint,bool eligible){
+  if(!eligible){observed.Remove(token);return false;}
+  if(consumed.Contains(token))return false;
+  string previous;if(!observed.TryGetValue(token,out previous)||previous!=fingerprint){observed[token]=fingerprint;return false;}
+  return true;
+ }
+ public void Consume(string token){consumed.Add(token);}
+ public static bool Acknowledgement(bool modal,bool direct,bool push,bool visible,bool enabled,string text){
+  string caption=(text??"").Replace("&","").Trim();
+  return modal&&direct&&push&&visible&&enabled&&(String.Equals(caption,"OK",StringComparison.OrdinalIgnoreCase)||caption=="확인");
+ }
+}
 public static class PlanrailInstallerUI {
  public delegate bool Callback(IntPtr h,IntPtr data);
  [DllImport("user32.dll")] static extern bool EnumWindows(Callback cb,IntPtr data);
@@ -22,12 +37,17 @@ public static class PlanrailInstallerUI {
  [DllImport("user32.dll")] public static extern IntPtr GetDlgItem(IntPtr h,int id);
  [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
  [DllImport("user32.dll")] public static extern bool IsWindowEnabled(IntPtr h);
- [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
+ [DllImport("user32.dll",EntryPoint="SendMessageTimeoutW",ExactSpelling=true,SetLastError=true)] static extern IntPtr SendMessageTimeout(IntPtr h,uint msg,UIntPtr w,IntPtr l,uint flags,uint timeout,out UIntPtr result);
  [DllImport("user32.dll")] public static extern IntPtr SendMessage(IntPtr h,uint msg,IntPtr w,IntPtr l);
  public static string Text(IntPtr h){var s=new StringBuilder(2048);GetWindowText(h,s,s.Capacity);return s.ToString();}
  public static string ClassName(IntPtr h){var s=new StringBuilder(256);GetClassName(h,s,s.Capacity);return s.ToString();}
  public static int ProcessId(IntPtr h){int pid;GetWindowThreadProcessId(h,out pid);return pid;}
- public static bool NotifyButton(IntPtr button){var parent=GetParent(button);int id=GetDlgCtrlID(button);return parent!=IntPtr.Zero&&id>0&&ClassName(button)=="Button"&&IsWindowVisible(button)&&IsWindowEnabled(button)&&IsWindowEnabled(parent)&&PostMessage(parent,0x111,new IntPtr(id&65535),button);}
+ public static bool NotifyButton(IntPtr button,out bool attempted){
+  attempted=false;var parent=GetParent(button);int id=GetDlgCtrlID(button);
+  if(parent==IntPtr.Zero||id<=0||ClassName(button)!="Button"||!IsWindowVisible(button)||!IsWindowEnabled(button)||!IsWindowEnabled(parent))return false;
+  attempted=true;UIntPtr result;return SendMessageTimeout(parent,0x111,new UIntPtr((uint)(id&65535)),button,2,1000,out result)!=IntPtr.Zero;
+ }
+ public static bool IsPushButton(IntPtr h){int kind=GetWindowLong(h,-16)&15;return ClassName(h)=="Button"&&(kind==0||kind==1);}
  public static IntPtr[] AllWindows(int[] pids){var list=new List<IntPtr>();EnumWindows((h,d)=>{int pid;GetWindowThreadProcessId(h,out pid);if(Array.IndexOf(pids,pid)>=0)list.Add(h);return true;},IntPtr.Zero);return list.ToArray();}
  public static IntPtr[] AllChildren(IntPtr parent){var list=new List<IntPtr>();EnumChildWindows(parent,(h,d)=>{list.Add(h);return true;},IntPtr.Zero);return list.ToArray();}
  public static bool IsCheckbox(IntPtr h){var c=new StringBuilder(256);GetClassName(h,c,c.Capacity);return c.ToString()=="Button"&&(GetWindowLong(h,-16)&15)==3;}
@@ -74,7 +94,7 @@ function Stop-OwnedInstallerTree {
  foreach($child in @($owned.Values)){try{if(-not $child.HasExited){$remaining=[Math]::Max(0,[int]($deadline-[DateTime]::UtcNow).TotalMilliseconds);if(-not $child.WaitForExit($remaining)){$errors.Add("Installer child remained live: $($child.Id)")}}}catch{$errors.Add([string]$_)}}
  return ,($errors.ToArray())
 }
-$initial=$null;$visited=$false;$completed=$false;$lastAction='';$lastClick=[DateTime]::MinValue;$runUnchecked=$false;$runLabel=$null
+$initial=$null;$visited=$false;$completed=$false;$lastAction='';$runUnchecked=$false;$runLabel=$null;$advance=[PlanrailPageAdvance]::new()
 try {
  $deadline=[DateTime]::UtcNow.AddSeconds(120)
  do {
@@ -88,8 +108,20 @@ try {
     if(-not $visited){$initial=[PlanrailInstallerUI]::SendMessage($checkbox[0],0xF0,[IntPtr]::Zero,[IntPtr]::Zero).ToInt64() -eq 1;$visited=$true}
     if($Startup -ne 'Keep'){$value=if($Startup -eq 'On'){1}else{0};[void][PlanrailInstallerUI]::SendMessage($checkbox[0],0xF1,[IntPtr]$value,[IntPtr]::Zero)}
    }
-   $next=[PlanrailInstallerUI]::GetDlgItem($window,1)
-   $mayAdvance=$true
+   $owner=[PlanrailInstallerUI]::GetParent($window)
+   $modal=$owner -ne [IntPtr]::Zero -and -not [PlanrailInstallerUI]::IsWindowEnabled($owner)
+   if($modal){
+    $buttons=@($children|Where-Object {[PlanrailInstallerUI]::GetParent($_) -eq $window -and [PlanrailInstallerUI]::IsPushButton($_) -and [PlanrailInstallerUI]::IsWindowVisible($_) -and [PlanrailInstallerUI]::IsWindowEnabled($_)})
+    if($buttons.Count -ne 1 -or -not [PlanrailPageAdvance]::Acknowledgement($modal,$true,$true,$true,$true,[PlanrailInstallerUI]::Text($buttons[0]))){continue}
+    $next=$buttons[0];$pageToken='modal:'+$window.ToInt64()
+   }else{
+    # Main captions change before custom-page creation; require the actual visible
+    # inner dialog and never rearm that HWND after one advance, even if text changes.
+    $pages=@($children|Where-Object {[PlanrailInstallerUI]::ClassName($_) -eq '#32770' -and [PlanrailInstallerUI]::GetParent($_) -eq $window})
+    if($pages.Count -ne 1){continue}
+    $next=[PlanrailInstallerUI]::GetDlgItem($window,1);$pageToken='page:'+$pages[0].ToInt64()
+   }
+   $mayAdvance=$modal -or $visited -or [PlanrailInstallerUI]::Text($next).Trim() -ne '설치'
    if($next -ne [IntPtr]::Zero -and [PlanrailInstallerUI]::Text($next) -eq '마침'){
     # Pinned MUI Finish.nsh creates a nested nsDialogs1044 checkbox dynamically.
     # Korean.nsh defines its caption as '<name> 실행하기(&R)'; no fixed child id.
@@ -105,15 +137,15 @@ try {
      $runUnchecked=$true
     }
    }
-   if($mayAdvance -and $next -ne [IntPtr]::Zero -and [PlanrailInstallerUI]::IsWindowEnabled($window) -and [PlanrailInstallerUI]::IsWindowEnabled($next)){
-    $description=([PlanrailInstallerUI]::Text($window))+':'+([PlanrailInstallerUI]::Text($next))+':'+[string]$visited
-    if($description -ne $lastAction -or ([DateTime]::UtcNow-$lastClick).TotalMilliseconds -gt 800){
-     # BM_CLICK can fail for an inactive dialog. Send the documented BN_CLICKED
-     # WM_COMMAND notification to this enabled button's owning dialog instead.
-     $sent=[PlanrailInstallerUI]::NotifyButton($next)
-     $history.Add(@{at=[DateTime]::UtcNow.ToString('o');stage=$description;sent=$sent;button=Window-Record $next;dialog=Window-Record $window})
-     $lastAction=$description;$lastClick=[DateTime]::UtcNow
-    }
+   $eligible=$mayAdvance -and $next -ne [IntPtr]::Zero -and [PlanrailInstallerUI]::IsWindowEnabled($window) -and [PlanrailInstallerUI]::IsWindowEnabled($next)
+   $fingerprint=(@($children|Sort-Object {$_.ToInt64()}|ForEach-Object {$r=Window-Record $_;'{0}|{1}|{2}|{3}|{4}' -f $r.handle,$r.id,$r.class,$r.enabled,$r.text.Trim()}) -join "`n")
+   if($advance.Observe($pageToken,$fingerprint,$eligible)){
+    $description=$pageToken+':'+[PlanrailInstallerUI]::Text($next).Trim()+':'+[string]$visited
+    $action=@{at=[DateTime]::UtcNow.ToString('o');stage=$description;button=Window-Record $next;dialog=Window-Record $window;fingerprint=$fingerprint}
+    # Bounded synchronous delivery does not queue a second click during page creation.
+    $attempted=$false;$action.sent=[PlanrailInstallerUI]::NotifyButton($next,[ref]$attempted);$action.attempted=$attempted
+    if($attempted){$advance.Consume($pageToken)}
+    $history.Add($action);$lastAction=$description
    }
   }
   Start-Sleep -Milliseconds 100
