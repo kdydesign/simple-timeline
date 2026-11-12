@@ -56,3 +56,7 @@ Windows job130910118385는 타입·release·3TZ·UI·build·native를 모두 통
 `73ed583`의 [Application43137367288](https://github.com/kdydesign/simple-timeline/actions/runs/43137367288)는 Linux 및 Windows `verify:app` 전체를 통과했다(Windows job130915813755,01:53:14~02:00:44UTC). 이어지는 실제 NSIS 컴파일에서 옵션 페이지의 top-level 함수가 플러그인/기본 변수 초기화 전에 확장되어 `StdUtils::TestParameter` plugin-not-found로 실패했다. 설치 산출물은 아직 제공하지 않았으며 함수 정의를 builder 초기화 뒤의 확장 지점으로 이동해 검증한다.
 
 NSIS 함수/변수 정의를 `customHeader`로 지연했다. builder26.18.0의 비동기 header 생성에서 custom include가 pluginDir보다 먼저 나올 수 있는 순서와 common.nsh의 실행 파일 정의 시점을 확인했다. `node --use-env-proxy scripts/testing/nsis-compile-smoke.mjs`는 pinned NSIS3.0.4.1/resources3.4.1과 실제 builder 설치·제거 템플릿으로 원본 RED 및 수정 GREEN을 확인한다. Linux 컴파일 전용이며 생성 EXE는 실행하지 않는다. Windows 설치 실행은 후속 CI에서 확인한다.
+
+`f4059c0`의 [Application43140123393](https://github.com/kdydesign/simple-timeline/actions/runs/43140123393)에서 Linux 전체 검사와 별도 Windows/Linux 하네스는 통과했다. Windows는 첫6단계 및 Electron92개 통과 후 기존 UPDATE 회귀의 설치 인계 기록 assertion이 실패했다(`updates.spec.ts:22`, 기대 shutdown/handoff-failed, 실제 빈 배열). 설치 빌드 단계에는 도달하지 않았다. 실패 artifact13909771742를 보존하고 설치 전 실패 원인을 조사한다.
+
+실제 원인은 UPDATE의 `onInstalling`이 파일 기록보다 먼저 renderer 쓰기 차단 상태를 알리는 데 있었다. 기존 검사는 이 중간 배너를 완료 신호로 사용했다. 테스트 fixture의 실제 record 단계를 보류하자 같은 빈 trace assertion 실패를 결정적으로 재현(RED4.5초)했다. 중간 상태도 검증한 뒤 record를 해제하고 기존 install Promise의 완료·정확한 최종 상태/오류/trace를 확인하도록 테스트2개 파일만 수정했다. dirty 입력·재시작·데이터 보존 assertion은 유지. sandbox Electron 집중1개 GREEN5.6초, 타입·diff 검사 통과; 독립 범위 검토도 통과했다. 제품 timeout·종료 로직 변경은 없다.

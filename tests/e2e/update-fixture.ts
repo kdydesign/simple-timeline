@@ -37,9 +37,14 @@ export function exposeUpdateFixture(window:BrowserWindow,profile:string,closeSto
  g.setupUpdateMember=async(connection:UpdateConnection)=>{
   let service:UpdateService|undefined
   const ipc=attach(()=>service),barrier=createMutationBarrier()
+  // Only the test fixture holds record I/O; production coordinator/service stay unchanged.
+  let recordStarted!:()=>void,releaseRecord!:()=>void
+  const started=new Promise<void>(resolve=>{recordStarted=resolve}),recordGate=new Promise<void>(resolve=>{releaseRecord=resolve})
+  g.waitForUpdateRecord=()=>started
+  g.finishUpdateRecord=async()=>{releaseRecord();await service!.install();return service!.getState()}
   const coordinator=createInstallCoordinator({barrier,freezeRenderer:()=>ipc.guard.freeze(),releaseRenderer:()=>ipc.guard.release(),
    prepare:async()=>({validate:async()=>{},dispose:async()=>{},handoff:async()=>{g.updateTrace.push('handoff-failed');throw Error('Controlled installer failure')}}),
-   record:(input,files)=>service!.recordAttempt(input,files),shutdown:async()=>{g.updateTrace.push('shutdown');closeStorage()}})
+   record:async(input,files)=>{recordStarted();await recordGate;await service!.recordAttempt(input,files)},shutdown:async()=>{g.updateTrace.push('shutdown');closeStorage()}})
   service=await createUpdateService({root:join(profile,'fixture-member'),version:'0.8.0',editingBlocked:()=>barrier.blocked(),install:input=>coordinator.install(input),changed:s=>ipc.changed(s)})
   await service.setSharing({role:'member',connected:true,connection});await service.check();ipc.changed(service.getState())
   g.checkUpdate=()=>service!.check()

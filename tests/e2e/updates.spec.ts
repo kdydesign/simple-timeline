@@ -18,7 +18,14 @@ test('real update IPC across two pinned TLS profiles defers dirty edits and rest
   expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual([])
   await expect(member.page.locator('.saving-shield')).toHaveCount(0)
   await member.page.getByRole('button',{name:'UPDATE',exact:true}).click();await member.page.getByRole('button',{name:'설치 후 재시작'}).click()
+  // The blocked banner appears before durable attempt recording/shutdown finishes.
+  // Hold that actual record step to make a slow Windows disk deterministic.
+  await member.app.evaluate(()=>(globalThis as any).waitForUpdateRecord())
   await expect(member.page.getByText(/앱을 종료한 뒤 다시 열어/)).toBeVisible()
+  expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual([])
+  const settled=await member.app.evaluate(()=>(globalThis as any).finishUpdateRecord())
+  expect(settled).toMatchObject({phase:'waiting',error:'shutdown',editingBlocked:true})
+  await expect(member.page.getByText('업데이트를 위한 앱 종료를 완료하지 못했습니다.',{exact:true})).toBeVisible()
   expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual(['shutdown','handoff-failed'])
   await member.restart();await member.app.evaluate((_electron,connection)=>(globalThis as any).setupUpdateMember(connection),connection);await member.page.reload()
   await member.page.getByRole('button',{name:'UPDATE',exact:true}).click();await expect(member.page.getByRole('button',{name:'설치 후 재시작'})).toBeEnabled()
