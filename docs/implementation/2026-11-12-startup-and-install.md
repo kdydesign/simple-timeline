@@ -78,3 +78,7 @@ Windows의 BM_CLICK은 비활성 대화상자에서 실패할 수 있어, 테스
 `26ef5f6`의 [Application43153912893](https://github.com/kdydesign/simple-timeline/actions/runs/43153912893)는 양 OS 앱 전체·빌드·기본 설치·자동 UPDATE를 통과했다. artifact13916395607의 설치 화면 진단으로 실패 원인을 확인했다: 예상한 권한 거부 안내가 정상 표시됐지만 OK 버튼 ID가2였고 드라이버는1만 찾았다. 또한 페이지 전환 중 queued 입력이 중복되어 옵션 페이지를 지나친 이력이 있었다. 설치 종료 보호 자체는 정상 작동했으며, 테스트 실패 정리는 오류 없이 완료돼 다음 UPDATE 검사는 통과했다. 단일 OK 모달 처리와 안정된 페이지별 한 번의 입력으로 검사 도구를 보정한다.
 
 드라이버는 실제 보이는 내부 페이지 HWND별로 안정된 컨트롤 스냅샷2개를 확인한 뒤 한 번만 진행하며, 제목/버튼 문구 변화로 재입력하지 않는다. 소유 모달의 유일한 활성 OK/확인 버튼은 컨트롤 번호와 무관하게 처리한다. 동기식 SendMessageTimeout으로 큐 중복을 막고, 실제 시작 옵션을 확인하기 전 설치를 진행하지 않는다. `pwsh -NoProfile -File scripts/testing/windows-installer-ui-state.test.ps1`로 실제 결정 클래스를 재현해 RED12실패→GREEN17확인을 기록했다. PowerShell구문4개/C#컴파일2개·diff 검사를 통과했고 제품·ACL 거부 조건·시간 제한은 변경하지 않았다.
+
+`20640d8`의 [Application43157196698](https://github.com/kdydesign/simple-timeline/actions/runs/43157196698)는 양 OS 앱 전체·빌드·기본 설치·자동 UPDATE를 통과했다. artifact13916872948에서 실제 옵션 페이지의 기본 체크와 ACL 거부 시 설치 중단·원본 보존까지 확인했다. 다음 실행 중0.8.0 교체는 UI timeout 없이 종료 확인 오류(exit2)로 중단됐다. 현재 NSIS가 helper의 구체적인 오류를 일반 안내로 대체하므로 정확한 종료 단계 원인은 미확정이다. helper 오류와32비트 WindowsPS 읽기 전용 진단을 확보하며, 프로세스 경로·SID·버전·핸들 검증을 완화하지 않는다.
+
+종료 확인 helper의 실패 단계·줄번호와 기존 캡처된 오류를 설치 실패 안내에 추가했다. 실제 설치기와 같은32비트 WindowsPS 및64비트 엔진에서 PE버전·CIM경로·네이티브 핸들 정보를 읽기만 하는 CI 진단도 추가했다. 이 변경은 실패 원인 확보용이며 종료 권한·동작·기한을 변경하지 않는다.

@@ -154,7 +154,7 @@ FunctionEnd
   System::Call 'kernel32::SetEnvironmentVariableW(w "PLANRAIL_INSTALL_TARGET", p 0)'
   System::Call 'kernel32::SetEnvironmentVariableW(w "PLANRAIL_INSTALL_MANUAL", p 0)'
   ${If} $0 != 0
-    MessageBox MB_OK|MB_ICONEXCLAMATION "Planrail 종료를 안전하게 확인하지 못했습니다. 앱을 종료한 뒤 설치 프로그램을 다시 실행해 주세요." /SD IDOK
+    MessageBox MB_OK|MB_ICONEXCLAMATION "Planrail 종료를 안전하게 확인하지 못했습니다. 앱을 종료한 뒤 설치 프로그램을 다시 실행해 주세요.$\r$\nHelper exit $0: $1" /SD IDOK
     SetErrorLevel 2
     Quit
   ${EndIf}

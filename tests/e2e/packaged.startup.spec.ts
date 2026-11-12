@@ -7,6 +7,7 @@ import {join,resolve} from 'node:path'
 import {createHash} from 'node:crypto'
 import {windowsPowerShellEnvironment} from '../../src/main/windows-login-startup'
 const powershell=join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe')
+const powershell32=join(process.env.SystemRoot??'C:\\Windows','SysWOW64','WindowsPowerShell','v1.0','powershell.exe')
 const envFor=(extra:NodeJS.ProcessEnv={}):Record<string,string>=>Object.fromEntries(Object.entries({...process.env,...extra}).filter((entry):entry is [string,string]=>typeof entry[1]==='string'&&entry[0]!=='ELECTRON_RUN_AS_NODE'))
 const command=(script:string,extra:NodeJS.ProcessEnv={})=>execFileSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',script],{env:windowsPowerShellEnvironment(envFor(extra)),encoding:'utf8',timeout:30000}).trim()
 const waitExit=(child:ReturnType<typeof spawn>)=>new Promise<number|null>((done,reject)=>{const timer=setTimeout(()=>reject(Error('Child exit timeout')),15000);child.once('error',reject);child.once('exit',code=>{clearTimeout(timer);done(code)})})
@@ -85,6 +86,14 @@ try {
   expect(interactive('Keep',true).exitCode).not.toBe(0);expect(instance!.process().exitCode).toBeNull()
   command('$a=Get-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET;$a.SetSecurityDescriptorSddlForm($env:PLANRAIL_ACL_SDDL);Set-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET -AclObject $a',{PLANRAIL_ACL_TARGET:exe,PLANRAIL_ACL_SDDL:restoreAcl});restoreAcl=undefined
   expect(createHash('sha256').update(await readFile(exe)).digest('hex')).toBe(beforeHash);cases.push('identity permission failure aborts before replacement')
+  const diagnostic=await readFile('scripts/testing/windows-install-gate-diagnostics.ps1','utf8')
+  evidence.gateArchitecture=[]
+  for(const engine of [powershell,powershell32]){
+   const probe=spawnSync(engine,['-NoLogo','-NoProfile','-NonInteractive','-Command',native+'\n'+diagnostic],{env:windowsPowerShellEnvironment(envFor({PLANRAIL_TEST_TARGET:exe})),encoding:'utf8',timeout:30000})
+   let detail:unknown
+   try{detail=JSON.parse(Buffer.from(probe.stdout.trim(),'base64').toString('utf8'))}catch{detail=null}
+   ;(evidence.gateArchitecture as unknown[]).push({engine,status:probe.status,stdout:probe.stdout,stderr:probe.stderr,error:probe.error?.message,detail})
+  }
   let closed=instance!.waitForEvent('close');const oldUi=interactive();await closed;instance=undefined
   expect(oldUi.initialChecked).toBe(true);expect(startup('Read')).toMatchObject({selected:true,registered:true,disabled:false});cases.push('actual pinned0.8.0 manually replaced, default checked')
   page=await launch(exe,['--planrail-autostart']);expect(await instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false)

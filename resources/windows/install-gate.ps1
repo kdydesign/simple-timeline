@@ -5,9 +5,11 @@ param([string]$Target=$env:PLANRAIL_INSTALL_TARGET,[switch]$Manual)
 $env:PSModulePath=[IO.Path]::Combine($PSHOME,'Modules')
 $ErrorActionPreference='Stop'
 if ($env:PLANRAIL_INSTALL_MANUAL -eq '1') { $Manual=$true }
+$gateStage='initialize'
 try {
   if (-not [IO.Path]::IsPathRooted($Target)) { throw 'Absolute installation target required' }
   $Target=[IO.Path]::GetFullPath($Target)
+  $gateStage='load-native-api'
   Add-Type -TypeDefinition @'
 using System;
 using System.IO;
@@ -59,7 +61,7 @@ public sealed class PlanrailProcess : IDisposable {
     $result=New-Object System.Collections.Generic.List[object]
     try {
       foreach($item in @(Get-CimInstance Win32_Process -Filter "Name = 'Planrail.exe'")) {
-        if (-not $item.ExecutablePath) { throw 'Cannot verify process path' }
+        if (-not $item.ExecutablePath) { throw "Cannot verify process path (PID $($item.ProcessId))" }
         if (-not [String]::Equals([PlanrailProcess]::Canonical($item.ExecutablePath),$canonical,[StringComparison]::OrdinalIgnoreCase)) { continue }
         $process=$null
         try { $process=[PlanrailProcess]::new([int]$item.ProcessId,[bool]$forceLegacy) }
@@ -73,6 +75,7 @@ public sealed class PlanrailProcess : IDisposable {
       return ,$result
     } catch { foreach($process in $result){$process.Dispose()};throw }
   }
+  $gateStage='check-target-image'
   if (-not (Test-Path -LiteralPath $Target -PathType Leaf)) {
     # A missing target is safe only when no process reports this exact path.
     foreach($item in @(Get-CimInstance Win32_Process -Filter "Name = 'Planrail.exe'")) {
@@ -81,9 +84,11 @@ public sealed class PlanrailProcess : IDisposable {
     exit 0
   }
   # Hold the image against replacement while checking its version and process identity.
+  $gateStage='open-target-image'
   $image=[IO.File]::Open($Target,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::Read)
   $handles=New-Object System.Collections.Generic.List[object]
   try {
+    $gateStage='inspect-image-version'
     $canonical=[PlanrailProcess]::Canonical($Target)
     $owner=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value
     $versionText=[Diagnostics.FileVersionInfo]::GetVersionInfo($Target).ProductVersion
@@ -91,13 +96,15 @@ public sealed class PlanrailProcess : IDisposable {
     $version=$null
     $supported=[Version]::TryParse($versionText,[ref]$version) -and $version -ge [Version]'0.8.1'
     $forceLegacy=$Manual -and $legacy
+    $gateStage='discover-before-shutdown'
     $handles=Find-Targets
     if ($handles.Count -eq 0) { exit 0 }
     if ($Manual) {
       if ($forceLegacy) {
         # All matching handles and owners were validated before stopping any process.
-        foreach($process in $handles) { $process.StopLegacy($canonical,$owner,$process.Created) }
+        foreach($process in $handles) { $gateStage='stop-legacy PID '+$process.Id; $process.StopLegacy($canonical,$owner,$process.Created) }
       } elseif ($supported) {
+        $gateStage='request-graceful-shutdown'
         $request=New-Object Diagnostics.ProcessStartInfo
         $request.FileName=$Target
         $request.UseShellExecute=$false
@@ -107,6 +114,7 @@ public sealed class PlanrailProcess : IDisposable {
         try { if(-not $child.WaitForExit(10000) -or $child.ExitCode -ne 0){throw 'Graceful shutdown request failed'} } finally { $child.Dispose() }
       } else { throw 'Unsupported running app version' }
     }
+    $gateStage='verify-process-exit'
     $deadline=[DateTime]::UtcNow.AddSeconds(30)
     do {
       $remaining=Find-Targets
@@ -117,4 +125,4 @@ public sealed class PlanrailProcess : IDisposable {
     } while([DateTime]::UtcNow -lt $deadline)
     throw 'Planrail did not complete safe shutdown'
   } finally { foreach($process in $handles){$process.Dispose()};$image.Dispose() }
-} catch { [Console]::Error.WriteLine($_.Exception.Message);exit 2 }
+} catch { [Console]::Error.WriteLine("${gateStage} (line $($_.InvocationInfo.ScriptLineNumber)): $($_.Exception.Message)");exit 2 }
