@@ -88,3 +88,17 @@ Windows의 BM_CLICK은 비활성 대화상자에서 실패할 수 있어, 테스
 보정은 종료 전에 이미 검증한 핸들을 계속 보유하고, 그 핸들이 종료 신호를 낸 같은 PID의 잔류 항목만 건너뛰는 것으로 제한한다. [Microsoft PROCESS_INFORMATION 계약](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/ns-processthreadsapi-process_information)은 모든 핸들이 닫히고 프로세스 객체가 해제되기 전에는 PID가 재사용되지 않는다고 명시한다. 알 수 없는 PID·살아 있는 프로세스의 빈 경로는 기존처럼 거부하며, 대상/소유자/버전 확인을 생략하거나 종료 범위를 늘리지 않는다.
 
 실제 `Find-Targets` 함수를 추출한 `scripts/testing/windows-install-gate-state.test.ps1`에서 잔류 main/child 통과와 초기 발견·알 수 없는 PID·살아 있는 main/child의 빈 경로 거부를 검증했다. 원본 RED3개 실패→보정 GREEN6개 통과, root 재실행 및 하네스7개도 통과했다. 네이티브 핸들은 기존 outer finally까지 유지하며 강제 종료 조건은 그대로다. 실제 설치 재검증 결과는 후속 CI에 기록한다. 사용 안내의 이전 ‘로그인 자동 실행 없음’ 문구2곳도 현재0.8.1 정책과 일치시켰다.
+
+잔류 프로세스 보정의 독립 검토에서 원본 핸들 수명·복사 참조·반복 조회 핸들의 별도 해제·종료 전 전체 신원 확인·알 수 없는 대상 거부를 확인했고 추가 지적은 없었다. PowerShell구문4개/C#컴파일2개·실제 NSIS 설치/제거 템플릿 컴파일·release installer6개·diff 검사도 통과했다. 보정 커밋은 `3cbb3e8ae30e86144f743b38a777050b4db1d5f9`이며 [Application43162750047](https://github.com/kdydesign/simple-timeline/actions/runs/43162750047)에서 실제 Windows lifecycle을 재검증한다.
+
+## 2026-11-16 설치 검증 재개
+
+`3cbb3e8`의 Application43162750047은 양 OS 앱 전체 검사·설치본 빌드·기본 설치/오프라인/DB 보존을 통과했다. 실제0.8.0 교체 뒤 자동 실행 등록·숨김 시작·직접 실행 복원·저장 데이터 보존 assertion도 통과한 뒤, 다음0.8.1 실행 중 재설치에서 실패했다. artifact13918729294의 installer-ui-3은 `verify-process-exit: Planrail did not complete safe shutdown`, 테스트는 별도 close Promise의30초 timeout을 기록했다. 이후 UPDATE 검사는 정리되지 않은 시험 프로필을 감지해 중단했다.
+
+테스트의 `execFileSync`가 설치기 종료를 기다리는 동안 Playwright의 이벤트 루프를 막았다. pinned Playwright1.64.1의 Electron launcher는 stderr의 `Waiting for the debugger to disconnect...`를 받은 뒤 inspector 연결을 닫는데, 동기식 대기 중에는 이 callback이 실행되지 않는다. 실제 Node inspector·별도 종료 대기 프로세스로 같은 조건을 재현했다: 동기식은 종료 대기 실패, 비동기식은 debugger-disconnect 관측과 실제 프로세스 종료를 확인했다. 종료 제한을 늘리거나 제품의 정상 종료를 강제 종료로 바꾸지 않는다.
+
+대화형 설치 시험을 비동기 `execFile`로 전환했다. 앱 close와 설치 결과를 즉시 함께 관찰하고 둘 다 끝난 뒤 정리하며, 두 작업이 실패하면 설치기의 구체적인 오류를 우선 보존한다. 이로써 처리되지 않은 close rejection과 정리 도중 설치기 잔류를 방지한다. 변경은 테스트 실행부에만 한정한다. 실제 inspector를 사용하는 회귀는 원본 동기식에서 실패했고 수정 후 집중 검사2개·타입 검사를 통과했다. 전체 앱 검사와 실제 Windows NSIS lifecycle 결과는 후속 기록한다.
+
+독립 범위 검토는 비동기 inspector 해제·설치와 close의 두 rejection 관찰·설치 오류 우선 보존·기존 assertion/기한 유지에 중요한 문제를 찾지 않았다. 회귀 fixture의 spawn 실패에도 정리를 끝내도록 프로세스 `exit` 대신 `close`를 기다리는 소규모 보정을 반영했다. 최종 집중2개·타입 검사 재실행도 통과했다.
+
+로컬 `verify:app`은 typecheck·release·3TZ unit·UI·build를 통과했다. native는 `Missing X server or $DISPLAY`로 시작 단계에서 종료했고 E2E는 미실행이다. 현재 환경에 xvfb-run도 없어 로컬 Electron 실행 검증을 완료했다고 표시하지 않는다. 이 변경은 테스트 코드이며 제품 코드·Windows helper·설치 종료 제한을 바꾸지 않았다. 화면 환경을 제공하는 깨끗한 Linux/Windows CI의 전체 검사와 Windows packaged 결과를 확인한다.

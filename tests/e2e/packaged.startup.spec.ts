@@ -5,6 +5,7 @@ import {existsSync,realpathSync} from 'node:fs'
 import {readFile,writeFile,mkdir,readdir,rm} from 'node:fs/promises'
 import {join,resolve} from 'node:path'
 import {createHash} from 'node:crypto'
+import {runInstallerProcess} from './installer-process'
 import {windowsPowerShellEnvironment} from '../../src/main/windows-login-startup'
 const powershell=join(process.env.SystemRoot??'C:\\Windows','System32','WindowsPowerShell','v1.0','powershell.exe')
 const powershell32=join(process.env.SystemRoot??'C:\\Windows','SysWOW64','WindowsPowerShell','v1.0','powershell.exe')
@@ -26,13 +27,23 @@ test('actual0.8.0 manual migration and assisted startup choices preserve OS disa
  const gate=(manual:boolean)=>spawnSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',gateSource],{env:contaminated({PLANRAIL_INSTALL_TARGET:exe,PLANRAIL_INSTALL_MANUAL:manual?'1':'0'}),encoding:'utf8',timeout:55000})
  const silent=(file=installer,args:string[]=[])=>{const result=spawnSync(file,['/S',...args,'/D='+directory],{env:windowsPowerShellEnvironment(envFor()),timeout:90000,encoding:'utf8'});expect(result.status,result.stderr).toBe(0)}
  let interactiveAttempt=0
- const interactive=(startup:'On'|'Off'|'Keep'='Keep',expectFailure=false)=>JSON.parse(execFileSync('pwsh.exe',['-NoProfile','-NonInteractive','-File',resolve('scripts/testing/windows-installer-ui.ps1'),'-Installer',installer,'-Directory',directory,'-Startup',startup,'-EvidenceDirectory',info.outputPath('installer-ui-'+(++interactiveAttempt)),...(expectFailure?['-ExpectFailure']:[])],{encoding:'utf8',timeout:140000}))
+ const interactive=async(startup:'On'|'Off'|'Keep'='Keep',expectFailure=false)=>JSON.parse((await runInstallerProcess('pwsh.exe',['-NoProfile','-NonInteractive','-File',resolve('scripts/testing/windows-installer-ui.ps1'),'-Installer',installer,'-Directory',directory,'-Startup',startup,'-EvidenceDirectory',info.outputPath('installer-ui-'+(++interactiveAttempt)),...(expectFailure?['-ExpectFailure']:[])],{encoding:'utf8',timeout:140000})).stdout)
  const windowsVersion=command('$PSVersionTable.PSVersion.ToString()');expect(windowsVersion).toMatch(/^5\.1\./)
  const evidence:Record<string,unknown>={sourceSha:base.sourceSha,legacySourceSha:legacy.sourceSha,legacyInstallerSha256:legacy.sha256,executionPolicy:command('Get-ExecutionPolicy'),windowsPowerShell:windowsVersion,inheritedModulePath:process.env.PSModulePath??null,foreignModules,nativeModuleCommands:JSON.parse(command('Get-Command Add-Type,Get-CimInstance,Get-ExecutionPolicy,Get-Acl,Set-Acl,ConvertTo-Json | Select-Object Name,ModuleName,@{Name="ModulePath";Expression={$_.Module.Path}} | ConvertTo-Json -Compress')),windowsAnsiCodePage:command('[Text.Encoding]::Default.CodePage'),unicodeInstallationPath:directory,cases:[]}
  const cases=evidence.cases as unknown[]
  let instance:ElectronApplication|undefined,restoreAcl:string|undefined,hadFailure=false
  const launch=async(path=exe,args:string[]=[])=>{instance=await _electron.launch({chromiumSandbox:true,executablePath:path,args,env:envFor(),timeout:30000});const page=await instance.firstWindow();await page.getByRole('button',{name:'프로젝트 추가',exact:true}).waitFor();return page}
  const close=async()=>{if(!instance)return;await instance.evaluate(({app})=>app.exit(0)).catch(()=>{});await instance.close().catch(()=>{});instance=undefined}
+ // Observe both promises immediately and finish the installer before cleanup.
+ // Report its actual failure ahead of a secondary close timeout.
+ const replaceRunning=async()=>{
+  const closed=instance!.waitForEvent('close')
+  const [exit,installation]=await Promise.allSettled([closed,interactive()])
+  if(installation.status==='rejected')throw installation.reason
+  if(exit.status==='rejected')throw exit.reason
+  instance=undefined
+  return installation.value
+ }
  const snapshot=async()=>{const page=await instance!.firstWindow();return page.evaluate(async()=>{const result=await window.simpleTimeline.getSnapshot();if(!result.ok)throw Error('DB unavailable');return result.data})}
  const uninstall=async()=>{const file=(await readdir(directory)).find(p=>p.startsWith('Uninstall')&&p.endsWith('.exe'));if(!file)throw Error('Uninstaller missing');const result=spawnSync(join(directory,file),['/S'],{timeout:90000,encoding:'utf8'});expect(result.status,result.stderr).toBe(0);await expect.poll(()=>existsSync(exe),{timeout:30000}).toBe(false)}
  await mkdir(info.outputDir,{recursive:true})
@@ -83,7 +94,7 @@ try {
   restoreAcl=command('(Get-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET).Sddl',{PLANRAIL_ACL_TARGET:exe})
   const beforeHash=createHash('sha256').update(await readFile(exe)).digest('hex')
   command('$a=Get-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET;$sid=[Security.Principal.WindowsIdentity]::GetCurrent().User;$rule=[Security.AccessControl.FileSystemAccessRule]::new($sid,[Security.AccessControl.FileSystemRights]::ReadData,[Security.AccessControl.AccessControlType]::Deny);$a.AddAccessRule($rule);Set-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET -AclObject $a',{PLANRAIL_ACL_TARGET:exe})
-  expect(interactive('Keep',true).exitCode).not.toBe(0);expect(instance!.process().exitCode).toBeNull()
+  expect((await interactive('Keep',true)).exitCode).not.toBe(0);expect(instance!.process().exitCode).toBeNull()
   command('$a=Get-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET;$a.SetSecurityDescriptorSddlForm($env:PLANRAIL_ACL_SDDL);Set-Acl -LiteralPath $env:PLANRAIL_ACL_TARGET -AclObject $a',{PLANRAIL_ACL_TARGET:exe,PLANRAIL_ACL_SDDL:restoreAcl});restoreAcl=undefined
   expect(createHash('sha256').update(await readFile(exe)).digest('hex')).toBe(beforeHash);cases.push('identity permission failure aborts before replacement')
   const diagnostic=await readFile('scripts/testing/windows-install-gate-diagnostics.ps1','utf8')
@@ -94,26 +105,26 @@ try {
    try{detail=JSON.parse(Buffer.from(probe.stdout.trim(),'base64').toString('utf8'))}catch{detail=null}
    ;(evidence.gateArchitecture as unknown[]).push({engine,status:probe.status,stdout:probe.stdout,stderr:probe.stderr,error:probe.error?.message,detail})
   }
-  let closed=instance!.waitForEvent('close');const oldUi=interactive();await closed;instance=undefined
+  const oldUi=await replaceRunning()
   expect(oldUi.initialChecked).toBe(true);expect(startup('Read')).toMatchObject({selected:true,registered:true,disabled:false});cases.push('actual pinned0.8.0 manually replaced, default checked')
   page=await launch(exe,['--planrail-autostart']);expect(await instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false)
   expect(await waitExit(spawn(exe,['--planrail-autostart'],{env:envFor(),stdio:'ignore'}))).toBe(0);expect(await instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false)
   expect(await waitExit(spawn(exe,[],{env:envFor(),stdio:'ignore'}))).toBe(0);await expect.poll(()=>instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(true)
   expect((await snapshot()).projects.map(p=>p.name)).toEqual(['commit before manual install'])
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('discard current draft')
-  closed=instance!.waitForEvent('close');expect(interactive().initialChecked).toBe(true);await closed;instance=undefined;cases.push('supported version graceful manual exit discards draft')
+  const currentUi=await replaceRunning();expect(currentUi.initialChecked).toBe(true);cases.push('supported version graceful manual exit discards draft')
   command('$k=[Microsoft.Win32.Registry]::CurrentUser.CreateSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\StartupApproved\\Run");$k.SetValue("Planrail",[byte[]](3,0,0,0,0,0,0,0,0,0,0,0),[Microsoft.Win32.RegistryValueKind]::Binary);$k.Dispose()')
   await launch();expect(startup('Read').disabled).toBe(true);await close()
-  expect(interactive().initialChecked).toBe(false);expect(startup('Read')).toMatchObject({selected:true,registered:true,disabled:true});cases.push('OS-disabled launch and interactive reinstall preserved')
+  expect((await interactive()).initialChecked).toBe(false);expect(startup('Read')).toMatchObject({selected:true,registered:true,disabled:true});cases.push('OS-disabled launch and interactive reinstall preserved')
   expect(startup('On')).toMatchObject({selected:true,registered:true,disabled:false})
   silent(installer,['--updated']);expect(startup('Read').registered).toBe(true)
   expect(startup('Off')).toMatchObject({selected:false,registered:false})
   silent(installer,['--updated']);expect(startup('Read')).toMatchObject({selected:false,registered:false})
-  expect(interactive().initialChecked).toBe(false);expect(startup('Read')).toMatchObject({selected:false,registered:false});cases.push('explicit OFF and ON survive updated and interactive installs')
+  expect((await interactive()).initialChecked).toBe(false);expect(startup('Read')).toMatchObject({selected:false,registered:false});cases.push('explicit OFF and ON survive updated and interactive installs')
   await launch();expect((await snapshot()).projects.map(p=>p.name)).toEqual(['commit before manual install']);await close()
   const db=join(profile,'data/timeline.sqlite3'),dbHash=createHash('sha256').update(await readFile(db)).digest('hex')
   await uninstall();expect(startup('Read')).toMatchObject({selected:null,registered:false});expect(createHash('sha256').update(await readFile(db)).digest('hex')).toBe(dbHash)
-  expect(interactive('Off').initialChecked).toBe(true);expect(startup('Read')).toMatchObject({selected:false,registered:false});await uninstall();cases.push('actual uninstall cleans registration, retains DB; fresh unchecked install persists OFF')
+  expect((await interactive('Off')).initialChecked).toBe(true);expect(startup('Read')).toMatchObject({selected:false,registered:false});await uninstall();cases.push('actual uninstall cleans registration, retains DB; fresh unchecked install persists OFF')
   evidence.pass=true
  }catch(error){
   hadFailure=true
