@@ -44,7 +44,7 @@ function send(res: ServerResponse, status: number, body?: unknown, etag?: string
   res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', connection: 'close', ...(bytes ? { 'content-length': bytes.length } : {}), ...(etag ? { etag } : {}) })
   res.end(bytes)
 }
-export function createSharingHost(options: { identity: HostIdentity; store: HostStore; onChange?: () => void; now?: () => number; updates?: UpdateRoutes }) {
+export function createSharingHost(options: { identity: HostIdentity; store: HostStore; onChange?: () => void; onSyncComplete?:(deviceId:string)=>void; now?: () => number; updates?: UpdateRoutes }) {
   const { identity, store } = options
   const now = options.now ?? (() => performance.now())
   const attempts = new Map<string, Attempt>()
@@ -81,6 +81,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       if (!server) fail('ABORTED', 503)
       const ip = req.socket.remoteAddress
       if (!ip || !/^\d+\.\d+\.\d+\.\d+$/.test(ip)) fail('UNAUTHORIZED', 401)
+      const completedSync=(deviceId:string)=>res.once('finish',()=>{try{if(server&&requestGeneration===generation&&[200,304].includes(res.statusCode)&&authenticate(req,ip).id===deviceId)options.onSyncComplete?.(deviceId)}catch{/* Revoked or replaced before response completion. */}})
       const clock = now()
       for (const [key, r] of rate) if (clock - r.start >= 60000) rate.delete(key)
       let r = rate.get(ip)
@@ -99,6 +100,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       if (req.method === 'GET' && req.url === '/v1/snapshot') {
         const device = authenticate(req, ip)
         // Store owns the coherent filtered read. ETag cannot reveal private-project revisions.
+        completedSync(device.id)
         const snapshot = validateWireSnapshot(store.getWireSnapshot(device.id))
         const etag = `"${hashCredential(JSON.stringify(snapshot))}"`
         send(res, req.headers['if-none-match'] === etag ? 304 : 200, req.headers['if-none-match'] === etag ? undefined : snapshot, etag)
@@ -116,6 +118,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
         let envelope
         try { envelope = validateChangeEnvelope(store.getChangeSnapshot(device.id, b.cursor as string | null, b.reconnecting)) }
         catch (error) { if (error instanceof Error && error.message === 'CHANGE_CURSOR_INVALID') fail('CHANGE_CURSOR_INVALID', 409); throw error }
+        completedSync(device.id)
         send(res, 200, envelope, `"${hashCredential(JSON.stringify(envelope.snapshot))}"`)
         return
       }

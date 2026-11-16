@@ -53,6 +53,6 @@ export function useUpdates(api:UpdateApi|undefined=window.timelineUpdates){
   try{const result=await api[action]();if(alive.current){if(result.ok)accept(result.data);else setError(result.error.message)}}catch{if(alive.current)setError('업데이트 작업 결과를 확인하지 못했습니다. 다시 시도해 주세요.')}
   finally{pending.current.delete(action);if(alive.current)setBusy(pending.current.size>0)}
  },[api,accept])
- return{state,error,busy,run}
+ return{state,error,busy,run,acknowledgeOpen:async(token:string)=>{const result=await api?.acknowledgeOpen(token);if(result?.ok)accept(result.data)}}
 }
 export type UpdatesView=ReturnType<typeof useUpdates>

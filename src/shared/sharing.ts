@@ -28,7 +28,10 @@ export interface ChangeNotificationState {
   storageError:boolean
   openRequest:{token:string;target:ChangeTarget}|null
 }
+export interface MemberPresence {connected:boolean;lastSeenAt:string|null}
 export interface SharingState {
+  memberPresence?:Record<string,MemberPresence>
+  connectedMembers?:number
   availableAddresses: string[]
   snapshotRevision: number
   cleanupPending: boolean

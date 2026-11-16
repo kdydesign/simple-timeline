@@ -19,13 +19,13 @@ export function createChangeDelivery(o:Options){
     const settings=o.inbox.settings()
     if(!settings.enabled||settings.baselining)continue
     for(const notice of o.inbox.pending()){
-     const generation=o.generation(),version=revision
+     const generation=o.generation(),version=revision,policy=o.inbox.notificationGeneration()
      const active=()=>{
       try{return !stopped&&version===revision&&generation===o.generation()&&o.inbox.settings().enabled}
       catch{storageError=true;return false}
      }
      const live=()=>{
-      try{return active()&&!o.inbox.settings().baselining&&o.authorized(notice)}
+      try{return active()&&policy===o.inbox.notificationGeneration()&&!o.inbox.settings().baselining&&o.authorized(notice)}
       catch{storageError=true;return false}
      }
      if(!live())break

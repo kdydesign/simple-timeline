@@ -1,3 +1,4 @@
+import {createNotificationStore} from '../notifications'
 import { randomUUID } from 'node:crypto'
 import type { DatabaseHandle } from '../repository'
 import type { ChangeEnvelope, ChangeNotice } from '../../../shared/change-notifications'
@@ -11,14 +12,14 @@ interface Row {id:string;project_id:string|null;payload:string;state:State;basel
 interface Settings {enabled:bigint;baselining:bigint;cursor:string|null;revoked:bigint}
 export function createChangeInbox(db:DatabaseHandle) {
  checkChangeSchema(db)
- const cache=createMemberCache(db)
+ const cache=createMemberCache(db),notifications=createNotificationStore(db)
  const config=()=>db.prepare('SELECT remote_host_id,remote_dataset_id,role FROM sharing_config WHERE singleton=1').get() as {remote_host_id:string;remote_dataset_id:string;role:string}
  const settingsRow=():Settings=>{
   const row=db.prepare('SELECT * FROM sharing_change_settings WHERE singleton=1').get() as Settings|undefined
   if(!row)throw new Error('CHANGE_METADATA_MISSING')
   return row
  }
- const settings=()=>{const r=settingsRow();return {enabled:!!r.enabled,baselining:!!r.baselining}}
+ const settings=()=>{const r=settingsRow();return {enabled:!!r.enabled,baselining:!!r.baselining||notifications.state().muted||notifications.state().changesResume}}
  const cursor=()=>settingsRow().cursor
  const pendingRows=()=>db.prepare("SELECT * FROM sharing_change_inbox WHERE state='pending' ORDER BY rowid").all() as Row[]
  const wireCache=():WireSnapshot=>{
@@ -40,7 +41,7 @@ export function createChangeInbox(db:DatabaseHandle) {
    db.prepare("UPDATE sharing_change_inbox SET project_id=NULL,payload=?,baseline=NULL,state=CASE WHEN state IN ('pending','failed') THEN 'cancelled' ELSE state END WHERE id=?").run(JSON.stringify(genericNotice(row.id,'ended')),row.id)
   }
  }
- const apply=db.transaction((input:ChangeEnvelope,reconnecting=false)=>{
+ const apply=db.transaction((input:ChangeEnvelope,reconnecting=false,generation=notifications.state().generation)=>{
   if(typeof reconnecting!=='boolean')throw new Error('CHANGE_RECONNECT_INVALID')
   const e=validateChangeEnvelope(input),previous=wireCache(),old=settingsRow(),pending=pendingRows()
   cache.apply(e.snapshot)
@@ -49,7 +50,7 @@ export function createChangeInbox(db:DatabaseHandle) {
   for(const n of e.notices)if(old.cursor!==e.cursor&&n.projectId!==null&&n.body===sharingNoticeBody(e.snapshot.projects.find(p=>p.id===n.projectId)!.name))continuing.delete(n.projectId)
   scrubUnauthorized(e.mode==='reset'?new Set():continuing)
   db.prepare('UPDATE sharing_change_settings SET cursor=?,baselining=0,revoked=0 WHERE singleton=1').run(e.cursor)
-  if(!old.enabled||old.baselining){db.prepare("UPDATE sharing_change_inbox SET state='cancelled' WHERE state IN ('pending','failed')").run();return}
+  if(notifications.consumeChanges(generation)||!old.enabled||old.baselining){db.prepare("UPDATE sharing_change_inbox SET state='cancelled' WHERE state IN ('pending','failed')").run();return}
   if(old.cursor===e.cursor&&!reconnecting)return
   db.prepare("UPDATE sharing_change_inbox SET state='cancelled' WHERE state='pending'").run()
   const oldGeneric=pending.find(r=>r.project_id===null&&(r.baseline==='initial'||r.baseline==='reset'))
@@ -90,7 +91,7 @@ export function createChangeInbox(db:DatabaseHandle) {
  }
  const pending=():ChangeNotice[]=>pendingRows().filter(r=>valid(r)).map(r=>JSON.parse(r.payload) as ChangeNotice)
  const claim=db.transaction((id:string,retry=false):boolean=>{
-  const s=settingsRow()
+  const s=settings()
   if(!s.enabled||s.baselining)return false
   const row=db.prepare('SELECT * FROM sharing_change_inbox WHERE id=?').get(id) as Row|undefined
   if(!row||(row.state!=='pending'&&!(retry&&row.state==='failed'))||!valid(row,retry))return false
@@ -107,7 +108,7 @@ export function createChangeInbox(db:DatabaseHandle) {
  }
  const recover=()=>{db.prepare("UPDATE sharing_change_inbox SET state='unknown' WHERE state='claimed'").run()}
  const retry=db.transaction(()=>{
-  const s=settingsRow();if(!s.enabled||s.baselining)return
+  const s=settings();if(!s.enabled||s.baselining)return
   for(const r of db.prepare("SELECT * FROM sharing_change_inbox WHERE state='failed'").all() as Row[]){
    if(!valid(r,true))continue
    const n=JSON.parse(r.payload) as ChangeNotice
@@ -127,7 +128,7 @@ export function createChangeInbox(db:DatabaseHandle) {
   if(s.revoked)return
   db.prepare("UPDATE sharing_change_inbox SET state='cancelled' WHERE state IN ('pending','failed')").run()
   db.prepare('UPDATE sharing_change_settings SET revoked=1 WHERE singleton=1').run()
-  if(s.enabled&&!s.baselining)put(genericNotice(randomUUID(),'ended'),null,'ended',s.cursor??'')
+  if(s.enabled&&!s.baselining&&!notifications.state().muted&&!notifications.state().changesResume)put(genericNotice(randomUUID(),'ended'),null,'ended',s.cursor??'')
  })
  const reset=db.transaction(()=>{
   cache.clear();db.prepare('DELETE FROM sharing_change_inbox').run()
@@ -144,6 +145,6 @@ export function createChangeInbox(db:DatabaseHandle) {
   for(const r of db.prepare("SELECT state,count(*) AS n FROM sharing_change_inbox WHERE state IN ('failed','unknown') GROUP BY state").all() as {state:'failed'|'unknown';n:bigint}[])result[r.state]=Number(r.n)
   return result
  }
- return {settings,setEnabled,cursor,apply,revoke,reset,recover,pending,claim,finish,issues,retry}
+ return {notificationGeneration:()=>notifications.state().generation,settings,setEnabled,cursor,apply,revoke,reset,recover,pending,claim,finish,issues,retry}
 }
 export type ChangeInbox=ReturnType<typeof createChangeInbox>

@@ -226,3 +226,15 @@ it.each(['withdrawal','replacement'] as const)('fences %s synchronously while ob
  }finally{finishObservation();await checking}
  expect(restored.getState()).toMatchObject(transition==='withdrawal'?{error:'withdrawn',canDownload:false}:{phase:'available',canDownload:true})
 })
+it('unmute force check queues one current-generation request behind an in-flight old-generation check',async()=>{
+ const f=await fixture();await f.service.dispose()
+ let generation=1,reads=0,finish!:(s:UpdateStatus)=>void
+ const seen:number[]=[]
+ const notifier={generation:()=>generation,error:()=>false,observe:async(_s:UpdateStatus,g:number)=>{seen.push(g)},dispose:()=>{}}
+ const service=await createUpdateService({...f.options,notifications:notifier,readStatus:async()=>{reads++;if(reads===1)return new Promise<UpdateStatus>(r=>{finish=r});return {protocolVersion:1,hostId:'host',revision:1,publication:f.publication}}});services.push(service)
+ await service.setSharing(f.context);await vi.waitFor(()=>expect(finish).toBeTypeOf('function'))
+ generation=2
+ const a=Reflect.apply(service.check,null,[true]),b=Reflect.apply(service.check,null,[true])
+ finish({protocolVersion:1,hostId:'host',revision:1,publication:f.publication});await Promise.all([a,b])
+ expect(reads).toBe(2);expect(seen).toEqual([1,2])
+})

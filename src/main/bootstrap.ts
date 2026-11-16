@@ -1,4 +1,7 @@
 /// <reference types="electron-vite/node" />
+import {createNotificationStore} from './db/notifications'
+import {createUpdateNotifications} from './notifications/updates'
+import {dueReminders} from '../domain/reminder'
 import { windowsLoginStartup } from './windows-login-startup'
 import { createHelpWindow } from './help-window'
 import { parseInstallExit, createInstallExit } from './install-exit'
@@ -142,13 +145,16 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   let help:ReturnType<typeof createHelpWindow>|undefined
   freezeInputs = () => { window.setEnabled(false); window.hide();help?.hideWithMain() }
   let exiting = false, shutdownComplete = false, finishingShutdown = false
+  const notificationPolicy=storage.state==='ready'?createNotificationStore(storage.db):undefined
+  const localReminderStore=storage.state==='ready'?createReminderStore(storage.db):undefined
   const nativeReminders = createNativeReminderSender(icon)
   let evaluateReminders = () => {}
   let tray: ReturnType<typeof createTray> | undefined
   let updates:UpdateService|undefined,updateRoutes:UpdateRoutes|undefined,uiReady=false
   let refreshUpdates=()=>{}
+  const updateNotifications=notificationPolicy?createUpdateNotifications({store:notificationPolicy,send:options.changeSender??nativeReminders.send,open:()=>{if(exiting||appMutationBarrier.blocked())return;show();void updates?.requestOpen()},changed:()=>{if(updates)updatesIpc.changed(updates.getState())}}):undefined
   let sharingIpc:ReturnType<typeof registerSharingIpc>|undefined
-  const sharing=storage.state==='ready'?createSharingService({storage,profile,mutationsBlocked:()=>appMutationBarrier.blocked(),updateChanged:()=>refreshUpdates(),updates:async(req,res,authenticate)=>{if(!updateRoutes)throw new SharingNetworkError('UNAVAILABLE',503);await updateRoutes(req,res,authenticate)},transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,changeSender:options.changeSender??nativeReminders.send,onChangeClick:show,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
+  const sharing=storage.state==='ready'?createSharingService({storage,profile,mutationsBlocked:()=>appMutationBarrier.blocked(),updateChanged:()=>refreshUpdates(),updates:async(req,res,authenticate)=>{if(!updateRoutes)throw new SharingNetworkError('UNAVAILABLE',503);await updateRoutes(req,res,authenticate)},transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,reminderClock:options.reminderClock,changeSender:options.changeSender??nativeReminders.send,onChangeClick:show,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
   sharingIpc=registerSharingIpc(window,rendererUrl,sharing,()=>evaluateReminders())
   void sharing?.start()
   const updatesIpc=registerUpdateIpc(window,rendererUrl,()=>updates)
@@ -167,7 +173,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     shutdown:async()=>{await stopServices();await finishShutdown();exiting=true;shutdownComplete=true},
   })
   // Rehash/catalog I/O never delays window creation, initial snapshot, or sharing startup.
-  if(storage.state==='ready')void (options.createUpdates??createUpdateService)({root:join(updateRoot,'member'),version:app.getVersion(),catalog,
+  if(storage.state==='ready')void (options.createUpdates??createUpdateService)({notifications:updateNotifications,root:join(updateRoot,'member'),version:app.getVersion(),catalog,
     updaterCacheRoot:join(localAppData,'simple-timeline-updater'),editingBlocked:()=>appMutationBarrier.blocked(),
     chooseBundle:async()=>{const choice=await dialog.showOpenDialog(window,{title:'업데이트 ZIP 등록',properties:['openFile'],filters:[{name:'Planrail update ZIP',extensions:['zip']}]});return choice.canceled?undefined:choice.filePaths[0]},
     install:input=>coordinator.install(input),changed:state=>updatesIpc.changed(state),
@@ -224,11 +230,11 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   }
   let reminderIpc: ReturnType<typeof registerReminderIpc> | undefined
   const reminderEngine = storage.state === 'ready' ? createReminderEngine({
-    store:createReminderStore(storage.db),snapshot:()=>storage.repository.getSnapshot(),clock:options.reminderClock,
+    generation:()=>notificationPolicy!.state().generation,muted:()=>notificationPolicy!.state().muted,store:localReminderStore!,snapshot:()=>storage.repository.getSnapshot(),clock:options.reminderClock,
     send:options.reminderSender ?? nativeReminders.send,
     onClick:id=>{if(appMutationBarrier.blocked())return;show();reminderIpc?.open(id)},onChange:()=>reminderIpc?.changed(),
   }) : undefined
-  const sharedReminderEngine=sharing?createReminderEngine({store:sharing.memberReminderStore,snapshot:sharing.memberSnapshot,clock:options.reminderClock,
+  const sharedReminderEngine=sharing?createReminderEngine({generation:()=>notificationPolicy!.state().generation,muted:()=>{const p=notificationPolicy!.state();return p.muted||p.sharedResume},store:sharing.memberReminderStore,snapshot:sharing.memberSnapshot,clock:options.reminderClock,
     beforeSchedule:()=>sharing.authorizeReminder(),send:options.reminderSender??nativeReminders.send,
     onClick:id=>{if(appMutationBarrier.blocked())return;show();reminderIpc?.open(id)},onChange:()=>reminderIpc?.changed(),
   }):undefined
@@ -248,6 +254,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const stopServices=()=>{
     if(!shutdown){
       clearInterval(reminderTimer)
+      updateNotifications?.dispose()
       shutdown=Promise.all([reminderEngine?.dispose(),sharedReminderEngine?.dispose(),sharing?.dispose()]).then(()=>{})
     }
     return shutdown
@@ -261,7 +268,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     requestClose()
   }
   try {
-    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState(), windowsLoginStartup(app.isPackaged), error => { show(); dialog.showErrorBox('Windows 시작 설정을 변경하지 못했습니다', String(error)) })
+    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState(), windowsLoginStartup(app.isPackaged), error => { show(); dialog.showErrorBox('Windows 시작 설정을 변경하지 못했습니다', String(error)) }, {read:()=>{if(!notificationPolicy)throw Error('저장소를 사용할 수 없습니다');return notificationPolicy.state().muted},set:muted=>{if(!notificationPolicy||storage.state!=='ready'||appMutationBarrier.blocked())throw Error('지금 알림 설정을 변경할 수 없습니다');const result=notificationPolicy.setMuted(muted,()=>localReminderStore!.suppress(storage.repository.getSnapshot().schedules.flatMap(s=>dueReminders(s,(options.reminderClock??(()=>new Date()))()))));evaluateReminders();if(!muted){void sharing?.sync().catch(()=>{});void updates?.check(true)}return result.muted},error:error=>{show();dialog.showErrorBox('알림 설정을 변경하지 못했습니다',String(error))}})
   } catch {
     show()
     if (options.notifyTrayFailure) options.notifyTrayFailure()

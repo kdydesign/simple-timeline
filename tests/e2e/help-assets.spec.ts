@@ -1,6 +1,6 @@
 import {test,expect} from './fixture'
 import {settings,sharingState} from './sharing-fixture'
-import {mkdir,writeFile} from 'node:fs/promises'
+import {mkdir,writeFile,readFile} from 'node:fs/promises'
 import {execFileSync} from 'node:child_process'
 const directory='artifacts/help-assets'
 test.use({seed:'single',fault:'help-capture'})
@@ -17,7 +17,7 @@ test('captures current app help illustrations with synthetic participant data on
  await p.getByRole('button',{name:'취소',exact:true}).click();await p.getByRole('button',{name:'변경 버리기',exact:true}).click()
  await p.getByRole('button',{name:'개발 편집',exact:true}).click();await p.getByRole('switch',{name:'시작일 알림',exact:true}).click()
  await p.locator('.reminder-fields').screenshot({path:`${directory}/reminders.png`})
- await writeFile(`${directory}/capture.json`,JSON.stringify({source:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirty:!!execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),version:await d.app.evaluate(({app})=>app.getVersion()),platform:process.platform,recordedAt:new Date().toISOString(),command:'tests/e2e/help-assets.spec.ts',synthetic:true,scope:'Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded.'},null,2))
+ await writeFile(`${directory}/capture.json`,JSON.stringify({source:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),dirty:!!execFileSync('git',['status','--porcelain'],{encoding:'utf8'}).trim(),version:JSON.parse(await readFile('package.json','utf8')).version,runtimeVersion:await d.app.evaluate(({app})=>app.getVersion()),platform:process.platform,recordedAt:new Date().toISOString(),command:'tests/e2e/help-assets.spec.ts',synthetic:true,scope:'Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded.'},null,2))
  expect((await sharingState(d)).devices[0].name).toBe('디자인 PC')
 })
 test('captures member address form using example LAN address without connecting',async({desktop:d})=>{

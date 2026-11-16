@@ -1,14 +1,14 @@
 {
-  "source": "c214891661caafd790a09fde6bbba3c7486769a8",
+  "source": "bfb78873b57455c9969da2f7cc265d3e4ee4c6c9",
   "dirty": true,
-  "version": "0.8.2",
+  "version": "0.8.3",
   "platform": "linux",
-  "recordedAt": "2026-11-16T02:14:22.352Z",
+  "recordedAt": "2026-11-16T04:23:38.185Z",
   "command": "tests/e2e/help-assets.spec.ts",
   "synthetic": true,
-  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded.",
-  "sourceVersion": "0.8.1",
-  "versionChange": "Metadata-only 0.8.1→0.8.2 after screenshot capture; UI unchanged.",
+  "scope": "Actual renderer in isolated SQLite profiles with synthetic project, participant and LAN address fixtures. No real user data or OS notification screenshots.",
+  "sourceVersion": "0.8.3",
+  "versionChange": "Source package 0.8.3. Unpackaged fixture reports runtimeVersion 0.0; package version records the rendered product source. Updated screenshots recaptured; unchanged member-toolbar.png retained from previous capture.",
   "commands": [
     "tests/e2e/help-assets.spec.ts",
     "tests/e2e/help-member-assets.spec.ts",
@@ -42,6 +42,22 @@
         "host-address.png",
         "member-address.png"
       ]
+    },
+    {
+      "sourceVersion": "0.8.3",
+      "source": "bfb78873b57455c9969da2f7cc265d3e4ee4c6c9",
+      "dirty": true,
+      "files": [
+        "updates-host.png",
+        "project-share.png",
+        "member-toolbar.png",
+        "updates-member.png",
+        "participants.png",
+        "member-address.png",
+        "reminders.png",
+        "host-address.png"
+      ]
     }
-  ]
+  ],
+  "runtimeVersion": "0.0"
 }

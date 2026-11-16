@@ -44,7 +44,7 @@ export function createMemberCache(db: DatabaseHandle) {
 }
 export function createSharedReminderStore(db: DatabaseHandle): ReminderStore {
   const insert=db.prepare("INSERT OR IGNORE INTO sharing_reminder_deliveries(identity,schedule_id,state,updated_at) SELECT ?,id,'claimed',? FROM sharing_cache_schedules WHERE id=?")
-  const retry=db.prepare("UPDATE sharing_reminder_deliveries SET state='claimed',updated_at=? WHERE identity=? AND schedule_id=? AND state='failed'")
+  const retry=db.prepare("UPDATE sharing_reminder_deliveries SET state='claimed',updated_at=? WHERE identity=? AND schedule_id=? AND state='failed' AND suppressed=0")
   return {
     claim:db.transaction((items:ReminderOccurrence[],allowRetry:boolean)=>items.filter(o=>{
       parseSharedId(o.scheduleId)
@@ -52,12 +52,13 @@ export function createSharedReminderStore(db: DatabaseHandle): ReminderStore {
       if(insert.run(o.key,now,o.scheduleId).changes)return true
       return allowRetry && !!retry.run(now,o.key,o.scheduleId).changes
     })),
-    finish:db.transaction((keys:string[],state:Exclude<DeliveryState,'claimed'>)=>{
-      const q=db.prepare("UPDATE sharing_reminder_deliveries SET state=?,updated_at=? WHERE identity=? AND (state='claimed' OR (?='failed' AND state IN ('submitted','unknown')))")
+    finish:db.transaction((keys:string[],state:Exclude<DeliveryState,'claimed'|'suppressed'>)=>{
+      const q=db.prepare("UPDATE sharing_reminder_deliveries SET state=?,updated_at=? WHERE identity=? AND suppressed=0 AND (state='claimed' OR (?='failed' AND state IN ('submitted','unknown')))")
       for(const key of keys)q.run(state,new Date().toISOString(),key,state)
     }),
-    recover:()=>{db.prepare("UPDATE sharing_reminder_deliveries SET state='unknown' WHERE state='claimed'").run()},
-    state:(key:string)=>(db.prepare('SELECT state FROM sharing_reminder_deliveries WHERE identity=?').get(key) as {state:DeliveryState}|undefined)?.state,
-    issues:()=>{const counts={failed:0,unknown:0};for(const r of db.prepare("SELECT state,count(*) AS n FROM sharing_reminder_deliveries WHERE state IN ('failed','unknown') GROUP BY state").all() as {state:'failed'|'unknown';n:bigint}[])counts[r.state]=Number(r.n);return counts},
+    recover:()=>{db.prepare("UPDATE sharing_reminder_deliveries SET state='unknown' WHERE state='claimed' AND suppressed=0").run()},
+    state:(key:string)=>{const row=db.prepare('SELECT state,suppressed FROM sharing_reminder_deliveries WHERE identity=?').get(key) as {state:DeliveryState;suppressed:bigint}|undefined;return row?.suppressed?'suppressed':row?.state},
+    suppress:db.transaction((items:ReminderOccurrence[])=>{for(const o of items){insert.run(o.key,new Date().toISOString(),o.scheduleId);db.prepare("UPDATE sharing_reminder_deliveries SET suppressed=1 WHERE identity=? AND state IN ('claimed','failed')").run(o.key)}}),
+    issues:()=>{const counts={failed:0,unknown:0};for(const r of db.prepare("SELECT state,count(*) AS n FROM sharing_reminder_deliveries WHERE suppressed=0 AND state IN ('failed','unknown') GROUP BY state").all() as {state:'failed'|'unknown';n:bigint}[])counts[r.state]=Number(r.n);return counts},
   }
 }

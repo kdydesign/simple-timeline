@@ -1,3 +1,6 @@
+import {createMemberPresence} from './presence'
+import {createNotificationStore} from '../db/notifications'
+import {dueReminders} from '../../domain/reminder'
 import type { UpdateRoutes } from '../updates/transport'
 import type { UpdateSharingContext } from '../updates/service'
 import {createChangeNotifications} from './change-notifications'
@@ -30,10 +33,12 @@ interface Options {
   storage:Extract<StorageState,{state:'ready'}>;profile:string;changed:(state:SharingState)=>void
   updates?:UpdateRoutes;updateChanged?:()=>void;mutationsBlocked?:()=>boolean
   changeSender?:ReminderSender;onChangeClick?:()=>void
-  clock?:()=>number;transport?:Partial<SharingTransport>;secrets?:(profile:string)=>Promise<ProtectedSecrets>
+  reminderClock?:()=>Date;clock?:()=>number;transport?:Partial<SharingTransport>;secrets?:(profile:string)=>Promise<ProtectedSecrets>
 }
 export function createSharingService(o:Options){
   const store=createSharingStore(o.storage.db),transport={...productionTransport,...o.transport},clock=o.clock??(()=>performance.now())
+  const policy=createNotificationStore(o.storage.db),memberReminderStore=createSharedReminderStore(o.storage.db)
+  const presence=createMemberPresence({now:clock,changed})
   const initial=store.getConfig()
   let snapshotRevision=0,epoch=0,disposed=false,suspended=false,status:SharingState['status']=initial.pendingCredentialDeleteRef?'error':initial.role==='personal'?'personal':'stopped',message=initial.pendingCredentialDeleteRef?new CredentialCleanupError().message:'',lastCheckedAt:string|null=null
   let pendingPair:PendingPair|null=null,pendingAddress:SharingAddress|null=null,settingsRequestToken:string|null=null
@@ -50,8 +55,8 @@ export function createSharingService(o:Options){
   const current=(generation:number)=>!disposed&&!suspended&&!o.mutationsBlocked?.()&&generation===epoch
   const check=(generation:number)=>{if(!current(generation))throw failure('FORBIDDEN')}
   function getState():SharingState{
-    const c=store.getConfig()
-    return {changeNotifications:changes.state(),snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
+    const c=store.getConfig(),memberPresence=c.role==='host'?presence.snapshot(store.listDevices().filter(d=>d.approved&&!d.revoked).map(d=>d.id)):undefined
+    return {...(memberPresence?{memberPresence,connectedMembers:Object.values(memberPresence).filter(p=>p.connected).length}:{}),changeNotifications:changes.state(),snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
       pendingPair:pendingPair?{pairId:pendingPair.pairId,fingerprint:pendingPair.fingerprint,expiresAt:pendingPair.expiresAt}:null,
       pendingPairs:host?.pending()??[],devices:c.role==='host'?store.listDevices():[],projects:c.role==='host'?store.listSharedProjects():[],settingsRequestToken,
       availableAddresses:transport.interfaces(),
@@ -60,6 +65,7 @@ export function createSharingService(o:Options){
   function changed(){if(disposed)return;try{o.updateChanged?.()}catch{};try{o.changed(getState())}catch{/* An unavailable renderer does not alter committed state. */}}
   function setStatus(value:SharingState['status'],error?:unknown){
     status=value
+    if(value!=='connected'&&store.getConfig().role==='host')presence.invalidate()
     if(error instanceof SharingNetworkError&&['TLS_UNTRUSTED','UNAUTHORIZED','REVOKED'].includes(error.code))updateTrustRejected=true
     if(value==='revoked')updateTrustRejected=true
     message=error instanceof SharingNetworkError||error instanceof CredentialCleanupError?error.message:error?'공유 연결을 확인하지 못했습니다. 주소·승인·보호 저장소를 확인하고 다시 연결해 주세요.':''
@@ -68,7 +74,7 @@ export function createSharingService(o:Options){
     if(value==='connected'||value==='revoked')void changes.evaluate()
   }
   function invalidate(){
-    epoch++;o.updateChanged?.();changes.invalidate();starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null;pendingAddress=null
+    presence.invalidate();epoch++;o.updateChanged?.();changes.invalidate();starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null;pendingAddress=null
     const previous=host;host=undefined
     // stop invalidates handlers synchronously before its first await.
     return previous?.stop()??Promise.resolve()
@@ -90,8 +96,10 @@ export function createSharingService(o:Options){
     }}
     client=transport.client({installationId:store.getConfig().hostId,trust,address:target,persistence,expectedDatasetId:store.getConfig().remoteDatasetId??undefined})
     const activeClient=client
-    syncController=createSyncController({now:clock,cursor:changes.cursor,poll:options=>{operationSignal=options.signal;return activeClient.poll(options)},apply:(result,reconnecting)=>{check(generation);const before=JSON.stringify(store.readCache());if(result.changes)changes.apply(result.changes,reconnecting);else{store.applyCache(result.snapshot);if(result.changesSupported===false)changes.unsupported()}if(before!==JSON.stringify(store.readCache())){snapshotRevision++;changed()}},
-      outcome:result=>{check(generation);if(result.kind==='revoked'){changes.revoke();snapshotRevision++;pendingPair=null}else if(result.kind==='unchanged'&&result.changesSupported===false)changes.unsupported();else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
+    const generations=new WeakMap<object,number>()
+    const settle=(result:object)=>policy.resumeShared(generations.get(result)??-1,()=>memberReminderStore.suppress(store.readCache().schedules.flatMap(s=>dueReminders(s,(o.reminderClock??(()=>new Date()))()))))
+    syncController=createSyncController({now:clock,cursor:changes.cursor,poll:async options=>{operationSignal=options.signal;const generation=policy.state().generation;const result=await activeClient.poll(options);generations.set(result,generation);return result},apply:(result,reconnecting)=>{check(generation);const before=JSON.stringify(store.readCache());o.storage.db.transaction(()=>{if(result.changes)changes.apply(result.changes,reconnecting,generations.get(result)??-1);else{store.applyCache(result.snapshot);if(result.changesSupported===false)changes.unsupported()}settle(result)})();if(before!==JSON.stringify(store.readCache())){snapshotRevision++;changed()}},
+      outcome:result=>{check(generation);if(result.kind==='unchanged')settle(result);if(result.kind==='revoked'){changes.revoke();snapshotRevision++;pendingPair=null}else if(result.kind==='unchanged'&&result.changesSupported===false)changes.unsupported();else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
       state:(value,error)=>{if(current(generation))setStatus(value,error)},
     })
     clientCommand=<T>(operation:(signal:AbortSignal)=>Promise<T>)=>syncController!.command(signal=>{operationSignal=signal;return operation(signal)})
@@ -112,7 +120,7 @@ export function createSharingService(o:Options){
       store.setHostIdentity({certificatePin:identity.pin,certificateRef:ref,privateKeyRef:ref})
     }
     check(generation)
-    const activeHost=transport.host({identity,store,updates:o.updates,onChange:()=>{if(current(generation))changed()},now:clock});host=activeHost
+    const activeHost=transport.host({identity,store,updates:o.updates,onSyncComplete:id=>{if(current(generation))presence.record(id)},onChange:()=>{if(current(generation))changed()},now:clock});host=activeHost
     await activeHost.start(c.address,c.port);check(generation);setStatus('connected')
   }
   async function loadMember(generation:number){
@@ -190,9 +198,9 @@ export function createSharingService(o:Options){
     await syncController?.refresh(true);check(generation);changed();return getState()
   }
   function approve(input:{pairId:string;confirmed:true}){if(input.confirmed!==true||!host)throw failure('FORBIDDEN');host.approve(input.pairId);changed();return getState()}
-  function saveDevice(input:{id?:string;name:string;ip:string}){if(disposed)throw failure('FORBIDDEN');const value=store.saveDevice(input);changed();return value}
-  function revokeDevice(input:{id:string}){if(disposed)throw failure('FORBIDDEN');store.revokeDevice(input);changed();return getState()}
-  function deleteDevice(input:{id:string}){if(disposed)throw failure('FORBIDDEN');store.deleteDevice(input);snapshotRevision++;changed();return getState()}
+  function saveDevice(input:{id?:string;name:string;ip:string}){if(disposed)throw failure('FORBIDDEN');const previous=input.id?store.getDevice(input.id):undefined;const value=store.saveDevice(input);if(previous&&previous.ip!==value.ip)presence.invalidate(value.id);changed();return value}
+  function revokeDevice(input:{id:string}){if(disposed)throw failure('FORBIDDEN');store.revokeDevice(input);presence.invalidate(input.id);changed();return getState()}
+  function deleteDevice(input:{id:string}){if(disposed)throw failure('FORBIDDEN');store.deleteDevice(input);presence.invalidate(input.id);snapshotRevision++;changed();return getState()}
   function saveProject(input:SharedProjectInput){if(disposed)throw failure('FORBIDDEN');const value=store.saveProject(input);snapshotRevision++;changed();return value}
   function saveReminder(input:{id:string;reminder:ReminderSettings}){if(disposed)throw failure('FORBIDDEN');const value=store.saveReminder(input);snapshotRevision++;changed();return value}
   async function disconnect(input:{confirmed:true}){
@@ -211,7 +219,7 @@ export function createSharingService(o:Options){
     suspended=false;const drain=invalidate(),generation=epoch
     try{await drain;if(current(generation))await start()}catch(error){if(current(generation))setStatus('error',error)}
   }
-  function dispose(){if(closing)return closing;disposed=true;const notifications=changes.dispose();closing=Promise.all([invalidate(),notifications]).then(()=>{});return closing}
+  function dispose(){if(closing)return closing;disposed=true;presence.dispose();const notifications=changes.dispose();closing=Promise.all([invalidate(),notifications]).then(()=>{});return closing}
   return {getState,start,
     getUpdateHostId:()=>store.getConfig().hostId,
     getUpdateContext():UpdateSharingContext{
@@ -227,7 +235,7 @@ export function createSharingService(o:Options){
     notifyLocalMutation(){if(!disposed){snapshotRevision++;changed()}},
     requestSettings(){if(disposed)throw failure('FORBIDDEN');settingsRequestToken=randomUUID();changed();return getState()},
     acknowledgeSettings({token}:{token:string}){if(disposed)throw failure('FORBIDDEN');if(settingsRequestToken===token)settingsRequestToken=null;return getState()},
-    suspend,resume,dispose,repository:createSharingRepository(o.storage.repository,store),memberSnapshot:()=>store.readCache(),memberReminderStore:createSharedReminderStore(o.storage.db),
+    suspend,resume,dispose,repository:createSharingRepository(o.storage.repository,store),memberSnapshot:()=>store.readCache(),memberReminderStore,
   }
 }
 export type SharingService=ReturnType<typeof createSharingService>

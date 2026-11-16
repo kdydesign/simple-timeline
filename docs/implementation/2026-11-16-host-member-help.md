@@ -1,6 +1,6 @@
 # 0.8.2 호스트·멤버 도움말
 
-2026-11-16. [승인 설계](../design/host-member-help.md)의 H1~H8 이후 사용자가 별도로 구현을 요청했다. 기준 소스 `c214891661caafd790a09fde6bbba3c7486769a8`. 기존 MVP 단계는 완료로 유지하고 알림 제어·접속 멤버 표시 설계는 계속 구현 보류다.
+2026-11-16. [승인 설계](../design/host-member-help.md)의 H1~H8 이후 사용자가 별도로 구현을 요청했다. 기준 소스 `c214891661caafd790a09fde6bbba3c7486769a8`. 기존 MVP 단계는 완료로 유지하고 당시 알림 제어·접속 멤버 표시 설계는 구현 보류였다. 이후 사용자의 순차 구현 요청과 도움말 CI 성공 후 [0.8.3 후속](2026-11-16-notification-controls-and-presence.md)에서 진행한다.
 
 ## 구현 범위
 
@@ -52,3 +52,5 @@ Linux x64·Node24.22.1·Electron45.2.1, Xvfb와 sandbox를 유지한 환경에�
 bootstrap에 기존 업데이트 서비스 생성 함수를 기본값으로 하는 주입점을 두고, 테스트 진입점에서만 원래 발신을 차단하고 서비스를 dispose한 뒤 fixture를 연결한다. 촬영 전 renderer 재로드로 교체 전 revision 구독도 초기화한다. 폐기한 발신자의 늦은 실제 상태를 명시적으로 전달하는 회귀 시나리오가 로컬에서 동일하게 실패한 뒤 수정 후 통과했다. 기존 실제 업데이트 IPC 시나리오도 통과했다. 로그: `artifacts/help-ci-fix/red.log`, `green.log`. 제품 업데이트 서비스·보안·설치 정책은 변경하지 않았다.
 
 보정 작업 트리의 `verify:app`7개 검사 모두 통과(typecheck/release26/단위243×3TZ/UI173/build/native70/E2E99). 하네스·diff 검사 통과. Windows 재검증은 수정 커밋의 CI 결과를 따른다.
+
+최종 확인: `bfb7887`의 [Application 43800500478](https://github.com/kdydesign/simple-timeline/actions/runs/43800500478)에서 Linux·Windows 전체 앱 검사, Windows 정식 설치본 생성, 실제 NSIS 수명주기 검사와 배포 산출물 업로드가 모두 성공했다. 최초 Windows 실패는 해결됐으며 회사 PC의 배율·다중 모니터·Narrator 확인은 여전히 별도다.

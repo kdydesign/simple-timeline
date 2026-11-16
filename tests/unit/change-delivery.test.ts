@@ -5,7 +5,7 @@ const notice:ChangeNotice={id:'n',projectId:'p',title:'P',body:'Changed',target:
 function fixture(){
  let state='pending',enabled=true,allowed=true,generation=0,calls=0
  const order:string[]=[],clicks:ChangeNotice[]=[];let failure:(()=>void)|undefined,click:(()=>void)|undefined,resolve!:(state:'submitted'|'failed'|'unknown')=>void
- const inbox={recover:()=>{},settings:()=>({enabled,baselining:false}),pending:()=>state==='pending'?[notice]:[],claim:()=>{order.push('claim');state='claimed';return true},finish:(_id:string,next:string)=>{if(state==='claimed'||next==='failed')state=next},issues:()=>({failed:Number(state==='failed'),unknown:Number(state==='unknown')}),retry:()=>{if(state==='failed')state='pending'}}
+ const inbox={notificationGeneration:()=>0,recover:()=>{},settings:()=>({enabled,baselining:false}),pending:()=>state==='pending'?[notice]:[],claim:()=>{order.push('claim');state='claimed';return true},finish:(_id:string,next:string)=>{if(state==='claimed'||next==='failed')state=next},issues:()=>({failed:Number(state==='failed'),unknown:Number(state==='unknown')}),retry:()=>{if(state==='failed')state='pending'}}
  const engine=createChangeDelivery({inbox:inbox as any,generation:()=>generation,authorized:()=>allowed,send:(_message,onClick,onFailure)=>{calls++;order.push('send');failure=onFailure;click=onClick;return new Promise(r=>{resolve=r})},onClick:n=>clicks.push(n),onChange:()=>{}})
  return {engine,order,clicks,get state(){return state},get calls(){return calls},finish:(s:'submitted'|'failed'|'unknown')=>resolve(s),fail:()=>failure?.(),click:()=>click?.(),disable:()=>{enabled=false;engine.invalidate()},revoke:()=>{allowed=false;generation++},allow:()=>{allowed=true},deny:()=>{allowed=false},breakSettings:()=>{inbox.settings=()=>{throw Error('closed')}},claimFailure:()=>{inbox.claim=()=>{throw Error('disk')}}}
 }
@@ -29,7 +29,7 @@ it('native callbacks never throw when authorization storage becomes unavailable'
 it('retains a caught authorization error until a later successful drain iteration',async()=>{
  let broken=true,sends=0
  const statuses:boolean[]=[]
- const inbox={recover:()=>{},settings:()=>({enabled:true,baselining:false}),pending:()=>[notice],claim:()=>true,finish:()=>{},issues:()=>({failed:0,unknown:0}),retry:()=>{}}
+ const inbox={notificationGeneration:()=>0,recover:()=>{},settings:()=>({enabled:true,baselining:false}),pending:()=>[notice],claim:()=>true,finish:()=>{},issues:()=>({failed:0,unknown:0}),retry:()=>{}}
  const engine=createChangeDelivery({inbox:inbox as any,generation:()=>0,authorized:()=>{if(broken)throw Error('authorization storage unavailable');return true},send:async()=>{sends++;return 'submitted'},onClick:()=>{},onChange:()=>{statuses.push(engine.issues().storageError)}})
  await engine.evaluate();expect(sends).toBe(0);expect(engine.issues().storageError).toBe(true);expect(statuses).toEqual([true])
  broken=false;await engine.evaluate();expect(sends).toBe(1);expect(engine.issues().storageError).toBe(false);expect(statuses).toEqual([true,false]);engine.dispose()

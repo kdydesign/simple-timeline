@@ -2,7 +2,7 @@
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
 최신 후속: 0.8.2 [호스트·멤버 도움말 창](../design/host-member-help.md). H1~H8 확정 후 사용자가 별도 구현을 요청했다. [구현·검증 기록](../implementation/2026-11-16-host-member-help.md)에서 오프라인 도움말과 실제 검증 범위를 확인한다.
-설계 완료·구현 보류: 업데이트 Windows 알림·전체 무음·호스트 접속 멤버·트레이 자동 실행 표시. [승인 설계](../design/notification-controls-and-member-presence.md)의 Q1~Q8과 Q9 문서 전체를 확정했다. 사용자 지시에 따라 제품 구현은 시작하지 않으며 기존 MVP 지도는 유지한다.
+최신 후속: 0.8.3 업데이트 Windows 알림·전체 무음·호스트 접속 멤버·트레이 자동 실행 표시를 구현하고 독립 검토·로컬 전체 검증을 완료했다. 사용자가 도움말 완료 후 구현을 명시했다. [승인 설계](../design/notification-controls-and-member-presence.md)·[구현 기록](../implementation/2026-11-16-notification-controls-and-presence.md)을 따른다. 0.8.2 도움말 CI는 bfb7887에서 보정 후 양 OS·Windows 설치까지 성공했다. 기존 MVP 지도는 유지한다.
 최신 후속: 0.8.1 버튼 재질·로그인 자동 실행·수동 설치 종료 구현·독립 검토 완료. `c914232`의 양 OS 전체 앱 검사와 실제 Windows 설치3개 통과. 회사 PC의 실제 로그인 인수는 미검증이다. [확정 설계](../design/windows-login-startup.md)·[실행 기록](../implementation/2026-11-12-startup-and-install.md#최종-windows-결과)을 따른다. MVP 단계 완료 상태는 유지한다.
 이전 후속: 0.8.0 호스트 배포 기반 앱 업데이트를 구현했다. [승인 설계](../design/lan-app-updates.md)·[구현·검증 기록](../implementation/2026-11-11-lan-app-updates.md)에 로컬 검사와 실제 Windows 미검증 범위를 구분한다. 기존 MVP 완료 상태를 유지한다. 최종 SHA·CI 결과는 종료 메시지를 따른다.
 이전 후속: 0.7.0 공유 변경 알림 구현·로컬 전체 검증 완료. [구현·검증 기록](../implementation/2026-11-11-shared-change-notifications.md)을 따른다.

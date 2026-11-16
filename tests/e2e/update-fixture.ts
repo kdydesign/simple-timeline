@@ -1,3 +1,5 @@
+import {createNotificationStore} from '../../src/main/db/notifications'
+import {createUpdateNotifications} from '../../src/main/notifications/updates'
 // Test-entry only: real service, TLS, catalog, IPC and guard; no installer can execute.
 import {ipcMain,type BrowserWindow} from 'electron'
 import {join} from 'node:path'
@@ -54,7 +56,8 @@ export function exposeUpdateFixture(window:BrowserWindow,profile:string,closeSto
   const coordinator=createInstallCoordinator({barrier,freezeRenderer:()=>ipc.guard.freeze(),releaseRenderer:()=>ipc.guard.release(),
    prepare:async()=>({validate:async()=>{},dispose:async()=>{},handoff:async()=>{g.updateTrace.push('handoff-failed');throw Error('Controlled installer failure')}}),
    record:async(input,files)=>{recordStarted();await recordGate;await service!.recordAttempt(input,files)},shutdown:async()=>{g.updateTrace.push('shutdown');closeStorage()}})
-  service=await createUpdateService({root:join(profile,'fixture-member'),version:'0.8.0',editingBlocked:()=>barrier.blocked(),install:input=>coordinator.install(input),changed:s=>ipc.changed(s)})
+  const notifications=createUpdateNotifications({store:createNotificationStore(g.testStorage.db),send:async(m,click)=>{(g.updateNotifications??=[]).push(m);g.clickUpdateNotification=click;return 'submitted'},open:()=>{window.show();void service!.requestOpen()},changed:()=>{if(service)ipc.changed(service.getState())}})
+  service=await createUpdateService({notifications,root:join(profile,'fixture-member'),version:'0.8.0',editingBlocked:()=>barrier.blocked(),install:input=>coordinator.install(input),changed:s=>ipc.changed(s)})
   await service.setSharing({role:'member',connected:true,connection});await service.check();ipc.changed(service.getState())
   g.checkUpdate=()=>service!.check()
  }

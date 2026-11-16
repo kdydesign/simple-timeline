@@ -41,7 +41,7 @@ export function createChangeNotifications(o:Options){
  }
  return {
   state,cursor:inbox.cursor,
-  apply(envelope:ChangeEnvelope,reconnecting:boolean){try{inbox.apply(envelope,reconnecting);supported=true;storageError=false}catch(error){storageError=true;throw error}},
+  apply(envelope:ChangeEnvelope,reconnecting:boolean,generation?:number){try{inbox.apply(envelope,reconnecting,generation);supported=true;storageError=false}catch(error){storageError=true;throw error}},
   revoke(){try{inbox.revoke();storageError=false}catch(error){storageError=true;throw error}},
   unsupported(){supported=false},
   setEnabled(input:{enabled:boolean}){guard();try{inbox.setEnabled(input.enabled);revision++;delivery.invalidate();openRequest=null;storageError=false;o.changed()}catch(error){storageError=true;o.changed();throw error}},

@@ -122,7 +122,7 @@ DB 파일은 평문이며 Windows 사용자 파일 권한을 따른다. 별도 �
 
 ## 검증과 남은 범위
 
-현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1·v2·v3·v4를 지원한다.
+현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1~v6을 지원한다. v5는 공유 변경 이력·수신함, v6은 전역 알림 설정·업데이트 알림 이력과 날짜 알림 억제 flag를 추가한다. [v5→v6 보존 및 손상 차단 회귀](../../tests/native/notification-controls.case.ts)를 포함한다.
 [알림 native 회귀](../../tests/native/reminders.case.ts)는 실제 v1→v2 데이터 보존을,
 [native lifecycle 회귀](../../tests/native/lifecycle.case.ts)는 현재 버전 이후의 시험용 추가 버전으로 성공·실패를 검사한다.
 0.1.0→검증용 0.1.1 설치는 같은 schema이므로 실제 제품 schema 업그레이드의 증거가 아니다.
@@ -185,3 +185,10 @@ Linux basic_text backend는 거부한다. 자동 테스트의 격리 AES vault�
 - `sharing_change_inbox`는 전송 대기·선점·제출·실패·결과 불명·취소와 미선점 프로젝트의 최초 업무 기준을 저장한다. 날짜 알림 전송 이력과 독립하며 삭제된 일정도 중복 억제가 가능하다. 권한 회수 시 이력의 상세 이름/내용은 정리하고 필요한 식별자·처리 상태만 남긴다.
 - 업무 변경과 사건 기록, 멤버 cache/cursor/inbox는 각각 하나의 트랜잭션이다. 내부의 중첩 참여자 교체를 외부 권한 회수로 기록하지 않는다. 송신은 멤버 commit 뒤이며 OS 제출과 DB는 단일 트랜잭션이 아니므로 결과 불명·누락 가능성을 기존 계약대로 표시한다.
 - v4→v5는 기존 백업·원자 migration 경로를 유지한다. v5를 연 프로필은 구버전으로 다운그레이드하지 않는다. metadata가 없으면 빈 기준점을 자동 생성하지 않고 원본을 보존해 차단한다. [native 회귀](../../tests/native/change-notifications.case.ts)가 보존·rollback·재실행 경계를 검사한다.
+
+
+## 전역 알림 제어 schema v6 (0.8.3)
+
+`notification_settings`는 해당 PC의 muted·generation과 공유 날짜/공유 변경/업데이트 재개 기준을 저장한다. singleton 또는 필수 schema가 없으면 시작을 차단한다. 설정 변경·개인 날짜 후보 억제·공유 대기 취소는 같은 transaction이며 실패하면 이전 실제 설정으로 복구한다. `reminder_deliveries`와 `sharing_reminder_deliveries`의 suppressed flag는 기존 전송 결과를 보존하면서 무음 억제를 실패/재시도 대상과 구분한다.
+
+`update_notification_deliveries`의 hostId/버전 키는 OS 제출 전에 claimed를 기록하며 submitted/failed/unknown/suppressed로 마무리한다. 중단된 claimed는 unknown으로 회복하고 자동 재전송하지 않는다. 호스트 재승인이나 같은 버전 재배포로 중복 알리지 않도록 연결 해제 후에도 이름·IP·자격을 포함하지 않는 최소 이력은 남긴다. 호스트 접속 멤버의 시각은 DB에 저장하지 않고 프로세스 메모리에서만 관리한다.

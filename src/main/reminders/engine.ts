@@ -4,7 +4,7 @@ import {toOrdinal} from '../../domain/date'
 import type {ReminderStore} from '../db/reminders'
 export interface ReminderMessage {title:string;body:string}
 export type ReminderSender=(message:ReminderMessage,onClick:()=>void,onFailure?:()=>void)=>Promise<'submitted'|'failed'|'unknown'>
-interface Options {store:ReminderStore;snapshot:()=>TimelineSnapshot;clock?:()=>Date;send:ReminderSender;onClick:(id:string)=>void;onChange:()=>void;beforeSchedule?:(id:string)=>Promise<boolean>}
+interface Options {generation?:()=>number;muted?:()=>boolean;store:ReminderStore;snapshot:()=>TimelineSnapshot;clock?:()=>Date;send:ReminderSender;onClick:(id:string)=>void;onChange:()=>void;beforeSchedule?:(id:string)=>Promise<boolean>}
 export function createReminderEngine(o:Options) {
  const clock=o.clock??(()=>new Date())
  let running:Promise<void>|undefined,pending=false,stopped=false,storageError=false
@@ -41,6 +41,8 @@ export function createReminderEngine(o:Options) {
      }
      const now=clock(),due=dueReminders(schedule,now)
      if(!due.length||!project)continue
+     if(o.muted?.()){o.store.suppress(due);continue}
+     const generation=o.generation?.()
      const claimed=o.store.claim(due.filter(item=>eligible(item.key)),true)
      for(const item of claimed)retryKeys.delete(item.key)
      if(!claimed.length)continue
@@ -50,11 +52,11 @@ export function createReminderEngine(o:Options) {
      let state:'submitted'|'failed'|'unknown'='unknown'
      try{state=await o.send(message,()=>{if(!stopped)o.onClick(schedule.id)},()=>{
       if(stopped)return
-      try{o.store.finish(claimed.map(c=>c.key),'failed')}catch{storageError=true}
+      try{if(o.muted?.()||generation!==o.generation?.())return;o.store.finish(claimed.map(c=>c.key),'failed')}catch{storageError=true}
       changed()
      })}catch{/* An unexpected transport throw cannot prove non-delivery. */}
      if(stopped)break // Preserve the claim for recovery; never touch a closed DB.
-     o.store.finish(claimed.map(c=>c.key),state)
+     if(generation===o.generation?.()&&!o.muted?.())o.store.finish(claimed.map(c=>c.key),state)
     }
     storageError=false
    }catch{storageError=true;pending=false;retryKeys.clear()}

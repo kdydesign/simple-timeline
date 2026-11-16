@@ -35,6 +35,8 @@ export type UpdatePhase = 'idle' | 'available' | 'downloading' | 'verifying' | '
 export type UpdateErrorCode = 'invalid-bundle' | 'host-mismatch' | 'storage' | 'network' | 'integrity' | 'withdrawn' | 'replaced' | 'trust-changed' | 'unsupported' | 'shutdown' | 'install'
 /** Renderer snapshots contain display data and allowed actions only, never paths or credentials. */
 export interface UpdateState {
+  openRequest?:string|null
+  notificationError?:boolean
   revision: number
   role: 'personal' | 'host' | 'member'
   phase: UpdatePhase
@@ -52,6 +54,7 @@ export interface UpdateState {
   host: { importing: boolean; currentVersion: string | null; candidateVersion: string | null; candidateBytes: number; publishing: boolean; canPublish: boolean } | null
 }
 export interface UpdateApi {
+  acknowledgeOpen(token:string):Promise<Result<UpdateState>>
   getState(): Promise<Result<UpdateState>>
   importBundle(): Promise<Result<UpdateState>>
   publish(): Promise<Result<UpdateState>>

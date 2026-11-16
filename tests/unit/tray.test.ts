@@ -16,11 +16,37 @@ it('refreshes Windows startup state when opening menu and explicit checkbox appl
  await menu[3].click({checked:true});expect(changed).toEqual([true]);menu=mocks.menu.mock.calls.at(-1)![0];expect(menu[3].checked).toBe(true)
 })
 
-it('opens Open and Exit immediately while Windows startup status is still pending',async()=>{
+it('waits for actual Windows startup state and opens menu only once',async()=>{
  let finish!:(value:any)=>void
  const startup={read:()=>new Promise<any>(r=>{finish=r}),set:async()=>{throw Error('not used')}},tray=createTray('icon',()=>{},()=>{},undefined,undefined,undefined,startup)
  const open=(tray.on as any).mock.calls.find((c:any[])=>c[0]==='right-click')[1]
- const pending=open();expect(tray.popUpContextMenu).toHaveBeenCalledOnce()
+ const pending=open();expect(tray.popUpContextMenu).not.toHaveBeenCalled()
+ await vi.waitFor(()=>expect(finish).toBeTypeOf('function'))
  const menu=mocks.menu.mock.calls.at(-1)![0];expect(menu[3].enabled).toBe(false);expect(menu[5].label).toBe('Open');expect(menu[6].label).toBe('Exit')
- finish({supported:true,enabled:false,selected:true,registered:true,disabled:true});await pending
+ finish({supported:true,enabled:true,selected:true,registered:true,disabled:false});await pending;expect(tray.popUpContextMenu).toHaveBeenCalledOnce();expect(mocks.menu.mock.calls.at(-1)![0][3].checked).toBe(true)
+})
+
+it('coalesces pending right-clicks and drops the popup after a left click',async()=>{
+ let finish!:(v:any)=>void;const show=vi.fn(),startup={read:()=>new Promise<any>(r=>{finish=r}),set:vi.fn()}
+ const tray=createTray('icon',show,()=>{},undefined,undefined,undefined,startup)
+ const handler=(name:string)=>(tray.on as any).mock.calls.find((c:any[])=>c[0]===name)[1]
+ const a=handler('right-click')(),b=handler('right-click')();handler('click')()
+ await vi.waitFor(()=>expect(finish).toBeTypeOf('function'));finish({supported:true,enabled:true});await Promise.all([a,b])
+ expect(show).toHaveBeenCalledOnce();expect(tray.popUpContextMenu).not.toHaveBeenCalled()
+})
+it('shows unreadable startup once after timeout while Open and Exit remain usable',async()=>{
+ vi.useFakeTimers()
+ try{
+ const tray=createTray('icon',()=>{},()=>{},undefined,undefined,undefined,{read:()=>new Promise(()=>{}),set:vi.fn()})
+ const open=(tray.on as any).mock.calls.find((c:any[])=>c[0]==='right-click')[1],pending=open()
+ await vi.advanceTimersByTimeAsync(10000);await pending
+ expect(tray.popUpContextMenu).toHaveBeenCalledOnce();const menu=mocks.menu.mock.calls.at(-1)![0]
+ expect(menu[3]).toMatchObject({label:'자동 실행 상태 확인 불가',enabled:false});expect(menu.at(-2).label).toBe('Open');expect(menu.at(-1).label).toBe('Exit')
+ }finally{vi.useRealTimers()}
+})
+it('keeps mute checkbox at persisted state on failed write and in the approved menu order',async()=>{
+ const error=vi.fn(),tray=createTray('icon',()=>{},()=>{},undefined,undefined,undefined,{read:async()=>({supported:true,enabled:true,selected:true,registered:true,disabled:false}),set:vi.fn()},undefined,{read:()=>false,set:()=>{throw Error('disk')},error})
+ await (tray.on as any).mock.calls.find((c:any[])=>c[0]==='right-click')[1]()
+ let menu=mocks.menu.mock.calls.at(-1)![0];expect(menu.map((v:any)=>v.label??v.type)).toEqual(['연결 상태','separator','About','Windows 시작 시 자동 실행','전체 알림 끄기','separator','Open','Exit'])
+ await menu[4].click({checked:true});menu=mocks.menu.mock.calls.at(-1)![0];expect(menu[4].checked).toBe(false);expect(error).toHaveBeenCalledOnce()
 })

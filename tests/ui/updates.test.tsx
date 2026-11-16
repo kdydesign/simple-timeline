@@ -17,7 +17,7 @@ const available:UpdateState={revision:1,role:'member',phase:'available',version:
 function updates(initial:Partial<UpdateState>={}){
  let state={...available,...initial},guard:((r:UpdateGuardRequest)=>boolean|Promise<boolean>)|undefined
  const listeners=new Set<(s:UpdateState)=>void>();const result=async()=>({ok:true as const,data:state})
- const api:UpdateApi={getState:vi.fn(result),download:vi.fn(result),cancel:vi.fn(result),retry:vi.fn(result),install:vi.fn(result),importBundle:vi.fn(result),publish:vi.fn(result),withdraw:vi.fn(result),onChange:fn=>{listeners.add(fn);return()=>{listeners.delete(fn)}},onInstallGuard:fn=>{guard=fn;return()=>{guard=undefined}}}
+ const api:UpdateApi={acknowledgeOpen:vi.fn(result),getState:vi.fn(result),download:vi.fn(result),cancel:vi.fn(result),retry:vi.fn(result),install:vi.fn(result),importBundle:vi.fn(result),publish:vi.fn(result),withdraw:vi.fn(result),onChange:fn=>{listeners.add(fn);return()=>{listeners.delete(fn)}},onInstallGuard:fn=>{guard=fn;return()=>{guard=undefined}}}
  window.timelineUpdates=api
  return{api,emit(patch:Partial<UpdateState>){state={...state,...patch,revision:state.revision+1};listeners.forEach(fn=>fn(state))},freeze:()=>guard!({requestId:'nonce',action:'freeze'}),release:()=>guard!({requestId:'nonce',action:'release'})}
 }
@@ -101,4 +101,24 @@ it('release cancels a pending save guard so its late completion cannot approve i
 
 it('ignores a failed initial snapshot arriving after a valid state event',async()=>{
  const f=updates({role:'host',host:{importing:false,currentVersion:null,candidateVersion:null,candidateBytes:0,publishing:false,canPublish:false}});sharingFixture({role:'host',settingsRequestToken:'settings'});const pending:Array<(r:Awaited<ReturnType<UpdateApi['getState']>>)=>void>=[];f.api.getState=vi.fn(()=>new Promise<Awaited<ReturnType<UpdateApi['getState']>>>(resolve=>pending.push(resolve)));render(<App api={memoryApi().api}/>);await screen.findByRole('dialog',{name:'공유 설정'});act(()=>f.emit({}));await act(async()=>{pending.forEach(resolve=>resolve({ok:false,error:{code:'DB_NOT_READY',message:'초기 읽기 실패'}}))});expect(screen.queryByText('초기 읽기 실패')).toBeNull();expect(screen.getByRole('button',{name:'업데이트 ZIP 가져오기'})).toBeEnabled()
+})
+it('notification opens UPDATE information without downloading or changing an editor draft',async()=>{
+ const previousWidth=window.innerWidth;window.innerWidth=1440
+ const f=updates();render(<App api={memoryApi().api}/>);window.innerWidth=previousWidth;await userEvent.click(await screen.findByRole('button',{name:'프로젝트 추가'}))
+ const input=await screen.findByLabelText('프로젝트 이름');await userEvent.type(input,'보존할 입력')
+ act(()=>f.emit({openRequest:'11111111-1111-4111-8111-111111111111'}))
+ expect(await screen.findByRole('group',{name:'앱 업데이트'})).toBeVisible();expect(input).toHaveValue('보존할 입력');expect(f.api.download).not.toHaveBeenCalled();expect(f.api.acknowledgeOpen).toHaveBeenCalledOnce()
+})
+it('defers notification popup until a modal closes and shows generic current state after withdrawal',async()=>{
+ const f=updates();render(<App api={memoryApi().api}/>);await screen.findByRole('button',{name:'프로젝트 추가'})
+ const modal=document.createElement('div');modal.setAttribute('aria-modal','true');document.body.append(modal)
+ act(()=>f.emit({openRequest:'22222222-2222-4222-8222-222222222222',phase:'idle',version:null,canDownload:false}))
+ expect(screen.queryByRole('group',{name:'앱 업데이트'})).toBeNull();expect(f.api.acknowledgeOpen).not.toHaveBeenCalled()
+ act(()=>modal.remove());expect(await screen.findByText('현재 사용할 수 있는 새 업데이트가 없습니다.')).toBeVisible();expect(f.api.download).not.toHaveBeenCalled()
+})
+it('shows a persistent notification storage error even while an available UPDATE popup is closed',async()=>{
+ const f=updates({notificationError:true});render(<App api={memoryApi().api}/>)
+ await screen.findByRole('button',{name:'UPDATE'});expect(screen.queryByRole('group',{name:'앱 업데이트'})).toBeNull()
+ expect(screen.getByText(/업데이트 알림 기록을 확인하지 못했습니다/)).toBeVisible()
+ act(()=>f.emit({notificationError:false}));expect(screen.queryByText(/업데이트 알림 기록을 확인하지 못했습니다/)).toBeNull()
 })

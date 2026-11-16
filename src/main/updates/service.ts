@@ -1,3 +1,4 @@
+import type {UpdateNotifications} from '../notifications/updates'
 import { SharingNetworkError } from '../sharing/transport'
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, open, readFile, readdir, rename, rm, lstat, statfs } from 'node:fs/promises'
@@ -10,6 +11,7 @@ import type { InstallInput } from './installer'
 export interface UpdateSharingContext {role:UpdateState['role'];connected:boolean;connection?:UpdateConnection;revoked?:boolean;trustPending?:boolean}
 interface Ready {schemaVersion:1;publication:UpdatePublication;trust:string;directory:string}
 interface Options {
+ notifications?:UpdateNotifications
  root:string;version:string;updaterCacheRoot?:string;catalog?:()=>Promise<UpdateCatalog>;chooseBundle?:()=>Promise<string|undefined>
  readStatus?:typeof readUpdateStatus;downloadFile?:typeof downloadUpdateFile
  install(input:InstallInput):Promise<'dirty'|'installed'>;changed?:(state:UpdateState)=>void;editingBlocked?:()=>boolean
@@ -35,9 +37,10 @@ export async function createUpdateService(o:Options){
  if((await lstat(o.root)).isSymbolicLink())throw Error('Invalid member update directory')
  let context:UpdateSharingContext={role:'personal',connected:false},trust:string|undefined,publication:UpdatePublication|null=null,ready:Ready|undefined
  let phase:UpdateState['phase']='idle',error:UpdateErrorCode|null=null,connected=false,explicit=false,received=0,revision=0,generation=0,disposed=false,importing=false,installing=false
+ let openRequest:string|null=null
  let completedReady:Ready|undefined,cleanupFailed=false
  let observed:Record<string,number>={}
- let catalog:UpdateCatalog|undefined,downloadTask:Promise<void>|undefined,checkTask:Promise<void>|undefined,installTask:Promise<void>|undefined
+ let catalog:UpdateCatalog|undefined,downloadTask:Promise<void>|undefined,checkTask:Promise<void>|undefined,forcedCheck:Promise<void>|undefined,installTask:Promise<void>|undefined
  let abort:AbortController|undefined,checkAbort:AbortController|undefined,io:Promise<unknown>=Promise.resolve()
  const listeners=new Set<(state:UpdateState)=>void>()
  const serialize=<T>(f:()=>Promise<T>):Promise<T>=>{const work=io.then(f);io=work.catch(()=>{});return work}
@@ -64,7 +67,7 @@ export async function createUpdateService(o:Options){
  const persist=()=>{const value=ready?structuredClone(ready):undefined;return serialize(()=>value?atomicUpdateRecord(readyPath,value):rm(readyPath,{force:true}))}
  function getState():UpdateState{
   const h=catalog?.status(),file=publication?.manifest.files.find(f=>f.id==='installer'),busy=phase==='downloading'||phase==='verifying'||installing
-  return {revision,role:context.role,phase,version:publication?.manifest.version??null,totalBytes:file?.size??0,receivedBytes:received,connected,requiresExplicitInstall:explicit,editingBlocked:o.editingBlocked?.()??false,
+  return {openRequest,notificationError:o.notifications?.error()??false,revision,role:context.role,phase,version:publication?.manifest.version??null,totalBytes:file?.size??0,receivedBytes:received,connected,requiresExplicitInstall:explicit,editingBlocked:o.editingBlocked?.()??false,
    canDownload:context.role==='member'&&!!publication&&connected&&!busy&&!ready,canCancel:!!publication&&phase!=='installing'&&!o.editingBlocked?.()&&(!!ready||phase==='downloading'||phase==='verifying'),canRetry:context.role==='member'&&!!publication&&phase==='error'&&connected&&!ready,
    canInstall:!!ready&&trust===ready.trust&&!installing&&!disposed&&!o.editingBlocked?.(),error,
    host:context.role==='host'?{importing,currentVersion:h?.current?.manifest.version??null,candidateVersion:h?.candidate?.manifest.version??null,candidateBytes:h?.candidate?.manifest.files.find(f=>f.id==='installer')?.size??0,publishing:!!h?.publication,canPublish:!!h?.current||!!h?.candidate}:null}
@@ -88,10 +91,14 @@ export async function createUpdateService(o:Options){
  try{const attempt=JSON.parse(await readFile(join(o.root,'attempt.json'),'utf8'));if(ready&&attempt.schemaVersion===1&&attempt.stage==='handoff'&&attempt.fromVersion===o.version&&attempt.targetVersion===ready.publication.manifest.version)error='install'}catch(e){if((e as NodeJS.ErrnoException).code!=='ENOENT'){error='storage'}}
  // Only update-owned stage directories and temporary records are touched.
  for(const name of await readdir(o.root))if((/^[a-f0-9-]{36}$/.test(name)&&name!==ready?.directory&&name!==completedReady?.directory)||name.endsWith('.tmp'))await rm(join(o.root,name),{recursive:true,force:true})
- async function check(){
+ async function check(force=false):Promise<void>{
   if(disposed||phase==='installing'||context.role!=='member'||!context.connection||context.revoked)return
-  if(checkTask)return checkTask
-  const g=generation,c=context.connection,controller=new AbortController();checkAbort=controller
+  if(checkTask){
+   if(!force)return checkTask
+   if(!forcedCheck)forcedCheck=checkTask.then(()=>{forcedCheck=undefined;return check()})
+   return forcedCheck
+  }
+  const policyGeneration=o.notifications?.generation(),g=generation,c=context.connection,controller=new AbortController();checkAbort=controller
   let requestGeneration=g
   const work=(async()=>{
    try{
@@ -112,6 +119,7 @@ export async function createUpdateService(o:Options){
     connected=true
     if(next&&!publication){publication=next;phase='available';error=null;received=0}
     if(!next&&!publication&&phase!=='error')phase='idle'
+    void o.notifications?.observe({...status,publication:next},policyGeneration!)
     changed()
    }catch(e){if(!current(requestGeneration))return;connected=false
     const code=(e as {code?:string}).code
@@ -192,6 +200,8 @@ export async function createUpdateService(o:Options){
  }
  const timer=setInterval(()=>{void check()},300000);timer.unref()
  return {getState,check,setSharing,download,install,
+  async requestOpen(){if(disposed)return;await check();if(disposed)return;openRequest=randomUUID();changed()},
+  acknowledgeOpen(token:string){if(openRequest===token){openRequest=null;changed()}},
   async recordAttempt(input:InstallInput,cacheFiles:string[]){
    if(cacheFiles.some(p=>!o.updaterCacheRoot||dirname(p)!==join(o.updaterCacheRoot,'pending')))throw Error('Unexpected updater cache path')
    await atomicUpdateRecord(join(o.root,'attempt.json'),{schemaVersion:1,id:randomUUID(),fromVersion:o.version,targetVersion:input.publication.manifest.version,releaseId:input.publication.releaseId,sha256:input.publication.manifest.files.find(f=>f.id==='installer')!.sha256,stage:'handoff',cacheFiles})
@@ -228,7 +238,7 @@ export async function createUpdateService(o:Options){
   // free to replace this publication while the old files are being removed.
   async cancel(){if(phase==='installing'||o.editingBlocked?.())return;await invalidate(null,true)},
   async retry(){await check();await download()},
-  async dispose(){if(disposed)return;disposed=true;generation++;abort?.abort();checkAbort?.abort();clearInterval(timer);await Promise.allSettled([downloadTask,checkTask]);await io;listeners.clear()},
+  async dispose(){if(disposed)return;disposed=true;generation++;abort?.abort();checkAbort?.abort();clearInterval(timer);await Promise.allSettled([downloadTask,checkTask,forcedCheck]);await io;listeners.clear()},
  }
 }
 export type UpdateService=Awaited<ReturnType<typeof createUpdateService>>

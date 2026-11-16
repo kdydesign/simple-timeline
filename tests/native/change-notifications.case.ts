@@ -111,7 +111,7 @@ cases.push(
   const old=await initializeStorage(ctx.tempDir,migrations.slice(0,4));assert.equal(old.state,'ready');if(old.state!=='ready')return
   const store=createSharingStore(old.db);store.configureHost({address:'127.0.0.1',port:47831});const d=store.saveDevice({name:'A',ip:'127.0.0.2'}),p=store.saveProject({name:'P',color:'#2563EB',participants:[{name:'A',deviceId:d.id}]});old.repository.createSchedule({projectId:p.id,name:'S',startDate:'2026-11-11',endDate:'2026-11-12'});const before=old.repository.getSnapshot();old.db.close()
   const next=await initializeStorage(ctx.tempDir);assert.equal(next.state,'ready');if(next.state!=='ready')return
-  assert.equal(next.db.pragma('user_version',{simple:true}),5n);assert.deepEqual(next.repository.getSnapshot(),before);assert.equal(createSharingStore(next.db).getChangeSnapshot(d.id,null,false).notices.length,1)
+  assert.equal(next.db.pragma('user_version',{simple:true}),BigInt(migrations.length));assert.deepEqual(next.repository.getSnapshot(),before);assert.equal(createSharingStore(next.db).getChangeSnapshot(d.id,null,false).notices.length,1)
   next.db.exec('DELETE FROM sharing_change_settings');next.db.close();const blocked=await initializeStorage(ctx.tempDir);assert.equal(blocked.state,'blocked');if(blocked.state==='blocked')assert.equal(blocked.error.code,'DB_CORRUPT')
  }}
 )

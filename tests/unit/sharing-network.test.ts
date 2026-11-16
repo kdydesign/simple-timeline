@@ -35,7 +35,7 @@ function memoryStore() {
   }
   return { store, devices, credentials, snapshot }
 }
-async function fixture(options: { now?: () => number } = {}) {
+async function fixture(options: { now?: () => number;onSyncComplete?:(id:string)=>void } = {}) {
   const memory = memoryStore()
   const host = createSharingHost({ identity, store: memory.store, ...options })
   const address = await host.start('127.0.0.1', 0)
@@ -366,3 +366,12 @@ async function rawHttp(f: Awaited<ReturnType<typeof fixture>>, path: string, hea
     req.on('error', reject); req.end()
   })
 }
+
+it('presence records only authenticated successful snapshots including 304, never pairing or rejected requests',async()=>{
+ const seen:string[]=[];const f=await fixture({onSyncComplete:id=>seen.push(id)});await ready(f);expect(seen).toEqual([])
+ const first=await f.client.poll();expect(first.kind).toBe('snapshot');expect(seen).toEqual(['device-a'])
+ if(first.kind!=='snapshot')throw Error('snapshot')
+ await f.client.poll({etag:first.etag});expect(seen).toEqual(['device-a','device-a'])
+ await expect(pinnedRequest({address:f.address,trust:f.trust,path:'/v1/snapshot',method:'GET'})).rejects.toMatchObject({code:'UNAUTHORIZED'});expect(seen.length).toBe(2)
+ f.devices[0].revoked=true;await f.client.poll();expect(seen.length).toBe(2)
+})

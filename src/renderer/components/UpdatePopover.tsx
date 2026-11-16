@@ -1,4 +1,4 @@
-import {useRef,useState} from 'react'
+import {useEffect,useRef,useState} from 'react'
 import {Popover} from './Popover'
 import {IconButton} from './Icon'
 import {Button} from './ui/button'
@@ -10,20 +10,28 @@ export const updateErrors:Record<UpdateErrorCode,string>={
 export const updateBytes=(bytes:number)=>`${(bytes/1024/1024).toFixed(1)} MB`
 export function UpdatePopover({updates,installBlocked=false}:{updates:UpdatesView;installBlocked?:boolean}){
  const [open,setOpen]=useState(false),anchor=useRef<HTMLSpanElement>(null),s=updates.state
- if(!s||s.role!=='member'||!s.version||s.phase==='idle')return null
+ const acknowledged=useRef<string|null>(null)
+ useEffect(()=>{
+  const token=s?.openRequest;if(!token||acknowledged.current===token)return
+  const show=()=>{if(document.querySelector('[aria-modal="true"]'))return;acknowledged.current=token;setOpen(true);void updates.acknowledgeOpen(token).catch(()=>{});observer.disconnect()}
+  const observer=new MutationObserver(show);observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-modal']});show();return()=>observer.disconnect()
+ },[s?.openRequest])
+ if(!s||(!open&&!s.openRequest&&(s.role!=='member'||!s.version||s.phase==='idle')))return s?.notificationError?<span role="alert" className="update-notification-error">업데이트 알림 기록을 확인하지 못했습니다.</span>:null
+ const available=s.role==='member'&&!!s.version&&s.phase!=='idle'
  const disabled=!s.connected&&!s.canInstall&&!['downloading','verifying','installing'].includes(s.phase)
  const percent=s.totalBytes?Math.min(100,Math.round(s.receivedBytes/s.totalBytes*100)):0
  const close=(restore:boolean)=>{setOpen(false);if(restore)anchor.current?.querySelector('button')?.focus()}
  return <span className="update-anchor update-ui" ref={anchor}>
-  <button type="button" className="update-trigger" disabled={disabled} aria-expanded={open} aria-controls="update-progress" title={disabled?'호스트 연결 후 다운로드할 수 있습니다.':undefined} onClick={()=>{setOpen(true);if(s.canDownload&&!updates.busy)void updates.run('download')}}>UPDATE</button>
+  {s.notificationError&&<span role="alert" className="update-notification-error">업데이트 알림 기록을 확인하지 못했습니다.</span>}
+  {available&&<button type="button" className="update-trigger" disabled={disabled} aria-expanded={open} aria-controls="update-progress" title={disabled?'호스트 연결 후 다운로드할 수 있습니다.':undefined} onClick={()=>{setOpen(true);if(s.canDownload&&!updates.busy)void updates.run('download')}}>UPDATE</button>}
   {open&&<Popover anchor={anchor} onClose={close} label="앱 업데이트" id="update-progress" className="update-popover" width={320}>
    <div className="update-heading"><h2>Planrail {s.version}</h2><IconButton icon="close" label="업데이트 진행 닫기" onClick={()=>close(true)}/></div>
-   <p role="status">{s.phase==='downloading'?'업데이트 다운로드 중':s.phase==='verifying'?'다운로드 파일 검증 중':s.phase==='installing'?'설치 후 재시작 중':s.phase==='waiting'?'설치 준비 완료':s.phase==='error'?'업데이트를 완료하지 못했습니다.':'새 버전을 사용할 수 있습니다.'}</p>
+   <p role="status">{!available?(s.connected?'현재 사용할 수 있는 새 업데이트가 없습니다.':'호스트 연결 후 업데이트를 다시 확인해 주세요.'):s.phase==='downloading'?'업데이트 다운로드 중':s.phase==='verifying'?'다운로드 파일 검증 중':s.phase==='installing'?'설치 후 재시작 중':s.phase==='waiting'?'설치 준비 완료':s.phase==='error'?'업데이트를 완료하지 못했습니다.':'새 버전을 사용할 수 있습니다.'}</p>
    {['downloading','verifying'].includes(s.phase)&&<><progress max={100} value={percent} aria-label="업데이트 다운로드" aria-valuenow={percent}/><p>{updateBytes(s.receivedBytes)} / {updateBytes(s.totalBytes)} · {percent}%</p></>}
    {s.requiresExplicitInstall&&<p>입력을 저장하거나 정리한 뒤 ‘설치 후 재시작’을 눌러 주세요.</p>}
    {!s.connected&&s.canInstall&&<p>검증한 파일로 오프라인 설치할 수 있습니다.</p>}
    {(updates.error||s.error)&&<p role="alert">{updates.error??updateErrors[s.error!]}</p>}
-   <div className="update-actions">{s.canCancel&&<Button onClick={()=>void updates.run('cancel')}>{s.phase==='waiting'?'업데이트 취소':'다운로드 취소'}</Button>}{s.canRetry&&<Button disabled={updates.busy} onClick={()=>void updates.run('retry')}>다시 시도</Button>}{s.canInstall&&<Button className="primary" disabled={updates.busy||s.editingBlocked||installBlocked} onClick={()=>void updates.run('install')}>설치 후 재시작</Button>}</div>
+   <div className="update-actions">{s.canDownload&&<Button disabled={updates.busy} onClick={()=>void updates.run('download')}>업데이트 다운로드</Button>}{s.canCancel&&<Button onClick={()=>void updates.run('cancel')}>{s.phase==='waiting'?'업데이트 취소':'다운로드 취소'}</Button>}{s.canRetry&&<Button disabled={updates.busy} onClick={()=>void updates.run('retry')}>다시 시도</Button>}{s.canInstall&&<Button className="primary" disabled={updates.busy||s.editingBlocked||installBlocked} onClick={()=>void updates.run('install')}>설치 후 재시작</Button>}</div>
    {s.phase==='downloading'&&<p className="help">창을 닫아도 다운로드는 계속됩니다.</p>}
   </Popover>}
  </span>

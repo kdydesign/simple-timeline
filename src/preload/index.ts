@@ -62,12 +62,12 @@ const sharingApi={
 } satisfies SharingApi
 contextBridge.exposeInMainWorld('timelineSharing',sharingApi)
 
-const updateInvoke=async(command:string)=>{
-  try{return await ipcRenderer.invoke(updatesChannel,command)}
+const updateInvoke=async(command:string,...args:unknown[])=>{
+  try{return await ipcRenderer.invoke(updatesChannel,command,...args)}
   catch{return {ok:false,error:{code:'IPC_UNAVAILABLE',message:'업데이트 상태를 확인하지 못했습니다.'}}}
 }
 contextBridge.exposeInMainWorld('timelineUpdates',{
-  getState:()=>updateInvoke('getState'),importBundle:()=>updateInvoke('importBundle'),publish:()=>updateInvoke('publish'),withdraw:()=>updateInvoke('withdraw'),
+  acknowledgeOpen:token=>updateInvoke('acknowledgeOpen',token),getState:()=>updateInvoke('getState'),importBundle:()=>updateInvoke('importBundle'),publish:()=>updateInvoke('publish'),withdraw:()=>updateInvoke('withdraw'),
   download:()=>updateInvoke('download'),cancel:()=>updateInvoke('cancel'),retry:()=>updateInvoke('retry'),install:()=>updateInvoke('install'),
   onChange:callback=>{const listener=(_event:unknown,state:UpdateState)=>callback(state);ipcRenderer.on(updatesChanged,listener);return ()=>ipcRenderer.removeListener(updatesChanged,listener)},
   onInstallGuard:callback=>{
