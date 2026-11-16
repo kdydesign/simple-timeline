@@ -2,6 +2,8 @@
 
 2026-11-12. 사용자 승인 시안과 [확정 설계](../design/windows-login-startup.md)를 따른다. 구현과 독립 검토를 마쳤다. 아래 로컬 검증·Windows CI·실제 사용자 인수 상태를 구분한다.
 
+2026-11-16 최종 확인: `c914232889241d49879b5a455d450d2820212347`의 양 OS 전체 앱 검사와 실제 Windows 설치 검사3개가 통과했다. 설치본과 상세 근거는 아래 [최종 Windows 결과](#최종-windows-결과)에 기록한다. 회사 PC의 실제 로그아웃·로그인 인수는 아직 미검증이다.
+
 ## 승인 범위
 
 - 편집 패널 삭제·프로젝트 목록 휴지통·공유 참여자 휴지통은 붉은 반투명 유리 재질과 얇은 보더로 통일. 기존 버튼 크기·동작·권한 유지.
@@ -23,7 +25,7 @@ Linux sandbox Electron·격리 임시 프로필에서 기존 편집 삭제 버�
 - Electron의 두 번째 실행 인자 재배열 때문에 최초 정상 종료 요청 검사가 실패했다. 단일 인스턴스 additionalData로 이미 검증한 경로를 전달하고 수신 측에서도 확인하도록 수정했다.
 - 기존 종료 검사의 고정 시간 비교는674ms/700ms 경계에서 실패했다. 제품 timeout을 바꾸지 않고, 테스트 전용 저장 해제 신호로 저장 전 생존·완료 후 종료·DB 반영을 확인하도록 보정했다.
 - 공식 체크섬으로 확인한 PowerShell7.4.6 Linux에서 새 스크립트4개 구문과 embedded C#2개 컴파일 통과. Windows5.1·레지스트리·프로세스 API 실행 검증으로 간주하지 않는다.
-- 실제0.8.0은 소스 `bde6edf63b8f16f6be4943f864aca2e585339245`로 CI에서 별도 빌드한다. 버전 숫자만 낮춘 새 앱으로 대체하지 않는다. 일회성 Windows VM의 실제 NSIS 페이지·실행 중 교체·자동 실행 설정 보존·제거 검사는 CI 실행 대기다.
+- 실제0.8.0은 소스 `bde6edf63b8f16f6be4943f864aca2e585339245`로 CI에서 별도 빌드한다. 버전 숫자만 낮춘 새 앱으로 대체하지 않는다. 일회성 Windows VM의 실제 NSIS 페이지·실행 중 교체·자동 실행 설정 보존·제거 검사는 아래 최종 CI에서 통과했다.
 - 전체 `verify:app` 1차 통과: typecheck,release26개,3개 시간대의 단위227개씩,UI169개,제품 빌드,native70개,Electron93개(234.1초,skip/flaky0). 실행 기준은 `af86369` 위 dirty 작업 트리이며 Linux x64/Node24.22.1/sandbox 사용. 최종 검토의 경합 보정 뒤 관련 검증을 추가 기록한다.
 - 회사 Windows11 로그인·시작 앱 정책·보안 프로그램 환경의 실기는 미검증이다.
 
@@ -108,3 +110,20 @@ Windows의 BM_CLICK은 비활성 대화상자에서 실패할 수 있어, 테스
 재실행은 모든 설치본 빌드·기본 설치·앱 내 UPDATE를 통과했으나, 실행 중0.8.0 교체에서 `verify-process-exit (line69): Cannot verify process path (PID10168)`로 중단됐다. artifact14187451278은 해당 PID가 사전 검증한 main임을 기록하며 정리 오류는 없다. 이전 보정은 종료 신호가 이미 발생한 핸들만 CIM 재조회에서 제외했다. 종료 진행 중에는 CIM 경로가 먼저 없어지고 핸들 종료 신호가 늦게 발생할 수 있어 같은 확인을 다시 실패했다.
 
 종료 확인 단계에서는 이미 승인해 계속 보유한 핸들의 PID를 CIM으로 재검증하지 않고, 기존 `$alive` 조건으로 원본 핸들 전부의 실제 종료 신호를 기다리도록 보정했다. 신호 전에는 설치를 계속 보류하며, 초기 발견·새 PID의 경로/소유자 검사·허용 버전·종료 권한·30초 제한은 유지한다. PID 보존 근거와 outer finally까지의 핸들 수명도 동일하다. 실제 함수와 완료 조건을 함께 실행한 회귀에서 종료 중·자식 미종료·CIM 행 소실·미확인 PID·종료 상태 읽기 실패를 확인했다(RED4개→GREEN10개). 이 회귀를 실제 WindowsPS5 packaged 검사에도 연결했다. 독립 검토에서 조기 완료·PID 재사용·핸들 해제·권한 변경 문제는 발견되지 않았다. PowerShell 구문·native 선언 컴파일, 실제 NSIS 설치/제거 템플릿 컴파일, release installer6개와 하네스7개도 통과했다. 실제 Windows 재검증은 후속 CI에서 확인한다.
+
+보정 커밋 `c914232889241d49879b5a455d450d2820212347`의 로컬 전체 검사는 타입·release 통과 뒤 UTC 단위 검사에서 기존 `sharing-network.test.ts:268` 요청 제한 사례가5초를 넘어 중단됐다(234개 통과·1개 실패). 해당 사례만 같은 코드·기한으로 실행하자1.28초에 통과했다. `/tmp/planrail081-held-exit-verify.log`에 전체 실패를 보존하며 로컬 전체 통과로 표기하지 않는다. 제품 공유 코드·검사 기한은 변경하지 않았고, 최종 판정은 [Application43778692584](https://github.com/kdydesign/simple-timeline/actions/runs/43778692584)의 깨끗한 양 OS 전체 검사와 실제 설치 결과를 따른다.
+
+## 최종 Windows 결과
+
+2026-11-16, 소스 `c914232889241d49879b5a455d450d2820212347`, clean checkout. [Application CI](https://github.com/kdydesign/simple-timeline/actions/runs/43778692584)는 Linux·Windows의 타입·release·3TZ unit·UI·build·native·Electron7단계 전체 통과. [Repository harness](https://github.com/kdydesign/simple-timeline/actions/runs/43778692581)도 양 OS 통과했다. Windows job133010748593의 실제 패키지 검사3개는3.6분에 모두 통과했다.
+
+- Windows Server2025 x64, build26100, Node24.22.1. 설치 helper는 WindowsPS5.1.26100.33648에서 실행했다. 회사 Windows11 실기와 구분한다.
+- `startup-manual-installer-validation.json`: `pass:true`, `cleanupErrors:[]`. 정확한 경로·사용자·생성 시각, 다른 경로 보존, 권한 확인 실패 시 교체 중단, 실제0.8.0 실행 중 교체, 기본 체크·트레이 시작,0.8.1 정상 종료 및 초안 폐기, OS 사용 중지·명시 ON/OFF 보존, 실제 제거 후 등록 정리·DB 보존을 확인했다. 종료 상태 회귀10개도 WindowsPS5에서 통과했다.
+- `windows-validation.json`: 설치·오프라인·업데이트·제거 후 DB 보존·재설치와 `pass`가 모두 true다.
+- `real-updater-validation.json`: 실제 bootstrap 종료 완료 후 NSIS 인계, 자동 재실행·데이터 보존과 `pass:true`를 확인했다. 다음 버전0.8.2는 테스트 전용이다.
+
+[원본 Windows 보고서](https://github.com/kdydesign/simple-timeline/actions/runs/43778692584/artifacts/14188021732)의 `app/latest.json`은 `dirty:false`,7단계 통과다. 위 설치 보고서는 `packaged/output/` 아래에 있다. 앞선 로컬/첫 CI의 간헐적 공유 검사 실패 기록을 이 결과로 삭제하거나 통과로 바꾸지 않는다.
+
+[일반 설치본0.8.1](https://github.com/kdydesign/simple-timeline/actions/runs/43778692584/artifacts/14187458767)과 [호스트 등록용 LAN UPDATE ZIP](https://github.com/kdydesign/simple-timeline/actions/runs/43778692584/artifacts/14188665177)이 생성됐다. 일반 설치 EXE의 SHA256은 `ce6a223f349e46cd8a68b29db5820129623d647d3502a35919981f273341dea4`다. 이후 검증 기록만 갱신하는 문서 커밋과 이 설치본 소스 SHA를 구분한다.
+
+남은 확인은 회사 PC의 실제 로그인 자동 실행·보안 정책 조합·Windows 배율/외형 인수와 위에 명시한 nonblocking 회귀 보강이다. 다음 세션은 이 기록과 확정 설계를 읽고 진행하며 MVP 단계는 다시 열지 않는다.

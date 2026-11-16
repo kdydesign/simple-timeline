@@ -51,5 +51,5 @@ UPDATE: border `1px solid #f92d2de0`, radius `5px`, padding `0px 6px`, font `9px
 - [x] 트레이 메뉴는 연결 상태 / 구분선 / About / 자동 실행 체크 / 구분선 / Open / Exit. 메뉴를 열 때 OS 상태를 재확인하고 설정 실패는 오류·실제 상태로 반영.
 - [x] 지원 버전 수동 설치는 같은 설치 경로 앱에 정상 종료 요청. 요청용 실행이 단일 인스턴스 락을 새로 얻으면 DB·창을 열지 않고 종료. 초기화 중 요청도 유실하지 않는다. 새 입력·변경을 차단하고 수락된 저장·서비스·DB 정리 뒤 완전 종료; 미저장 초안은 확인 없이 폐기. 안전한 종료 실패 시 파일 교체 중단, 강제 종료 fallback 없음.
 - [x] 대화형 수동 설치에서만 기존0.8.0 강제 종료 허용. 실행 파일명 일괄 종료 금지. 정확한 정규 경로·현재 사용자 SID·실행 버전·프로세스 신원을 검증하고 동일 핸들/생성 시각으로 PID 재사용을 막는다. 다른 경로·다른 사용자·알 수 없는 버전·silent/updated는 강제 종료 금지. 종료와 잔류 프로세스 확인 실패 시 설치 중단.
-- [ ] 실제 Windows의 helper와 NSIS lifecycle 검증: 현재 사용자 설정/업데이트 보존/제거,0.8.0 실행 중 수동 설치,0.8.1+ 정상 종료, 데이터 보존. 시험은 일회성 CI 프로필만 사용. synthetic 테스트 버전 우회는 기존 test-only harness에 한정.
+- [x] 실제 Windows의 helper와 NSIS lifecycle 검증: 현재 사용자 설정/업데이트 보존/제거,0.8.0 실행 중 수동 설치,0.8.1+ 정상 종료, 데이터 보존. 일회성 CI `c914232`의 실제 패키지3개 통과. [최종 근거](../../implementation/2026-11-12-startup-and-install.md#최종-windows-결과). synthetic 테스트 버전 우회는 기존 test-only harness에 한정.
 - [x] focused TDD·typecheck·관련 native/E2E 실행 후 상세 보고서 작성. root가 통합 `verify:app`·harness·검토·배포를 마무리.
