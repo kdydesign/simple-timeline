@@ -19,6 +19,7 @@
 | 도구·명령·검증 범위 | [package.json](../../package.json), [CI](../../.github/workflows/), [검증 안내](../harness/validation.md) |
 | 공유 변경 Windows 알림 | [승인 설계](../design/shared-change-notifications.md). Q1~Q13 전체 확정. [0.7.0 구현·검증 기록](../implementation/2026-11-11-shared-change-notifications.md)에서 실제 검증 범위와 실기 잔여 항목 확인. 기존 날짜 알림과 별개 |
 | 업데이트 알림·전체 무음·접속 멤버·트레이 조회 | [승인 설계](../design/notification-controls-and-member-presence.md). Q1~Q8 개별 결정 및 Q9 문서 전체 확정. 사용자가 구현 보류를 명시했으며 제품 구현은 아직 시작하지 않음 |
+| 호스트·멤버 도움말 창 | [설계·시안](../design/host-member-help.md). H1~H7 개별 합의. 문서 전체·시안 검토 대기이며 제품 구현은 보류. 독립 창·역할별 목차/검색·이미지 확대·트레이 연동 |
 | 호스트 배포 기반 앱 업데이트 | [승인 설계](../design/lan-app-updates.md). Q1~Q20·문서 전체·구현 진행 승인. [0.8.0 구현·검증](../implementation/2026-11-11-lan-app-updates.md)에 구현과 실제 Windows 미검증 범위를 기록했다. 호스트 ZIP 등록·멤버 UPDATE·파일 검증·안전한 설치 인계 계약 |
 | 사내 프로젝트 공유·동기화 | [설계·검토](../design/lan-project-sharing.md). Q1~Q27·후속 참여자 권한·UI 위치 확정. 보안·상태·알림 계약 검토 보정 완료. 트레이 상태 클릭으로 공유 설정 진입·필터별 간트 기간 확정. 0.6.0 [구현·검증 기록](../implementation/2026-11-10-lan-sharing.md), 실제 Windows·사내망 인수는 별도 |
 | Windows 자동 실행·수동 설치 종료 | [0.8.1 확정 설계](../design/windows-login-startup.md)·[구현 및 검증](../implementation/2026-11-12-startup-and-install.md). 사용자별 로그인 실행, 구버전0.8.0에 한정한 수동 설치 강제 종료와 기존 UPDATE 보호를 구분 |
