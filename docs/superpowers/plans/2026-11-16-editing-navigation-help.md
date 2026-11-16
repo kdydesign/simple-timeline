@@ -75,3 +75,5 @@
 - Ruling: 전체 E2E가84개 통과 후360초 제한으로 중단되어 총 예산을600초로 늘린다. 개별45초·IPC/저장 제한은 유지하고 runner 예산 검사 RED→GREEN 및 지침을 갱신한다. 완전한 멈춤 감지가 최대240초 늦어지는 비용이 있다.
 
 - Final verification: 2026-11-16 07:31:57 UTC verify:app 전체 통과(typecheck/release26/3TZ×261/UI188/build/native78/E2E100). 하네스·문서 링크·diff 검증 통과. Windows CI는 main 반영 후 별도 확인하며 최종 SHA/결과는 종료 보고에 남긴다.
+
+- Ruling: Windows CI의 도움말 촬영 최초 연결 실패는 승인 자격 활성화와 첫 snapshot의 서로 다른 poll 단계를 각각 기다리도록 보정한다(승인15초, connected 기존7초). 제품 제한은 유지한다. 비용: 촬영 검사는 최초 승인 지연을 더 오래 허용하며 제품 성능 검증으로 쓰지 않는다. 기존 Windows 실패가 RED이며 Linux 반복 촬영과 후속 Windows 전체 CI로 확인한다.

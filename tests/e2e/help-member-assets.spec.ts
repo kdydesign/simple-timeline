@@ -13,6 +13,9 @@ test('captures authenticated member toolbar without network addresses or credent
   await expect.poll(async()=>(await sharingState(host)).pendingPairs.length).toBe(1)
   const pair=(await sharingState(member)).pendingPair!;expect((await sharingState(host)).pendingPairs[0].fingerprint).toBe(pair.fingerprint)
   await m.getByRole('button',{name:'전체 지문 일치 확인'}).click();await h.getByRole('button',{name:'지문 확인 · 연결 승인'}).click();await host.page.getByRole('button',{name:'일치 확인 후 승인'}).click()
+  // Pair credential activation and the following snapshot are separate 2s poll turns.
+  // Wait for the approval handshake first; the normal connected-state deadline remains 7s.
+  await expect.poll(async()=>(await sharingState(member)).pendingPair,{timeout:15000,message:'first-pair credential activation completes before snapshot capture'}).toBeNull()
   await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');await m.getByRole('button',{name:'공유 설정 닫기'}).click();await member.page.setViewportSize({width:1440,height:960})
   const toolbar=await member.page.locator('.toolbar').boundingBox();await mkdir('artifacts/help-assets',{recursive:true});await member.page.screenshot({path:'artifacts/help-assets/member-toolbar.png',clip:{x:0,y:0,width:1440,height:Math.ceil(toolbar!.y+toolbar!.height+8)}})
   // Role-driven help is independently verified in an authenticated real member.

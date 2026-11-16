@@ -34,3 +34,9 @@ Minor1건: 멤버 화면 그림의1번 번호가 연결 아이콘보다 역할 �
 2026-11-16 07:23:29~07:31:57 UTC, Linux x64 / Node24.22.1 / Xvfb :98 / Electron sandbox 사용. 기준 SHA `a060eb6955f898939c6be541413aab83a55a5e38` + 이번 변경(dirty:true)에서 `DISPLAY=:98 CHROME_DEVEL_SANDBOX=/usr/lib/chromium/chrome-sandbox npm run verify:app` 전체 통과. 타입·빌드, release26개, UTC/New_York/Seoul 각각 단위261개, UI188개, native78개, 실제 Electron E2E100개를 통과했다. 보고서는 ignored `artifacts/app/latest.json`과 단계별 로그다.
 
 `node scripts/harness/run.mjs verify`, `git diff --check`와 변경 문서의 상대 링크 검사도 통과했다. Windows 실제 NSIS 설치·업데이트는 main push의 Application CI에서 별도 확인하며 이 Linux 결과로 대체하지 않는다. 회사PC 체감 시간과 실제 Windows 알림/보안 정책은 미검증이다.
+
+## 첫 CI 보정
+
+`f84587a`의 Repository harness 양 OS와 Application Linux는 성공했다. Application Windows는 E2E99/100으로, 도움말 멤버 촬영의 최초 승인→connected 대기7초가 만료됐다(마지막 상태 connecting). 승인 자격 활성화와 첫 snapshot은 별도2초 poll에서 처리되므로, 촬영 검사를 승인 완료(pendingPair 해제, 최대15초)→connected(기존7초) 순으로 분리했다. 제품 poll/통신 제한·동기화 성능 목표는 바꾸지 않는다. 최초 승인의 추가 지연을 허용하는 테스트이므로 제품 속도 개선의 근거로 사용하지 않는다. 이후 CI 결과는 종료 보고에 기록한다.
+
+보정된 실제 Electron 도움말 멤버 촬영은 Linux에서5회 연속 통과했다(47.7초). 하네스·diff 검사도 통과했다. 이번 보정은 테스트 대기 조건과 이 기록만 변경한다.
