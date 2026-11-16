@@ -1,0 +1,82 @@
+import type {HelpTopicId} from './help'
+export interface HelpArticle {
+ id:HelpTopicId;section:'시작하기'|'호스트 사용법'|'멤버 사용법'|'문제 해결';title:string;intro:string
+ steps:{title:string;text:string}[];note?:string;related:HelpTopicId[]
+ image?:{width?:number;file:string;alt:string;caption:string;points:{step:number;x:number;y:number}[]}
+}
+const participants={width:560,file:'participants.png',alt:'참여자 이름과 IP 등록, 승인 상태와 승인 취소·삭제 버튼',caption:'가상 디자인 PC · 192.168.0.20은 예시입니다.',points:[{step:1,x:5,y:72},{step:2,x:65,y:46}]}
+const reminders={width:390,file:'reminders.png',alt:'일정의 며칠 전·알림 시각 입력과 시작일·종료일 알림 스위치',caption:'가상 일정의 자기 알림 설정 화면',points:[{step:1,x:5,y:20},{step:2,x:5,y:70}]}
+export const helpArticles:HelpArticle[]=[
+ {id:'getting-started',section:'시작하기',title:'호스트와 멤버 이해하기',intro:'대표 PC 한 대가 공유 원본을 관리합니다. 다른 PC는 승인된 멤버로 연결해 자신에게 허용된 프로젝트를 받습니다. 인터넷이나 외부 서버는 필요하지 않습니다.',steps:[
+  {title:'PC의 역할을 정합니다',text:'대표 PC는 호스트, 공유받을 PC는 멤버로 설정합니다. 개인 전용은 공유 없이 사용합니다. 호스트·멤버 겸용, 다른 호스트로의 자동 전환과 호스트 이관은 지원하지 않습니다.'},
+  {title:'공유 설정을 엽니다',text:'Windows 숨겨진 아이콘에서 Planrail을 우클릭하고 맨 위 연결 상태를 누릅니다. 여기서 호스트로 공유 또는 멤버로 연결을 선택합니다.'},
+  {title:'개인 자료와 공유 자료를 구분합니다',text:'각 PC의 개인 프로젝트는 계속 편집할 수 있습니다. 공유 프로젝트·일정의 추가·수정·삭제는 호스트만 하고, 멤버는 조회와 자신의 일정 알림 설정만 합니다.'}],note:'앱의 X는 트레이로 숨깁니다. 트레이 Exit로 완전히 종료하거나 호스트 PC가 잠들면 공유가 중단됩니다.',related:['host-start','member-connect']},
+ {id:'host-start',section:'호스트 사용법',title:'공유 시작하기',intro:'호스트의 Planrail이 실행 중이거나 트레이에 있을 때 사내 PC에 공유 자료를 제공합니다.',image:{width:560,file:'host-address.png',alt:'공유할 LAN IP와 포트, 호스트 주소 저장 및 공유 시작 버튼',caption:'192.168.0.10은 테스트용 가상 주소입니다. 실제 호스트 주소를 선택하세요.',points:[{step:1,x:4,y:15},{step:2,x:4,y:86}]},steps:[
+  {title:'LAN 주소를 선택합니다',text:'공유 설정에서 호스트로 공유를 선택하고 실제 공유할 LAN IPv4를 고릅니다. 예: 192.168.0.10. 포트 기본값은 47831이며 멤버도 같은 값을 사용해야 합니다. 호스트 주소 저장을 누릅니다.'},
+  {title:'공유를 시작합니다',text:'공유 시작을 누릅니다. Windows의 앱 네트워크 접근 허용은 회사 정책에 따라 처리합니다. 필요한 경우 IT 담당자에게 호스트 프로그램과 TCP 포트를 알려 주세요.'},
+  {title:'참여자를 등록합니다',text:'공유 시작만으로 모든 PC가 자료를 받지는 않습니다. 멤버의 이름·IP를 등록하고 연결 지문 확인·승인과 프로젝트의 공유 대상 연결을 완료해야 합니다.'}],note:'127.0.0.1은 자기 PC 전용입니다. 다른 PC 연결에는 실제 LAN 주소를 사용하세요. 공유 중지 상태는 재실행 후에도 유지됩니다.',related:['host-participants','troubleshoot-connection']},
+ {id:'host-participants',section:'호스트 사용법',title:'참여자 등록과 승인',intro:'공유 설정 → 참여자 이름 · IP에서 연결할 PC를 등록합니다. IP와 최초 승인된 설치본을 함께 확인합니다.',image:participants,steps:[
+  {title:'이름과 실제 멤버 IP를 등록합니다',text:'새 참여자에 이름과 멤버 PC의 IPv4를 입력하고 등록을 누릅니다. 예시 192.168.0.20 대신 실제 멤버 주소를 사용하세요. 잘못된 값이나 중복 IP는 입력 아래 안내를 확인합니다.'},
+  {title:'등록 상태를 확인합니다',text:'승인 대기는 아직 연결 승인이 끝나지 않은 상태입니다. 승인 배지는 접속 중이라는 뜻이 아닙니다. 이름·IP 변경은 수정을 눌러 저장합니다.'},
+  {title:'양쪽 지문을 비교하고 승인합니다',text:'멤버가 호스트 주소로 연결하면 양쪽 화면의 전체64자리 SHA-256 지문을 모두 비교합니다. 호스트는 지문 확인 · 연결 승인, 멤버는 전체 지문 일치 확인을 완료합니다. 5분이 지나면 새 연결 시도를 시작합니다.'}],note:'지문이 다르면 승인하지 말고 주소와 대상 PC를 확인하세요. 이름이 같다는 이유로 승인하거나 접근을 허용하지 않습니다.',related:['host-projects','host-access','member-connect']},
+ {id:'host-projects',section:'호스트 사용법',title:'프로젝트 공유하기',intro:'호스트에서 개인 프로젝트를 공유로 전환하거나 공유 프로젝트를 새로 만듭니다.',image:{width:390,file:'project-share.png',alt:'프로젝트 편집의 참여자와 공유 프로젝트로 저장, 참여자별 PC 선택',caption:'가상 프로젝트와 디자인 PC를 연결한 예시',points:[{step:1,x:4,y:42},{step:2,x:4,y:73}]},steps:[
+  {title:'프로젝트와 참여자를 확인합니다',text:'프로젝트 추가 또는 편집에서 이름·색상·참여자를 확인합니다. 기존 참여자 이름에는 공유할 PC를 연결하거나 공유하지 않을 이름을 명시적으로 제거해야 합니다.'},
+  {title:'공유 저장과 PC 연결을 설정합니다',text:'공유 프로젝트로 저장을 켜고 각 참여자에 해당하는 등록 PC를 선택합니다. 저장과 공유 확인을 완료합니다. 실제 수신에는 멤버 설치본의 연결 승인이 필요합니다.'},
+  {title:'멤버 반영을 확인합니다',text:'원본은 공유 프로젝트로 전환되며 별도 개인 복사본은 남지 않습니다. 실패하면 원본을 보존합니다. 연결된 멤버는 약2초마다 변경을 확인하며 수동 동기화도 할 수 있습니다.'}],note:'멤버는 공유 원본 이름·날짜·참여자·삭제·드래그를 수정할 수 없습니다. 참여자 등록 정보는 호스트만 관리합니다.',related:['host-participants','member-sync']},
+ {id:'host-access',section:'호스트 사용법',title:'승인 취소·삭제와 공유 중지',intro:'승인 취소, 참여자 삭제, 프로젝트 삭제는 서로 다른 동작입니다.',image:{...participants,points:[{step:1,x:86,y:43},{step:2,x:97,y:43}]},steps:[
+  {title:'등록을 유지하고 접근만 막습니다',text:'승인 취소는 참여자 이름·IP를 남기고 해당 설치본의 접근을 막습니다. 다시 연결하려면 새 승인 절차가 필요합니다.'},
+  {title:'참여자와 공유 권한을 제거합니다',text:'참여자 행의 휴지통을 누르면 영향받는 프로젝트를 확인합니다. 삭제를 확정하면 이름·IP 등록과 모든 공유 권한을 제거하지만 프로젝트·일정 원본은 지우지 않습니다.'},
+  {title:'공유를 잠시 중지합니다',text:'공유 중지는 모든 멤버의 최신 수신을 멈춥니다. 호스트를 다시 실행해도 중지 상태를 유지합니다. 공유 중에 앱을 종료한 경우 다음 실행에는 공유를 재개합니다.'}],note:'오프라인 멤버의 수신 자료를 즉시 원격 삭제할 수는 없습니다. 멤버가 권한 회수를 확인하면 수신 자료와 자기 공유 알림을 제거합니다. 프로젝트 목록의 휴지통은 확인 없이 하위 일정까지 삭제하므로 주의하세요.',related:['host-projects','member-disconnect']},
+ {id:'host-updates',section:'호스트 사용법',title:'업데이트 배포하기',intro:'호스트가 사내 업데이트 배포처가 됩니다. 별도의 외부 서버 없이 승인된 멤버에게 제공합니다.',image:{file:'updates-host.png',alt:'업데이트 배포 영역의 ZIP 등록과 검사 후 배포 시작·배포 중지',caption:'현재 앱의 배포 관리 화면. 등록과 배포 시작은 별개입니다.',points:[{step:2,x:5,y:35}]},steps:[
+  {title:'호스트를 먼저 업데이트합니다',text:'새 정식 설치본으로 호스트를 직접 업데이트합니다. 호스트와 같은 정식 버전이며 멤버 현재 버전보다 높은 업데이트만 제공합니다.'},
+  {title:'ZIP을 등록하고 배포를 시작합니다',text:'GitHub Actions의 Planrail LAN_UPDATE ZIP 하나를 공유 설정 → 업데이트 배포에서 등록합니다. 직접 압축을 풀 필요가 없습니다. 검사 완료 후 버전과 용량을 확인하고 배포 시작을 누릅니다. 등록 실패 시 기존 배포를 유지합니다.'},
+  {title:'중지·교체 영향을 확인합니다',text:'배포 중지를 확인한 멤버는 아직 설치하지 않은 다운로드·설치 대기를 취소합니다. 이미 설치한 앱은 되돌리지 않습니다. 새 배포로 교체하면 멤버가 UPDATE를 다시 선택합니다.'}],note:'이미 검증 파일을 받은 오프라인 멤버는 중지·교체를 알 수 없어 설치할 수 있습니다. 호스트 자체는 UPDATE 버튼이 아닌 수동 설치로 업데이트합니다.',related:['member-updates','troubleshoot-updates']},
+ {id:'member-connect',section:'멤버 사용법',title:'호스트 연결하기',intro:'먼저 호스트에게 자신의 PC 이름·IP 등록을 요청하세요. 호스트가 공유 중이어야 연결할 수 있습니다.',image:{width:560,file:'member-address.png',alt:'멤버의 호스트 IP와 포트 입력, 연결 버튼',caption:'호스트에게 받은 실제 주소와 포트를 입력합니다.',points:[{step:1,x:4,y:15}]},steps:[
+  {title:'호스트 주소를 입력합니다',text:'트레이 연결 상태 → 공유 설정 → 멤버로 연결에서 호스트 IP와 포트를 입력합니다. 예시 192.168.0.10:47831 대신 호스트가 알려 준 실제 값을 사용합니다.'},
+  {title:'전체 지문을 대조합니다',text:'양쪽 화면의 전체64자리 지문이 같은지 확인합니다. 호스트의 연결 승인과 멤버의 전체 지문 일치 확인을 모두 마칩니다. 지문이 다르거나 만료됐다면 승인하지 않고 다시 확인합니다.'},
+  {title:'허용된 자료를 확인합니다',text:'호스트가 자신을 참여자로 연결한 프로젝트만 받습니다. 프로젝트가 보이지 않으면 호스트에게 해당 프로젝트의 공유 대상 PC 설정을 확인해 달라고 하세요.'}],note:'IP가 바뀌면 호스트가 등록 IP를 수정해야 합니다. 이름만 같다고 연결되지 않습니다. PC 교체·설치본 자격 소실 시 재승인이 필요합니다.',related:['member-sync','troubleshoot-connection']},
+ {id:'member-sync',section:'멤버 사용법',title:'동기화와 연결 상태',intro:'공유 자료는 자동으로 갱신되며 필요할 때 수동으로 최신 자료를 확인할 수 있습니다.',image:{file:'member-toolbar.png',alt:'제목 옆 공유 연결 상태, 간트·달력 왼쪽 수동 동기화, 전체·개인·공유 필터',caption:'가상 멤버 화면의 제목 표시줄과 도구 모음',points:[{step:1,x:9.7,y:20},{step:2,x:52.2,y:67},{step:3,x:85,y:67}]},steps:[
+  {title:'연결 상태를 확인합니다',text:'제목 Planrail 옆 초록은 최근 정상 확인과 저장 완료, 빨강은 미확인·연결 오류·승인 취소를 뜻합니다. 아이콘 설명에서 마지막 정상 확인 시각을 볼 수 있습니다.'},
+  {title:'수동 동기화를 실행합니다',text:'간트/달력 버튼 왼쪽의 수동 동기화를 누릅니다. 성공은 자료 수신과 화면 반영을 마친 뒤 표시됩니다. 연결이 끊겨도 개인 자료는 계속 편집할 수 있습니다.'},
+  {title:'보려는 자료를 고릅니다',text:'전체/개인/공유 필터는 프로젝트 목록·간트·달력에 함께 적용됩니다. 필터는 공유 권한이나 알림 설정을 바꾸지 않습니다.'}],note:'연결이 끊기면 마지막 수신본을 조회할 수 있으나 최신 정보가 아닐 수 있습니다. 공유 일정 알림은 최신 권한 확인 후 재개합니다.',related:['member-reminders','troubleshoot-connection']},
+ {id:'member-reminders',section:'멤버 사용법',title:'일정 알림과 공유 변경 알림',intro:'날짜 기반 일정 알림은 각 PC가 따로 설정합니다. 호스트의 공유 원본 변경을 알리는 공유 변경 알림과는 별개입니다.',image:reminders,steps:[
+  {title:'날짜 알림 시각을 정합니다',text:'일정 편집에서 0~365일 전과 PC 현지 시각 HH:mm을 정합니다. 0은 당일입니다. 시작·종료는 같은 N일 전과 시각을 사용합니다.'},
+  {title:'시작일·종료일 알림을 켜고 저장합니다',text:'새 일정은 둘 다 꺼짐이며 기본 입력값은2일 전·09:00입니다. 알림이 켜진 일정 이름 옆 종을 눌러 빠른 알림 편집도 할 수 있습니다. 공유 일정 알림은 자신의 PC에만 적용됩니다.'},
+  {title:'공유 변경 알림을 별도로 관리합니다',text:'멤버 공유 설정의 공유 변경 알림 스위치로 수신 여부를 정합니다. 기본 켜짐이며 공유 프로젝트와 일정의 주요 변경을 Windows 알림으로 받습니다. 끄더라도 동기화와 날짜 알림은 유지합니다.'}],note:'실행 중·트레이에서만 알립니다. Windows 알림 설정·방해 금지의 영향을 받습니다. 오늘 놓친 날짜 알림만 처리하며 어제 이전 것은 몰아 보내지 않습니다.',related:['troubleshoot-notifications','member-sync']},
+ {id:'member-updates',section:'멤버 사용법',title:'UPDATE로 설치하기',intro:'연결·재연결 시와 연결 중5분마다 새 버전을 확인합니다. 새 버전이 있으면 제목 옆 UPDATE 버튼이 나타납니다.',image:{file:'updates-member.png',alt:'UPDATE 팝오버의 대상 버전과 다운로드·검증·설치 대기 안내',caption:'가상 배포를 받은 멤버의 업데이트 팝오버',points:[{step:1,x:8,y:12},{step:2,x:8,y:65}]},steps:[
+  {title:'UPDATE를 누릅니다',text:'버튼을 누르면 전체 업데이트 파일을 다운로드합니다. 작은 팝오버에서 대상 버전·진행률·검증 상태를 확인할 수 있고 팝오버를 닫아도 작업은 계속됩니다. 내려받는 동안 일정 편집이 가능합니다.'},
+  {title:'설치 대기를 확인합니다',text:'검증이 끝나고 저장 작업과 미저장 입력이 없으면 자동 설치·재실행합니다. 미저장 입력 때문에 대기했다면 저장하거나 버린 뒤 설치 후 재시작을 다시 눌러야 합니다.'},
+  {title:'취소·다시 시도를 사용합니다',text:'다운로드 취소는 임시 파일을 지우며 재시도는 처음부터 받습니다. 검증된 대기 파일은 앱 재실행 후 다시 검증하고 명시적으로 설치합니다. 일반 Exit로 자동 설치하지 않습니다.'}],note:'설치가 시작된 후에는 앱에서 취소하지 않습니다. 검증 완료 파일은 오프라인에서도 설치할 수 있지만 아직 받지 않았다면 호스트 연결이 필요합니다.',related:['troubleshoot-updates','host-updates']},
+ {id:'member-disconnect',section:'멤버 사용법',title:'연결 해제와 공유 종료',intro:'일시적인 네트워크 끊김과 직접 연결 해제는 다르게 처리합니다.',steps:[
+  {title:'일시적인 끊김은 연결 복구를 기다립니다',text:'네트워크 끊김 때문에 개인 자료나 마지막 수신본을 자동 삭제하지 않습니다. 호스트의 공유 상태와 주소를 먼저 확인하세요.'},
+  {title:'직접 연결을 해제합니다',text:'공유 설정의 연결 해제를 누르고 확인하면 수신 자료·자기 공유 알림·접속 자격을 삭제합니다. 개인 프로젝트와 일정은 유지합니다. 다시 연결할 때 호스트 승인이 필요합니다.'},
+  {title:'공유 종료 안내를 확인합니다',text:'호스트가 권한을 회수하면 멤버가 이를 확인할 때 해당 자료와 자기 알림을 제거합니다. 공유 종료 알림에는 프로젝트 이름이나 일정 내용이 포함되지 않습니다.'}],related:['member-connect','host-access']},
+ {id:'troubleshoot-connection',section:'문제 해결',title:'연결이 되지 않을 때',intro:'호스트와 멤버가 각각 아래 항목을 확인하세요. 설치 여부나 승인 상태만으로 정상 통신을 판단하지 않습니다.',steps:[
+  {title:'호스트 실행과 주소를 확인합니다',text:'호스트가 공유 시작 상태이며 절전·완전 종료되지 않았는지 확인합니다. 멤버 주소의 IP·포트가 호스트와 같아야 합니다. 127.0.0.1은 다른 PC에 연결되지 않습니다.'},
+  {title:'멤버 IP와 승인 상태를 확인합니다',text:'호스트 참여자 목록의 IP가 현재 멤버 PC 주소와 같은지 확인합니다. 승인 취소·삭제 또는 새 설치본이면 연결 지문 확인과 승인을 다시 완료합니다.'},
+  {title:'네트워크 정책을 확인합니다',text:'Windows의 공용 및 개인 네트워크에서 앱에 액세스하도록 허용 창은 방화벽 안내입니다. 개발 실행의 Electron과 설치된 Planrail은 별도 프로그램 경로이므로 규칙이 다를 수 있습니다. 회사 IT 담당자에게 필요한 사내 연결 범위를 요청하세요.'}],note:'방화벽 전체 해제, 보호 저장소 삭제, DB 초기화는 해결 절차가 아닙니다. 개인 자료는 보존하세요.',related:['host-start','member-connect']},
+ {id:'troubleshoot-updates',section:'문제 해결',title:'업데이트가 보이지 않거나 실패할 때',intro:'배포 등록과 배포 시작, 다운로드와 설치 대기를 구분합니다.',steps:[
+  {title:'버전과 배포 상태를 확인합니다',text:'호스트가 ZIP 등록 후 배포 시작까지 했는지 확인합니다. 현재 멤버보다 높은 정식 버전이어야 하며 승인된 멤버만 받을 수 있습니다. 최신 확인은 연결 시·5분마다 진행합니다.'},
+  {title:'연결과 다운로드를 확인합니다',text:'알려진 업데이트가 있어도 연결이 끊기면 다운로드 버튼은 비활성화됩니다. 연결 복구 뒤 다시 시도하세요. 전송 실패 시 불완전한 파일을 버리고 처음부터 받습니다.'},
+  {title:'미저장 입력과 설치 대기를 확인합니다',text:'미저장 편집·설정 때문에 대기하면 먼저 정리하고 설치 후 재시작을 누릅니다. DB·설치 오류를 무시하거나 현재 데이터를 삭제하지 마세요.'}],related:['member-updates','host-updates']},
+ {id:'troubleshoot-notifications',section:'문제 해결',title:'Windows 알림이 보이지 않을 때',intro:'Windows의 배너 표시 여부와 앱의 알림 설정을 함께 확인합니다.',steps:[
+  {title:'Windows 알림을 확인합니다',text:'Windows 설정의 알림·Planrail 허용·방해 금지 상태를 확인합니다. 여러 알림이 전달되어도 모든 배너가 차례로 보이는 것은 보장되지 않습니다.'},
+  {title:'앱 실행과 개별 설정을 확인합니다',text:'Planrail이 실행 중 또는 트레이인지, 해당 일정의 시작/종료 스위치와 시각이 맞는지 확인합니다. 공유 변경 알림은 공유 설정에서 따로 켭니다.'},
+  {title:'공유 연결과 오류 안내를 확인합니다',text:'공유 날짜 알림은 최신 권한 확인이 필요합니다. 재연결 후 오늘 놓친 미처리 알림만 제공합니다. 저장 실패·결과 불명 안내가 있으면 그 안내의 재조회/재시도 절차를 따릅니다.'}],note:'현재 버전에는 업데이트 Windows 알림과 전체 알림 끄기 메뉴가 아직 포함되지 않았습니다. 새 버전은 UPDATE 버튼으로 확인하세요.',related:['member-reminders','member-updates']},
+]
+export function searchHelp(query:string){
+ const q=query.trim().toLocaleLowerCase()
+ return helpArticles.flatMap(article=>{
+  const text=[article.title,article.intro,...article.steps.flatMap(s=>[s.title,s.text]),article.note??''].join(' ')
+  const index=text.toLocaleLowerCase().indexOf(q)
+  if(index<0)return []
+  return [{article,excerpt:q?`${index>24?'…':''}${text.slice(Math.max(0,index-24),index+q.length+60)}${index+q.length+60<text.length?'…':''}`:article.intro}]
+ })
+}
+export function validateHelpContent(articles:HelpArticle[]):string[]{
+ const errors:string[]=[],ids=new Set<string>()
+ for(const a of articles){if(ids.has(a.id)||!/^[a-z]+(?:-[a-z]+)+$/.test(a.id))errors.push(`Invalid/duplicate topic: ${a.id}`);ids.add(a.id)}
+ for(const a of articles){if(!a.title||!a.intro||!a.steps.length)errors.push(`Empty article: ${a.id}`);for(const id of a.related)if(!ids.has(id))errors.push(`Missing link: ${id}`)
+  if(a.image&&(!/^[a-z-]+\.png$/.test(a.image.file)||!a.image.alt||a.image.points.some(p=>p.step<1||p.step>a.steps.length||p.x<0||p.x>100||p.y<0||p.y>100)))errors.push(`Invalid image: ${a.id}`)}
+ return errors
+}

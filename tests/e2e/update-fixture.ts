@@ -30,6 +30,13 @@ export function exposeUpdateFixture(window:BrowserWindow,profile:string,closeSto
   const device={id:'device',ip:'127.0.0.2',name:'Member',approved:true,revoked:false}
   const store={getConfig:()=>({hostId,datasetId:hostId}),listDevices:()=>[device],getDevice:()=>device,revokePendingCredentials:()=>{},findCredential:(hash:string)=>hash===hashCredential(token)?{deviceId:'device',status:'active'}:undefined} as unknown as HostStore
   const host=createSharingHost({identity,store,updates:createUpdateRoutes(catalog)}),address=await host.start('127.0.0.1',0)
+  // Help screenshot fixture: real distribution component/service, synthetic package.
+  g.showUpdateHost=async()=>{
+   let service:UpdateService|undefined
+   const ipc=attach(()=>service)
+   service=await createUpdateService({root:join(profile,'fixture-host-ui'),version:'0.9.0',catalog:async()=>catalog,install:async()=>{throw Error('Help capture must never install')},changed:s=>ipc.changed(s)})
+   await service.setSharing({role:'host',connected:true});ipc.changed(service.getState())
+  }
   g.withdrawUpdate=()=>catalog.withdraw()
   // Identity/key/token remain in test main/controller processes, never renderer.
   return{address,trust:identity,token,localAddress:'127.0.0.2'}

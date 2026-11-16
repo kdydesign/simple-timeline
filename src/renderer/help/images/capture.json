@@ -1,0 +1,47 @@
+{
+  "source": "c214891661caafd790a09fde6bbba3c7486769a8",
+  "dirty": true,
+  "version": "0.8.2",
+  "platform": "linux",
+  "recordedAt": "2026-11-16T02:14:22.352Z",
+  "command": "tests/e2e/help-assets.spec.ts",
+  "synthetic": true,
+  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded.",
+  "sourceVersion": "0.8.1",
+  "versionChange": "Metadata-only 0.8.1→0.8.2 after screenshot capture; UI unchanged.",
+  "commands": [
+    "tests/e2e/help-assets.spec.ts",
+    "tests/e2e/help-member-assets.spec.ts",
+    "tests/e2e/help-update-assets.spec.ts"
+  ],
+  "files": [
+    "updates-host.png",
+    "project-share.png",
+    "member-toolbar.png",
+    "updates-member.png",
+    "participants.png",
+    "member-address.png",
+    "reminders.png",
+    "host-address.png"
+  ],
+  "captureRounds": [
+    {
+      "sourceVersion": "0.8.1",
+      "files": [
+        "participants.png",
+        "project-share.png",
+        "reminders.png",
+        "member-toolbar.png",
+        "updates-host.png",
+        "updates-member.png"
+      ]
+    },
+    {
+      "sourceVersion": "0.8.2",
+      "files": [
+        "host-address.png",
+        "member-address.png"
+      ]
+    }
+  ]
+}

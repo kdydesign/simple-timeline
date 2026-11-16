@@ -4,6 +4,7 @@ import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
+import { finished } from "node:stream/promises";
 import {
   inspectPackage,
   normalizeArchivePath,
@@ -74,11 +75,13 @@ async function fixture(
     await writeFile(join(module, ...parts), pe(machine));
   }
   await mkdir(join(unpacked, "resources"), { recursive: true });
-  await asar.createPackageWithOptions(
+  const archiveStream = await asar.createPackageWithOptions(
     source,
     join(unpacked, "resources/app.asar"),
     unpack ? { unpack: "**/*.node" } : {},
   );
+  // ASAR returns the ended stream before its pending writes have finished.
+  await finished(archiveStream);
   await writeFile(join(unpacked, "Planrail.exe"), pe());
   return unpacked;
 }

@@ -1,0 +1,34 @@
+{
+  "updates-host.png": {
+    "width": 561,
+    "height": 302
+  },
+  "project-share.png": {
+    "width": 388,
+    "height": 635
+  },
+  "member-toolbar.png": {
+    "width": 1440,
+    "height": 121
+  },
+  "updates-member.png": {
+    "width": 320,
+    "height": 198
+  },
+  "participants.png": {
+    "width": 560,
+    "height": 339
+  },
+  "member-address.png": {
+    "width": 569,
+    "height": 181
+  },
+  "reminders.png": {
+    "width": 347,
+    "height": 172
+  },
+  "host-address.png": {
+    "width": 560,
+    "height": 229
+  }
+}

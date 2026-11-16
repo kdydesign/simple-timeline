@@ -2,6 +2,9 @@ import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { resolve } from 'node:path'
+import {existsSync,readFileSync} from 'node:fs'
+import {helpArticles,validateHelpContent} from './src/shared/help-content.ts'
+import {helpTopicIds} from './src/shared/help.ts'
 export default defineConfig({
   main: {
     build: {
@@ -19,11 +22,12 @@ export default defineConfig({
       externalizeDeps: false,
       outDir: 'out/preload',
       rollupOptions: {
-        input: resolve('src/preload/index.ts'),
+        input: {index:resolve('src/preload/index.ts'),help:resolve('src/preload/help.ts')},
         output: {
-          entryFileNames: 'index.cjs',
+          entryFileNames: '[name].cjs',
           format: 'cjs',
-          codeSplitting: false,
+          // Independent sandbox preloads; no local module loading in either entry.
+          codeSplitting: true,
         },
       },
     },
@@ -33,6 +37,15 @@ export default defineConfig({
     plugins: [
       react(),
       tailwindcss(),
+      {name:'validate-offline-help',buildStart(){
+        const problems=validateHelpContent(helpArticles)
+        if(helpArticles.map(a=>a.id).sort().join()!==[...helpTopicIds].sort().join())problems.push('Help topic IDs must match the IPC allowlist')
+        for(const article of helpArticles)if(article.image&&!existsSync(resolve('src/renderer/help/images',article.image.file)))problems.push(`Missing help image: ${article.image.file}`)
+        const version=JSON.parse(readFileSync(resolve('package.json'),'utf8')).version
+        const evidence=JSON.parse(readFileSync(resolve('src/renderer/help/images/capture.json'),'utf8'))
+        if(evidence.version!==version)problems.push('Help capture metadata must match the app version')
+        if(problems.length)this.error(problems.join('\n'))
+      }},
       {
         name: 'development-csp',
         apply: 'serve',
@@ -49,7 +62,7 @@ export default defineConfig({
     server: { host: '127.0.0.1', port: 5173, strictPort: true },
     build: {
       outDir: resolve('out/renderer'),
-      rollupOptions: { input: resolve('src/renderer/index.html') },
+      rollupOptions: { input: {main:resolve('src/renderer/index.html'),help:resolve('src/renderer/help.html')} },
     },
   },
 })

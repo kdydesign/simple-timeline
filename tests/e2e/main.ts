@@ -33,9 +33,9 @@ void bootstrap({
     (g.changeFailures??=[]).push(onFailure);
     return 'submitted';
   },
-  ...(fault === 'sharing' ? {
+  ...((fault === 'sharing'||fault === 'help-capture') ? {
     // Test entry only: real pinned HTTPS/authentication, bound to a distinct socket source.
-    sharingTransport: { client: options => {
+    sharingTransport: { ...(fault==='help-capture'?{interfaces:()=>['127.0.0.1','192.168.0.10']}:{}), client: options => {
       const bound = {...options, localAddress: '127.0.0.2'};
       return new SharingClient(bound);
     } },

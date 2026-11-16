@@ -1,5 +1,6 @@
 /// <reference types="electron-vite/node" />
 import { windowsLoginStartup } from './windows-login-startup'
+import { createHelpWindow } from './help-window'
 import { parseInstallExit, createInstallExit } from './install-exit'
 import { UpdateCatalog } from './updates/catalog'
 import { createUpdateRoutes, type UpdateRoutes } from './updates/transport'
@@ -137,7 +138,8 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     desktopIcon,
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
-  freezeInputs = () => { window.setEnabled(false); window.hide() }
+  let help:ReturnType<typeof createHelpWindow>|undefined
+  freezeInputs = () => { window.setEnabled(false); window.hide();help?.hideWithMain() }
   let exiting = false, shutdownComplete = false, finishingShutdown = false
   const nativeReminders = createNativeReminderSender(icon)
   let evaluateReminders = () => {}
@@ -175,7 +177,10 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     refreshUpdates();updatesIpc.changed(service.getState())
     if(uiReady)await service.confirmHealthyStartup()
   }).catch(()=>{/* Storage initialization failure is exposed by unavailable update IPC; existing app data remains usable. */})
-  const unregisterWindow = registerWindowIpc(window, rendererUrl)
+  help=createHelpWindow({mainWindow:window,url:new URL('help.html',rendererUrl).href,preload:join(__dirname,'../preload/help.cjs'),role:()=>sharing?.getState().role??'personal',version:app.getVersion(),icon:desktopIcon,
+    onError:()=>{show();dialog.showErrorBox('도움말을 열지 못했습니다','주 창은 계속 사용할 수 있습니다. 물음표 버튼을 눌러 도움말을 다시 열어 주세요.')},
+  })
+  const unregisterWindow = registerWindowIpc(window, rendererUrl,()=>{if(!exiting&&!installPending)help?.open()})
   const unregister = registerTimelineIpc(
     window,
     storage.state==='ready'&&sharing?{...storage,repository:sharing.repository}:storage,
@@ -213,6 +218,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     if (window.isDestroyed() || (installPending && !installExitFailed)) return
     if (window.isMinimized()) window.restore()
     window.show()
+    help?.restoreWithMain()
     window.focus()
   }
   let reminderIpc: ReturnType<typeof registerReminderIpc> | undefined
@@ -276,7 +282,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       }),
     {
       allowClose:()=>shutdownComplete,
-      hide: tray ? () => window.hide() : undefined,
+      hide: tray ? () => {window.hide();help?.hideWithMain()} : undefined,
       chooseClose: tray ? undefined : () => options.chooseClose ? options.chooseClose(!!tray) : (async () => {
         const choices: CloseChoice[] = ['quit', 'cancel']
         const result = await dialog.showMessageBox(window, {
@@ -287,7 +293,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         })
         return choices[result.response] ?? 'cancel'
       })(),
-      beforeClose: () => { exiting = true;void updates?.dispose();void stopServices().catch(()=>{}) },
+      beforeClose: () => { exiting = true;help?.dispose();void updates?.dispose();void stopServices().catch(()=>{}) },
       afterClose: () => app.quit(),
     },
   )
@@ -301,6 +307,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
   async function finishShutdown(){
+    help?.dispose()
     powerMonitor.removeListener('resume',resume);powerMonitor.removeListener('suspend',suspend)
     nativeReminders.dispose()
     if(storage.state==='ready'&&storage.db.open)storage.db.close()
