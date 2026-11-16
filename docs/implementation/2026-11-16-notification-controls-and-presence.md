@@ -43,3 +43,8 @@ Minor1건은 기능에 영향을 주지 않는 접속 문구다. 실제 화면�
 - 중요 검토2건은 각각 RED→GREEN 뒤 전체 suite를 재실행했다. 실제 Electron 오류 visibility도 재현 후 통과했다. 모의 updater·격리 TLS·SQLite 경계와 실제 화면 검증을 결합했다.
 - `node scripts/harness/run.mjs verify`, `git diff --check`, 변경 문서 상대 경로 검사 통과. 작업 기준은 `bfb78873b57455c9969da2f7cc265d3e4ee4c6c9`+dirty이며 검증 보고서는 `artifacts/app/latest.json` 및 `artifacts/notification-controls/`에 있다.
 - 새 버전0.8.3, 의존성/배포 정책 변경 없음. 일반 main commit/push 후 Windows/Linux CI와 설치본 생성의 최종 SHA·실행 URL은 종료 보고를 따른다. 회사 PC 실기는 위 별도 순서로 확인한다.
+## Windows 설치 검사 후속 보정
+
+- `1d499c7`의 Application run `43806292273`에서 Linux·Windows 앱 전체 검사와 설치본 생성은 통과했다. Windows 패키지 검사 3개 중 실제 0.8.0 수동 설치와 자동 업데이터 검사는 통과했고, 기존 Simple Timeline 업그레이드 검사는 DB 스키마 기대값 `5`와 실제 `6`의 불일치로 중단됐다.
+- 원인은 `tests/e2e/packaged.spec.ts`의 이전 버전 고정값 누락이다. 현재 migration의 마지막 version과 설치된 DB 헤더의 실제 version을 비교하고, 검증 기록에는 실제 읽은 값을 남기도록 수정했다. 데이터·마이그레이션 코드는 변경하지 않았다. 기존 데이터 비교·오프라인·제거 후 보존 검사는 유지하며 새 커밋의 Windows CI에서 전체 시나리오를 다시 실행한다.
+- 후속 로컬 검증: typecheck, Playwright packaged 테스트3개 로딩, native78/78 통과. Windows 실제 설치는 새 커밋 CI에서 재검증한다.

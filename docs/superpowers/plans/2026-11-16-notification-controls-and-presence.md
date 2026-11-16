@@ -107,3 +107,7 @@
 - Final: fixed Important1 — closed-popup UI 및 actual Electron notification-error visibility RED→GREEN; full suite7/7.
 - Final: fixed Important2 — force check queues current-generation request RED→GREEN; full suite7/7.
 - Ruling: 새 정책을 별도 policy facade로 감싸지 않고 main 전용 NotificationStore를 발신기/공유 service에서 사용했다. 같은 DB transaction 경계를 직접 유지하고 불필요한 계층을 줄였다. 비용은 정책 호출 위치가 여러 main 모듈에 분산된다는 점이며 통합 회귀로 검증한다.
+## Windows CI 후속
+
+- `1d499c7`을 main에 commit/push했다. Repository harness 양 OS, Application 양 OS verify:app, Windows 설치본 생성 통과. Application `43806292273` packaged 검사에서 이전 스키마 고정값5 때문에 실제6과 불일치 RED. `packaged.spec.ts`의 기대값을 최종 migration version으로 연결하고 증거는 실제 읽은 version으로 기록한다. 제품 코드는 유지하고 수정 후 전체 Windows 설치 검사를 재실행한다.
+- 후속 로컬 검증: typecheck, Playwright packaged 테스트3개 로딩, native78/78 통과. Windows 실제 설치는 새 커밋 CI에서 재검증한다.
