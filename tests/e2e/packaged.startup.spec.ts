@@ -110,9 +110,9 @@ try {
   }
   const oldUi=await replaceRunning()
   expect(oldUi.initialChecked).toBe(true);expect(startup('Read')).toMatchObject({selected:true,registered:true,disabled:false});cases.push('actual pinned0.8.0 manually replaced, default checked')
-  page=await launch(exe,['--planrail-autostart']);expect(await instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false)
-  expect(await waitExit(spawn(exe,['--planrail-autostart'],{env:envFor(),stdio:'ignore'}))).toBe(0);expect(await instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false)
-  expect(await waitExit(spawn(exe,[],{env:envFor(),stdio:'ignore'}))).toBe(0);await expect.poll(()=>instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(true)
+  page=await launch(exe,['--planrail-autostart']);expect(await instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.isVisible())).toBe(false)
+  expect(await waitExit(spawn(exe,['--planrail-autostart'],{env:envFor(),stdio:'ignore'}))).toBe(0);expect(await instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.isVisible())).toBe(false)
+  expect(await waitExit(spawn(exe,[],{env:envFor(),stdio:'ignore'}))).toBe(0);await expect.poll(()=>instance!.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.isVisible())).toBe(true)
   expect((await snapshot()).projects.map(p=>p.name)).toEqual(['commit before manual install'])
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('discard current draft')
   const currentUi=await replaceRunning();expect(currentUi.initialChecked).toBe(true);cases.push('supported version graceful manual exit discards draft')

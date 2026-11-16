@@ -6,7 +6,7 @@ test('project validation and sharing popup keep exact approved geometry and LAN 
  const p=d.page;await p.setViewportSize({width:1440,height:900});await mkdir(screens,{recursive:true});
  await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await p.getByLabel('색상 코드').fill('bad');await p.getByRole('button',{name:'저장',exact:true}).click();
  await expect(p.getByLabel('프로젝트 이름')).toBeFocused();await expect(p.getByLabel('색상 코드')).toHaveAttribute('aria-invalid','true');await p.screenshot({path:`${screens}/project-errors.png`});
- await p.getByRole('button',{name:'편집 닫기'}).click();await p.getByRole('button',{name:'변경 버리기'}).click();
+ await p.getByRole('button',{name:'편집 닫기'}).click();await expect(p.getByRole('alertdialog')).toHaveCount(0);
  const panel=await settings(d);await expect(panel).toHaveCSS('background-color','rgba(43, 46, 49, 0.3)');await expect(panel).toHaveCSS('backdrop-filter','blur(10px)');await expect(panel).toHaveCSS('padding','15px');await expect(p.locator('.sharing-settings-scroll')).toHaveCSS('padding','10px');await expect(panel).toHaveCSS('max-height','740px');
  await panel.getByRole('button',{name:'호스트로 공유'}).click();const lan=panel.getByRole('combobox',{name:'공유할 LAN IP'});await lan.click();await expect(p.locator('.select-popover')).toHaveCSS('backdrop-filter','blur(10px)');await p.screenshot({path:`${screens}/sharing-lan-menu.png`});await p.keyboard.press('Escape');await expect(lan).toBeFocused();
 });

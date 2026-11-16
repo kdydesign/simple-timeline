@@ -39,3 +39,10 @@ it('keeps visible and remembered scroll consistent when selecting the current ar
  expect(main.scrollTop).toBe(0)
  expect(bridge.command).toHaveBeenLastCalledWith('remember',expect.objectContaining({topicId:'host-start',scrollTop:0}))
 })
+it('ignores a failed prewarm response after a newer explicit open succeeds',async()=>{
+ let rejectOld!:(reason:Error)=>void,opened!:()=>void;
+ const bridge:HelpApi={onOpen:fn=>{opened=fn;return()=>{}},command:vi.fn().mockImplementationOnce(()=>new Promise((_resolve,reject)=>{rejectOld=reject})).mockResolvedValue({ok:true,openId:2,version:'0.8.4',reading:{topicId:'gantt-navigation',query:'',scrollTop:0}})};
+ render(<HelpApp api={bridge}/>);await waitFor(()=>expect(opened).toBeDefined());opened();await screen.findByRole('heading',{name:'간트 이동과 확대·축소'});
+ rejectOld(Error('late prewarm failure'));await waitFor(()=>expect(screen.queryByRole('alert')).toBeNull());
+ await new Promise(resolve=>setTimeout(resolve,50));expect(screen.getByRole('heading',{name:'간트 이동과 확대·축소'})).toBeVisible();
+});

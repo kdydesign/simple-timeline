@@ -18,8 +18,7 @@ test('captures real update panels without installing the synthetic update',async
   await expect(dialog.getByRole('button',{name:'배포 중지',exact:true})).toBeEnabled()
   await dialog.locator('.update-distribution').screenshot({path:`${directory}/updates-host.png`})
   await member.app.evaluate((_electron,connection)=>(globalThis as any).setupUpdateMember(connection),connection)
-  await member.page.reload();await member.page.getByRole('button',{name:'개발 편집',exact:true}).click();await member.page.getByLabel('일정 이름',{exact:true}).fill('업데이트 전 저장할 입력')
-  await member.page.getByRole('button',{name:'UPDATE',exact:true}).click();await expect(member.page.getByText('설치 준비 완료',{exact:true})).toBeVisible()
+  await member.page.reload();await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).updateNotifications?.length??0)).toBe(1);await member.app.evaluate(()=>(globalThis as any).clickUpdateNotification());await expect(member.page.getByText('새 버전을 사용할 수 있습니다.',{exact:true})).toBeVisible()
   await member.page.locator('.update-popover').screenshot({path:`${directory}/updates-member.png`})
   expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual([])
  }finally{await member.dispose()}

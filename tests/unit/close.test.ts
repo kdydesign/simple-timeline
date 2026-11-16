@@ -24,14 +24,14 @@ function windowStub() {
     }) as unknown as BrowserWindow,
   }
 }
-it('keeps a dirty window open when discard is declined', async () => {
+it('does not ask to discard a known dirty window', async () => {
   const w = windowStub()
   installCloseGuard(w.window, async () => false)
   const preventDefault = vi.fn()
   w.events.emit('close', { preventDefault })
   await vi.waitFor(() => expect(preventDefault).toHaveBeenCalled())
   await new Promise((r) => setTimeout(r, 20))
-  expect(w.destroyed).toBe(false)
+  expect(w.destroyed).toBe(true)
 })
 it('waits for pending save before deciding whether to close', async () => {
   const w = windowStub()
@@ -71,7 +71,7 @@ it('asks on every window close and preserves dirty input when hiding or cancelli
   expect(confirm).not.toHaveBeenCalled(); expect(w.destroyed).toBe(false)
   w.events.emit('close', {preventDefault() {}})
   await vi.waitFor(() => expect(w.destroyed).toBe(true))
-  expect(confirm).toHaveBeenCalledTimes(1)
+  expect(confirm).not.toHaveBeenCalled()
 })
 it('does not let repeated close or direct quit bypass a pending choice', async () => {
   const w=windowStub(), hide=vi.fn()
@@ -96,4 +96,12 @@ it('keeps window open if the choice fails or hide is unavailable',async()=>{
  w.events.emit('close',{preventDefault(){}})
  await new Promise(resolve=>setTimeout(resolve,0))
  expect(w.destroyed).toBe(false)
+})
+it('discards known unsaved input on Exit without asking while pending writes still drain',async()=>{
+ const w=windowStub(),confirm=vi.fn(async()=>false),quit=installCloseGuard(w.window,confirm)
+ w.state={dirty:true,saving:true};quit();await new Promise(r=>setTimeout(r,20));expect(w.destroyed).toBe(false)
+ w.state={dirty:true,saving:false};await vi.waitFor(()=>expect(w.destroyed).toBe(true));expect(confirm).not.toHaveBeenCalled()
+})
+it('waits for main shutdown preparation before destroying the renderer',async()=>{
+ const w=windowStub();let finish!:()=>void;const beforeClose=vi.fn(()=>new Promise<void>(r=>{finish=r}));const quit=installCloseGuard(w.window,async()=>false,{beforeClose});quit();await vi.waitFor(()=>expect(beforeClose).toHaveBeenCalledOnce());expect(w.destroyed).toBe(false);finish();await vi.waitFor(()=>expect(w.destroyed).toBe(true))
 })

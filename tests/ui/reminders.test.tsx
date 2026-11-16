@@ -33,11 +33,10 @@ function notifications(){
  window.timelineReminders=api
  return {api,open(id:string){state={...state,openRequest:{token:1,scheduleId:id}};act(()=>listener())}}
 }
-it('notification click preserves a dirty draft when discard is cancelled',async()=>{
+it('notification click discards a dirty draft without confirmation',async()=>{
  const n=notifications(),u=userEvent.setup(),m=memoryApi(hotfix);render(<App api={m.api}/>)
  await u.click(await screen.findByRole('button',{name:'프로젝트 추가'}));await u.type(screen.getByLabelText('프로젝트 이름'),'보존할 초안')
- n.open('1');expect(await screen.findByRole('alertdialog')).toBeVisible();await u.click(screen.getByRole('button',{name:'계속 편집'}))
- expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('보존할 초안');expect(n.api.acknowledge).toHaveBeenCalledWith(1)
+ n.open('1');await screen.findByLabelText('일정 이름');expect(screen.queryByLabelText('프로젝트 이름')).toBeNull();expect(screen.queryByRole('alertdialog')).toBeNull();expect(n.api.acknowledge).toHaveBeenCalledWith(1)
 })
 it('notification click uses fresh data and reports a deleted schedule',async()=>{
  const n=notifications(),m=memoryApi(hotfix);render(<App api={m.api}/>);await screen.findByRole('button',{name:'프로젝트 추가'})

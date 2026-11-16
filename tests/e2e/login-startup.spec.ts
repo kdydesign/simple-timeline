@@ -6,7 +6,7 @@ import {readFile,mkdtemp,rm} from 'node:fs/promises'
 import {existsSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 const require=createRequire(resolve('package.json')),executable=require('electron') as string
-const visible=(d:Desktop)=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())
+const visible=(d:Desktop)=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.isVisible())
 function second(profile:string,args:string[]){
  const env:NodeJS.ProcessEnv={...process.env,SIMPLE_TIMELINE_TEST_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE
  const child=spawn(executable,[resolve('artifacts/test-app/main/index.cjs'),...args],{env,stdio:'ignore'})

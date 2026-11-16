@@ -12,7 +12,8 @@ interface Options {
   onDayWidth?: (width:number)=>void
   isScheduleDragging:()=>boolean
 }
-const editable = (target:EventTarget|null) => target instanceof Element && !!target.closest('input,textarea,select,[contenteditable="true"],[role="combobox"],[role="listbox"]')
+const navigationRange=(target:EventTarget|null)=>target instanceof Element&&!!target.closest('.gantt-navigation input[type="range"]')
+const editable = (target:EventTarget|null) => !navigationRange(target) && target instanceof Element && !!target.closest('input,textarea,select,[contenteditable="true"],[role="combobox"],[role="listbox"]')
 export function useGanttNavigation(options:Options) {
   const latest=useRef(options), suppress=useRef(false)
   const [panning,setPanning]=useState(false)
@@ -55,7 +56,7 @@ export function useGanttNavigation(options:Options) {
       if(!space && !session)suppress.current=false
       space=true
       // Ordinary button activation is preserved until a pointer gesture starts.
-      if(session)event.preventDefault()
+      if(session || navigationRange(event.target))event.preventDefault()
     }
     const keyup=(event:KeyboardEvent)=>{
       if(event.code!=='Space' && event.key!==' ')return

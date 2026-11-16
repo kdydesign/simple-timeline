@@ -1,4 +1,6 @@
 # 진행 상태
+최신 후속: 0.8.4 [편집·탐색·전체 기능 도움말](../design/editing-navigation-and-help.md) Q1~Q8 구현·독립 검토·로컬 전체 검증 완료. 원격 CI와 최종 SHA는 종료 보고에서 확인한다. [구현 기록](../implementation/2026-11-16-editing-navigation-help.md)에서 검증 상태를 확인한다. 기존 MVP 지도는 유지한다.
+
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
 최신 후속: 0.8.2 [호스트·멤버 도움말 창](../design/host-member-help.md). H1~H8 확정 후 사용자가 별도 구현을 요청했다. [구현·검증 기록](../implementation/2026-11-16-host-member-help.md)에서 오프라인 도움말과 실제 검증 범위를 확인한다.

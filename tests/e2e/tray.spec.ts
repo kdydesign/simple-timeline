@@ -4,7 +4,7 @@ import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 const require = createRequire(resolve('package.json'));
-const visible = (d: import('./fixture').Desktop) => d.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows()[0].isVisible());
+const visible = (d: import('./fixture').Desktop) => d.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.isVisible());
 const control = (d: import('./fixture').Desktop, action: 'show' | 'requestQuit') => d.app.evaluate((_electron, action) => (globalThis as any).desktopController[action](), action);
 test('close hides dirty form and restore/minimize/second-instance retain it', async ({ desktop:d }) => {
  const p=d.page;
@@ -19,10 +19,10 @@ test('close hides dirty form and restore/minimize/second-instance retain it', as
  expect(await readFile(join(d.profile,'close-choice.txt'),'utf8').catch(()=>null)).toBeNull();
  await expect.poll(()=>visible(d)).toBe(true);
  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('숨겨도 유지');
- await d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].minimize());
+ await d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.minimize());
  await control(d,'show');
- await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isMinimized())).toBe(false);
- await d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].hide());
+ await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.isMinimized())).toBe(false);
+ await d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.hide());
  const env: NodeJS.ProcessEnv={...process.env,SIMPLE_TIMELINE_TEST_PROFILE:d.profile};
  delete env.ELECTRON_RUN_AS_NODE;
  const second=spawn(require('electron'),[resolve('artifacts/test-app/main/index.cjs')],{env,stdio:'ignore'});
@@ -35,18 +35,13 @@ test('close hides dirty form and restore/minimize/second-instance retain it', as
  await expect.poll(()=>visible(d)).toBe(true);
  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('숨겨도 유지');
 });
-test.describe('quit cancellation',()=>{
+test.describe('dirty quit',()=>{
  test.use({fault:'close-denied'});
- test('actual quit restores dirty editor and allows rejection',async({desktop:d})=>{
-  await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
-  await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('종료 취소');
-  const closing=d.page.getByRole('button',{name:'창 닫기',exact:true}).click().then(()=>null,error=>error);
-  await expect.poll(()=>visible(d)).toBe(false);
-  await control(d,'requestQuit');
-  await expect.poll(()=>readFile(join(d.profile,'close-confirmed.txt'),'utf8').catch(()=>null)).toBe('requested');
-  await expect.poll(()=>visible(d)).toBe(true);
-  expect(await closing).toBeNull();
-  await expect(d.page.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('종료 취소');
+ test('Exit discards unsaved input without invoking the old confirmation',async({desktop:d})=>{
+  await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('종료 시 폐기');
+  const exited=d.app.waitForEvent('close');await control(d,'requestQuit');await exited;
+  expect(await readFile(join(d.profile,'close-confirmed.txt'),'utf8').catch(()=>null)).toBeNull();
+  await d.restart();const snapshot=await d.page.evaluate(()=>window.simpleTimeline.getSnapshot());expect(snapshot.ok&&snapshot.data.projects.some(p=>p.name==='종료 시 폐기')).toBe(false);
  });
 });
 test.describe('pending save',()=>{
@@ -95,7 +90,7 @@ test.describe('unavailable tray close choice',()=>{
 });
 test('initial bounds fit display and hidden About uses current app metadata without touching input',async({desktop:d})=>{
  const bounds=await d.app.evaluate(({BrowserWindow,screen})=>{
-  const w=BrowserWindow.getAllWindows()[0],a=screen.getDisplayMatching(w.getBounds()).workArea;
+  const w=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!,a=screen.getDisplayMatching(w.getBounds()).workArea;
   return {b:w.getBounds(),a};
  });
  expect(bounds.b.width).toBe(Math.min(1707,bounds.a.width));
@@ -103,7 +98,7 @@ test('initial bounds fit display and hidden About uses current app metadata with
  await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();
  await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('About 입력 보호');
  const info=await d.app.evaluate(async({BrowserWindow,dialog,app})=>{
-  BrowserWindow.getAllWindows()[0].hide();
+  BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.hide();
   const original=dialog.showMessageBox;
   let captured:any;
   (dialog as any).showMessageBox=async(options:any)=>{captured=options;return {response:0}};

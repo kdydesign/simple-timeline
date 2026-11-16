@@ -28,7 +28,7 @@ export function UpdatePopover({updates,installBlocked=false}:{updates:UpdatesVie
    <div className="update-heading"><h2>Planrail {s.version}</h2><IconButton icon="close" label="업데이트 진행 닫기" onClick={()=>close(true)}/></div>
    <p role="status">{!available?(s.connected?'현재 사용할 수 있는 새 업데이트가 없습니다.':'호스트 연결 후 업데이트를 다시 확인해 주세요.'):s.phase==='downloading'?'업데이트 다운로드 중':s.phase==='verifying'?'다운로드 파일 검증 중':s.phase==='installing'?'설치 후 재시작 중':s.phase==='waiting'?'설치 준비 완료':s.phase==='error'?'업데이트를 완료하지 못했습니다.':'새 버전을 사용할 수 있습니다.'}</p>
    {['downloading','verifying'].includes(s.phase)&&<><progress max={100} value={percent} aria-label="업데이트 다운로드" aria-valuenow={percent}/><p>{updateBytes(s.receivedBytes)} / {updateBytes(s.totalBytes)} · {percent}%</p></>}
-   {s.requiresExplicitInstall&&<p>입력을 저장하거나 정리한 뒤 ‘설치 후 재시작’을 눌러 주세요.</p>}
+   {s.requiresExplicitInstall&&<p>‘설치 후 재시작’을 누르면 미저장 입력을 폐기하고 설치합니다.</p>}
    {!s.connected&&s.canInstall&&<p>검증한 파일로 오프라인 설치할 수 있습니다.</p>}
    {(updates.error||s.error)&&<p role="alert">{updates.error??updateErrors[s.error!]}</p>}
    <div className="update-actions">{s.canDownload&&<Button disabled={updates.busy} onClick={()=>void updates.run('download')}>업데이트 다운로드</Button>}{s.canCancel&&<Button onClick={()=>void updates.run('cancel')}>{s.phase==='waiting'?'업데이트 취소':'다운로드 취소'}</Button>}{s.canRetry&&<Button disabled={updates.busy} onClick={()=>void updates.run('retry')}>다시 시도</Button>}{s.canInstall&&<Button className="primary" disabled={updates.busy||s.editingBlocked||installBlocked} onClick={()=>void updates.run('install')}>설치 후 재시작</Button>}</div>

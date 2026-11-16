@@ -1,5 +1,5 @@
 import {it,expect,vi} from 'vitest'
-import {render,screen,waitFor,within} from '@testing-library/react'
+import {act,fireEvent,render,screen,waitFor,within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {App} from '../../src/renderer/App'
 import {memoryApi} from './fake-api'
@@ -23,8 +23,9 @@ it('saves only reminder settings and protects a changed quick draft on escape',a
  const m=memoryApi(fixture()),u=userEvent.setup();const update=vi.spyOn(m.api,'updateSchedule');render(<App api={m.api}/>);
  await u.click(await screen.findByRole('button',{name:'개발 알림 설정'}));const dialog=screen.getByRole('dialog',{name:'알림 설정'});
  await u.clear(within(dialog).getByLabelText('알림 며칠 전'));await u.type(within(dialog).getByLabelText('알림 며칠 전'),'4');await u.keyboard('{Escape}');
- expect(screen.getByRole('alertdialog')).toBeVisible();await u.click(screen.getByRole('button',{name:'계속 편집'}));expect(within(dialog).getByLabelText('알림 며칠 전')).toHaveValue(4);
- await u.click(within(dialog).getByRole('button',{name:'저장'}));await waitFor(()=>expect(screen.queryByRole('dialog',{name:'알림 설정'})).not.toBeInTheDocument());
+ expect(screen.queryByRole('alertdialog')).toBeNull();expect(screen.queryByRole('dialog',{name:'알림 설정'})).toBeNull();expect(m.snapshot.schedules[0].reminder.daysBefore).toBe(2);
+ await u.click(screen.getByRole('button',{name:'개발 알림 설정'}));const reopened=screen.getByRole('dialog',{name:'알림 설정'});await u.clear(within(reopened).getByLabelText('알림 며칠 전'));await u.type(within(reopened).getByLabelText('알림 며칠 전'),'4');
+ await u.click(within(reopened).getByRole('button',{name:'저장'}));await waitFor(()=>expect(screen.queryByRole('dialog',{name:'알림 설정'})).not.toBeInTheDocument());
  expect(m.snapshot.schedules[0].reminder.daysBefore).toBe(4);expect(m.snapshot.schedules[0].name).toBe('개발');expect(m.snapshot.schedules[0].startDate).toBe('2026-11-11');expect(update).not.toHaveBeenCalled();
 });
 it('keeps failed quick drafts, marks quit dirty, and permits cancellation after an unknown result',async()=>{
@@ -32,7 +33,7 @@ it('keeps failed quick drafts, marks quit dirty, and permits cancellation after 
  await u.click(await screen.findByRole('button',{name:'개발 알림 설정'}));const dialog=screen.getByRole('dialog',{name:'알림 설정'});
  await u.clear(within(dialog).getByLabelText('알림 시각'));await u.type(within(dialog).getByLabelText('알림 시각'),'10:30');expect(document.documentElement.dataset.editorDirty).toBe('true');
  await u.click(within(dialog).getByRole('button',{name:'저장'}));await waitFor(()=>expect(within(dialog).getByRole('button',{name:'다시 조회'})).toBeEnabled());expect(within(dialog).getByLabelText('알림 시각')).toHaveValue('10:30');expect(within(dialog).getByRole('button',{name:'저장'})).toBeDisabled();
- await u.click(within(dialog).getByRole('button',{name:'알림 설정 닫기'}));await u.click(screen.getByRole('button',{name:'변경 버리기'}));expect(screen.queryByRole('dialog',{name:'알림 설정'})).not.toBeInTheDocument();expect(document.documentElement.dataset.editorDirty).toBe('false');
+ await u.click(within(dialog).getByRole('button',{name:'알림 설정 닫기'}));expect(screen.queryByRole('dialog',{name:'알림 설정'})).not.toBeInTheDocument();expect(document.documentElement.dataset.editorDirty).toBe('false');
 });
 it('validates quick reminder fields without saving, and removes the icon after disabling both reminders',async()=>{
  const m=memoryApi(fixture()),u=userEvent.setup();render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'개발 알림 설정'}));const dialog=screen.getByRole('dialog',{name:'알림 설정'});
@@ -49,3 +50,9 @@ it('keeps member project deletion disabled and saves shared reminders only to th
  await u.click(screen.getByRole('button',{name:'개발 알림 설정'}));const dialog=screen.getByRole('dialog',{name:'알림 설정'});await u.click(within(dialog).getByRole('switch',{name:'종료일 알림'}));await u.click(within(dialog).getByRole('button',{name:'저장'}));
  await waitFor(()=>expect(screen.queryByRole('dialog',{name:'알림 설정'})).not.toBeInTheDocument());expect(local).not.toHaveBeenCalled();expect(m.snapshot.schedules[0].reminder.end).toBe(true);expect(f.api.saveReminder).toHaveBeenCalledTimes(1);
 });
+
+it('shows a blocked quick action as a four-second warning toast without replacing form errors',async()=>{
+ Object.defineProperty(window,'innerWidth',{value:1707,writable:true,configurable:true});
+ const m=memoryApi(fixture()),u=userEvent.setup();render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'개발 편집'}));await u.type(screen.getByLabelText('일정 이름'),' 초안');
+ vi.useFakeTimers();try{fireEvent.click(screen.getByRole('button',{name:'개발 알림 설정'}));const warning=screen.getByText('먼저 저장하거나 변경을 버려주세요.');expect(warning).toHaveClass('warning-toast');act(()=>vi.advanceTimersByTime(3999));expect(warning).toBeVisible();act(()=>vi.advanceTimersByTime(1));expect(screen.queryByText('먼저 저장하거나 변경을 버려주세요.')).toBeNull()}finally{vi.useRealTimers()}
+})

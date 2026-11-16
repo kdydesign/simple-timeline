@@ -33,7 +33,7 @@ it('rejects invalid direct entry and preserves selection and the visible anchor'
   expect(screen.getByRole('alert')).toHaveTextContent('날짜')
   expect(document.querySelector<HTMLElement>('[data-day="2027-01-31"]')!.style.left).toBe('0px')
 })
-it('shares selection across views, preserves it on dirty cancel, and does not jump on date creation', async () => {
+it('shares selection across views, updates it when discarding a draft, and does not jump on date creation', async () => {
   const u=userEvent.setup(); await ready(); enter('2026-11-30')
   const slider=screen.getByRole('scrollbar',{name:'간트 가로 이동'})
   const before=(slider as HTMLInputElement).value
@@ -43,10 +43,10 @@ it('shares selection across views, preserves it on dirty cancel, and does not ju
   expect(document.querySelector('[data-day="2026-12-18"]')).toHaveAttribute('aria-pressed','true')
   await u.type(screen.getByLabelText('일정 이름'),'미저장')
   fireEvent.click(document.querySelector('[data-day="2026-12-19"]')!)
-  await u.click(screen.getByRole('button',{name:'계속 편집'}))
-  expect(screen.getByLabelText('선택 날짜')).toHaveValue('2026-12-18')
+  expect(screen.queryByRole('alertdialog')).toBeNull()
+  expect(screen.getByLabelText('선택 날짜')).toHaveValue('2026-12-19')
   enter('2026-12-20')
-  expect(screen.getByLabelText('일정 이름')).toHaveValue('미저장')
+  expect(screen.getByLabelText('일정 이름')).toHaveValue('')
   await u.click(screen.getByRole('button',{name:'달력'}))
   expect(document.querySelector('[data-date="2026-12-20"]')).toHaveAttribute('aria-pressed','true')
 })

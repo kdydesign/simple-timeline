@@ -17,7 +17,7 @@ export async function prepare(directory:string,report:string){
  const publication:UpdatePublication={protocolVersion:1,hostId:'disposable-vm',revision:1,publicationId:'11111111-1111-4111-8111-111111111111',releaseId:sha256,manifest:{schemaVersion:1,appId:'com.kdydesign.simpletimeline',version:manifest.version,sourceSha:manifest.sourceSha,platform:'win32',arch:'x64',installerType:'nsis',installScope:'per-user',signed:false,validationUpdateOnly:false,files:[{id:'installer',name:manifest.installer,size:bytes.length,sha256,sha512:createHash('sha512').update(bytes).digest('base64')}]}}
  // The synthetic file enters the adapter directly, never the production catalog or LAN service.
  prepared=await prepareProductionInstaller({directory,publication,current:()=>true});await prepared.validate();evidencePath=report
- const window=BrowserWindow.getAllWindows()[0],url=window.webContents.getURL()
+ const window=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!,url=window.webContents.getURL()
  guard=createRendererInstallGuard(request=>window.webContents.send(updatesGuard,request))
  ipcMain.removeHandler(updatesGuardReply)
  ipcMain.handle(updatesGuardReply,(event,id,value)=>isTrustedSender(event,window,url)&&typeof id==='string'&&typeof value==='boolean'?guard!.acknowledge(id,value):false)

@@ -3,6 +3,7 @@ import {createNotificationStore} from './db/notifications'
 import {createUpdateNotifications} from './notifications/updates'
 import {dueReminders} from '../domain/reminder'
 import { windowsLoginStartup } from './windows-login-startup'
+import { createHelpPerformance } from './help-performance'
 import { createHelpWindow } from './help-window'
 import { parseInstallExit, createInstallExit } from './install-exit'
 import { UpdateCatalog } from './updates/catalog'
@@ -184,7 +185,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     refreshUpdates();updatesIpc.changed(service.getState())
     if(uiReady)await service.confirmHealthyStartup()
   }).catch(()=>{/* Storage initialization failure is exposed by unavailable update IPC; existing app data remains usable. */})
-  help=createHelpWindow({mainWindow:window,url:new URL('help.html',rendererUrl).href,preload:join(__dirname,'../preload/help.cjs'),role:()=>sharing?.getState().role??'personal',version:app.getVersion(),icon:desktopIcon,
+  help=createHelpWindow({performance:createHelpPerformance(profile,app.getVersion()),mainWindow:window,url:new URL('help.html',rendererUrl).href,preload:join(__dirname,'../preload/help.cjs'),role:()=>sharing?.getState().role??'personal',version:app.getVersion(),icon:desktopIcon,
     onError:()=>{show();dialog.showErrorBox('도움말을 열지 못했습니다','주 창은 계속 사용할 수 있습니다. 물음표 버튼을 눌러 도움말을 다시 열어 주세요.')},
   })
   const unregisterWindow = registerWindowIpc(window, rendererUrl,()=>{if(!exiting&&!installPending)help?.open()})
@@ -211,7 +212,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         else if (performance.now() >= deadline) resolve(false);
         else setTimeout(check, 20);
       }; check();
-    })`).then(ready => { if (ready) { startup.mark('ui-ready');uiReady=true;if(storage.state==='ready')void updates?.confirmHealthyStartup() } }).catch(() => {})
+    })`).then(ready => { if (ready) { startup.mark('ui-ready');uiReady=true;const idleHelp=setTimeout(()=>{try{help?.prepare()}catch{/* Explicit help opening can retry after a failed prewarm. */}},1000);idleHelp.unref();if(storage.state==='ready')void updates?.confirmHealthyStartup() } }).catch(() => {})
   })
   if (storage.state === 'blocked') {
     if (options.notifyBlocked) options.notifyBlocked(storage)
@@ -272,21 +273,14 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   } catch {
     show()
     if (options.notifyTrayFailure) options.notifyTrayFailure()
-    else dialog.showErrorBox('트레이를 만들지 못했습니다', '창 닫기로 앱을 종료할 수 있습니다. 저장하지 않은 입력은 종료 전에 확인합니다.')
+    else dialog.showErrorBox('트레이를 만들지 못했습니다', '창 닫기로 앱을 종료할 수 있습니다. 저장하지 않은 입력은 완전 종료 시 폐기됩니다.')
   }
   const requestClose = installCloseGuard(
     window,
     options.confirmClose ??
       (async () => {
-        const result = await dialog.showMessageBox(window, {
-          type: 'question',
-          title: '변경 내용을 버리고 종료할까요?',
-          message: '저장하지 않은 입력이 사라질 수 있습니다.',
-          buttons: ['계속 편집', '변경 버리고 종료'],
-          defaultId: 0,
-          cancelId: 0,
-        })
-        return result.response === 1
+        dialog.showErrorBox('종료 준비를 확인하지 못했습니다', '진행 중인 저장 상태를 확인할 수 없습니다. 잠시 후 다시 종료해 주세요.')
+        return false
       }),
     {
       allowClose:()=>shutdownComplete,
@@ -301,7 +295,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         })
         return choices[result.response] ?? 'cancel'
       })(),
-      beforeClose: () => { exiting = true;help?.dispose();void updates?.dispose();void stopServices().catch(()=>{}) },
+      beforeClose: async () => { await appMutationBarrier.freezeForShutdown();await updates?.dispose();await stopServices();exiting = true;help?.dispose() },
       afterClose: () => app.quit(),
     },
   )

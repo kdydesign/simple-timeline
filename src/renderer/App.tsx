@@ -79,6 +79,7 @@ export function App({
     [validationActive,setValidationActive]=useState(false),
     [formError, setFormError] = useState<ApiError | null>(null),
     [notice, setNotice] = useState(""),
+    [warning,setWarning] = useState<{message:string}|null>(null),
     [projectsOpen, setProjectsOpen] = useState(false),
     [mode, setMode] = useState<"gantt" | "calendar">("gantt"),
     [dayModalOpen, setDayModalOpen] = useState(false),
@@ -90,6 +91,11 @@ export function App({
   const preferences = usePreferences();
   const recentProject = useRef<string | null>(null);
   const [todayRequest, setTodayRequest] = useState<{date:string;token:number}>(() => ({date:localDate(today),token:0}));
+  useEffect(()=>{
+    if(!warning)return;
+    const timer=window.setTimeout(()=>setWarning(null),4000);
+    return()=>window.clearTimeout(timer);
+  },[warning]);
   useEffect(() => {
     if (!notice) return;
     const timer = window.setTimeout(() => setNotice(""), 2000);
@@ -118,7 +124,7 @@ export function App({
   const model = editor.editor,
     canEdit = timeline.phase === "ready",
     saving = timeline.phase === "saving" || sharing.busy;
-  const updates=useUpdateGuard({known:timeline.phase==='ready'||timeline.phase==='saving',dirty:editor.dirty||settingsDirty||quickDirty,saving});
+  const updates=useUpdateGuard({known:(timeline.phase==='ready'||timeline.phase==='saving')&&!sharing.writeOutcomeUnknown,dirty:editor.dirty||settingsDirty||quickDirty,saving});
   const settingsVisible=sharing.settingsOpen&&!quickReminder&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
   useEffect(()=>{setFieldErrors({});serverFieldErrors.current={};pendingFieldFocus.current=null;setValidationActive(false)},[model?.session]);
   const patchForm:typeof editor.patch=(update)=>{
@@ -213,22 +219,8 @@ export function App({
   const request = (action: (caller: HTMLElement | null) => void) => {
     const caller = document.activeElement as HTMLElement | null;
     if (saving) return;
-    if (editor.dirty)
-      confirm({
-        title: "변경 내용을 버릴까요?",
-        message: "저장하지 않은 입력이 사라집니다.",
-        confirmLabel: "변경 버리기",
-        cancelLabel: "계속 편집",
-        run: () => {
-          setConfirmation(null);
-          setFormError(null);
-          action(caller);
-        },
-      });
-    else {
-      setFormError(null);
-      action(caller);
-    }
+    setFormError(null);
+    action(caller);
   };
   const showValidation = (e: unknown) => {
     const error =
@@ -366,12 +358,11 @@ export function App({
   };
   const requestCloseQuick = () => {
     if(saving||saveShieldActive)return;
-    if(quickDirty)confirm({title:'변경 내용을 버릴까요?',message:'저장하지 않은 알림 설정이 사라집니다.',confirmLabel:'변경 버리기',cancelLabel:'계속 편집',run:()=>{setConfirmation(null);closeQuick()}});
-    else closeQuick();
+    closeQuick();
   };
   const allowQuickAction = () => {
     if(!canEdit||saving||saveShieldActive||confirmation||quickReminder)return false;
-    if(editor.dirty||settingsDirty){setFormError({code:'VALIDATION_ERROR',message:'먼저 저장하거나 변경을 버려주세요.'});return false}
+    if(editor.dirty||settingsDirty){setNotice('');setWarning({message:'먼저 저장하거나 변경을 버려주세요.'});return false}
     setFormError(null);return true;
   };
   const listDeleteFocus=useRef(false);
@@ -403,7 +394,7 @@ export function App({
     onDragStart: () => {
       if (!canEdit || confirmation || quickReminder) return false;
       if (editor.dirty) {
-        setFormError({code:"VALIDATION_ERROR",message:"먼저 저장하거나 변경을 버려주세요."});
+        setNotice('');setWarning({message:'먼저 저장하거나 변경을 버려주세요.'});
         return false;
       }
       sharingView.beginDrag();setNotice(""); return true;
@@ -540,6 +531,7 @@ export function App({
         else request(caller=>editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller));
       }}>{schedule.name} 알림 설정</button>
     </div>)}
+    {sharing.writeOutcomeUnknown&&<p className="reminder-notice" role="alert">공유 저장 결과를 확인하지 못해 업데이트를 설치할 수 없습니다. 앱을 완전히 종료한 뒤 다시 실행하여 공유 설정을 확인하고 설치를 다시 시도해 주세요.</p>}
     {sharing.error&&sharing.error.message!==timeline.error?.message&&!(sharing.error.code==='VALIDATION_ERROR'&&sharing.error.field)&&<p className="reminder-notice" role="alert">{sharing.error.message}</p>}
     {sharing.state&&["error","revoked","disconnected"].includes(sharing.state.status)&&sharing.error?.message!==sharingDescription(sharing.state)&&<p className="reminder-notice" role="alert">{sharingDescription(sharing.state)}</p>}
     <StatusNotice
@@ -554,7 +546,7 @@ export function App({
   </>);
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
-      <Titlebar sharing={sharing.state} installBlocked={editor.dirty||settingsDirty||quickDirty||saving||saveShieldActive||timeline.phase!=='ready'}/>
+      <Titlebar sharing={sharing.state} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
       {updates.frozen&&<div className="update-blocked update-ui" role="alert">{updates.editingBlocked?'앱을 종료한 뒤 다시 열어 주세요. 종료 준비 실패로 편집을 잠시 중지했습니다.':'업데이트 설치 준비 중입니다. 저장을 마칠 때까지 기다려 주세요.'}</div>}
       <div className="saving-content" inert={updates.frozen||saveShieldActive}>
       <div
@@ -689,7 +681,8 @@ export function App({
           />
         )}
       </div>
-      <div className="toast" role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
+      {warning&&<div className="toast warning-toast" role="alert">{warning.message}</div>}
+      <div className="toast" hidden={!!warning} role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
       {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
       {quickReminder&&<QuickReminder key={quickReminder.id} schedule={timeline.snapshot?.schedules.find(s=>s.id===quickReminder.id)} caller={quickReminder.caller}
         disabled={!canEdit||saving||saveShieldActive} busy={saving||saveShieldActive} covered={!!confirmation} onRefresh={()=>void timeline.refresh()} onGuard={setQuickDirty} onClose={requestCloseQuick} onSave={saveQuickReminder}/>}

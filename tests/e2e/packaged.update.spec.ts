@@ -19,9 +19,7 @@ test('actual updater waits for safe exit, installs per-user and automatically re
   instance=await _electron.launch({chromiumSandbox:true,executablePath:exe,env,timeout:30000});const page=await instance.firstWindow()
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('업데이트 보존 확인');await page.getByRole('button',{name:'저장',exact:true}).click();await expect(page.locator('.saving-shield')).toHaveCount(0)
   await instance.evaluate(async(_electron,{harness,directory,handoff})=>{await process.mainModule!.require(harness).prepare(directory,handoff)},{harness,directory:resolve('artifacts/windows-update'),handoff})
-  await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('버리지 않는 초안')
-  expect(await instance.evaluate((_electron,harness)=>process.mainModule!.require(harness).freeze(),harness)).toBe(false);await expect(page.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('버리지 않는 초안')
-  await page.getByRole('button',{name:'편집 닫기',exact:true}).click();await page.getByRole('button',{name:'변경 버리기',exact:true}).click()
+  await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('저장하지 않고 폐기할 초안')
   expect(await instance.evaluate((_electron,harness)=>process.mainModule!.require(harness).freeze(),harness)).toBe(true)
   const oldPid=instance.process().pid!,started=Date.now(),closed=instance.waitForEvent('close')
   await instance.evaluate((_electron,harness)=>process.mainModule!.require(harness).handoffAfterShutdown(),harness);await closed;instance=null

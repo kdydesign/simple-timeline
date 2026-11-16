@@ -69,14 +69,14 @@ it('one UPDATE click starts download; closing or Escape keeps transfer running; 
  await userEvent.click(button);await userEvent.click(screen.getByRole('button',{name:'다운로드 취소'}));expect(f.api.cancel).toHaveBeenCalledOnce()
  act(()=>f.emit({phase:'error',error:'network',canCancel:false,canRetry:true}));await userEvent.click(screen.getByRole('button',{name:'다시 시도'}));expect(f.api.retry).toHaveBeenCalledOnce()
 })
-it('dirty primary draft refuses freeze and survives release; a later clean draft requires explicit install',async()=>{
+it('dirty primary draft accepts freeze and survives release; a later clean draft requires explicit install',async()=>{
  const f=updates(),u=userEvent.setup();render(<App api={memoryApi().api}/>);const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await u.click(add);await u.type(screen.getByLabelText('프로젝트 이름'),'보존할 입력')
- let clean=true;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(false);fireEvent.change(screen.getByLabelText('프로젝트 이름'),{target:{value:'버리면 안 됨'}});expect(document.documentElement).toHaveAttribute('data-update-frozen','true')
+ let clean=true;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);fireEvent.change(screen.getByLabelText('프로젝트 이름'),{target:{value:'버리면 안 됨'}});expect(document.documentElement).toHaveAttribute('data-update-frozen','true')
  await act(async()=>{await f.release()});expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('보존할 입력');act(()=>f.emit({phase:'waiting',canDownload:false,canInstall:true,requiresExplicitInstall:true}));await u.click(screen.getByRole('button',{name:'저장'}));await waitFor(()=>expect(screen.queryByLabelText('프로젝트 이름')).toBeNull());expect(f.api.install).not.toHaveBeenCalled()
  await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);expect(document.documentElement).toHaveAttribute('data-update-frozen','true');await act(async()=>{await f.release()})
 })
 it('guards sharing device drafts and quick reminders, and keeps failed-teardown editing blocked',async()=>{
- const f=updates(),s=sharingFixture({role:'host',settingsRequestToken:'settings',devices:[{id:'9',name:'민수',ip:'192.168.0.20',approved:true,revoked:false}]}),u=userEvent.setup();render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});await u.type(within(dialog).getByLabelText('새 참여자 이름'),'초안');let clean=true;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(false);await act(async()=>{await f.release()});expect(within(dialog).getByLabelText('새 참여자 이름')).toHaveValue('초안')
+ const f=updates(),s=sharingFixture({role:'host',settingsRequestToken:'settings',devices:[{id:'9',name:'민수',ip:'192.168.0.20',approved:true,revoked:false}]}),u=userEvent.setup();render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});await u.type(within(dialog).getByLabelText('새 참여자 이름'),'초안');let clean=true;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);await act(async()=>{await f.release()});expect(within(dialog).getByLabelText('새 참여자 이름')).toHaveValue('초안')
  act(()=>f.emit({editingBlocked:true,phase:'error',error:'shutdown'}));await act(async()=>{await f.release()});expect(document.documentElement).toHaveAttribute('data-update-frozen','true');expect(screen.getByText(/앱을 종료한 뒤 다시 열어/)).toBeVisible();expect(s.api.saveDevice).not.toHaveBeenCalled()
 })
 it('host import is separate from publish and errors retain the current release',async()=>{
@@ -92,8 +92,8 @@ it('waits for accepted save completion and retains freeze after the saving shiel
  const f=updates(),m=memoryApi(),u=userEvent.setup();let finish!:(r:Awaited<ReturnType<typeof m.api.createProject>>)=>void;const create=m.api.createProject;m.api.createProject=vi.fn(()=>new Promise<Awaited<ReturnType<typeof m.api.createProject>>>(r=>{finish=r}));render(<App api={m.api}/>);const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await u.click(add);await u.type(screen.getByLabelText('프로젝트 이름'),'저장 대기');await u.click(screen.getByRole('button',{name:'저장'}));let settled=false,clean=false,pending!:Promise<void>;act(()=>{pending=Promise.resolve(f.freeze()).then(v=>{clean=v;settled=true})});expect(settled).toBe(false);await act(async()=>{finish(await create({name:'저장 대기',color:'#2563EB',participants:[]}))});await act(async()=>{await pending});expect(clean).toBe(true);await waitFor(()=>expect(document.querySelector('.saving-shield')).toBeNull());expect(document.querySelector('.saving-content')).toHaveAttribute('inert');await act(async()=>{await f.release()})
 })
 it('defers uncommitted toolbar dates and quick reminder drafts but permits a clean popup',async()=>{
- const f=updates(),u=userEvent.setup();const data=structuredClone(hotfix);data.schedules[0].reminder={start:true,end:false,daysBefore:0,time:'09:00'};render(<App api={memoryApi(data).api}/>);await screen.findByRole('button',{name:'개발 편집'});fireEvent.change(screen.getByLabelText('선택 날짜'),{target:{value:'2026-12-12'}});let clean=true;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(false);await act(async()=>{await f.release()});fireEvent.keyDown(screen.getByLabelText('선택 날짜'),{key:'Enter'});
- await u.click(screen.getByRole('button',{name:'개발 알림 설정'}));await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);await act(async()=>{await f.release()});await u.click(screen.getByRole('switch',{name:'시작일 알림'}));await act(async()=>{clean=await f.freeze()});expect(clean).toBe(false);await act(async()=>{await f.release()})
+ const f=updates(),u=userEvent.setup();const data=structuredClone(hotfix);data.schedules[0].reminder={start:true,end:false,daysBefore:0,time:'09:00'};render(<App api={memoryApi(data).api}/>);await screen.findByRole('button',{name:'개발 편집'});fireEvent.change(screen.getByLabelText('선택 날짜'),{target:{value:'2026-12-12'}});let clean=true;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);await act(async()=>{await f.release()});fireEvent.keyDown(screen.getByLabelText('선택 날짜'),{key:'Enter'});
+ await u.click(screen.getByRole('button',{name:'개발 알림 설정'}));await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);await act(async()=>{await f.release()});await u.click(screen.getByRole('switch',{name:'시작일 알림'}));await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);await act(async()=>{await f.release()})
 })
 it('release cancels a pending save guard so its late completion cannot approve installation',async()=>{
  const f=updates(),m=memoryApi(),u=userEvent.setup();let finish!:(r:Awaited<ReturnType<typeof m.api.createProject>>)=>void;const create=m.api.createProject;m.api.createProject=vi.fn(()=>new Promise<Awaited<ReturnType<typeof m.api.createProject>>>(r=>{finish=r}));render(<App api={m.api}/>);const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await u.click(add);await u.type(screen.getByLabelText('프로젝트 이름'),'저장 대기');await u.click(screen.getByRole('button',{name:'저장'}));let pending!:Promise<boolean>;act(()=>{pending=Promise.resolve(f.freeze())});await act(async()=>{await f.release()});await act(async()=>{finish(await create({name:'저장 대기',color:'#2563EB',participants:[]}))});let clean=true;await act(async()=>{clean=await pending});expect(clean).toBe(false);expect(document.documentElement).toHaveAttribute('data-update-frozen','false')
@@ -122,3 +122,22 @@ it('shows a persistent notification storage error even while an available UPDATE
  expect(screen.getByText(/업데이트 알림 기록을 확인하지 못했습니다/)).toBeVisible()
  act(()=>f.emit({notificationError:false}));expect(screen.queryByText(/업데이트 알림 기록을 확인하지 못했습니다/)).toBeNull()
 })
+it('accepts unsaved project and uncommitted date input for automatic install without saving either',async()=>{
+ const f=updates(),m=memoryApi(),u=userEvent.setup();render(<App api={m.api}/>);
+ const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());fireEvent.change(screen.getByLabelText('선택 날짜'),{target:{value:'2026-12-12'}});await u.click(add);await u.type(screen.getByLabelText('프로젝트 이름'),'폐기 대상');
+ let clean=false;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);expect(m.snapshot.projects).toHaveLength(0);expect(document.documentElement).toHaveAttribute('data-update-frozen','true');await act(async()=>{await f.release()});expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('폐기 대상')
+})
+it.each(['unavailable','rejected'] as const)('blocks UPDATE after an uncertain sharing write (%s) even when polls and later commands succeed',async kind=>{
+ const f=updates(),sharing=sharingFixture({role:'member',address:'192.168.0.10',status:'connected',settingsRequestToken:'open'}),u=userEvent.setup();
+ sharing.api.connect=kind==='rejected'?vi.fn().mockRejectedValue(Error('late IPC failure')):vi.fn().mockResolvedValue({ok:false,error:{code:'IPC_UNAVAILABLE',message:'공유 작업 결과를 확인하지 못했습니다.'}});
+ render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});
+ const port=within(dialog).getByLabelText('포트');await u.clear(port);await u.type(port,'47832');await u.click(within(dialog).getByRole('button',{name:'연결'}));
+ await within(dialog).findByText('공유 작업 결과를 확인하지 못했습니다.');await act(async()=>expect(await f.freeze()).toBe(false));await act(async()=>{await f.release()});
+ act(()=>sharing.emit({snapshotRevision:2,status:'connected'}));await u.click(within(dialog).getByRole('switch',{name:'공유 변경 알림'}));
+ await act(async()=>expect(await f.freeze()).toBe(false));
+});
+
+it('permits UPDATE after a definitive sharing validation failure',async()=>{
+ const f=updates(),sharing=sharingFixture({role:'member',address:'192.168.0.10',status:'connected',settingsRequestToken:'open'}),u=userEvent.setup();sharing.api.connect=vi.fn().mockResolvedValue({ok:false,error:{code:'VALIDATION_ERROR',message:'잘못된 주소입니다.'}});
+ render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});await u.click(within(dialog).getByRole('button',{name:'연결'}));await within(dialog).findByText('잘못된 주소입니다.');await act(async()=>expect(await f.freeze()).toBe(true));
+});

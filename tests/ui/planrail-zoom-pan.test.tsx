@@ -137,3 +137,9 @@ it('keeps the empty project message inside the available gantt body',()=>{
  const v=render(<GanttView snapshot={{projects:[],schedules:[]}} selectedMonth={{year:2026,month:11}} onEditProject={()=>{}} onEditSchedule={()=>{}} onAddSchedule={()=>{}} />)
  expect(v.container.querySelector('.gantt-body')).toContainElement(screen.getByText('프로젝트를 추가해 일정을 관리하세요'))
 })
+it.each(['scrollbar','slider'] as const)('arms Space pan after focused Gantt %s without native Space scrolling',role=>{
+ const v=setup(),control=screen.getByRole(role) as HTMLInputElement,bar=v.container.querySelector<HTMLElement>('[data-bar="3"]')!;
+ control.focus();const key=new KeyboardEvent('keydown',{key:' ',code:'Space',bubbles:true,cancelable:true});fireEvent(control,key);expect(key.defaultPrevented).toBe(true);
+ const before=Number(v.slider.value);pointer(bar,'pointerdown',500);pointer(window,'pointermove',450);pointer(window,'pointerup',450);fireEvent.keyUp(control,{key:' ',code:'Space'});
+ expect(Number(v.slider.value)).toBe(before+50);expect(v.commit).not.toHaveBeenCalled();expect(v.edit).not.toHaveBeenCalled()
+})

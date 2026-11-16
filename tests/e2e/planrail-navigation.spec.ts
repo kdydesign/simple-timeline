@@ -55,6 +55,11 @@ test.describe('Planrail zoom and Space pan',()=>{
     await p.keyboard.press('Enter')
     await expect(p.getByLabel('일정 이름',{exact:true})).toHaveValue('운영 배포')
     await p.getByRole('button',{name:'편집 닫기',exact:true}).click()
+    for(const target of [slider,p.getByRole('slider',{name:'간트 배율'})]){
+      await target.focus();const start=Number(await slider.inputValue()),bounds=(await p.locator('.gantt-date-heading').boundingBox())!;
+      await p.keyboard.down('Space');await p.mouse.move(bounds.x+160,bounds.y+45);await p.mouse.down();await p.mouse.move(bounds.x+120,bounds.y+45,{steps:4});await p.mouse.up();await p.keyboard.up('Space');
+      await expect.poll(async()=>Number(await slider.inputValue())).toBeCloseTo(start+40,3);await expect(p.getByRole('dialog')).toHaveCount(0);expect(await p.evaluate(()=>window.simpleTimeline.getSnapshot())).toEqual(snapshot);
+    }
     await d.restart()
     await expect.poll(async()=>d.page.locator('[data-day]').first().evaluate(el=>parseFloat((el as HTMLElement).style.width))).toBeCloseTo(width,4)
   })

@@ -4,6 +4,9 @@ import type {ApiError,Result} from '../../shared/types'
 import {sharingDescription} from '../../shared/sharing-status'
 export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:SharingApi|undefined=window.timelineSharing) {
  const [state,setState]=useState<SharingState|null>(null),[error,setError]=useState<ApiError|null>(null)
+ // A later poll/other command cannot establish the outcome of a lost write reply.
+ // Keep installation blocked for this session; relaunch reads persisted state anew.
+ const [writeOutcomeUnknown,setWriteOutcomeUnknown]=useState(false)
  const [busy,setBusy]=useState(false),[settingsOpen,setSettingsOpen]=useState(false)
  const revision=useRef<number|null>(null),pending=useRef(false),alive=useRef(true),locked=useRef(false),manual=useRef(false)
  const eventVersion=useRef(0),latest=useRef<SharingState|null>(null),read=useRef(reconcile);read.current=reconcile
@@ -40,11 +43,11 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
   locked.current=true;setBusy(true);errorVersion.current++;errorSource.current=null;setError(null)
   try{
    const result=await operation()
-   if(!result.ok){errorSource.current=source;setError(result.error)}
+   if(!result.ok){if(source==='command'&&result.error.code==='IPC_UNAVAILABLE')setWriteOutcomeUnknown(true);errorSource.current=source;setError(result.error)}
    else if(receiveState&&result.data&&typeof result.data==='object'&&'snapshotRevision' in result.data)accept(result.data as unknown as SharingState)
    return result
   }catch{
-   const error:ApiError={code:'IPC_UNAVAILABLE',message:'공유 작업 결과를 확인하지 못했습니다.'};errorSource.current=source;setError(error);return{ok:false,error}
+   const error:ApiError={code:'IPC_UNAVAILABLE',message:'공유 작업 결과를 확인하지 못했습니다.'};if(source==='command')setWriteOutcomeUnknown(true);errorSource.current=source;setError(error);return{ok:false,error}
   }finally{locked.current=false;if(alive.current)setBusy(false)}
  }
  async function sync(){
@@ -69,5 +72,5 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
    return result.ok&&latest.current?.status==='connected'
   }finally{manual.current=false}
  }
- return{state,api,error,busy,settingsOpen,setSettingsOpen,run,sync}
+ return{state,api,error,busy,writeOutcomeUnknown,settingsOpen,setSettingsOpen,run,sync}
 }

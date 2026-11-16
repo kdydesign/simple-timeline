@@ -45,7 +45,7 @@ it('creates from a calendar date and remembers the selected project within this 
   await u.click(screen.getByRole('combobox',{name:'소속 프로젝트'}))
   await u.click(screen.getByRole('option',{name:'일정 없음 · #2'}))
   await u.click(screen.getByRole('button',{name:'편집 닫기'}))
-  await u.click(screen.getByRole('button',{name:'변경 버리기'}))
+
   await u.click(screen.getByRole('button',{name:'2026-11-13 일정 추가'}))
   expect(screen.getByRole('combobox',{name:'소속 프로젝트'})).toHaveTextContent('일정 없음 · #2')
 })

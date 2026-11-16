@@ -1,12 +1,302 @@
 import type {HelpTopicId} from './help'
+export const helpSections=['시작하기','기본 사용법','간트·달력','알림·창','호스트 사용법','멤버 사용법','문제 해결'] as const
 export interface HelpArticle {
- id:HelpTopicId;section:'시작하기'|'호스트 사용법'|'멤버 사용법'|'문제 해결';title:string;intro:string
+ id:HelpTopicId;section:typeof helpSections[number];title:string;intro:string
  steps:{title:string;text:string}[];note?:string;related:HelpTopicId[]
  image?:{width?:number;file:string;alt:string;caption:string;points:{step:number;x:number;y:number}[]}
 }
 const participants={width:560,file:'participants.png',alt:'참여자 이름과 IP 등록, 승인 상태와 승인 취소·삭제 버튼',caption:'가상 디자인 PC · 192.168.0.20은 예시입니다.',points:[{step:1,x:5,y:72},{step:2,x:65,y:46}]}
 const reminders={width:390,file:'reminders.png',alt:'일정의 며칠 전·알림 시각 입력과 시작일·종료일 알림 스위치',caption:'가상 일정의 자기 알림 설정 화면',points:[{step:1,x:5,y:20},{step:2,x:5,y:70}]}
+const coreHelpArticles:HelpArticle[]=[
+ {
+  "id": "app-overview",
+  "image": {"file": "app-overview.png", "alt": "역할과 도구 모음, 프로젝트 일정 간트가 보이는 실제 앱 화면", "caption": "가상 프로젝트로 촬영한 기본 화면", "points": [{"step": 1, "x": 4, "y": 2}, {"step": 2, "x": 96, "y": 8}, {"step": 3, "x": 56, "y": 8}]},
+  "section": "시작하기",
+  "title": "Planrail 시작하기",
+  "intro": "프로젝트 아래 일정을 모아 간트와 달력으로 관리하는 Windows 데스크톱 앱입니다. 개인 자료는 인터넷 없이 사용할 수 있습니다.",
+  "steps": [
+   {
+    "title": "화면과 역할을 확인합니다",
+    "text": "제목 표시줄에 호스트 또는 멤버 배지가 표시됩니다. 개인 전용에는 배지가 없습니다. 역할과 연결 상태는 다르며 빨간 연결 상태에서도 개인 자료는 사용할 수 있습니다."
+   },
+   {
+    "title": "프로젝트와 일정을 만듭니다",
+    "text": "상단 프로젝트 추가로 프로젝트를 만든 다음 일정 추가에서 이름·소속 프로젝트·시작일·종료일을 입력하고 저장합니다."
+   },
+   {
+    "title": "보기와 범위를 바꿉니다",
+    "text": "간트/달력, 전체/개인/공유 버튼으로 표시 대상을 바꿉니다. 프로젝트 목록은 버튼 아래 열리고 항목이 많으면 스크롤합니다."
+   }
+  ],
+  "related": [
+   "projects",
+   "schedules",
+   "getting-started"
+  ]
+ },
+ {
+  "id": "projects",
+  "image": {"width": 390, "file": "project-editor.png", "alt": "프로젝트 이름과 색상을 입력하는 프로젝트 추가 패널", "caption": "가상 신규 제품 계획 프로젝트의 저장 전 예시", "points": [{"step": 1, "x": 5, "y": 10}]},
+  "section": "기본 사용법",
+  "title": "프로젝트 추가·편집·삭제",
+  "intro": "프로젝트는 일정의 소속과 색상을 관리하는 단위입니다.",
+  "steps": [
+   {
+    "title": "프로젝트 추가",
+    "text": "상단 폴더+ 버튼 또는 프로젝트 목록의 추가 버튼을 누릅니다. 이름과 색상을 선택하거나 #RRGGBB 값을 입력하고 저장합니다."
+   },
+   {
+    "title": "프로젝트 편집과 공유",
+    "text": "프로젝트 이름을 눌러 편집합니다. 참여자 관리와 공유 프로젝트 생성·전환은 호스트만 할 수 있습니다. 멤버의 개인 프로젝트는 편집할 수 있지만 받은 공유 프로젝트는 조회만 가능합니다."
+   },
+   {
+    "title": "프로젝트 삭제",
+    "text": "편집 패널의 삭제는 하위 일정 수를 확인한 뒤 함께 삭제합니다. 프로젝트 목록의 휴지통은 확인 없이 프로젝트와 하위 일정을 즉시 삭제합니다. 멤버가 받은 공유 프로젝트에는 삭제 권한이 없습니다."
+   }
+  ],
+  "related": [
+   "schedules",
+   "host-projects",
+   "saving-errors"
+  ],
+  "note": "저장하지 않고 닫거나 다른 항목을 열면 입력은 확인 없이 사라집니다."
+ },
+ {
+  "id": "schedules",
+  "image": {"width": 390, "file": "schedule-editor.png", "alt": "일정 이름과 소속 프로젝트, 시작일 종료일 및 알림을 입력하는 일정 추가 패널", "caption": "가상 사용성 검토 일정의 저장 전 예시", "points": [{"step": 1, "x": 5, "y": 8}, {"step": 2, "x": 5, "y": 28}, {"step": 3, "x": 94, "y": 78}]},
+  "section": "기본 사용법",
+  "title": "일정 추가·편집·삭제",
+  "intro": "일정의 시작일과 종료일을 모두 포함해 기간을 계산합니다.",
+  "steps": [
+   {
+    "title": "일정 추가",
+    "text": "상단 + 또는 프로젝트 옆 +를 누릅니다. 간트 날짜 눈금·빈 영역이나 달력 날짜를 누르면 클릭한 날을 시작일과 종료일로 넣습니다. 간트 행의 프로젝트를 우선하고, 맥락이 없으면 최근 선택 또는 첫 프로젝트를 사용합니다."
+   },
+   {
+    "title": "이름·프로젝트·날짜 지정",
+    "text": "시작일·종료일은 직접 YYYY-MM-DD로 입력하거나 입력 옆 달력에서 선택합니다. 0001~9999년을 지원하며 종료일은 시작일보다 빠를 수 없습니다. 하루 일정은 시작일과 종료일을 같게 둡니다."
+   },
+   {
+    "title": "저장·수정·삭제",
+    "text": "저장을 누르고 저장 완료 안내를 확인합니다. 일정 막대나 이름은 기존 일정 편집을 엽니다. 삭제는 확인 후 실행합니다. 공유 일정의 내용은 호스트만 바꾸고 멤버는 자신의 알림만 설정합니다."
+   }
+  ],
+  "related": [
+   "schedule-drag",
+   "personal-reminders",
+   "saving-errors"
+  ]
+ },
+ {
+  "id": "gantt-navigation",
+  "section": "간트·달력",
+  "title": "간트 이동과 확대·축소",
+  "intro": "날짜를 바꾸지 않고 보고 있는 위치와 배율만 조절합니다.",
+  "steps": [
+   {
+    "title": "날짜로 이동",
+    "text": "상단 날짜를 직접 입력 후 Enter 또는 달력에서 선택합니다. 선택 날짜를 간트 맨 왼쪽에 표시하며 필요하면 전체 일정과 선택 월을 포함하도록 범위를 넓힙니다. 오늘 버튼도 오늘을 맨 왼쪽으로 이동합니다."
+   },
+   {
+    "title": "가로 이동",
+    "text": "하단 가로 스크롤이나 Shift+휠을 사용합니다. 날짜 영역에서 Space를 누른 채 왼쪽 마우스를 드래그하면 화면을 이동합니다. Space·마우스를 놓거나 Escape·창 포커스 이탈 시 멈춥니다. 현재 범위 밖으로 늘어나지는 않습니다."
+   },
+   {
+    "title": "배율 조절",
+    "text": "날짜 영역의 Ctrl+휠은 포인터 아래 날짜를 유지하며 확대·축소합니다. 하단 배율 슬라이더는 왼쪽 날짜를 유지합니다. 50~300%이며 마지막 값을 기억합니다. 배율 숫자를 누르면100%로 돌아갑니다."
+   },
+   {
+    "title": "프로젝트 접기와 키보드",
+    "text": "프로젝트 왼쪽 화살표로 일정을 접고 펼치며 상태를 기억합니다. 스크롤·배율은 방향키, PageUp/PageDown, Home/End로도 조절할 수 있습니다. 텍스트 입력창의 Space는 공백 입력입니다."
+   }
+  ],
+  "related": [
+   "schedule-drag",
+   "calendar",
+   "schedules"
+  ]
+ },
+ {
+  "id": "schedule-drag",
+  "section": "간트·달력",
+  "title": "일정 드래그 이동·기간 조절",
+  "intro": "간트와 달력에서 일정 몸통은 이동, 양 끝 손잡이는 기간 조절에 사용합니다.",
+  "steps": [
+   {
+    "title": "몸통으로 이동",
+    "text": "막대를 끌면 기간을 유지한 채 날짜가 이동합니다. 소속 프로젝트는 유지됩니다. 달력에서는 원래 위치가 흐려지고 예상 위치 막대와 날짜를 확인할 수 있습니다."
+   },
+   {
+    "title": "양 끝으로 기간 조절",
+    "text": "왼쪽 끝은 시작일, 오른쪽 끝은 종료일을 바꿉니다. 최소 기간은1일입니다. 여러 주로 나뉜 달력 막대는 실제 시작·끝 조각에만 손잡이가 있습니다."
+   },
+   {
+    "title": "탐색과 저장·취소",
+    "text": "간트 가장자리에서는 자동 스크롤·범위 확장, 달력의 이전/다음 월 영역에 머물면 월 전환이 됩니다. 유효 날짜에 놓으면 한 번 저장합니다. Escape·유효 영역 밖 놓기·포인터 중단은 취소합니다. 편집 중인 미저장 입력이 있으면 먼저 저장하거나 패널을 닫으세요."
+   }
+  ],
+  "related": [
+   "gantt-navigation",
+   "calendar",
+   "saving-errors"
+  ]
+ },
+ {
+  "id": "calendar",
+  "image": {"file": "calendar.png", "alt": "월간 달력의 날짜별 일정과 이전 다음 달 버튼", "caption": "2026년11월 가상 일정의 실제 달력", "points": [{"step": 1, "x": 94, "y": 3}, {"step": 2, "x": 45, "y": 44}]},
+  "section": "간트·달력",
+  "title": "월간 달력 사용하기",
+  "intro": "월요일부터 시작하는 달력에서 일정의 기간과 겹침을 확인합니다.",
+  "steps": [
+   {
+    "title": "월과 날짜 선택",
+    "text": "상단 날짜/이전·다음 달 또는 달력의 월 이동으로 탐색합니다. 오늘 버튼은 현재 월을 열고 오늘을 강조합니다. 선택 날짜·오늘·마우스 오버는 서로 구분됩니다."
+   },
+   {
+    "title": "일정 표시와 더 보기",
+    "text": "선택 월에 필요한4~6주를 표시합니다. 인접 월 숫자는 흐리게 표시하며 일반 일정은 선택 월 안에서만 보입니다. 겹치는 일정은3줄과 날짜별 더 보기에서 확인합니다."
+   },
+   {
+    "title": "추가·편집·드래그",
+    "text": "날짜의 빈 곳을 누르면 그날의 일정 추가, 막대를 누르면 일정 편집입니다. 드래그 미리보기는 겹쳐도 보이며 인접 월 날짜까지 표시합니다. 주·월 경계에서 나뉜 일정은 계속 표시로 구분합니다."
+   }
+  ],
+  "related": [
+   "schedule-drag",
+   "schedules",
+   "gantt-navigation"
+  ]
+ },
+ {
+  "id": "personal-reminders",
+  image: reminders,
+  "section": "알림·창",
+  "title": "일정 알림과 전체 알림 끄기",
+  "intro": "각 PC에서 자신의 일정 알림을 설정합니다. Windows 일반 알림으로 전달합니다.",
+  "steps": [
+   {
+    "title": "날짜와 시각 설정",
+    "text": "일정 편집의 알림에서0~365일 전, PC 현지 시각 HH:mm, 시작일·종료일 스위치를 설정하고 저장합니다. 기본2일 전·09:00이며 새 일정은 둘 다 꺼짐입니다. 주말·공휴일을 포함한 날짜 기준입니다."
+   },
+   {
+    "title": "간편 수정과 수신",
+    "text": "알림이 켜진 일정 이름 옆 종 아이콘을 누르면 별도 알림 설정을 엽니다. 같은 일정·같은 시각의 시작/종료 알림은 합칩니다. 앱 실행·트레이 상태에서 동작하고 오늘 놓친 미처리 알림만 보충합니다."
+   },
+   {
+    "title": "종류별·전체 알림",
+    "text": "멤버의 공유 설정에는 공유 변경 알림 스위치가 있습니다. 트레이 전체 알림 끄기는 해당 PC의 일정·공유 변경/종료·업데이트 Windows 알림을 모두 끄며 설정을 기억합니다. 동기화·UPDATE·저장/오류 안내는 유지하고 꺼 둔 동안 알림은 소급하지 않습니다."
+   }
+  ],
+  "related": [
+   "member-reminders",
+   "troubleshoot-notifications",
+   "window-tray"
+  ],
+  "note": "멤버의 공유 일정 알림은 연결이 끊기면 중단하고 최신 자료를 확인한 뒤 재개합니다. Windows 방해 금지·회사 정책에 따라 배너/소리가 제한될 수 있습니다."
+ },
+ {
+  "id": "window-tray",
+  "section": "알림·창",
+  "title": "창·트레이 메뉴와 자동 실행",
+  "intro": "창의 X와 트레이 Exit는 다릅니다.",
+  "steps": [
+   {
+    "title": "창 조작",
+    "text": "최소화는 작업 표시줄로, 최대화/복원은 창 크기를 바꿉니다. X·Alt+F4는 트레이로 숨기며 편집 입력·동기화·알림을 유지합니다. 트레이 생성 실패 때는 종료/취소를 안내합니다."
+   },
+   {
+    "title": "트레이 메뉴",
+    "text": "연결 상태를 누르면 공유 설정, About은 버전·개발자 정보를 엽니다. Windows 시작 시 자동 실행은 현재 사용자 로그인 시 트레이 실행을 설정합니다. 전체 알림 끄기는 해당 PC의 Windows 알림만 끕니다. Open은 창 복원, Exit는 완전 종료입니다."
+   },
+   {
+    "title": "완전 종료와 시작",
+    "text": "Exit는 진행 중 저장을 마무리한 뒤 미저장 입력을 확인 없이 폐기합니다. 종료 후 알림·동기화·호스트 공유는 동작하지 않습니다. Windows 작업 관리자에서 자동 실행을 끈 설정도 존중합니다."
+   }
+  ],
+  "related": [
+   "personal-reminders",
+   "host-start",
+   "help-reading"
+  ]
+ },
+ {
+  "id": "installation",
+  "section": "시작하기",
+  "title": "설치·업데이트·데이터 보존",
+  "intro": "현재 Windows 사용자에게 설치하고 선택한 위치와 일정 데이터 위치는 별개로 관리합니다.",
+  "steps": [
+   {
+    "title": "설치와 로그인 자동 실행",
+    "text": "정식 Windows x64 설치 EXE를 실행해 경로와 Windows 로그인 시 자동 실행 여부를 선택합니다. 최초 설치는 자동 실행이 기본 체크이며 로그인 시 트레이로 시작합니다. 설치 완료 화면의 실행 체크는 즉시 실행 여부입니다."
+   },
+   {
+    "title": "업데이트",
+    "text": "호스트는 새 EXE를 직접 설치하고 같은 정식 버전의 LAN-UPDATE ZIP을 등록·배포합니다. 멤버는 연결/재연결 및5분마다 확인하고 UPDATE를 눌러 받습니다. 다운로드·검증 후 미저장 입력을 폐기하고 자동 설치·재실행합니다."
+   },
+   {
+    "title": "데이터 보존",
+    "text": "앱 업데이트·제거·재설치에서 사용자 앱 데이터 폴더의 DB는 보존됩니다. 설치 폴더를 옮겼다는 이유로 DB를 직접 옮기거나 삭제하지 마세요. 앱 내 수동 백업·복원과 호스트 이관은 제공하지 않습니다."
+   }
+  ],
+  "related": [
+   "host-updates",
+   "member-updates",
+   "saving-errors"
+  ]
+ },
+ {
+  "id": "saving-errors",
+  "section": "문제 해결",
+  "title": "저장·입력 오류와 폐기",
+  "intro": "저장 성공 안내는 실제 저장을 확인한 뒤 표시합니다.",
+  "steps": [
+   {
+    "title": "입력 오류 수정",
+    "text": "잘못된 필드는 붉은 테두리와 작은 설명으로 표시합니다. 첫 오류 항목부터 수정하고 저장합니다. 저장 중에는 얇은 진행 막대와 투명 덮개가 표시되며 새 편집을 잠시 막습니다."
+   },
+   {
+    "title": "미저장 입력 폐기",
+    "text": "편집 패널·빠른 알림·공유 설정을 닫거나 다른 항목으로 바꾸면 확인 없이 초안을 버립니다. 미저장 상태에서 드래그/빠른 작업을 시도하면4초 경고 토스트를 표시하고 차단합니다. 저장하거나 패널을 닫은 뒤 다시 시도하세요."
+   },
+   {
+    "title": "저장 결과 불명·DB 오류",
+    "text": "DB·통신 오류는 지속 안내를 확인합니다. 결과 불명에서는 다시 조회해 실제 저장 여부를 확인하고 무작정 재저장하지 마세요. DB 오류 때 원본을 삭제하거나 빈 DB로 바꾸지 않습니다. UPDATE가 안전한 종료를 확인하지 못하면 설치를 중단하고 재시도를 안내합니다."
+   }
+  ],
+  "related": [
+   "schedules",
+   "projects",
+   "troubleshoot-updates"
+  ]
+ },
+ {
+  "id": "help-reading",
+  "section": "시작하기",
+  "title": "도움말 검색과 화면 확대",
+  "intro": "제목 표시줄의 물음표로 별도 도움말 창을 엽니다.",
+  "steps": [
+   {
+    "title": "목차와 검색",
+    "text": "왼쪽에서 기능을 선택하거나 제목·본문을 검색합니다. Space, Ctrl, 프로젝트 추가처럼 기능 이름으로 찾을 수 있습니다. 모든 역할의 안내를 볼 수 있으며 사용자 일정은 검색하지 않습니다."
+   },
+   {
+    "title": "이미지 확대",
+    "text": "번호가 붙은 화면을 누르면 확대 보기가 열립니다. 확대/축소·화면 맞춤·휠과 드래그로 읽습니다. Escape 또는 X는 확대 보기만 닫습니다. 이미지 아래 같은 번호의 설명을 함께 확인하세요."
+   },
+   {
+    "title": "창 닫기와 다시 열기",
+    "text": "도움말 X는 도움말 화면만 닫으며 다음 열기에 재사용합니다. 같은 앱 실행 중 읽던 항목·검색·스크롤을 기억합니다. 주 창을 트레이로 보내면 열려 있던 도움말도 함께 숨기고 복원합니다. 앱 Exit 때 모두 종료합니다."
+   }
+  ],
+  "related": [
+   "app-overview",
+   "gantt-navigation",
+   "window-tray"
+  ]
+ }
+]
 export const helpArticles:HelpArticle[]=[
+ ...coreHelpArticles,
  {id:'getting-started',section:'시작하기',title:'호스트와 멤버 이해하기',intro:'대표 PC 한 대가 공유 원본을 관리합니다. 다른 PC는 승인된 멤버로 연결해 자신에게 허용된 프로젝트를 받습니다. 인터넷이나 외부 서버는 필요하지 않습니다.',steps:[
   {title:'PC의 역할을 정합니다',text:'대표 PC는 호스트, 공유받을 PC는 멤버로 설정합니다. 개인 전용은 공유 없이 사용합니다. 호스트·멤버 겸용, 다른 호스트로의 자동 전환과 호스트 이관은 지원하지 않습니다.'},
   {title:'공유 설정을 엽니다',text:'Windows 숨겨진 아이콘에서 Planrail을 우클릭하고 맨 위 연결 상태를 누릅니다. 여기서 호스트로 공유 또는 멤버로 연결을 선택합니다.'},
@@ -45,7 +335,7 @@ export const helpArticles:HelpArticle[]=[
   {title:'공유 변경 알림을 별도로 관리합니다',text:'멤버 공유 설정의 공유 변경 알림 스위치로 수신 여부를 정합니다. 기본 켜짐이며 공유 프로젝트와 일정의 주요 변경을 Windows 알림으로 받습니다. 끄더라도 동기화와 날짜 알림은 유지합니다.'}],note:'실행 중·트레이에서만 알립니다. Windows 알림 설정·방해 금지의 영향을 받습니다. 오늘 놓친 날짜 알림만 처리하며 어제 이전 것은 몰아 보내지 않습니다.',related:['troubleshoot-notifications','member-sync']},
  {id:'member-updates',section:'멤버 사용법',title:'UPDATE로 설치하기',intro:'연결·재연결 시와 연결 중5분마다 새 버전을 확인합니다. 새 버전이 있으면 제목 옆 UPDATE 버튼과 Windows 알림이 제공됩니다. 같은 호스트의 같은 버전은 한 번만 알립니다. 알림을 클릭하면 안내만 열고, UPDATE 또는 업데이트 다운로드를 눌러야 다운로드합니다.',image:{file:'updates-member.png',alt:'UPDATE 팝오버의 대상 버전과 다운로드·검증·설치 대기 안내',caption:'가상 배포를 받은 멤버의 업데이트 팝오버',points:[{step:1,x:8,y:12},{step:2,x:8,y:65}]},steps:[
   {title:'UPDATE를 누릅니다',text:'버튼을 누르면 전체 업데이트 파일을 다운로드합니다. 작은 팝오버에서 대상 버전·진행률·검증 상태를 확인할 수 있고 팝오버를 닫아도 작업은 계속됩니다. 내려받는 동안 일정 편집이 가능합니다.'},
-  {title:'설치 대기를 확인합니다',text:'검증이 끝나고 저장 작업과 미저장 입력이 없으면 자동 설치·재실행합니다. 미저장 입력 때문에 대기했다면 저장하거나 버린 뒤 설치 후 재시작을 다시 눌러야 합니다.'},
+  {title:'설치 대기를 확인합니다',text:'검증이 끝나면 진행 중 저장을 안전하게 마무리하고 미저장 입력을 확인 없이 폐기한 뒤 자동 설치·재실행합니다. 다운로드 중 편집하던 내용도 사라질 수 있습니다. 앱 재실행 후 보관된 설치 파일은 설치 후 재시작을 직접 눌러 진행합니다.'},
   {title:'취소·다시 시도를 사용합니다',text:'다운로드 취소는 임시 파일을 지우며 재시도는 처음부터 받습니다. 검증된 대기 파일은 앱 재실행 후 다시 검증하고 명시적으로 설치합니다. 일반 Exit로 자동 설치하지 않습니다.'}],note:'설치가 시작된 후에는 앱에서 취소하지 않습니다. 검증 완료 파일은 오프라인에서도 설치할 수 있지만 아직 받지 않았다면 호스트 연결이 필요합니다.',related:['troubleshoot-updates','host-updates']},
  {id:'member-disconnect',section:'멤버 사용법',title:'연결 해제와 공유 종료',intro:'일시적인 네트워크 끊김과 직접 연결 해제는 다르게 처리합니다.',steps:[
   {title:'일시적인 끊김은 연결 복구를 기다립니다',text:'네트워크 끊김 때문에 개인 자료나 마지막 수신본을 자동 삭제하지 않습니다. 호스트의 공유 상태와 주소를 먼저 확인하세요.'},
@@ -58,7 +348,7 @@ export const helpArticles:HelpArticle[]=[
  {id:'troubleshoot-updates',section:'문제 해결',title:'업데이트가 보이지 않거나 실패할 때',intro:'배포 등록과 배포 시작, 다운로드와 설치 대기를 구분합니다.',steps:[
   {title:'버전과 배포 상태를 확인합니다',text:'호스트가 ZIP 등록 후 배포 시작까지 했는지 확인합니다. 현재 멤버보다 높은 정식 버전이어야 하며 승인된 멤버만 받을 수 있습니다. 최신 확인은 연결 시·5분마다 진행합니다.'},
   {title:'연결과 다운로드를 확인합니다',text:'알려진 업데이트가 있어도 연결이 끊기면 다운로드 버튼은 비활성화됩니다. 연결 복구 뒤 다시 시도하세요. 전송 실패 시 불완전한 파일을 버리고 처음부터 받습니다.'},
-  {title:'미저장 입력과 설치 대기를 확인합니다',text:'미저장 편집·설정 때문에 대기하면 먼저 정리하고 설치 후 재시작을 누릅니다. DB·설치 오류를 무시하거나 현재 데이터를 삭제하지 마세요.'}],related:['member-updates','host-updates']},
+  {title:'설치 준비 실패와 재시도를 확인합니다',text:'진행 중 저장의 안전한 종료나 설치 파일을 확인하지 못하면 설치를 중단합니다. 오류를 해결하고 설치 후 재시작을 누릅니다. DB·설치 오류를 무시하거나 현재 데이터를 삭제하지 마세요.'}],related:['member-updates','host-updates']},
  {id:'troubleshoot-notifications',section:'문제 해결',title:'Windows 알림이 보이지 않을 때',intro:'Windows의 배너 표시 여부와 앱의 알림 설정을 함께 확인합니다.',steps:[
   {title:'Windows 알림을 확인합니다',text:'Windows 설정의 알림·Planrail 허용·방해 금지 상태를 확인합니다. 여러 알림이 전달되어도 모든 배너가 차례로 보이는 것은 보장되지 않습니다.'},
   {title:'앱 실행과 개별 설정을 확인합니다',text:'트레이의 전체 알림 끄기가 해제되어 있는지, Planrail이 실행 중 또는 트레이인지, 해당 일정의 시작/종료 스위치와 시각이 맞는지 확인합니다. 공유 변경 알림은 공유 설정에서 따로 켭니다.'},
@@ -75,7 +365,7 @@ export function searchHelp(query:string){
 }
 export function validateHelpContent(articles:HelpArticle[]):string[]{
  const errors:string[]=[],ids=new Set<string>()
- for(const a of articles){if(ids.has(a.id)||!/^[a-z]+(?:-[a-z]+)+$/.test(a.id))errors.push(`Invalid/duplicate topic: ${a.id}`);ids.add(a.id)}
+ for(const a of articles){if(ids.has(a.id)||!/^[a-z]+(?:-[a-z]+)*$/.test(a.id))errors.push(`Invalid/duplicate topic: ${a.id}`);ids.add(a.id)}
  for(const a of articles){if(!a.title||!a.intro||!a.steps.length)errors.push(`Empty article: ${a.id}`);for(const id of a.related)if(!ids.has(id))errors.push(`Missing link: ${id}`)
   if(a.image&&(!/^[a-z-]+\.png$/.test(a.image.file)||!a.image.alt||a.image.points.some(p=>p.step<1||p.step>a.steps.length||p.x<0||p.x>100||p.y<0||p.y>100)))errors.push(`Invalid image: ${a.id}`)}
  return errors

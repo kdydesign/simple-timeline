@@ -69,5 +69,5 @@ it('does not flag disabled settings and guards opening correction against anothe
  const {m,f}=member(),u=userEvent.setup();m.snapshot.schedules[0].reminder.start=false;m.snapshot.schedules[0].startDate='0001-01-01'
  render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'프로젝트 추가'}));await u.type(screen.getByLabelText('프로젝트 이름'),'보존할 개인 초안');expect(screen.queryByText(guidance)).not.toBeInTheDocument()
  m.snapshot.schedules[0].reminder.end=true;m.snapshot.schedules[0].endDate='0001-01-02';act(()=>f.emit({snapshotRevision:1}))
- expect(await screen.findByText(guidance)).toBeVisible();await u.click(within(screen.getByText(guidance).closest<HTMLElement>('[role=alert]')!).getByRole('button',{name:'개발 알림 설정'}));const dialog=screen.getByRole('alertdialog');expect(dialog).toHaveTextContent('저장하지 않은 입력');await u.click(within(dialog).getByRole('button',{name:'계속 편집'}));expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('보존할 개인 초안')
+ expect(await screen.findByText(guidance)).toBeVisible();await u.click(within(screen.getByText(guidance).closest<HTMLElement>('[role=alert]')!).getByRole('button',{name:'개발 알림 설정'}));expect(screen.queryByRole('alertdialog')).toBeNull();expect(screen.queryByLabelText('프로젝트 이름')).toBeNull();expect(screen.getByLabelText('알림 며칠 전')).toBeVisible()
 })

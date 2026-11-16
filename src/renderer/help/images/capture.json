@@ -1,63 +1,31 @@
 {
-  "source": "bfb78873b57455c9969da2f7cc265d3e4ee4c6c9",
+  "source": "a060eb6955f898939c6be541413aab83a55a5e38",
   "dirty": true,
-  "version": "0.8.3",
+  "version": "0.8.4",
+  "runtimeVersion": "0.0",
   "platform": "linux",
-  "recordedAt": "2026-11-16T04:23:38.185Z",
+  "recordedAt": "2026-11-16T07:06:08.306Z",
   "command": "tests/e2e/help-assets.spec.ts",
   "synthetic": true,
-  "scope": "Actual renderer in isolated SQLite profiles with synthetic project, participant and LAN address fixtures. No real user data or OS notification screenshots.",
-  "sourceVersion": "0.8.3",
-  "versionChange": "Source package 0.8.3. Unpackaged fixture reports runtimeVersion 0.0; package version records the rendered product source. Updated screenshots recaptured; unchanged member-toolbar.png retained from previous capture.",
+  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only.",
   "commands": [
     "tests/e2e/help-assets.spec.ts",
     "tests/e2e/help-member-assets.spec.ts",
     "tests/e2e/help-update-assets.spec.ts"
   ],
   "files": [
-    "updates-host.png",
-    "project-share.png",
-    "member-toolbar.png",
-    "updates-member.png",
-    "participants.png",
+    "app-overview.png",
+    "calendar.png",
+    "host-address.png",
     "member-address.png",
+    "member-toolbar.png",
+    "participants.png",
+    "project-editor.png",
+    "project-share.png",
     "reminders.png",
-    "host-address.png"
+    "schedule-editor.png",
+    "updates-host.png",
+    "updates-member.png"
   ],
-  "captureRounds": [
-    {
-      "sourceVersion": "0.8.1",
-      "files": [
-        "participants.png",
-        "project-share.png",
-        "reminders.png",
-        "member-toolbar.png",
-        "updates-host.png",
-        "updates-member.png"
-      ]
-    },
-    {
-      "sourceVersion": "0.8.2",
-      "files": [
-        "host-address.png",
-        "member-address.png"
-      ]
-    },
-    {
-      "sourceVersion": "0.8.3",
-      "source": "bfb78873b57455c9969da2f7cc265d3e4ee4c6c9",
-      "dirty": true,
-      "files": [
-        "updates-host.png",
-        "project-share.png",
-        "member-toolbar.png",
-        "updates-member.png",
-        "participants.png",
-        "member-address.png",
-        "reminders.png",
-        "host-address.png"
-      ]
-    }
-  ],
-  "runtimeVersion": "0.0"
+  "versionNote": "Source package 0.8.4; unpackaged isolated fixture reports runtimeVersion 0.0. All listed assets were recaptured from this implementation with synthetic data."
 }

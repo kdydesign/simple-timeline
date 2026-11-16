@@ -27,9 +27,8 @@ export function useUpdateGuard(safety:UpdateSafety,api:UpdateApi|undefined=windo
    const deadline=Date.now()+28000
    while(alive.current&&generation===guardGeneration.current&&safetyRef.current.saving&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,20))
    const current=safetyRef.current
-   // Uncommitted date and popup year text are drafts too; never blur them to force a commit.
-   const dateDraft=!!document.querySelector('[data-update-dirty="true"]')
-   return alive.current&&generation===guardGeneration.current&&current.known&&!current.dirty&&!current.saving&&!dateDraft&&!latest.current?.editingBlocked
+   // Drafts are deliberately discarded at shutdown. Never blur them into an accidental save.
+   return alive.current&&generation===guardGeneration.current&&current.known&&!current.saving&&!latest.current?.editingBlocked
   })
   void api.getState().then(result=>{if(!alive.current)return;if(result.ok)accept(result.data)}).catch(()=>{/* No known update state; main cannot install without our guard. */})
   return()=>{alive.current=false;guardGeneration.current++;off();guard();events.forEach(name=>window.removeEventListener(name,block,true));delete document.documentElement.dataset.updateFrozen}

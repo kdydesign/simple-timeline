@@ -5,7 +5,7 @@ import { App } from "../../src/renderer/App";
 import { memoryApi } from "./fake-api";
 import {sharingFixture} from "./sharing-fixture";
 import { hotfix } from "../fixtures/timeline";
-it("traps keyboard focus in a narrow editor and confirms Escape with a long draft", async () => {
+it("traps keyboard focus in a narrow editor and discards Escape with a long draft", async () => {
   const u = userEvent.setup(),
     m = memoryApi();
   render(<App api={m.api} />);
@@ -20,8 +20,9 @@ it("traps keyboard focus in a narrow editor and confirms Escape with a long draf
   await u.tab({ shift: true });
   expect(screen.getByRole("button", { name: "저장" })).toHaveFocus();
   await u.keyboard("{Escape}");
-  expect(screen.getByRole("alertdialog")).toBeVisible();
-  expect(screen.getByRole("button", { name: "계속 편집" })).toHaveFocus();
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.queryByLabelText("프로젝트 이름")).toBeNull();
+  expect(m.snapshot.projects).toHaveLength(0);
 });
 it("lets the user explicitly discard an uncertain draft after a lost response", async () => {
   const u = userEvent.setup(),
@@ -40,8 +41,7 @@ it("lets the user explicitly discard an uncertain draft after a lost response", 
   );
   expect(screen.getByRole("button", { name: "편집 닫기" })).toBeEnabled();
   await u.click(screen.getByRole("button", { name: "편집 닫기" }));
-  expect(screen.getByRole("alertdialog")).toBeVisible();
-  await u.click(screen.getByRole("button", { name: "변경 버리기" }));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "다시 조회" })).toHaveFocus(),
   );
@@ -88,7 +88,7 @@ it("creates a host personal project with defaults and participant rows, then res
   ).toHaveFocus();
   expect(m.snapshot.projects[0].participants).toEqual(["민수"]);
 });
-it("keeps input after failed save and confirms discard rather than losing it", async () => {
+it("keeps input after failed save and discards only when explicitly closed", async () => {
   const u = userEvent.setup(),
     m = memoryApi();
   m.api.createProject = async () => ({
@@ -104,12 +104,9 @@ it("keeps input after failed save and confirms discard rather than losing it", a
   expect(await screen.findByRole("alert")).toHaveTextContent("저장 공간 부족");
   expect(screen.getByLabelText("프로젝트 이름")).toHaveValue("미저장");
   await u.click(screen.getByRole("button", { name: "편집 닫기" }));
-  const dialog = screen.getByRole("alertdialog");
-  expect(
-    within(dialog).getByRole("button", { name: "계속 편집" }),
-  ).toHaveFocus();
-  await u.click(within(dialog).getByRole("button", { name: "계속 편집" }));
-  expect(screen.getByLabelText("프로젝트 이름")).toHaveValue("미저장");
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.queryByLabelText("프로젝트 이름")).toBeNull();
+  expect(m.snapshot.projects).toHaveLength(0);
 });
 it("validates dates, preserves the parent and confirms cascade deletion", async () => {
   const u = userEvent.setup(),
@@ -125,7 +122,7 @@ it("validates dates, preserves the parent and confirms cascade deletion", async 
   expect(screen.getByLabelText("종료일")).toHaveFocus();
   expect(screen.getByRole("alert")).toHaveTextContent("종료일");
   await u.click(screen.getByRole("button", { name: "편집 닫기" }));
-  await u.click(screen.getByRole("button", { name: "변경 버리기" }));
+
   await u.click(screen.getByRole("button", { name: "1.1.1 핫픽스 편집" }));
   await u.click(screen.getByRole("button", { name: "삭제" }));
   expect(screen.getByRole("alertdialog")).toHaveTextContent("일정 3개");
@@ -157,3 +154,8 @@ it("does not leave a previous save-success announcement next to a new save failu
   expect(await screen.findByRole("alert")).toHaveTextContent("새 저장 실패");
   expect(screen.getByRole("status")).not.toHaveTextContent("프로젝트를 추가했습니다.");
 });
+it('closes an unsaved project immediately without a discard dialog or saving it',async()=>{
+ const m=memoryApi(),u=userEvent.setup();render(<App api={m.api}/>);
+ const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await u.click(add);await u.type(screen.getByLabelText('프로젝트 이름'),'폐기할 초안');await u.click(screen.getByRole('button',{name:'편집 닫기'}));
+ expect(screen.queryByRole('alertdialog')).toBeNull();expect(screen.queryByLabelText('프로젝트 이름')).toBeNull();expect(m.snapshot.projects).toHaveLength(0)
+})

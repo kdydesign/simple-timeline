@@ -45,10 +45,7 @@ it.each([
   expect(dialog).toBeVisible();await waitFor(()=>expect(disconnect).toHaveFocus());
   expect(f.api.disconnect).not.toHaveBeenCalled();
   retain=false;await u.keyboard('{Escape}');
-  if(dirty){
-   expect(screen.getByRole('alertdialog')).toHaveTextContent('설정 변경을 버릴까요?');
-   await u.keyboard('{Escape}');expect(dialog).toBeVisible();expect(within(dialog).getByLabelText('포트')).toHaveValue(47832);
-  }else expect(dialog).not.toBeInTheDocument();
+  expect(screen.queryByRole('alertdialog')).toBeNull();expect(dialog).not.toBeInTheDocument();
  }finally{
   retain=false;adding.mockRestore();removing.mockRestore();
   for(const listener of listeners)remove('keydown',listener,{capture:true});
@@ -58,6 +55,6 @@ it.each([
 it('returns from initial tray settings to the toolbar when there was no previous focusable target',async()=>{
  const u=userEvent.setup(),f=sharingFixture();render(<App api={memoryApi().api}/>);const toolbar=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(toolbar).toBeEnabled());(document.activeElement as HTMLElement).blur();expect(document.activeElement).toBe(document.body);await act(async()=>f.emit({settingsRequestToken:'initial-settings'}));const dialog=await screen.findByRole('dialog',{name:'공유 설정'});await u.click(within(dialog).getByRole('button',{name:'공유 설정 닫기'}));await waitFor(()=>expect(toolbar).toHaveFocus());await act(async()=>{await new Promise(resolve=>setTimeout(resolve,300))});expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 });
-it('returns dirty-settings confirmation cancel to the close control and preserves its input',async()=>{
- const u=userEvent.setup(),f=sharingFixture();render(<App api={memoryApi().api}/>);await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled());await act(async()=>f.emit({settingsRequestToken:'dirty-settings'}));const dialog=await screen.findByRole('dialog',{name:'공유 설정'}),port=within(dialog).getByLabelText('포트');await u.clear(port);await u.type(port,'47832');const close=within(dialog).getByRole('button',{name:'공유 설정 닫기'});await u.click(close);await u.click(within(screen.getByRole('alertdialog')).getByRole('button',{name:'취소'}));await waitFor(()=>expect(close).toHaveFocus());expect(port).toHaveValue(47832);
+it('closes dirty settings without confirmation and returns focus to the toolbar',async()=>{
+ const u=userEvent.setup(),f=sharingFixture();render(<App api={memoryApi().api}/>);await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled());await act(async()=>f.emit({settingsRequestToken:'dirty-settings'}));const dialog=await screen.findByRole('dialog',{name:'공유 설정'}),port=within(dialog).getByLabelText('포트');await u.clear(port);await u.type(port,'47832');const close=within(dialog).getByRole('button',{name:'공유 설정 닫기'});await u.click(close);expect(screen.queryByRole('alertdialog')).toBeNull();expect(screen.queryByRole('dialog',{name:'공유 설정'})).toBeNull();await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toHaveFocus());
 });

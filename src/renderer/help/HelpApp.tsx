@@ -1,17 +1,19 @@
 import {useEffect,useLayoutEffect,useRef,useState} from 'react'
-import {helpArticles,searchHelp} from '../../shared/help-content'
+import {helpArticles,helpSections,searchHelp} from '../../shared/help-content'
 import {validHelpReading,type HelpApi,type HelpReadingState,type HelpTopicId} from '../../shared/help'
 import {Icon} from '../components/Icon'
 import {AnnotatedImage,ImageViewer} from './ImageViewer'
 
 const images=import.meta.glob<string>('./images/*.png',{eager:true,query:'?url',import:'default'})
 export function HelpApp({api}:{api:HelpApi}) {
+ const [openId,setOpenId]=useState(0);const loadGeneration=useRef(0)
  const [reading,setReading]=useState<HelpReadingState>(),[version,setVersion]=useState(''),[failed,setFailed]=useState(false)
  const [maximized,setMaximized]=useState(false),[toc,setToc]=useState(true),[zoom,setZoom]=useState(false),[brokenImage,setBrokenImage]=useState(false)
  const content=useRef<HTMLElement>(null),search=useRef<HTMLInputElement>(null),imageButton=useRef<HTMLButtonElement>(null),restoreScroll=useRef<number|null>(null)
  const pendingReading=useRef<HelpReadingState|undefined>(undefined)
- const load=()=>{setFailed(false);void api.command('state').then(r=>{if(!r.ok||!validHelpReading(r.reading))throw Error();restoreScroll.current=r.reading.scrollTop;pendingReading.current=r.reading;setReading(r.reading);setVersion(r.version??'');setMaximized(!!r.maximized)}).catch(()=>setFailed(true))}
- useEffect(load,[api])
+ const load=()=>{const generation=++loadGeneration.current;setFailed(false);void api.command('state').then(r=>{if(generation!==loadGeneration.current)return;if(!r.ok||!validHelpReading(r.reading))throw Error();restoreScroll.current=r.reading.scrollTop;pendingReading.current=r.reading;setReading(r.reading);setOpenId(r.openId??0);setVersion(r.version??'');setMaximized(!!r.maximized)}).catch(()=>{if(generation===loadGeneration.current)setFailed(true)})}
+ useEffect(()=>{load();const off=api.onOpen?.(load);return()=>{loadGeneration.current++;off?.()}},[api])
+ useEffect(()=>{if(!openId||!reading||failed)return;let second=0;const first=requestAnimationFrame(()=>{second=requestAnimationFrame(()=>{void api.command('ready',openId)})});return()=>{cancelAnimationFrame(first);cancelAnimationFrame(second)}},[api,openId,!!reading,failed])
  const remember=(next:HelpReadingState)=>{pendingReading.current=next;setReading(next);void api.command('remember',next)}
  const article=helpArticles.find(a=>a.id===reading?.topicId)
  useLayoutEffect(()=>{if(content.current&&restoreScroll.current!==null){content.current.scrollTop=restoreScroll.current;restoreScroll.current=null}},[reading?.topicId])
@@ -28,7 +30,7 @@ export function HelpApp({api}:{api:HelpApi}) {
    <div className="help-toolbar"><button aria-label={toc?'목차 접기':'목차 펼치기'} aria-expanded={toc} onClick={()=>setToc(!toc)}><Icon name="gantt"/>{toc?'목차 접기':'목차 펼치기'}</button><span>인터넷 연결 없이 사용할 수 있습니다.</span></div>
    <div className={`help-layout ${toc?'':'help-toc-hidden'}`}>
     {toc&&<aside><label htmlFor="help-search">도움말 검색</label><input ref={search} id="help-search" type="search" maxLength={200} placeholder="예: 승인, 업데이트" value={reading.query} onChange={e=>remember({...reading,scrollTop:pendingReading.current?.scrollTop??reading.scrollTop,query:e.target.value})}/>{reading.query&&<button className="help-clear" onClick={()=>{remember({...reading,scrollTop:pendingReading.current?.scrollTop??reading.scrollTop,query:''});search.current?.focus()}}>검색 지우기</button>}
-    <nav aria-label="도움말 목차">{results.length===0?<p role="status">검색 결과가 없습니다. 다른 검색어를 입력하세요.</p>:['시작하기','호스트 사용법','멤버 사용법','문제 해결'].map(group=>{
+    <nav aria-label="도움말 목차">{results.length===0?<p role="status">검색 결과가 없습니다. 다른 검색어를 입력하세요.</p>:helpSections.map(group=>{
      const items=results.filter(r=>r.article.section===group);return items.length>0&&<section key={group}><h2>{group}</h2>{items.map(r=><button key={r.article.id} aria-current={reading.topicId===r.article.id?'page':undefined} onClick={()=>select(r.article.id)}><span>{r.article.title}</span>{querying&&<small>{r.excerpt}</small>}</button>)}</section>
     })}</nav><p className="help-role-note">모든 역할의 설명을 볼 수 있습니다.<br/>이 창은 설정을 변경하지 않습니다.</p></aside>}
     <main ref={content} tabIndex={-1} onScroll={e=>{const next={...reading,scrollTop:e.currentTarget.scrollTop};pendingReading.current=next;void api.command('remember',next)}}>

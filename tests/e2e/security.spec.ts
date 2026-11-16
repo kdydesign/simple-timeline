@@ -11,7 +11,7 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
   expect(shape.keys.sort()).toEqual(['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort())
   expect(shape.keys).not.toContain('invoke')
   expect(shape.sharingKeys.sort()).toEqual(['getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','deleteDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','setChangeNotifications','retryChangeNotifications','acknowledgeChange','onChange'].sort())
-  const sandbox = await d.app.evaluate(({app,BrowserWindow})=>({disabled:app.commandLine.hasSwitch('no-sandbox'),renderer:(BrowserWindow.getAllWindows()[0].webContents as unknown as {getLastWebPreferences():{sandbox?:boolean}}).getLastWebPreferences().sandbox}))
+  const sandbox = await d.app.evaluate(({app,BrowserWindow})=>({disabled:app.commandLine.hasSwitch('no-sandbox'),renderer:(BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.webContents as unknown as {getLastWebPreferences():{sandbox?:boolean}}).getLastWebPreferences().sandbox}))
   expect(sandbox).toEqual({disabled:false,renderer:true})
   const malformedSharing = await d.page.evaluate(()=>window.timelineSharing!.connect({address:'https://example.com',port:47831,token:'forged'} as never))
   expect(malformedSharing).toMatchObject({ok:false,error:{code:'VALIDATION_ERROR'}})
@@ -43,7 +43,7 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
   const attempt = await d.app.evaluate(
     ({ BrowserWindow }) =>
       new Promise<string>((resolve, reject) => {
-        const contents = BrowserWindow.getAllWindows()[0].webContents
+        const contents = BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.webContents
         const timer = setTimeout(
           () => reject(Error('Navigation guard event missing')),
           10000,

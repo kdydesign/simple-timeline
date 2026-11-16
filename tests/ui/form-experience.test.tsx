@@ -42,7 +42,7 @@ it('starts a replacement project draft without inheriting validation from the sa
  Object.defineProperty(window,'innerWidth',{value:1280,writable:true,configurable:true});
  const u=userEvent.setup(),m=memoryApi();render(<App api={m.api}/>);const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await u.click(add);
  await u.clear(screen.getByLabelText('색상 코드'));await u.type(screen.getByLabelText('색상 코드'),'bad');await u.click(screen.getByRole('button',{name:'저장'}));expect(screen.getByLabelText('색상 코드')).toHaveAttribute('aria-invalid','true');
- await u.click(add);await u.click(screen.getByRole('button',{name:'변경 버리기'}));expect(screen.getByLabelText('색상 코드')).toHaveValue('#2563EB');expect(screen.getByLabelText('색상 코드')).not.toHaveAttribute('aria-invalid','true');expect(screen.queryByText('색상은 #RRGGBB 형식으로 입력해 주세요.')).not.toBeInTheDocument();
+ await u.click(add);expect(screen.getByLabelText('색상 코드')).toHaveValue('#2563EB');expect(screen.getByLabelText('색상 코드')).not.toHaveAttribute('aria-invalid','true');expect(screen.queryByText('색상은 #RRGGBB 형식으로 입력해 주세요.')).not.toBeInTheDocument();
  await u.type(screen.getByLabelText('프로젝트 이름'),'새 입력');expect(screen.getByLabelText('프로젝트 이름')).not.toHaveAttribute('aria-invalid','true');
 });
 it('retains a tray settings request until the timeline save shield has ended',async()=>{

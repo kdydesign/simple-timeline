@@ -125,17 +125,8 @@ it("keeps a usable focus path when day selection meets an unsaved editor", async
       name: /개발/,
     })[4],
   );
-  await u.click(screen.getByRole("button", { name: "계속 편집" }));
-  await waitFor(() =>
-    expect(screen.getByLabelText("프로젝트 이름")).toHaveFocus(),
-  );
-  await u.click(more);
-  await u.click(
-    within(screen.getByRole("dialog")).getAllByRole("button", {
-      name: /개발/,
-    })[4],
-  );
-  await u.click(screen.getByRole("button", { name: "변경 버리기" }));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(screen.getByLabelText("일정 이름")).toBeVisible();
   await u.click(screen.getByRole("button", { name: "편집 닫기" }));
   await waitFor(() => expect(more).toHaveFocus());
 });

@@ -37,7 +37,7 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
  useLayoutEffect(()=>{onGuard(dirty)},[dirty,onGuard]);
  useEffect(()=>()=>onGuard(false),[onGuard]);
  const ask:Ask=(title,message,label,action)=>{confirmationCaller.current=document.activeElement as HTMLElement|null;setConfirmation({title,message,label,run:()=>{dismissConfirmation();action()}})};
- const close=()=>{if(busy)return;if(dirty)ask('설정 변경을 버릴까요?','저장하지 않은 공유 설정 입력이 사라집니다. 기존 일정 편집은 유지됩니다.','변경 버리기',onClose);else onClose()};
+ const close=()=>{if(!busy)onClose()};
  const escape=(event:KeyboardEvent)=>{
   // Radix hands off document capture listeners in a passive effect. A visible
   // confirmation must own Escape even while the parent's listener is still live.

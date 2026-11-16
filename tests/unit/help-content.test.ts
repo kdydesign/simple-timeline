@@ -14,5 +14,8 @@ it('searches Korean titles/body/steps and trims query without searching user dat
  expect(searchHelp('update').some(x=>x.article.id==='member-updates')).toBe(true)
  expect(searchHelp('지문').every(x=>x.excerpt.includes('지문'))).toBe(true)
  expect(searchHelp('존재하지않는항목123')).toEqual([])
- expect(initialHelpTopic('personal')).toBe('getting-started');expect(initialHelpTopic('host')).toBe('host-start');expect(initialHelpTopic('member')).toBe('member-connect')
+ expect(initialHelpTopic('personal')).toBe('app-overview');expect(initialHelpTopic('host')).toBe('host-start');expect(initialHelpTopic('member')).toBe('member-connect')
+})
+it.each(['Space','Ctrl','프로젝트 추가','일정 추가','트레이','100%'])('documents core Planrail capability %s',query=>{
+ expect(searchHelp(query).length).toBeGreaterThan(0)
 })

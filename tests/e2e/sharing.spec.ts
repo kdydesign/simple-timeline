@@ -62,7 +62,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await member.page.getByRole('button',{name:'공유',exact:true}).click();await expect(member.page.getByRole('button',{name:'개인 일정 편집',exact:true})).toHaveCount(0);await member.page.getByRole('button',{name:'전체',exact:true}).click();
   await sync.click();await expect(member.page.getByRole('status',{exact:true})).toContainText('동기화했습니다.');
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);
-  // Native callback enters the real fixed bridge; a dirty draft must survive cancellation.
+  // Native callback enters the real fixed bridge; a dirty draft is discarded without a confirmation.
   const clickChange = async(index:number) => member.app.evaluate((_electron,index)=>new Promise<void>((resolve,reject)=>{
     setImmediate(()=>{try{(globalThis as any).changeClicks[index]();resolve()}catch(error){reject(error)}});
   }),index);
@@ -73,11 +73,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await member.page.getByRole('button',{name:'일정 추가',exact:true}).click();
   await member.page.getByLabel('일정 이름',{exact:true}).fill('보존할 초안');
   await clickChange(1);
-  await expect(member.page.getByRole('alertdialog')).toBeVisible();
-  await member.page.getByRole('button',{name:'계속 편집',exact:true}).click();
-  await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveValue('보존할 초안');
-  await clickChange(1);
-  await member.page.getByRole('button',{name:'변경 버리기',exact:true}).click();
+  await expect(member.page.getByRole('alertdialog')).toHaveCount(0);
   await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveValue('공유 변경');
   await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveAttribute('readonly','');
   await expect(member.page.getByRole('dialog',{name:'일정 편집'})).toHaveAttribute('aria-modal','true');
@@ -131,7 +127,9 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
 
 test('lost v3 sharing metadata shows the preserved-database blocked screen on restart',async({desktop:d})=>{
  await d.app.evaluate(()=>{(globalThis as any).testStorage.db.exec('DELETE FROM sharing_config')});
- await d.restart();
+ // Model crash recovery after deliberate metadata corruption. A graceful service
+ // shutdown cannot read the metadata this fixture just removed. No product force-exit path is added.
+ await d.app.evaluate(({app})=>app.exit(0));await d.restart();
  await expect(d.page.getByRole('button',{name:'프로젝트 추가',exact:true})).toBeDisabled();
  await expect(d.page.getByRole('alert').filter({hasText:'원본을 보존'})).toBeVisible();
  expect(await d.page.evaluate(()=>window.simpleTimeline.getSnapshot())).toMatchObject({ok:false,error:{code:'DB_CORRUPT'}});

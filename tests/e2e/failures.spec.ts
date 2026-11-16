@@ -80,7 +80,7 @@ for (const fault of ["schedule-full", "schedule-lost", "schedule-refresh"])
             "중복 없이 새 일정",
           );
           await p.getByRole("button", { name: "편집 닫기" }).click();
-          await p.getByRole("button", { name: "변경 버리기" }).click();
+
         }
         await p.getByRole("button", { name: "간트", exact: true }).click();
         await expect(

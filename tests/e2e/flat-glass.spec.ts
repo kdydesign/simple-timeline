@@ -11,11 +11,11 @@ test('custom titlebar keeps dirty close protection and isolated window API',asyn
  await p.getByLabel('프로젝트 이름',{exact:true}).fill('미저장 보호');
  // Hidden windows may defer the renderer's input acknowledgement until restored.
  const closing=p.getByRole('button',{name:'창 닫기',exact:true}).click().then(()=>null,error=>error);
- await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].isVisible())).toBe(false);
+ await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.isVisible())).toBe(false);
  await d.app.evaluate(()=> (globalThis as any).desktopController.show());
  expect(await closing).toBeNull();
  await expect(p.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('미저장 보호');
- await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().length)).toBe(1);
+ await expect.poll(()=>d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().filter(w=>w.isVisible()).length)).toBe(1);
 });
 test('project popup keeps its size and fixed actions while long content scrolls',async({desktop:d})=>{
  const p=d.page;await p.setViewportSize({width:1440,height:900});

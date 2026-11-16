@@ -744,3 +744,6 @@ html, body, #root { height:100%; }
 /* At 14px, horizontal padding must fit the real date width and leave a body between handles. */
 .gantt-bar { padding-inline: 4px; }
 .gantt-bar .resize-handle { width: min(6px, 25%); }
+
+.titlebar .role-badge { display:inline-flex; align-items:center; padding:1px 6px; border:1px solid #91adc955; border-radius:5px; background:#7197bb22; color:#c9dced; font-size:10px; line-height:18px; font-weight:600; white-space:nowrap; }
+.toast.warning-toast { background:rgb(63 54 31 / .96); color:#ffe7a6; border:1px solid #d8ad5866; }

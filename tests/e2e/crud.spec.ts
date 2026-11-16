@@ -106,5 +106,5 @@ test("a second process focuses the first instead of opening a second database", 
   await expect(
     d.page.getByRole("button", { name: "프로젝트 추가", exact: true }),
   ).toBeEnabled();
-  expect(d.app.windows()).toHaveLength(1);
+  expect(await d.app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().filter(w=>w.isVisible()).length)).toBe(1);
 });

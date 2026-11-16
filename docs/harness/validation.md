@@ -82,7 +82,7 @@ NSIS include·확장 지점 변경은 `node --use-env-proxy scripts/testing/nsis
 
 앱 검사는 공유 artifact 디렉터리를 정리하므로 전체/개별 검사를 겹쳐 실행하지 않는다.
 verify:app의 순서는 typecheck → test:release → test:tz → test:ui → build → test:native → test:e2e다.
-각 명령은 기본180초 제한이며, `test:native` 전체는360초, `test:e2e` 전체는360초다. 첫 실패에서 멈추고 나머지를 `not-run`으로 기록한다.
+각 명령은 기본180초 제한이며, `test:native` 전체는360초, `test:e2e` 전체는600초다. 첫 실패에서 멈추고 나머지를 `not-run`으로 기록한다.
 0.6.0의 순차 sandbox Electron 68개 회귀는 실제180초에64개 통과 뒤 종료된 근거로 전체 예산만 늘렸다.
 0.8.1은 Windows93개 검사 중82개 통과 후240초에 중단된 근거로 전체 E2E 예산을360초로 보정했다([0.8.1 기록](../implementation/2026-11-12-startup-and-install.md)).
 개별 테스트·assertion·네트워크 요청 제한은 유지한다. [실행 기록](../implementation/2026-11-10-lan-sharing.md)을 따른다.
@@ -124,3 +124,5 @@ completed와 passed, 개별 검사 결과를 함께 읽는다. dirty 보고서�
   Linux에 창 관리자가 없으면 native 최소화/최대화 상태 검사는 환경 한계로 표시하지만 실제 명령 전달과 숨김/복원은 검사한다.
 - 범위·근거: 자동화 viewport·실패 주입을 실제 Windows 배율/Narrator·물리 장애 결과로 확대하지 않는다.
   대량 fixture 수치는 해당 환경의 관측이며 사용자 PC 성능 보장이나 SLA가 아니다.
+
+0.8.4의 사전 준비/재사용 및 전체 도움말 검사 확장 후 Linux 전체 Electron 실행은84개 통과 단계에서360초 제한에 도달했다. 한 건의 구형 확인창 기대도 함께 수정했으며, 전체 E2E 예산만600초로 늘려 남은 공유·업데이트 시나리오를 수행한다. 개별 케이스45초 및 IPC/저장 제한은 유지한다. 전체 멈춤 감지는 최대240초 늦어질 수 있으며 성공 여부는 최종 전체 실행으로 확인한다.
