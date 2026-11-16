@@ -48,6 +48,9 @@ test('actual0.8.0 manual migration and assisted startup choices preserve OS disa
  const uninstall=async()=>{const file=(await readdir(directory)).find(p=>p.startsWith('Uninstall')&&p.endsWith('.exe'));if(!file)throw Error('Uninstaller missing');const result=spawnSync(join(directory,file),['/S'],{timeout:90000,encoding:'utf8'});expect(result.status,result.stderr).toBe(0);await expect.poll(()=>existsSync(exe),{timeout:30000}).toBe(false)}
  await mkdir(info.outputDir,{recursive:true})
  try{
+  const gateRegression=await runInstallerProcess(powershell,['-NoLogo','-NoProfile','-NonInteractive','-File',resolve('scripts/testing/windows-install-gate-state.test.ps1')],{env:windowsPowerShellEnvironment(envFor()),encoding:'utf8',timeout:30000})
+  evidence.gateStateRegression=gateRegression.stdout.trim().split(/\r?\n/)
+  cases.push('WindowsPS5 held-handle exit-state regression')
   // Actual WindowsPS5 helpers must resolve native modules even under a pwsh7 parent.
   const contaminatedRead=spawnSync(powershell,['-NoLogo','-NoProfile','-NonInteractive','-Command',startupSource],{env:contaminated({PLANRAIL_STARTUP_ACTION:'Read',PLANRAIL_STARTUP_TARGET:exe}),encoding:'utf8',timeout:30000})
   expect(contaminatedRead.status,contaminatedRead.stderr).toBe(0)

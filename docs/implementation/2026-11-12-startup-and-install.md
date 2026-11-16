@@ -102,3 +102,9 @@ Windows의 BM_CLICK은 비활성 대화상자에서 실패할 수 있어, 테스
 독립 범위 검토는 비동기 inspector 해제·설치와 close의 두 rejection 관찰·설치 오류 우선 보존·기존 assertion/기한 유지에 중요한 문제를 찾지 않았다. 회귀 fixture의 spawn 실패에도 정리를 끝내도록 프로세스 `exit` 대신 `close`를 기다리는 소규모 보정을 반영했다. 최종 집중2개·타입 검사 재실행도 통과했다.
 
 로컬 `verify:app`은 typecheck·release·3TZ unit·UI·build를 통과했다. native는 `Missing X server or $DISPLAY`로 시작 단계에서 종료했고 E2E는 미실행이다. 현재 환경에 xvfb-run도 없어 로컬 Electron 실행 검증을 완료했다고 표시하지 않는다. 이 변경은 테스트 코드이며 제품 코드·Windows helper·설치 종료 제한을 바꾸지 않았다. 화면 환경을 제공하는 깨끗한 Linux/Windows CI의 전체 검사와 Windows packaged 결과를 확인한다.
+
+비동기 검사 보정 커밋은 `91931f810c7a6405d9b8c69ff469c93770ff1179`이다. [Application43775720826](https://github.com/kdydesign/simple-timeline/actions/runs/43775720826)의 Linux 전체 검사는 통과했다. Windows 첫 시도는 설치 빌드 전 기존 공유 연결 검사에서 `connected` 대신 `connecting` 상태로7초를 넘었다(`sharing.spec.ts:40`, 나머지92개 통과, artifact14186587567). 해당 코드를 변경하거나 검사를 제외하지 않고 실패한 Windows 작업만 한 번 재실행하자 전체 앱 검사를 통과했다(job133003897473). 첫 시도의 원인은 확정하지 않았으며 공유 연결 검사의 간헐적 시간 초과는 후속 신뢰성 점검 대상으로 남긴다. 이 재실행의 실제 설치 결과는 아래에 기록한다.
+
+재실행은 모든 설치본 빌드·기본 설치·앱 내 UPDATE를 통과했으나, 실행 중0.8.0 교체에서 `verify-process-exit (line69): Cannot verify process path (PID10168)`로 중단됐다. artifact14187451278은 해당 PID가 사전 검증한 main임을 기록하며 정리 오류는 없다. 이전 보정은 종료 신호가 이미 발생한 핸들만 CIM 재조회에서 제외했다. 종료 진행 중에는 CIM 경로가 먼저 없어지고 핸들 종료 신호가 늦게 발생할 수 있어 같은 확인을 다시 실패했다.
+
+종료 확인 단계에서는 이미 승인해 계속 보유한 핸들의 PID를 CIM으로 재검증하지 않고, 기존 `$alive` 조건으로 원본 핸들 전부의 실제 종료 신호를 기다리도록 보정했다. 신호 전에는 설치를 계속 보류하며, 초기 발견·새 PID의 경로/소유자 검사·허용 버전·종료 권한·30초 제한은 유지한다. PID 보존 근거와 outer finally까지의 핸들 수명도 동일하다. 실제 함수와 완료 조건을 함께 실행한 회귀에서 종료 중·자식 미종료·CIM 행 소실·미확인 PID·종료 상태 읽기 실패를 확인했다(RED4개→GREEN10개). 이 회귀를 실제 WindowsPS5 packaged 검사에도 연결했다. 독립 검토에서 조기 완료·PID 재사용·핸들 해제·권한 변경 문제는 발견되지 않았다. PowerShell 구문·native 선언 컴파일, 실제 NSIS 설치/제거 템플릿 컴파일, release installer6개와 하네스7개도 통과했다. 실제 Windows 재검증은 후속 CI에서 확인한다.

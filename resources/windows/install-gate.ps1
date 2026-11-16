@@ -62,10 +62,12 @@ public sealed class PlanrailProcess : IDisposable {
     try {
       foreach($item in @(Get-CimInstance Win32_Process -Filter "Name = 'Planrail.exe'")) {
         # Only exit verification supplies previously authorized, still-open handles.
-        # Windows reserves their PIDs until all handles close (PROCESS_INFORMATION).
-        $knownExited=$false
-        foreach($held in $KnownHandles){if($held.Id -eq $item.ProcessId -and $held.Exited){$knownExited=$true;break}}
-        if($knownExited){continue}
+        # CIM may lose the path before termination finishes. The verification loop
+        # waits on each original handle; never rediscover its identity from CIM.
+        # Windows reserves these PIDs until all handles close (PROCESS_INFORMATION).
+        $known=$false
+        foreach($held in $KnownHandles){if($held.Id -eq $item.ProcessId){$known=$true;break}}
+        if($known){continue}
         if (-not $item.ExecutablePath) { throw "Cannot verify process path (PID $($item.ProcessId))" }
         if (-not [String]::Equals([PlanrailProcess]::Canonical($item.ExecutablePath),$canonical,[StringComparison]::OrdinalIgnoreCase)) { continue }
         $process=$null
