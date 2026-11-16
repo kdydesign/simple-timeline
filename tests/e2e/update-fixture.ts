@@ -12,9 +12,11 @@ import {createInstallCoordinator,createMutationBarrier} from '../../src/main/upd
 import {registerUpdateIpc} from '../../src/main/updates/ipc'
 import {updatesChannel,updatesGuardReply} from '../../src/shared/updates'
 import {createUpdateBundle} from '../../scripts/release/update-bundle.mjs'
-export function exposeUpdateFixture(window:BrowserWindow,profile:string,closeStorage:()=>void){
+export function exposeUpdateFixture(window:BrowserWindow,profile:string,closeStorage:()=>void,detachBootstrap:()=>Promise<void>){
  const g=globalThis as any;g.updateTrace=[]
- const attach=(service:()=>UpdateService|undefined)=>{
+ const attach=async(service:()=>UpdateService|undefined)=>{
+  // One publisher owns the IPC stream, including callbacks already in flight.
+  await detachBootstrap()
   ipcMain.removeHandler(updatesChannel);ipcMain.removeHandler(updatesGuardReply)
   return registerUpdateIpc(window,window.webContents.getURL(),service)
  }
@@ -33,7 +35,7 @@ export function exposeUpdateFixture(window:BrowserWindow,profile:string,closeSto
   // Help screenshot fixture: real distribution component/service, synthetic package.
   g.showUpdateHost=async()=>{
    let service:UpdateService|undefined
-   const ipc=attach(()=>service)
+   const ipc=await attach(()=>service)
    service=await createUpdateService({root:join(profile,'fixture-host-ui'),version:'0.9.0',catalog:async()=>catalog,install:async()=>{throw Error('Help capture must never install')},changed:s=>ipc.changed(s)})
    await service.setSharing({role:'host',connected:true});ipc.changed(service.getState())
   }
@@ -43,7 +45,7 @@ export function exposeUpdateFixture(window:BrowserWindow,profile:string,closeSto
  }
  g.setupUpdateMember=async(connection:UpdateConnection)=>{
   let service:UpdateService|undefined
-  const ipc=attach(()=>service),barrier=createMutationBarrier()
+  const ipc=await attach(()=>service),barrier=createMutationBarrier()
   // Only the test fixture holds record I/O; production coordinator/service stay unchanged.
   let recordStarted!:()=>void,releaseRecord!:()=>void
   const started=new Promise<void>(resolve=>{recordStarted=resolve}),recordGate=new Promise<void>(resolve=>{releaseRecord=resolve})

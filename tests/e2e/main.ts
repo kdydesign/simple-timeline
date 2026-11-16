@@ -1,4 +1,5 @@
 import {exposeUpdateFixture} from './update-fixture';
+import {createUpdateService,type UpdateService} from '../../src/main/updates/service';
 import { app } from "electron";
 import { resolve, relative, isAbsolute, dirname, join } from "node:path";
 import { writeFileSync } from "node:fs";
@@ -23,7 +24,16 @@ if (
 let changed = false,
   injected = false;
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT;
+let bootstrapUpdates:Promise<UpdateService>|undefined;
+let sendBootstrapUpdate:(()=>Promise<void>)|undefined;
+let bootstrapUpdatesAttached=true;
 void bootstrap({
+  ...(fault==='updates'?{createUpdates:(options:Parameters<typeof createUpdateService>[0])=>{
+    const changed:typeof options.changed=state=>{if(bootstrapUpdatesAttached)options.changed?.(state)};
+    bootstrapUpdates=createUpdateService({...options,changed});
+    sendBootstrapUpdate=async()=>changed((await bootstrapUpdates!).getState());
+    return bootstrapUpdates;
+  }}:{}),
   profileDir: profile,
   // All E2E profiles use an independent change queue; never invoke real OS notifications.
   changeSender: async(message,onClick,onFailure) => {
@@ -124,7 +134,13 @@ void bootstrap({
     (globalThis as any).desktopController = (result as any).desktop;
     (globalThis as any).sharingService = result.sharing;
     (globalThis as any).testStorage = result.storage;
-    if(fault==='updates')exposeUpdateFixture(result.window,profile,()=>{if(result.storage.state==='ready'&&result.storage.db.open)result.storage.db.close()});
+    if(fault==='updates'){
+      (globalThis as any).sendBootstrapUpdate=()=>sendBootstrapUpdate?.();
+      exposeUpdateFixture(result.window,profile,()=>{if(result.storage.state==='ready'&&result.storage.db.open)result.storage.db.close()},async()=>{
+        bootstrapUpdatesAttached=false;
+        await (await bootstrapUpdates)?.dispose();
+      });
+    }
     const { storage } = result,
       repo = storage.repository,
       seed = process.env.SIMPLE_TIMELINE_TEST_SEED;

@@ -39,6 +39,7 @@ import type { Result } from '../shared/types'
 const desktopIcon = process.platform === 'win32' ? windowsIcon : icon
 
 export interface BootstrapOptions {
+  createUpdates?: typeof createUpdateService
   sharingTransport?: Partial<SharingTransport>
   sharingSecrets?: (profile:string)=>Promise<ProtectedSecrets>
   sharingClock?: ()=>number
@@ -166,7 +167,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     shutdown:async()=>{await stopServices();await finishShutdown();exiting=true;shutdownComplete=true},
   })
   // Rehash/catalog I/O never delays window creation, initial snapshot, or sharing startup.
-  if(storage.state==='ready')void createUpdateService({root:join(updateRoot,'member'),version:app.getVersion(),catalog,
+  if(storage.state==='ready')void (options.createUpdates??createUpdateService)({root:join(updateRoot,'member'),version:app.getVersion(),catalog,
     updaterCacheRoot:join(localAppData,'simple-timeline-updater'),editingBlocked:()=>appMutationBarrier.blocked(),
     chooseBundle:async()=>{const choice=await dialog.showOpenDialog(window,{title:'업데이트 ZIP 등록',properties:['openFile'],filters:[{name:'Planrail update ZIP',extensions:['zip']}]});return choice.canceled?undefined:choice.filePaths[0]},
     install:input=>coordinator.install(input),changed:state=>updatesIpc.changed(state),

@@ -42,3 +42,13 @@ Linux x64·Node24.22.1·Electron45.2.1, Xvfb와 sandbox를 유지한 환경에�
 - 로그: `artifacts/help-implementation/`, 전체 보고서: `artifacts/app/latest.json`, 실제 화면: `artifacts/help-implementation/help-host.png`, `help-compact.png`.
 
 실제 Windows의100/150/200% 배율·다중 모니터·Narrator·도움말을 연 상태의 설치 종료, 회사 PC 시작 시간은 미검증이다. Linux Electron 검사를 Windows 실기 인수로 간주하지 않는다.
+
+## Windows CI 촬영 테스트 경합 보정
+
+`eadf5e4`의 [Application 실행](https://github.com/kdydesign/simple-timeline/actions/runs/43793211986)은 Linux 전체 통과, Windows는 제품 build/native까지 통과했으나 E2E99개 중 도움말 업데이트 화면 촬영1개가 실패해 설치본 생성이 생략됐다.
+
+원인은 촬영 fixture가 IPC handler만 교체하고 bootstrap 업데이트 서비스의 상태 발신을 남겨 둔 것이다. Windows에서 기존 서비스의 늦은 상태가 촬영용 배포 상태를 덮어 `배포 중지`가 비활성화됐다. 실제 renderer의 revision 역행 방지는 유지한다.
+
+bootstrap에 기존 업데이트 서비스 생성 함수를 기본값으로 하는 주입점을 두고, 테스트 진입점에서만 원래 발신을 차단하고 서비스를 dispose한 뒤 fixture를 연결한다. 촬영 전 renderer 재로드로 교체 전 revision 구독도 초기화한다. 폐기한 발신자의 늦은 실제 상태를 명시적으로 전달하는 회귀 시나리오가 로컬에서 동일하게 실패한 뒤 수정 후 통과했다. 기존 실제 업데이트 IPC 시나리오도 통과했다. 로그: `artifacts/help-ci-fix/red.log`, `green.log`. 제품 업데이트 서비스·보안·설치 정책은 변경하지 않았다.
+
+보정 작업 트리의 `verify:app`7개 검사 모두 통과(typecheck/release26/단위243×3TZ/UI173/build/native70/E2E99). 하네스·diff 검사 통과. Windows 재검증은 수정 커밋의 CI 결과를 따른다.

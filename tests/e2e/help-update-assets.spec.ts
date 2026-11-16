@@ -9,7 +9,12 @@ test('captures real update panels without installing the synthetic update',async
   const connection=await host.app.evaluate(()=>(globalThis as any).setupUpdateHost())
   let dialog=await settings(host);await dialog.getByRole('button',{name:'호스트로 공유'}).click();await dialog.getByLabel('공유할 LAN IP').click();await host.page.getByRole('option',{name:'127.0.0.1 · 이 PC에서만 사용'}).click();await dialog.getByRole('button',{name:'호스트 주소 저장'}).click()
   await expect.poll(async()=>(await sharingState(host)).role).toBe('host')
-  await dialog.getByRole('button',{name:'공유 설정 닫기'}).click();await host.app.evaluate(()=>(globalThis as any).showUpdateHost());dialog=await settings(host)
+  await dialog.getByRole('button',{name:'공유 설정 닫기'}).click();await host.app.evaluate(()=>(globalThis as any).showUpdateHost())
+  // The replacement owns a fresh revision sequence; reset old view subscriptions.
+  await host.page.reload();dialog=await settings(host)
+  await expect(dialog.getByRole('button',{name:'배포 중지',exact:true})).toBeEnabled()
+  // Reproduce a late bootstrap publisher after the capture service takes over.
+  await host.app.evaluate(()=>(globalThis as any).sendBootstrapUpdate())
   await expect(dialog.getByRole('button',{name:'배포 중지',exact:true})).toBeEnabled()
   await dialog.locator('.update-distribution').screenshot({path:`${directory}/updates-host.png`})
   await member.app.evaluate((_electron,connection)=>(globalThis as any).setupUpdateMember(connection),connection)
