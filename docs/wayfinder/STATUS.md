@@ -1,7 +1,7 @@
 # 진행 상태
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
-설계 검토 중: [호스트·멤버 도움말 창](../design/host-member-help.md). H1~H7 합의와 검토용 HTML 시안을 정리했다. 문서 전체·화면 검토 대기이며 제품 코드는 변경하지 않는다.
+설계 완료·구현 보류: [호스트·멤버 도움말 창](../design/host-member-help.md). H1~H7 개별 결정과 H8 문서 전체·화면 시안을 확정했다. 사용자 지시에 따라 제품 구현은 시작하지 않는다.
 설계 완료·구현 보류: 업데이트 Windows 알림·전체 무음·호스트 접속 멤버·트레이 자동 실행 표시. [승인 설계](../design/notification-controls-and-member-presence.md)의 Q1~Q8과 Q9 문서 전체를 확정했다. 사용자 지시에 따라 제품 구현은 시작하지 않으며 기존 MVP 지도는 유지한다.
 최신 후속: 0.8.1 버튼 재질·로그인 자동 실행·수동 설치 종료 구현·독립 검토 완료. `c914232`의 양 OS 전체 앱 검사와 실제 Windows 설치3개 통과. 회사 PC의 실제 로그인 인수는 미검증이다. [확정 설계](../design/windows-login-startup.md)·[실행 기록](../implementation/2026-11-12-startup-and-install.md#최종-windows-결과)을 따른다. MVP 단계 완료 상태는 유지한다.
 이전 후속: 0.8.0 호스트 배포 기반 앱 업데이트를 구현했다. [승인 설계](../design/lan-app-updates.md)·[구현·검증 기록](../implementation/2026-11-11-lan-app-updates.md)에 로컬 검사와 실제 Windows 미검증 범위를 구분한다. 기존 MVP 완료 상태를 유지한다. 최종 SHA·CI 결과는 종료 메시지를 따른다.
