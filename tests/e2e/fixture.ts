@@ -4,12 +4,14 @@ import { mkdtemp, rm, mkdir, appendFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
+import { createTestAppCleanup } from './electron-cleanup';
 const require = createRequire(resolve("package.json"));
 export interface Desktop {
   app: ElectronApplication;
   page: Page;
   profile: string;
   restart(): Promise<void>;
+  stopApp(): Promise<void>;
   launchMs: number;
   launchedAt: number;
 }
@@ -51,7 +53,7 @@ export const test = base.extend<{
       await page
         .getByRole("button", { name: "프로젝트 추가", exact: true })
         .waitFor();
-      return { app, page, launchMs: Date.now() - began, launchedAt: began };
+      return { app, page, stopApp: createTestAppCleanup(app), launchMs: Date.now() - began, launchedAt: began };
     };
     const first = await launch();
     const desktop: Desktop = {
@@ -70,8 +72,7 @@ export const test = base.extend<{
           .screenshot({ path: info.outputPath("failure.png") })
           .catch(() => {});
       }
-      await desktop.app.evaluate(({ app }) => app.exit(0)).catch(() => {});
-      await desktop.app.close().catch(() => {});
+      await desktop.stopApp();
       await rm(profile, {
         recursive: true,
         force: true,

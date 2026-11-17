@@ -40,4 +40,4 @@ Files: help/release notes, docs design/implementation/status.
 - [x] Update help and version to 0.8.7 with Feat/Fix notes.
 - [x] Run verify:app and harness verify sequentially; record actual outcomes.
 - [x] Fresh whole-change reviewer; fix important findings with regression tests.
-- [ ] Commit/push main after verification; inspect CI for final SHA (완료 보고에 실제 결과 기록).
+- [x] Commit/push main after verification; inspect CI for final SHA (35fd1d6 Windows 성공·Ubuntu teardown 실패를 확인, 보정 근거는 구현 기록과 후속 완료 보고 참조).

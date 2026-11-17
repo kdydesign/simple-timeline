@@ -39,3 +39,15 @@
 최종 UI 전체 25파일·202/202 통과(127.95초). typecheck·배포 검사·시간대별 단위 검사는 마지막 통합 실행에서 통과했고, 이후 제품 빌드·native 85/85·UI 전체를 각각 통과했다. E2E 전체 102/103 + 실패 파일 재실행 4/4 결과를 위와 같이 구분한다. `verify:app` 한 번의 전체 성공으로 보고하지 않는다. 하네스 verify와 git diff --check 통과. 검증 제한·검사 목록·제품 로직을 재실행을 위해 변경하지 않았다.
 
 main의 최종 커밋을 push한 뒤 Windows/Linux Application 및 Repository harness 결과를 확인한다. 정확한 SHA와 CI 결과는 완료 보고를 따른다. 회사 Windows PC의 배율·트레이·실제 사내망 인수는 별도 미검증이다.
+
+## CI 종료 정리 보정
+
+`35fd1d6`의 [Application 실행](https://github.com/kdydesign/simple-timeline/actions/runs/44041641566)에서 Windows 전체 검증·설치본 빌드·실제 설치 lifecycle은 성공했다. Ubuntu는 앞의 여섯 검사와 E2E 102개가 통과했고, `improvements.spec.ts`의 `a successful drag refreshes the same clean editor without making it dirty`가 desktop teardown 45초 초과로 실패했다. 휴일 assertion 또는 컴파일 실패가 아니다.
+
+같은 테스트를 `DEBUG=pw:api`로 반복하여 7번째 실행에서 재현했다(6개 통과 뒤 실패, 남은 반복은 중단). 로그상 모든 assertion과 `app.exit(0)` 평가가 완료된 후 `electronApplication.close`에서 멈췄다. 공통 fixture가 강제 종료 직후 Playwright close를 호출하여 다시 app.quit을 보내는 중복 종료 경로를 사용했다. 원래 CI 로그·artifact와 로컬 재현 로그는 `/workspace/output/holiday-ci-ubuntu` 및 `/workspace/output/holiday-teardown-repro.log`에 보존했다.
+
+테스트 전용 cleanup을 하나로 통일한다. launch 시 프로세스 핸들을 보존하고, close event를 먼저 구독한 뒤 이벤트 루프에서 app.exit를 한 번 요청한다. 실제 프로세스 종료 확인 뒤에만 임시 프로필을 지운다. 이미 정상 종료한 프로세스는 재요청하지 않는다. 별도의 app.close를 보내지 않으며 10초 이내 종료를 확인하지 못하면 실패한다. 제품 종료·저장 보호·설치 로직과 45초 테스트 제한은 변경하지 않았다.
+
+수정 검증: 기존 실패 사례·중복 정리·일반 quit 이후 정리 3개를 각각 20회 실행하여 60/60 통과했다(1.6분). 최초 helper 검증에서는 종료 후 Playwright의 process() 채널이 사라지는 점을 확인했고, launch 시 프로세스 핸들을 캡처하도록 보정했다. 그 후 위 60회와 타입 검사를 통과했다. 전체 E2E 및 최종 SHA CI는 완료 보고에 기록한다.
+
+보정 후 전체 Electron E2E 105/105 통과(4.7분). 이전 실패 파일뿐 아니라 모든 일반/공유 fixture 정리와 실제 제품 Exit·저장 대기·업데이트 테스트를 함께 실행했다. 타입 검사·하네스 verify·공백 검사 통과. 제품 소스와 의존성·빌드 설정은 변경하지 않았다. 최종 CI의 정확한 SHA와 결과는 완료 보고를 따른다.

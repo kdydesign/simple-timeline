@@ -5,6 +5,7 @@ import { mkdtemp, rm, appendFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { createTestAppCleanup } from './electron-cleanup';
 const require = createRequire(resolve('package.json'));
 
 export async function launchMember(info: TestInfo, fault='sharing'): Promise<Desktop & { dispose(): Promise<void> }> {
@@ -16,11 +17,10 @@ export async function launchMember(info: TestInfo, fault='sharing'): Promise<Des
     app.process().stderr?.on('data', chunk => void appendFile(info.outputPath('member-electron.log'), chunk));
     const page = await app.firstWindow();
     await page.getByRole('button', {name:'프로젝트 추가', exact:true}).waitFor();
-    return {app,page,launchMs:Date.now()-began,launchedAt:began};
+    return {app,page,stopApp:createTestAppCleanup(app),launchMs:Date.now()-began,launchedAt:began};
   };
   const desktop = {...await launch(), profile, async restart() { await desktop.app.close(); Object.assign(desktop,await launch()); }, async dispose() {
-    await desktop.app.evaluate(({app}) => app.exit(0)).catch(()=>{});
-    await desktop.app.close().catch(()=>{});
+    await desktop.stopApp();
     await rm(profile,{recursive:true,force:true,maxRetries:10,retryDelay:100});
   }};
   return desktop;
