@@ -1,4 +1,6 @@
 import { validateChangeEnvelope } from '../../domain/change-notifications'
+import {validateHolidayEnvelope} from '../../domain/holidays'
+import type {HolidayPoll} from '../../shared/holidays'
 import type { ChangeEnvelope } from '../../shared/change-notifications'
 import { randomBytes } from 'node:crypto'
 import { validateSharingIdentity, validateWireSnapshot } from '../../domain/sharing'
@@ -32,14 +34,16 @@ export class SharingClient {
   private loaded = false
   private busy = false
   private changesSupported: boolean | null = null
-  private readonly options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string }
-  constructor(options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string }) {
+  private holidaySupported:boolean|null=null
+  private holidayEtag:string|undefined
+  private readonly options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string;appVersion?:string }
+  constructor(options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string;appVersion?:string }) {
     validateSharingIdentity(options.installationId)
     if (options.expectedDatasetId) validateSharingIdentity(options.expectedDatasetId)
     this.options = options
   }
   private checkOpen() { if (this.controller.signal.aborted) throw new SharingNetworkError('ABORTED') }
-  private async request(path: string, options: { method?: 'POST'; body?: unknown; proof?: string; token?: string; etag?: string }, signal?: AbortSignal) {
+  private async request(path: string, options: { method?: 'POST'; body?: unknown; proof?: string; token?: string; etag?: string;timeoutMs?:number }, signal?: AbortSignal) {
     this.checkOpen()
     const response = await pinnedRequest({ ...this.options, ...options, path, signal: signal ? AbortSignal.any([signal, this.controller.signal]) : this.controller.signal })
     this.checkOpen()
@@ -157,5 +161,26 @@ export class SharingClient {
       return { kind: 'snapshot', snapshot, etag: response.etag, changesSupported: false }
     })
   }
+  async pollHolidays(options:{force?:boolean;signal?:AbortSignal}={}):Promise<HolidayPoll>{
+    return this.exclusive(async()=>{
+      const connection=this.connection
+      if(!connection||connection.activation!=='active')throw new SharingNetworkError('UNAUTHORIZED')
+      if(this.holidaySupported===false&&!options.force)return {kind:'unsupported'}
+      const etag=options.force?undefined:this.holidayEtag
+      let response:TransportResponse
+      try{response=await this.request('/v1/holidays',{token:connection.token,etag,timeoutMs:1500},options.signal)}
+      catch(error){if(error instanceof SharingNetworkError&&error.status===404){this.holidaySupported=false;this.holidayEtag=undefined;return {kind:'unsupported'}}throw error}
+      if(response.status===304){if(!etag||response.etag!==etag)throw new SharingNetworkError('INVALID_RESPONSE');return {kind:'unchanged'}}
+      let envelope
+      try{envelope=validateHolidayEnvelope(response.body)}catch{throw new SharingNetworkError('INVALID_RESPONSE')}
+      if(envelope.hostId!==connection.trust.hostId)throw new SharingNetworkError('HOST_MISMATCH')
+      if(envelope.datasetId!==connection.datasetId)throw new SharingNetworkError('DATASET_MISMATCH')
+      if(response.status!==200||!response.etag||!/^"[a-f0-9]{64}"$/.test(response.etag))throw new SharingNetworkError('INVALID_RESPONSE')
+      this.holidaySupported=true
+      // Service acknowledges only after durable cache replacement.
+      return {kind:'updated',envelope,etag:response.etag}
+    })
+  }
+  acceptHolidayEtag(etag:string){this.holidayEtag=etag}
   close() { this.controller.abort(); this.attempt = null; this.connection = null }
 }

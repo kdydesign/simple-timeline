@@ -7,7 +7,7 @@ test.use({seed:'single',fault:'help-capture'})
 test('captures current app help illustrations with synthetic participant data only',async({desktop:d})=>{
  const p=d.page;await p.setViewportSize({width:1440,height:960});await mkdir(directory,{recursive:true})
  const dialog=await settings(d);await dialog.getByRole('button',{name:'호스트로 공유'}).click();await dialog.getByLabel('공유할 LAN IP').click();await p.getByRole('option',{name:'192.168.0.10',exact:true}).click();await dialog.getByRole('button',{name:'호스트 주소 저장'}).click()
- await expect(dialog.getByRole('button',{name:'공유 시작',exact:true})).toBeVisible();await dialog.locator('fieldset').screenshot({path:`${directory}/host-address.png`})
+ await expect(dialog.getByRole('button',{name:'공유 시작',exact:true})).toBeVisible();await dialog.locator('fieldset').first().screenshot({path:`${directory}/host-address.png`})
  await dialog.getByLabel('새 참여자 이름').fill('디자인 PC');await dialog.getByLabel('새 참여자 IP').fill('192.168.0.20');await dialog.getByRole('button',{name:'등록',exact:true}).click()
  const section=dialog.locator('section').filter({has:p.getByRole('heading',{name:'참여자 이름 · IP'})});await section.scrollIntoViewIfNeeded();await section.screenshot({path:`${directory}/participants.png`})
  await dialog.getByRole('button',{name:'공유 설정 닫기'}).click();await p.getByRole('button',{name:'1.1.1 핫픽스 편집',exact:true}).click()

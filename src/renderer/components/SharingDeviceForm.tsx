@@ -7,7 +7,7 @@ import {Input} from './ui/input'
 import {IconButton} from './Icon'
 
 type Errors=Partial<Record<'name'|'ip',string>>
-export function SharingDeviceForm({device,presence,devices,disabled,onSave,onRevoke,onDelete,onDirty}:{device?:ApprovedDevice;presence?:MemberPresence;devices:ApprovedDevice[];disabled:boolean;onSave:(name:string,ip:string)=>Promise<Result<ApprovedDevice>>;onRevoke?:()=>void;onDelete?:()=>void;onDirty:(dirty:boolean)=>void}) {
+export function SharingDeviceForm({device,presence,version,devices,disabled,onSave,onRevoke,onDelete,onDirty}:{device?:ApprovedDevice;presence?:MemberPresence;version?:{version:string|null;checkedAt:string};devices:ApprovedDevice[];disabled:boolean;onSave:(name:string,ip:string)=>Promise<Result<ApprovedDevice>>;onRevoke?:()=>void;onDelete?:()=>void;onDirty:(dirty:boolean)=>void}) {
  const [name,setName]=useState(device?.name??''),[ip,setIp]=useState(device?.ip??''),[submitted,setSubmitted]=useState(false),[serverError,setServerError]=useState<ApiError|null>(null)
  const prefix=useId(),form=useRef<HTMLFormElement>(null)
  const dirty=name!==(device?.name??'')||ip!==(device?.ip??'')
@@ -46,6 +46,6 @@ export function SharingDeviceForm({device,presence,devices,disabled,onSave,onRev
     {onDelete&&<IconButton icon="trash" className="danger" label={`${device?.name} 참여자 삭제`} disabled={disabled} onClick={onDelete}/>}
    </div>
   </div>
-  {device&&<p className="sharing-device-presence"><span className={presence?.connected?'presence-connected':''}>{presence?.connected?'연결됨':'연결 끊김'}</span><span>마지막 접속 확인: {presence?.lastSeenAt?new Date(presence.lastSeenAt).toLocaleString('ko-KR'):'아직 없음'}</span></p>}
+  {device&&<p className="sharing-device-presence"><span className={presence?.connected?'presence-connected':''}>{presence?.connected?'연결됨':'연결 끊김'}</span><span className="sharing-device-version">{version?.version?`${presence?.connected?'버전':'마지막 확인 버전'} ${version.version}`:'버전 확인 불가'}{version?.version&&!presence?.connected&&` · ${new Date(version.checkedAt).toLocaleString('ko-KR')}`}</span><span>마지막 접속 확인: {presence?.lastSeenAt?new Date(presence.lastSeenAt).toLocaleString('ko-KR'):'아직 없음'}</span></p>}
  </form>
 }

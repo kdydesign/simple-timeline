@@ -1,3 +1,6 @@
+import {createSharingExtras} from '../db/sharing/extras'
+import {createPairingNotifications} from '../notifications/pairing'
+import {DEFAULT_HOLIDAYS,type HolidayCalendar,type HolidayState} from '../../shared/holidays'
 import {createMemberPresence} from './presence'
 import {createNotificationStore} from '../db/notifications'
 import {dueReminders} from '../../domain/reminder'
@@ -23,7 +26,7 @@ import {createSharingHost,type PendingPair} from './host'
 import {SharingClient,type ClientConnection,type CredentialPersistence} from './client'
 export interface SharingTransport {
   discover:typeof discoverHost
-  client:(options:ConstructorParameters<typeof SharingClient>[0])=>Pick<SharingClient,'beginPair'|'confirmPair'|'poll'|'close'>
+  client:(options:ConstructorParameters<typeof SharingClient>[0])=>Pick<SharingClient,'beginPair'|'confirmPair'|'poll'|'close'> & Partial<Pick<SharingClient,'pollHolidays'|'acceptHolidayEtag'>>
   host:typeof createSharingHost
   identity:typeof createHostIdentity
   interfaces:()=>string[]
@@ -32,14 +35,15 @@ const productionTransport:SharingTransport={discover:discoverHost,client:o=>new 
 interface Options {
   storage:Extract<StorageState,{state:'ready'}>;profile:string;changed:(state:SharingState)=>void
   updates?:UpdateRoutes;updateChanged?:()=>void;mutationsBlocked?:()=>boolean
-  changeSender?:ReminderSender;onChangeClick?:()=>void
+  changeSender?:ReminderSender;onChangeClick?:()=>void;appVersion?:string
   reminderClock?:()=>Date;clock?:()=>number;transport?:Partial<SharingTransport>;secrets?:(profile:string)=>Promise<ProtectedSecrets>
 }
 export function createSharingService(o:Options){
   const store=createSharingStore(o.storage.db),transport={...productionTransport,...o.transport},clock=o.clock??(()=>performance.now())
-  const policy=createNotificationStore(o.storage.db),memberReminderStore=createSharedReminderStore(o.storage.db)
+  const policy=createNotificationStore(o.storage.db),memberReminderStore=createSharedReminderStore(o.storage.db),extras=createSharingExtras(o.storage.db)
   const presence=createMemberPresence({now:clock,changed})
   const initial=store.getConfig()
+  let holidayPhase:HolidayState['status']=extras.cachedCalendar()?'stale':'pending',holidayError='',versionError=false,approvalRequestToken:string|null=null
   let snapshotRevision=0,epoch=0,disposed=false,suspended=false,status:SharingState['status']=initial.pendingCredentialDeleteRef?'error':initial.role==='personal'?'personal':'stopped',message=initial.pendingCredentialDeleteRef?new CredentialCleanupError().message:'',lastCheckedAt:string|null=null
   let pendingPair:PendingPair|null=null,pendingAddress:SharingAddress|null=null,settingsRequestToken:string|null=null
   let clientCommand:<T>(operation:(signal:AbortSignal)=>Promise<T>)=>Promise<T>
@@ -52,11 +56,18 @@ export function createSharingService(o:Options){
     snapshot:()=>store.readCache(),authorize:async()=>{const generation=epoch,active=syncController;if(!active||disposed||suspended)return false;const allowed=await active.authorize();return current(generation)&&active===syncController&&allowed&&store.getConfig().role==='member'},
     changed,send:o.changeSender,onClick:o.onChangeClick,
   })
+  const pairing=createPairingNotifications({store:extras,policy,valid:p=>!disposed&&!suspended&&!!host?.needsApproval(p.pairId),send:o.changeSender??(async()=> 'failed'),
+    open:()=>{if(disposed||suspended||o.mutationsBlocked?.())return;settingsRequestToken=randomUUID();approvalRequestToken=settingsRequestToken;o.onChangeClick?.();changed()},changed})
+  function holidayState():HolidayState{
+    const c=store.getConfig(),cache=c.role==='member'?extras.cachedCalendar():null
+    const phase=c.role==='host'?'host':c.role==='personal'?'local':holidayPhase==='current'&&status!=='connected'?'stale':holidayPhase
+    return {calendar:c.role==='host'?extras.hostCalendar().calendar:phase==='unsupported'?DEFAULT_HOLIDAYS:cache?.envelope.calendar??DEFAULT_HOLIDAYS,status:phase,lastReceivedAt:cache?.receivedAt??null,message:holidayError}
+  }
   const current=(generation:number)=>!disposed&&!suspended&&!o.mutationsBlocked?.()&&generation===epoch
   const check=(generation:number)=>{if(!current(generation))throw failure('FORBIDDEN')}
   function getState():SharingState{
     const c=store.getConfig(),memberPresence=c.role==='host'?presence.snapshot(store.listDevices().filter(d=>d.approved&&!d.revoked).map(d=>d.id)):undefined
-    return {...(memberPresence?{memberPresence,connectedMembers:Object.values(memberPresence).filter(p=>p.connected).length}:{}),changeNotifications:changes.state(),snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
+    return {holidays:holidayState(),deviceVersions:c.role==='host'?extras.versions():undefined,pairingNotificationError:pairing.error(),deviceVersionError:versionError,approvalRequestToken,...(memberPresence?{memberPresence,connectedMembers:Object.values(memberPresence).filter(p=>p.connected).length}:{}),changeNotifications:changes.state(),snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
       pendingPair:pendingPair?{pairId:pendingPair.pairId,fingerprint:pendingPair.fingerprint,expiresAt:pendingPair.expiresAt}:null,
       pendingPairs:host?.pending()??[],devices:c.role==='host'?store.listDevices():[],projects:c.role==='host'?store.listSharedProjects():[],settingsRequestToken,
       availableAddresses:transport.interfaces(),
@@ -94,12 +105,29 @@ export function createSharingService(o:Options){
       o.updateChanged?.()
       if(old&&old!==ref)vault.remove(old)
     }}
-    client=transport.client({installationId:store.getConfig().hostId,trust,address:target,persistence,expectedDatasetId:store.getConfig().remoteDatasetId??undefined})
+    holidayPhase=extras.cachedCalendar()?'stale':'pending';holidayError=''
+    client=transport.client({installationId:store.getConfig().hostId,trust,address:target,persistence,appVersion:o.appVersion,expectedDatasetId:store.getConfig().remoteDatasetId??undefined})
     const activeClient=client
     const generations=new WeakMap<object,number>()
     const settle=(result:object)=>policy.resumeShared(generations.get(result)??-1,()=>memberReminderStore.suppress(store.readCache().schedules.flatMap(s=>dueReminders(s,(o.reminderClock??(()=>new Date()))()))))
     syncController=createSyncController({now:clock,cursor:changes.cursor,poll:async options=>{operationSignal=options.signal;const generation=policy.state().generation;const result=await activeClient.poll(options);generations.set(result,generation);return result},apply:(result,reconnecting)=>{check(generation);const before=JSON.stringify(store.readCache());o.storage.db.transaction(()=>{if(result.changes)changes.apply(result.changes,reconnecting,generations.get(result)??-1);else{store.applyCache(result.snapshot);if(result.changesSupported===false)changes.unsupported()}settle(result)})();if(before!==JSON.stringify(store.readCache())){snapshotRevision++;changed()}},
-      outcome:result=>{check(generation);if(result.kind==='unchanged')settle(result);if(result.kind==='revoked'){changes.revoke();snapshotRevision++;pendingPair=null}else if(result.kind==='unchanged'&&result.changesSupported===false)changes.unsupported();else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
+      outcome:result=>{check(generation);if(result.kind==='unchanged')settle(result);if(result.kind==='revoked'){extras.clearCalendar();holidayPhase='pending';holidayError='';changes.revoke();snapshotRevision++;pendingPair=null}else if(result.kind==='unchanged'&&result.changesSupported===false)changes.unsupported();else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
+      afterSync:async options=>{
+        if(!current(generation)||options.signal.aborted)return
+        try{
+          const result=await activeClient.pollHolidays?.(options)
+          if(!current(generation)||options.signal.aborted)return
+          if(!result||result.kind==='unsupported'){holidayPhase='unsupported';holidayError='호스트가 휴일 동기화를 지원하지 않습니다. 호스트를 업데이트하세요.'}
+          else if(result.kind==='updated'){extras.applyCalendar(result.envelope);activeClient.acceptHolidayEtag?.(result.etag);holidayPhase='current';holidayError=''}
+          else if(extras.cachedCalendar()){holidayPhase='current';holidayError=''}
+          else throw Error('HOLIDAY_CACHE_MISSING')
+        }catch(error){
+          if(!current(generation)||options.signal.aborted)return
+          if(error instanceof SharingNetworkError&&error.code==='REVOKED'&&error.status===403)return 'revoked'
+          holidayPhase='error';holidayError='휴일표를 갱신하지 못했습니다. 마지막 수신 자료를 표시합니다. 다시 동기화해 주세요.'
+          if(error instanceof SharingNetworkError&&['UNAUTHORIZED','TLS_UNTRUSTED','HOST_MISMATCH','DATASET_MISMATCH'].includes(error.code))throw error
+        }finally{if(current(generation))changed()}
+      },
       state:(value,error)=>{if(current(generation))setStatus(value,error)},
     })
     clientCommand=<T>(operation:(signal:AbortSignal)=>Promise<T>)=>syncController!.command(signal=>{operationSignal=signal;return operation(signal)})
@@ -120,7 +148,7 @@ export function createSharingService(o:Options){
       store.setHostIdentity({certificatePin:identity.pin,certificateRef:ref,privateKeyRef:ref})
     }
     check(generation)
-    const activeHost=transport.host({identity,store,updates:o.updates,onSyncComplete:id=>{if(current(generation))presence.record(id)},onChange:()=>{if(current(generation))changed()},now:clock});host=activeHost
+    const activeHost=transport.host({identity,store,updates:o.updates,holidays:extras.hostCalendar,onPairConfirmed:p=>{if(current(generation))void pairing.observe(p)},onSyncComplete:(id,version,bindingCurrent)=>{if(current(generation)){if(bindingCurrent!==false){try{extras.recordVersion(id,version);versionError=false}catch{versionError=true}}presence.record(id)}},onChange:()=>{if(current(generation))changed()},now:clock});host=activeHost
     await activeHost.start(c.address,c.port);check(generation);setStatus('connected')
   }
   async function loadMember(generation:number){
@@ -219,7 +247,7 @@ export function createSharingService(o:Options){
     suspended=false;const drain=invalidate(),generation=epoch
     try{await drain;if(current(generation))await start()}catch(error){if(current(generation))setStatus('error',error)}
   }
-  function dispose(){if(closing)return closing;disposed=true;presence.dispose();const notifications=changes.dispose();closing=Promise.all([invalidate(),notifications]).then(()=>{});return closing}
+  function dispose(){if(closing)return closing;disposed=true;presence.dispose();pairing.dispose();const notifications=changes.dispose();closing=Promise.all([invalidate(),notifications]).then(()=>{});return closing}
   return {getState,start,
     getUpdateHostId:()=>store.getConfig().hostId,
     getUpdateContext():UpdateSharingContext{
@@ -227,6 +255,7 @@ export function createSharingService(o:Options){
       return {role:c.role,connected:status==='connected',trustPending:c.role==='member'&&!!c.credentialRef&&!saved,revoked:updateTrustRejected||status==='revoked',
         ...(c.role==='member'&&c.credentialRef&&c.address&&saved?.activation==='active'?{connection:{address:{address:c.address,port:c.port},trust:saved.trust,token:saved.token}}:{})}
     },configureHost,setHosting,connect,confirmHost,approve,saveDevice,revokeDevice,deleteDevice,saveProject,saveReminder,disconnect,
+    saveHolidays(input:{calendar:HolidayCalendar}){if(disposed||suspended||o.mutationsBlocked?.())throw failure('FORBIDDEN');extras.saveCalendar(input.calendar);changed();return getState()},
     setChangeNotifications(input:{enabled:boolean}){changes.setEnabled(input);return getState()},
     retryChangeNotifications:async()=>{await changes.retry();return getState()},
     acknowledgeChange(input:{token:string}){changes.acknowledge(input);return getState()},

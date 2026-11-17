@@ -1,6 +1,9 @@
 export const releaseTypes={Feat:'기능 추가',Fix:'오류 수정',Perf:'성능 개선',Docs:'도움말·문서'} as const
 export interface ReleaseNote {version:string;summary:string;sections:{type:keyof typeof releaseTypes;items:string[]}[];notes?:string[]}
 export const releaseNotes:ReleaseNote[]=[
+ {version:'0.8.6',summary:'멤버 버전 확인과 공통 휴일표',sections:[
+  {type:'Feat',items:['호스트의 참여자 목록에서 멤버가 마지막으로 보고한 실행 버전을 확인합니다.','공유 설정에서 날짜별 휴일과 반복 요일을 관리하고 승인된 모든 멤버의 간트·달력에 동기화합니다.','멤버가 확인 코드를 확인하고 승인을 기다리면 호스트에게 Windows 알림을 보냅니다.']},
+  {type:'Docs',items:['공통 휴일표와 멤버 버전·연결 승인 요청 알림 사용법을 도움말에 추가했습니다.']}],notes:['휴일 변경은 알림을 보내지 않으며 일정 기간·알림 날짜 계산을 바꾸지 않습니다. 공식 공휴일 자동 수집은 제공하지 않습니다.','구버전의 프로젝트·일정 동기화는 유지됩니다. 새 휴일표와 버전 보고는 호스트·멤버 업데이트가 필요합니다.']},
  {version:'0.8.5',summary:'변경 전 확인과 버전별 릴리즈노트',sections:[
   {type:'Feat',items:['제목 표시줄에서 버전별 릴리즈노트를 별도 창으로 볼 수 있습니다.','일정 추가·수정·삭제·드래그와 알림 설정 저장 전에 변경 내용을 확인합니다.','프로젝트 목록에서 삭제할 때 하위 일정 수를 함께 확인합니다.']},
   {type:'Fix',items:['도움말과 창 제어 버튼 사이에 구분선을 추가하고 앱 바깥 테두리를 제거했습니다.','Windows 작업표시줄 재실행 항목에 현재 앱 이름·아이콘을 명시합니다.']},

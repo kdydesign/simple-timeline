@@ -1,3 +1,4 @@
+import {holidayStatusDescription} from "./components/HolidaySettings";
 import {useUpdateGuard} from './state/useUpdates';
 import {validateEditor,fieldId,type FieldErrors} from './state/formValidation';
 import {QuickReminder} from './components/QuickReminder';
@@ -126,7 +127,7 @@ export function App({
     canEdit = timeline.phase === "ready",
     saving = timeline.phase === "saving" || sharing.busy;
   const updates=useUpdateGuard({known:(timeline.phase==='ready'||timeline.phase==='saving')&&!sharing.writeOutcomeUnknown,dirty:editor.dirty||settingsDirty||quickDirty,saving});
-  const settingsVisible=sharing.settingsOpen&&!quickReminder&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
+  const settingsVisible=sharing.settingsOpen&&!quickReminder&&!confirmation&&!dayModalOpen&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
   useEffect(()=>{setFieldErrors({});serverFieldErrors.current={};pendingFieldFocus.current=null;setValidationActive(false)},[model?.session]);
   const patchForm:typeof editor.patch=(update)=>{
     editor.patch(update);
@@ -646,6 +647,7 @@ export function App({
           {timeline.snapshot ? (
             <>
               <GanttView
+                holidays={sharing.state?.holidays?.calendar} holidayNotice={holidayStatusDescription(sharing.state?.holidays)}
                 {...dragActions}
                 ref={gantt}
                 collapsed={preferences.collapsed} onToggleProject={preferences.toggleProject}
@@ -673,6 +675,7 @@ export function App({
                 }
               />
               <CalendarView
+                holidays={sharing.state?.holidays?.calendar} holidayNotice={holidayStatusDescription(sharing.state?.holidays)}
                 {...dragActions} onMonth={navigateMonth}
                 onAddDate={addDate}
                 snapshot={visibleSnapshot!}

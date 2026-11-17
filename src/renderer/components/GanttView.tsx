@@ -25,7 +25,8 @@ import {
   indexSnapshot,
   scheduleDescription,
 } from "../../visualization/presentation";
-import { isWeekend } from "../../visualization/weekends";
+import {holidayName} from "../../domain/holidays";
+import type {HolidayCalendar} from "../../shared/holidays";
 import { GanttNavigation } from "./GanttNavigation";
 import {IconButton} from './Icon';
 export interface GanttHandle {
@@ -34,6 +35,8 @@ export interface GanttHandle {
 import { useGanttNavigation } from "../state/useGanttNavigation";
 import { useScheduleDrag, type DragActions } from "../state/useScheduleDrag";
 export interface GanttProps extends DragActions {
+  holidays?:HolidayCalendar;
+  holidayNotice?:string;
   hideEmptyChrome?:boolean;
   onReminder?:(schedule:Schedule,caller:HTMLElement)=>void;
   selectedDate?: string;
@@ -61,7 +64,7 @@ type Row = {
   height: number;
 };
 export function GanttView({
-  snapshot,
+  snapshot, holidays, holidayNotice,
   onAddDate, collapsed = EXPANDED, onToggleProject, todayRequest,
   onDragStart, onDragCommit, onDragEnd,
   selectedMonth, selectedDate, dayWidth: P = 28, onDayWidth,
@@ -79,6 +82,7 @@ export function GanttView({
   const now = new Date();
   const today = `${String(now.getFullYear()).padStart(4, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const todayOrdinal = toOrdinal(today), selectedOrdinal = selectedDate ? toOrdinal(selectedDate) : null;
+  const [focusedHoliday,setFocusedHoliday]=useState<string|null>(null);
   const [hoveredDate, setHoveredDate] = useState<number | null>(null);
   const [extension,setExtension] = useState<{start:number;end:number}|null>(null);
   const selectedBounds = monthBounds(selectedMonth);
@@ -316,7 +320,7 @@ export function GanttView({
   const dates = Array.from({ length: last - first }, (_, i) => ({
     i: i + first,
     date: fromOrdinal(start + i + first),
-    nonworking: isWeekend(start + i + first),
+    nonworking: !!holidayName(fromOrdinal(start+i+first),holidays),
   }));
   const nonworkingColumns = dates.filter(d => d.nonworking && (d.i+1)*P>x && d.i*P<x+size.width).map(d =>
     <span key={d.date} aria-hidden="true" data-nonworking={d.date} className="date-highlight nonworking" style={{left:d.i*P-x,width:P}} />);
@@ -357,6 +361,8 @@ export function GanttView({
         </div>
 
       </div>
+      {!hideEmptyChrome&&holidayNotice&&<p className="holiday-notice" role="status">{holidayNotice}</p>}
+      {!hideEmptyChrome&&<span className="gantt-holiday-name">{hoveredDate!==null?holidayName(fromOrdinal(hoveredDate),holidays):focusedHoliday?holidayName(focusedHoliday,holidays):''}</span>}
       {outside && !hideEmptyChrome && (
         <p className="range-notice" role="status">
           선택 월은 전체 일정 범위 밖입니다
@@ -390,6 +396,8 @@ export function GanttView({
               disabled={disabled}
               tabIndex={d.i*P-x >= 0 && (d.i+1)*P-x <= size.width ? 0 : -1}
               aria-label={`${d.date} 일정 추가`}
+              aria-description={holidayName(d.date,holidays)||undefined}
+              onFocus={()=>setFocusedHoliday(d.date)} onBlur={()=>setFocusedHoliday(null)}
               onClick={() => onAddDate?.(d.date)}
               aria-pressed={d.date === selectedDate}
               aria-current={d.date === today ? "date" : undefined}

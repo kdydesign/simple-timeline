@@ -5,6 +5,7 @@ interface Options {
   apply(outcome:Extract<PollOutcome,{kind:'snapshot'}>,reconnecting:boolean):void
   cursor?:()=>string|null
   outcome?(outcome:PollOutcome):void
+  afterSync?(options:{force:boolean;signal:AbortSignal}):Promise<void|'revoked'>
   state(status:SharingConnectionStatus,error?:unknown):void
   now?:()=>number
 }
@@ -23,11 +24,15 @@ export function createSyncController(o:Options) {
       const timeout=new Promise<never>((_,reject)=>{deadline=setTimeout(()=>{controller.abort();reject(Error('TIMEOUT'))},5000)})
       const reconnecting=!fresh()
       const result=await Promise.race([o.poll({etag,force,signal:controller.signal,cursor:o.cursor?.(),reconnecting}),timeout])
+      if(deadline)clearTimeout(deadline)
       if(!current())return
       if(result.kind==='snapshot'){o.apply(result,reconnecting);etag=result.etag}
       if(result.kind==='unchanged'&&!etag)throw Error('CACHE_NOT_VALIDATED')
       if(result.kind==='snapshot'||result.kind==='unchanged'){
         connected=true;lastSuccess=now();failures=0;o.outcome?.(result);o.state('connected')
+        const extra=await o.afterSync?.({force:force||reconnecting,signal:controller.signal})
+        if(!current())return
+        if(extra==='revoked'){connected=false;etag=undefined;o.outcome?.({kind:'revoked'});o.state('revoked');stop();return}
       }else if(result.kind==='revoked'){
         connected=false;etag=undefined;o.outcome?.(result);o.state('revoked');stop();return
       }else{o.outcome?.(result);o.state(result.kind==='pending'?'pairing':'connecting')}

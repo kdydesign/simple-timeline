@@ -1,4 +1,5 @@
 import {CredentialCleanupError} from './secrets'
+import {validateHolidayCalendar} from '../../domain/holidays'
 import type {SharingService} from './service'
 import {DomainValidationError} from '../../domain/error'
 import {normalizeIPv4,validatePort,parseSharedId} from '../../domain/sharing'
@@ -6,6 +7,7 @@ import {normalizeName,normalizeColor,validateId} from '../../domain/normalize'
 import {failure,toPublicError} from '../errors'
 import type {Result} from '../../shared/types'
 const shapes:Record<string,{required:string[];optional?:string[]}>= {
+  saveHolidays:{required:['calendar']},
   configureHost:{required:['address','port']},setHosting:{required:['enabled']},connect:{required:['address','port']},
   confirmHost:{required:['pairId','confirmed']},approve:{required:['pairId','confirmed']},saveDevice:{required:['name','ip'],optional:['id']},
   deleteDevice:{required:['id']},revokeDevice:{required:['id']},saveProject:{required:['name','color','participants'],optional:['id']},
@@ -36,6 +38,7 @@ export async function dispatchSharing(service:SharingService|undefined,args:unkn
     if(Object.hasOwn(v,'enabled')&&typeof v.enabled!=='boolean')throw new DomainValidationError('enabled')
     for(const key of ['pairId','token','id'])if(Object.hasOwn(v,key)&&(typeof v[key]!=='string'||!v[key]))throw new DomainValidationError(key)
     if(command==='saveDevice'){normalizeName(v.name);normalizeIPv4(v.ip)}
+    if(command==='saveHolidays')validateHolidayCalendar(v.calendar)
     if(command==='saveProject'){
       normalizeName(v.name);normalizeColor(v.color);if(v.id!==undefined)validateId(v.id)
       if(!Array.isArray(v.participants))throw new DomainValidationError('participants')

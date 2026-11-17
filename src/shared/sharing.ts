@@ -1,4 +1,5 @@
 import type { ChangeTarget } from './change-notifications'
+import type {HolidayCalendar,HolidayState} from './holidays'
 import type { Project, ReminderSettings, Result, Schedule } from './types'
 export const SHARING_PROTOCOL_VERSION = 1 as const
 export const DEFAULT_SHARING_PORT = 47831
@@ -30,6 +31,11 @@ export interface ChangeNotificationState {
 }
 export interface MemberPresence {connected:boolean;lastSeenAt:string|null}
 export interface SharingState {
+  holidays?:HolidayState
+  deviceVersions?:Record<string,{version:string|null;checkedAt:string}>
+  pairingNotificationError?:boolean
+  deviceVersionError?:boolean
+  approvalRequestToken?:string|null
   memberPresence?:Record<string,MemberPresence>
   connectedMembers?:number
   availableAddresses: string[]
@@ -51,6 +57,7 @@ export interface SharingState {
   settingsRequestToken: string | null
 }
 export interface SharingApi {
+  saveHolidays(input:{calendar:HolidayCalendar}):Promise<Result<SharingState>>
   getState(): Promise<Result<SharingState>>
   configureHost(input: SharingAddress): Promise<Result<SharingState>>
   setHosting(input: { enabled: boolean }): Promise<Result<SharingState>>

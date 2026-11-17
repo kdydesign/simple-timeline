@@ -58,3 +58,11 @@ it('returns from initial tray settings to the toolbar when there was no previous
 it('closes dirty settings without confirmation and returns focus to the toolbar',async()=>{
  const u=userEvent.setup(),f=sharingFixture();render(<App api={memoryApi().api}/>);await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled());await act(async()=>f.emit({settingsRequestToken:'dirty-settings'}));const dialog=await screen.findByRole('dialog',{name:'공유 설정'}),port=within(dialog).getByLabelText('포트');await u.clear(port);await u.type(port,'47832');const close=within(dialog).getByRole('button',{name:'공유 설정 닫기'});await u.click(close);expect(screen.queryByRole('alertdialog')).toBeNull();expect(screen.queryByRole('dialog',{name:'공유 설정'})).toBeNull();await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toHaveFocus());
 });
+
+it('defers approval settings behind a schedule confirmation and preserves its draft',async()=>{
+ const u=userEvent.setup(),f=sharingFixture();render(<App api={memoryApi(hotfix).api}/>);
+ await u.click(await screen.findByRole('button',{name:'개발 편집'}));await u.clear(screen.getByLabelText('일정 이름'));await u.type(screen.getByLabelText('일정 이름'),'보존할 수정');await u.click(screen.getByRole('button',{name:'저장'}));
+ const confirm=screen.getByRole('alertdialog');await act(async()=>f.emit({settingsRequestToken:'approval-notice',approvalRequestToken:'approval-notice'}));
+ expect(confirm).toBeVisible();expect(screen.queryByRole('dialog',{name:'공유 설정'})).not.toBeInTheDocument();
+ await u.click(within(confirm).getByRole('button',{name:'취소'}));const settings=await screen.findByRole('dialog',{name:'공유 설정'});await u.click(within(settings).getByRole('button',{name:'공유 설정 닫기'}));expect(screen.getByLabelText('일정 이름')).toHaveValue('보존할 수정');
+})

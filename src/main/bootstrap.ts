@@ -158,7 +158,9 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   let refreshUpdates=()=>{}
   const updateNotifications=notificationPolicy?createUpdateNotifications({store:notificationPolicy,send:options.changeSender??nativeReminders.send,open:()=>{if(exiting||appMutationBarrier.blocked())return;show();void updates?.requestOpen()},changed:()=>{if(updates)updatesIpc.changed(updates.getState())}}):undefined
   let sharingIpc:ReturnType<typeof registerSharingIpc>|undefined
-  const sharing=storage.state==='ready'?createSharingService({storage,profile,mutationsBlocked:()=>appMutationBarrier.blocked(),updateChanged:()=>refreshUpdates(),updates:async(req,res,authenticate)=>{if(!updateRoutes)throw new SharingNetworkError('UNAVAILABLE',503);await updateRoutes(req,res,authenticate)},transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,reminderClock:options.reminderClock,changeSender:options.changeSender??nativeReminders.send,onChangeClick:show,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
+  let runningVersion=app.isPackaged?app.getVersion():undefined
+  if(!app.isPackaged){try{runningVersion=JSON.parse(await readFile(join(app.getAppPath(),'package.json'),'utf8')).version+'-dev'}catch{/* Unavailable development metadata must not report Electron's version. */}}
+  const sharing=storage.state==='ready'?createSharingService({storage,profile,appVersion:runningVersion,mutationsBlocked:()=>appMutationBarrier.blocked(),updateChanged:()=>refreshUpdates(),updates:async(req,res,authenticate)=>{if(!updateRoutes)throw new SharingNetworkError('UNAVAILABLE',503);await updateRoutes(req,res,authenticate)},transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,reminderClock:options.reminderClock,changeSender:options.changeSender??nativeReminders.send,onChangeClick:show,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
   sharingIpc=registerSharingIpc(window,rendererUrl,sharing,()=>evaluateReminders())
   void sharing?.start()
   const updatesIpc=registerUpdateIpc(window,rendererUrl,()=>updates)

@@ -23,3 +23,10 @@ it('exposes exactly bounded change preference, retry and token acknowledgement c
  for(const args of [['setChangeNotifications',{enabled:'false'}],['setChangeNotifications',{enabled:true,url:'evil'}],['retryChangeNotifications',{}],['acknowledgeChange',{token:'x',target:{kind:'list'}}]])expect((await dispatchSharing(service,args,true)).ok).toBe(false)
  expect(seen).toEqual([{enabled:false},'retry',{token:'request-id'}])
 })
+
+it('validates the entire holiday calendar before invoking the fixed host command',async()=>{
+ let calls=0;const service={saveHolidays:()=>{calls++;return{}}} as any
+ for(const calendar of [{weekdays:[7],dates:[]},{weekdays:[],dates:[{date:'2026-02-29',name:'invalid'}]},{weekdays:[],dates:[],path:'private'}])expect((await dispatchSharing(service,['saveHolidays',{calendar}],true)).ok).toBe(false)
+ expect((await dispatchSharing(service,['saveHolidays',{calendar:{weekdays:[],dates:[]}}],false)).ok).toBe(false);expect(calls).toBe(0)
+ expect((await dispatchSharing(service,['saveHolidays',{calendar:{weekdays:[],dates:[]}}],true)).ok).toBe(true);expect(calls).toBe(1)
+})

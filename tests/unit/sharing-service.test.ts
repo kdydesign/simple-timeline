@@ -59,3 +59,11 @@ it('passes committed cursor and reconnect context through atomic apply without a
  offline=true;await sync.refresh();offline=false;fail=true;await sync.refresh();expect(sync.fresh()).toBe(false)
  expect(contexts.at(-1)).toBe(true);sync.stop()
 })
+
+it('rechecks optional capabilities on automatic reconnection after an unsupported host restarts',async()=>{
+ vi.useFakeTimers();let online=true,supported=false,cachedUnsupported=false,received=false
+ const sync=createSyncController({poll:async()=>{if(!online)throw Error('offline');return snapshot},apply:()=>{},state:()=>{},afterSync:async({force})=>{if(cachedUnsupported&&!force)return;if(!supported){cachedUnsupported=true;return}received=true},now:()=>Date.now()})
+ await sync.refresh();expect(cachedUnsupported).toBe(true)
+ online=false;await vi.advanceTimersByTimeAsync(2000);online=true;supported=true
+ await vi.advanceTimersByTimeAsync(2000);expect(received).toBe(true);sync.stop()
+})

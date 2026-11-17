@@ -14,7 +14,7 @@ export interface SharingConfig {
   credentialRef:string|null; pendingCredentialDeleteRef:string|null; certificateRef:string|null; privateKeyRef:string|null
 }
 export interface MemberConnection extends SharingAddress { hostId:string; datasetId:string; certificatePin:string; credentialRef:string }
-export interface CredentialRecord { hash:string; deviceId:string; status:'pending'|'active'|'revoked' }
+export interface CredentialRecord { hash:string; deviceId:string; installationId:string|null; status:'pending'|'active'|'revoked' }
 type Row=Record<string,string|bigint|null>
 function requiredText(value:unknown,field:string):string {
   if(typeof value!=='string' || !value.trim())throw new DomainValidationError(field)
@@ -138,7 +138,7 @@ export function createSharingStore(db:DatabaseHandle) {
       const hash=credentialHash(input.hash)
       // Re-pairing invalidates incomplete delivery; old hashes remain recognizable and revoked.
       db.prepare("UPDATE sharing_credentials SET status='revoked' WHERE device_id=? AND status='pending'").run(device.id)
-      db.prepare("INSERT INTO sharing_credentials(hash,device_id,status) VALUES(?,?,'pending')").run(hash,device.id)
+      db.prepare("INSERT INTO sharing_credentials(hash,device_id,status,installation_id) VALUES(?,?,'pending',?)").run(hash,device.id,(db.prepare('SELECT installation_id FROM sharing_devices WHERE id=?').get(device.id) as Row).installation_id)
     }),
     revokePendingCredentials:db.transaction((deviceId:string)=>{
       requireHost();getDevice(deviceId)
@@ -154,7 +154,7 @@ export function createSharingStore(db:DatabaseHandle) {
     findCredential:(hash:string):CredentialRecord|undefined=>{
       credentialHash(hash)
       const r=db.prepare('SELECT * FROM sharing_credentials WHERE hash=?').get(hash) as Row|undefined
-      return r?{hash:String(r.hash),deviceId:String(r.device_id),status:r.status as CredentialRecord['status']}:undefined
+      return r?{hash:String(r.hash),deviceId:String(r.device_id),installationId:r.installation_id as string|null,status:r.status as CredentialRecord['status']}:undefined
     },
     saveProject:changeTransaction(db,(input:SharedProjectInput)=>{
       requireHost()

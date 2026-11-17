@@ -53,6 +53,7 @@ const sharingInvoke=async(command:string,...args:unknown[])=>{
   catch{return {ok:false,error:{code:'IPC_UNAVAILABLE',message:'공유 상태를 확인하지 못했습니다.'}}}
 }
 const sharingApi={
+  saveHolidays:(v)=>sharingInvoke('saveHolidays',v),
   getState:()=>sharingInvoke('getState'),configureHost:(v)=>sharingInvoke('configureHost',v),setHosting:(v)=>sharingInvoke('setHosting',v),
   connect:(v)=>sharingInvoke('connect',v),confirmHost:(v)=>sharingInvoke('confirmHost',v),approve:(v)=>sharingInvoke('approve',v),
   saveDevice:(v)=>sharingInvoke('saveDevice',v),revokeDevice:(v)=>sharingInvoke('revokeDevice',v),deleteDevice:(v)=>sharingInvoke('deleteDevice',v),saveProject:(v)=>sharingInvoke('saveProject',v),

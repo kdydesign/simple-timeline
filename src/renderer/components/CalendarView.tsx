@@ -1,3 +1,4 @@
+import {holidayName} from "../../domain/holidays";
 import {restoreFocus} from '../state/restoreFocus';
 import {CalendarDragPreview, CalendarDragLabel} from './CalendarDragPreview';
 import {calendarPreviewSegments} from '../../visualization/calendar';
@@ -20,7 +21,7 @@ import type { YearMonth } from "../../shared/types";
 import { useScheduleDrag } from "../state/useScheduleDrag";
 import { DayScheduleList } from "./DayScheduleList";
 export function CalendarView({
-  snapshot,
+  snapshot, holidays, holidayNotice,
   onAddDate, onDragStart, onDragCommit, onDragEnd, onMonth,
   selectedMonth, selectedDate,
   onEditSchedule,
@@ -139,6 +140,7 @@ export function CalendarView({
           ))}
         </div>
         </div>
+        {holidayNotice&&<p className="holiday-notice" role="status">{holidayNotice}</p>}
         {grid.weeks.map((week, wi) => (
           <div className="calendar-week" key={wi}>
             <div className="calendar-dates">
@@ -150,17 +152,19 @@ export function CalendarView({
                     type="button"
                     disabled={disabled || !date}
                     aria-label={date ? `${date} 일정 추가` : "날짜 없음"}
+                    aria-description={date?holidayName(date,holidays)||undefined:undefined}
                     aria-pressed={date === selectedDate}
                     aria-current={date === today ? "date" : undefined}
                     onClick={() => date && onAddDate?.(date)}
                     data-date={date ?? undefined}
                     data-focus={date ? `date:${date}` : undefined}
-                    className={(inMonth ? "month-date" : "adjacent-date") + (date && date === hoveredDate ? " date-hovered" : "")}
+                    className={(inMonth ? "month-date" : "adjacent-date") + (date&&holidayName(date,holidays)?" nonworking-day":"") + (date && date === hoveredDate ? " date-hovered" : "")}
                     key={c}
                   >
                     <time dateTime={date ?? undefined}>
                       {date ? Number(date.slice(8)) : ""}
                     </time>
+                    <span className="calendar-holiday-name">{date?holidayName(date,holidays):""}</span>
                   </button>
                 );
               })}

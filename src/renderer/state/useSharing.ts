@@ -57,6 +57,7 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
    const result=await run(async():Promise<Result<SharingState>>=>{
     const version=eventVersion.current,result=await api.sync()
     if(!result.ok)return result
+    if(result.data.holidays?.status==='error')return{ok:false,error:{code:'STORAGE_IO',message:result.data.holidays.message}}
     if(result.data.status!=='connected')return{ok:false,error:{code:'STORAGE_IO',message:sharingDescription(result.data)}}
     if(version!==eventVersion.current&&latest.current?.status!=='connected')return{ok:false,error:{code:'STORAGE_IO',message:latest.current?sharingDescription(latest.current):'공유 연결을 확인하지 못했습니다.'}}
     accept(result.data)

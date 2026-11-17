@@ -27,7 +27,7 @@ function memoryStore() {
     getDevice: id => { const d = devices.find(x => x.id === id); if (!d) throw Error('missing'); return { ...d } },
     getDeviceInstallationId: id => bindings.get(id) ?? null,
     saveDevice: input => { const d = devices.find(x => x.id === input.id)!; Object.assign(d, input); if (input.installationId) bindings.set(d.id, input.installationId); return { ...d } },
-    putCredential: ({ deviceId, hash }) => { store.revokePendingCredentials(deviceId); credentials.set(hash, { hash, deviceId, status: 'pending' }) },
+    putCredential: ({ deviceId, hash }) => { store.revokePendingCredentials(deviceId); credentials.set(hash, { hash, deviceId, installationId:bindings.get(deviceId)??null, status: 'pending' }) },
     revokePendingCredentials: deviceId => { for (const c of credentials.values()) if (c.deviceId === deviceId && c.status === 'pending') c.status = 'revoked' },
     activateCredential: hash => { const c = credentials.get(hash); if (!c || c.status !== 'pending' || devices.find(d => d.id === c.deviceId)?.revoked) throw Error('forbidden'); for (const other of credentials.values()) if (other.deviceId === c.deviceId && other.status === 'active') other.status = 'revoked'; c.status = 'active' },
     findCredential: hash => credentials.get(hash),
@@ -35,7 +35,7 @@ function memoryStore() {
   }
   return { store, devices, credentials, snapshot }
 }
-async function fixture(options: { now?: () => number;onSyncComplete?:(id:string)=>void } = {}) {
+async function fixture(options: { now?: () => number;onSyncComplete?:(id:string,version?:unknown,versionBindingCurrent?:boolean)=>void;onPairConfirmed?:(pair:import('../../src/main/sharing/host').PendingPair)=>void;holidays?:()=>unknown } = {}) {
   const memory = memoryStore()
   const host = createSharingHost({ identity, store: memory.store, ...options })
   const address = await host.start('127.0.0.1', 0)
@@ -54,6 +54,43 @@ async function ready(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 describe('real loopback pinned HTTPS and pairing', () => {
+  it('does not attribute an old credential report to a newly approved installation before acknowledgement',async()=>{
+    const reports:unknown[]=[];let presence=0;const f=await fixture({onSyncComplete:(_id,v,current)=>{presence++;if(current)reports.push(v)}});await ready(f)
+    const oldToken=f.saved()!.token
+    await pinnedRequest({address:f.address,trust:f.trust,path:'/v1/snapshot',token:oldToken,appVersion:'0.8.6'})
+    expect(reports).toEqual(['0.8.6']);reports.length=0
+    const next=new SharingClient({installationId:datasetId,trust:f.trust,address:f.address,persistence:{load:async()=>null,save:async()=>{}}});cleanup.push(async()=>next.close())
+    const pair=await next.beginPair();f.host.approve(pair.pairId)
+    await pinnedRequest({address:f.address,trust:f.trust,path:'/v1/snapshot',token:oldToken,appVersion:'0.8.6'})
+    expect(reports).toEqual([]);expect(presence).toBe(2)
+    await next.confirmPair(pair.pairId,pair.fingerprint)
+    await expect(pinnedRequest({address:f.address,trust:f.trust,path:'/v1/snapshot',token:oldToken,appVersion:'0.8.6'})).rejects.toMatchObject({code:'REVOKED'})
+  })
+  it('serves holidays only to approved PCs with a separate ETag and preserves legacy snapshots',async()=>{
+    const envelope={schemaVersion:1,hostId,datasetId,revision:installationId,calendar:{weekdays:[3],dates:[]}}
+    const f=await fixture({holidays:()=>envelope});await ready(f)
+    await expect(pinnedRequest({address:f.address,trust:f.trust,path:'/v1/holidays'})).rejects.toMatchObject({code:'UNAUTHORIZED'})
+    const h=await pinnedRequest({address:f.address,trust:f.trust,path:'/v1/holidays',token:f.saved()!.token})
+    expect(h.body).toEqual(envelope)
+    expect((await pinnedRequest({address:f.address,trust:f.trust,path:'/v1/holidays',token:f.saved()!.token,etag:h.etag})).status).toBe(304)
+    expect(Object.keys((await f.client.poll() as any).snapshot)).toEqual(['protocolVersion','hostId','datasetId','projects','schedules'])
+    const received=await f.client.pollHolidays();expect(received).toMatchObject({kind:'updated',envelope})
+    if(received.kind==='updated')f.client.acceptHolidayEtag(received.etag)
+    expect(await f.client.pollHolidays()).toEqual({kind:'unchanged'})
+  })
+  it('reports version only with successful authenticated sync and notifies only first member confirmation',async()=>{
+    const reports:unknown[]=[],notices:string[]=[]
+    const f=await fixture({onSyncComplete:(_id,v)=>reports.push(v),onPairConfirmed:p=>notices.push(p.pairId)})
+    const pair=await f.client.beginPair();expect(notices).toEqual([])
+    expect((await f.client.confirmPair(pair.pairId,pair.fingerprint)).kind).toBe('pending')
+    expect(notices).toEqual([pair.pairId])
+    await f.client.confirmPair(pair.pairId,pair.fingerprint);expect(notices).toEqual([pair.pairId])
+    f.host.approve(pair.pairId);await f.client.poll()
+    await pinnedRequest({address:f.address,trust:f.trust,path:'/v1/snapshot',token:f.saved()!.token,appVersion:'0.8.6'})
+    await new Promise(r=>setTimeout(r,10));expect(reports).toEqual(['0.8.6'])
+    const pre=await fixture({onPairConfirmed:p=>notices.push(p.pairId)});await ready(pre);expect(notices).toEqual([pair.pairId])
+    expect(await pre.client.pollHolidays()).toEqual({kind:'unsupported'})
+  })
   it('synchronizes authenticated change envelopes even when snapshot ETag has not changed', async () => {
     const f = await fixture(); await ready(f)
     let received: unknown[] = []
@@ -330,8 +367,8 @@ describe('real loopback pinned HTTPS and pairing', () => {
   })
   it('invalidates orphan pending credentials on host restart while retaining active credentials', async () => {
     const m = memoryStore()
-    m.credentials.set('1'.repeat(64), { hash: '1'.repeat(64), deviceId: 'device-a', status: 'active' })
-    m.credentials.set('2'.repeat(64), { hash: '2'.repeat(64), deviceId: 'device-a', status: 'pending' })
+    m.credentials.set('1'.repeat(64), { hash: '1'.repeat(64), deviceId: 'device-a', installationId:null, status: 'active' })
+    m.credentials.set('2'.repeat(64), { hash: '2'.repeat(64), deviceId: 'device-a', installationId:null, status: 'pending' })
     const host = createSharingHost({ identity, store: m.store })
     cleanup.push(() => host.dispose())
     await host.start('127.0.0.1', 0)

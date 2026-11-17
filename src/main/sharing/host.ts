@@ -1,4 +1,5 @@
 import type { UpdateRoutes } from '../updates/transport'
+import {validateHolidayEnvelope} from '../../domain/holidays'
 import { validateChangeEnvelope } from '../../domain/change-notifications'
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:https'
@@ -44,7 +45,7 @@ function send(res: ServerResponse, status: number, body?: unknown, etag?: string
   res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', connection: 'close', ...(bytes ? { 'content-length': bytes.length } : {}), ...(etag ? { etag } : {}) })
   res.end(bytes)
 }
-export function createSharingHost(options: { identity: HostIdentity; store: HostStore; onChange?: () => void; onSyncComplete?:(deviceId:string)=>void; now?: () => number; updates?: UpdateRoutes }) {
+export function createSharingHost(options: { identity: HostIdentity; store: HostStore; onChange?: () => void; onSyncComplete?:(deviceId:string,version?:unknown,versionBindingCurrent?:boolean)=>void; onPairConfirmed?:(pair:PendingPair)=>void; holidays?:()=>unknown; now?: () => number; updates?: UpdateRoutes }) {
   const { identity, store } = options
   const now = options.now ?? (() => performance.now())
   const attempts = new Map<string, Attempt>()
@@ -81,7 +82,14 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       if (!server) fail('ABORTED', 503)
       const ip = req.socket.remoteAddress
       if (!ip || !/^\d+\.\d+\.\d+\.\d+$/.test(ip)) fail('UNAUTHORIZED', 401)
-      const completedSync=(deviceId:string)=>res.once('finish',()=>{try{if(server&&requestGeneration===generation&&[200,304].includes(res.statusCode)&&authenticate(req,ip).id===deviceId)options.onSyncComplete?.(deviceId)}catch{/* Revoked or replaced before response completion. */}})
+      const completedSync=(deviceId:string)=>res.once('finish',()=>{
+        try{
+          if(!server||requestGeneration!==generation||![200,304].includes(res.statusCode)||authenticate(req,ip).id!==deviceId)return
+          const credential=store.findCredential(hashCredential(req.headers.authorization!.slice(7)))
+          const versionBindingCurrent=credential?.installationId===store.getDeviceInstallationId(deviceId)
+          options.onSyncComplete?.(deviceId,versionBindingCurrent?req.headers['x-planrail-version']:undefined,versionBindingCurrent)
+        }catch{/* Revoked or replaced before response completion. */}
+      })
       const clock = now()
       for (const [key, r] of rate) if (clock - r.start >= 60000) rate.delete(key)
       let r = rate.get(ip)
@@ -97,6 +105,11 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       if (req.headers['x-planrail-protocol'] !== '1') fail('PROTOCOL_MISMATCH', 409)
       const config = store.getConfig()
       if (req.method === 'GET' && req.url === '/v1/identity') { send(res, 200, { protocolVersion: 1, hostId: config.hostId, datasetId: config.datasetId }); return }
+      if(req.method==='GET'&&req.url==='/v1/holidays'&&options.holidays){
+        authenticate(req,ip)
+        const value=validateHolidayEnvelope(options.holidays()),etag=`"${hashCredential(JSON.stringify(value))}"`
+        send(res,req.headers['if-none-match']===etag?304:200,req.headers['if-none-match']===etag?undefined:value,etag);return
+      }
       if (req.method === 'GET' && req.url === '/v1/snapshot') {
         const device = authenticate(req, ip)
         // Store owns the coherent filtered read. ETag cannot reveal private-project revisions.
@@ -141,7 +154,10 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       const b = object(body, keys), a = getAttempt(b.pairId, req.headers['x-planrail-proof'], ip)
       if (req.url === '/v1/pair/confirm') {
         if (b.fingerprint !== a.fingerprint) fail('FINGERPRINT_MISMATCH', 409)
-        a.memberApproved = true; changed(); send(res, 200, { kind: 'confirmed' }); return
+        const notify=!a.memberApproved&&!a.hostApproved
+        a.memberApproved = true; changed();
+        if(notify){try{options.onPairConfirmed?.(publicPair(a))}catch{/* Notification failures never change the pairing result. */}}
+        send(res, 200, { kind: 'confirmed' }); return
       }
       if (!a.hostApproved || !a.memberApproved) { send(res, 202, { kind: 'pending' }); return }
       if (req.url === '/v1/pair/finish') {
@@ -179,6 +195,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       return { address, port: bound.port }
     },
     pending(): PendingPair[] { expire(); for(const a of attempts.values())if(store.getDevice(a.deviceId).revoked)discard(a); return [...attempts.values()].filter(a => !a.acknowledged).map(publicPair) },
+    needsApproval(pairId:string){expire();const a=attempts.get(pairId);if(!a||!a.memberApproved||a.hostApproved)return false;const d=store.getDevice(a.deviceId);return !d.revoked&&d.ip===a.ip},
     approve(pairId: string) {
       const a = attempts.get(pairId)
       if (!a) fail('PAIR_EXPIRED', 410)

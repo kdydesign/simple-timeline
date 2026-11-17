@@ -37,7 +37,12 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await expect(h.locator('code')).toHaveText(pair.fingerprint);await expect(m.locator('code')).toHaveText(pair.fingerprint);
   await h.locator('code').scrollIntoViewIfNeeded();await capture(host,'dark-host-before-pair-settings');await capture(member,'dark-member-before-pair-settings');
   for(const d of [host,member]){await d.page.getByRole('button',{name:'공유 설정 닫기'}).click();const panel=await settings(d);if(d===member){await expect(panel.getByLabel('호스트 IP')).toHaveValue('127.0.0.1');await expect(panel.getByLabel('포트',{exact:true})).toHaveValue(String(port))}await panel.locator('code').scrollIntoViewIfNeeded();await capture(d,d===host?'dark-host-pair-settings':'dark-member-pair-settings');await panel.getByRole('button',{name:'공유 설정 닫기'}).click();await settings(d)}
-  await m.getByRole('button',{name:'전체 지문 일치 확인'}).click();await h.getByRole('button',{name:'지문 확인 · 연결 승인'}).click();await host.page.getByRole('button',{name:'일치 확인 후 승인'}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');
+  expect(await host.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(0);
+  await m.getByRole('button',{name:'전체 지문 일치 확인'}).click();
+  await expect.poll(()=>host.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(1);
+  await host.app.evaluate(()=>new Promise<void>(resolve=>setImmediate(()=>{(globalThis as any).changeClicks[0]();resolve()})));
+  await expect(h.getByRole('heading',{name:'연결 승인',exact:true})).toBeVisible();
+  await h.getByRole('button',{name:'지문 확인 · 연결 승인'}).click();await host.page.getByRole('button',{name:'일치 확인 후 승인'}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');
   await expect.poll(async()=>(await sharingState(host)).connectedMembers).toBe(1);await expect(h.getByText('연결 1대',{exact:true})).toBeVisible();await expect(h.locator('.sharing-device-presence').getByText('연결됨',{exact:true})).toBeVisible();
   await m.getByRole('button',{name:'공유 설정 닫기'}).click();await h.getByRole('button',{name:'공유 설정 닫기'}).click();
   // Convert original host project without changing numeric source identity.
@@ -47,7 +52,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await expect(member.page.getByRole('button',{name:'개발 편집',exact:true})).toBeVisible();
   await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(1);
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages[0])).toMatchObject({body:'1.1.1 핫픽스 프로젝트가 공유되었습니다.'});
-  expect(await host.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(0);
+  expect(await host.app.evaluate(()=>(globalThis as any).changeMessages)).toEqual([{title:'Planrail 연결 승인 요청',body:'멤버 PC · 127.0.0.2 — 연결 승인을 기다립니다.'}]);
   const mixed=await snapshot(member),remote=mixed.schedules.find(s=>s.sharing==='member')!;
   expect(remote.id).not.toBe('1');expect(mixed.schedules.find(s=>s.id==='1')?.name).toBe('개인 일정');
   const sync=member.page.getByRole('button',{name:'수동 동기화',exact:true});expect(await sync.evaluate(el=>el.nextElementSibling?.getAttribute('aria-label'))).toBe('조회 모드');await expect(member.page.locator('.brand .sharing-status')).toHaveClass(/connected/);

@@ -1,21 +1,17 @@
 {
-  "source": "6fad3ca74a5f37452e0e276ba0c65a25b4d67fa1",
+  "source": "f53b165beacd576ebd3e27c83c3e1f5aff780435",
   "dirty": true,
-  "version": "0.8.5",
+  "version": "0.8.6",
   "runtimeVersion": "0.0",
   "platform": "linux",
-  "recordedAt": "2026-11-17T00:08:25.618Z",
+  "recordedAt": "2026-11-17T05:05:13.838Z",
   "command": "tests/e2e/help-assets.spec.ts",
   "synthetic": true,
-  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only.",
-  "commands": [
-    "tests/e2e/help-assets.spec.ts",
-    "tests/e2e/help-member-assets.spec.ts",
-    "tests/e2e/help-update-assets.spec.ts"
-  ],
+  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only. Holiday settings from the isolated actual renderer, captured by holidays.spec.ts.",
   "files": [
     "app-overview.png",
     "calendar.png",
+    "holidays.png",
     "host-address.png",
     "member-address.png",
     "member-toolbar.png",
@@ -27,5 +23,11 @@
     "updates-host.png",
     "updates-member.png"
   ],
-  "versionNote": "Source package 0.8.5; unpackaged isolated fixture reports runtimeVersion 0.0. All listed assets recaptured from this implementation with synthetic data; startup behavior was not benchmarked by these captures."
+  "commands": [
+    "tests/e2e/help-assets.spec.ts",
+    "tests/e2e/help-member-assets.spec.ts",
+    "tests/e2e/help-update-assets.spec.ts",
+    "tests/e2e/holidays.spec.ts"
+  ],
+  "versionNote": "Source package 0.8.6; unpackaged isolated fixture reports runtimeVersion 0.0. All listed images recaptured with synthetic data. Not a Windows performance measurement."
 }

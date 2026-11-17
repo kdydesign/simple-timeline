@@ -25,6 +25,17 @@ const ready = async (
   return s
 }
 export const cases: NativeCase[] = [
+  {name:'v6 upgrade preserves projects and active credentials while binding version reports and default holidays',async run(ctx){
+    const old=await ready(ctx,migrations.filter(m=>m.version<=6))
+    const project=old.repository.createProject({name:'업그레이드 보존',color:'#2563EB',participants:[]})
+    old.db.prepare("INSERT INTO sharing_devices(id,name,ip,installation_id) VALUES('legacy','Legacy','127.0.0.1',?)").run('11111111-1111-4111-8111-111111111111')
+    old.db.prepare("INSERT INTO sharing_credentials(hash,device_id,status) VALUES(?,'legacy','active')").run('a'.repeat(64))
+    old.db.close()
+    const next=await ready(ctx)
+    assert.equal(next.repository.getSnapshot().projects[0].id,project.id)
+    assert.equal((next.db.prepare('SELECT installation_id FROM sharing_credentials').get() as any).installation_id,'11111111-1111-4111-8111-111111111111')
+    assert.deepEqual(JSON.parse((next.db.prepare('SELECT calendar FROM sharing_holidays').get() as any).calendar),{weekdays:[0,6],dates:[]})
+  }},
   {
     name: 'missing sharing identity blocks startup and preserves the entire database',
     async run(ctx) {

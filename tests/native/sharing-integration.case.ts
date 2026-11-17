@@ -161,7 +161,7 @@ export const cases:NativeCase[]=[
  }},
  {name:'resume reports host stop storage failure without escaping into the personal lifecycle',async run(ctx){
   const {db,repo}=setup(ctx),store=createSharingStore(db);store.configureHost({address:'127.0.0.1',port:47831});store.setHosting({enabled:true})
-  const service=createSharingService({storage:{state:'ready',db,repository:repo},profile:ctx.tempDir,changed:()=>{},secrets:async()=>createProtectedSecrets(ctx.tempDir,vault),transport:{host:()=>({start:async(address,port)=>({address,port}),stop:async()=>{throw Error('disk failure')},pending:()=>[],approve:()=>{},dispose:async()=>{}})}})
+  const service=createSharingService({storage:{state:'ready',db,repository:repo},profile:ctx.tempDir,changed:()=>{},secrets:async()=>createProtectedSecrets(ctx.tempDir,vault),transport:{host:()=>({start:async(address,port)=>({address,port}),stop:async()=>{throw Error('disk failure')},pending:()=>[],needsApproval:()=>false,approve:()=>{},dispose:async()=>{}})}})
   await service.start();assert.equal(service.getState().status,'connected');await assert.doesNotReject(service.resume());assert.equal(service.getState().status,'error');await service.dispose()
  }},
  {name:'orderly host disposal preserves desired hosting and refuses an unselected bind interface',async run(ctx){

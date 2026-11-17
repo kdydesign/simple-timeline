@@ -66,7 +66,7 @@ export async function discoverHost(address: string, port: number, options: { sig
 export interface PinnedRequestOptions {
   address: SharingAddress; trust: HostTrust; path: string; method?: 'GET' | 'POST'
   body?: unknown; token?: string; proof?: string; etag?: string; signal?: AbortSignal
-  timeoutMs?: number; localAddress?: string
+  timeoutMs?: number; localAddress?: string; appVersion?:string
 }
 export interface TransportResponse { status: number; body: unknown; etag?: string }
 export async function pinnedRequest(options: PinnedRequestOptions): Promise<TransportResponse> {
@@ -82,6 +82,7 @@ export async function pinnedRequest(options: PinnedRequestOptions): Promise<Tran
       checkServerIdentity: (name, cert) => checkServerIdentity(name, cert) ?? (certificatePin(cert.raw) === options.trust.pin ? undefined : new SharingNetworkError('TLS_UNTRUSTED')),
       path: options.path, method: options.method ?? 'GET', headers: {
         'x-planrail-protocol': '1', ...(data ? { 'content-type': 'application/json', 'content-length': data.length } : {}),
+        ...(options.appVersion?{'x-planrail-version':options.appVersion}:{}),
         ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
         ...(options.proof ? { 'x-planrail-proof': options.proof } : {}), ...(options.etag ? { 'if-none-match': options.etag } : {}),
       },

@@ -1,4 +1,5 @@
 # 진행 상태
+최신 후속: 0.8.6 [멤버 버전·공통 휴일·연결 승인 요청 알림](../design/member-versions-holidays-and-pairing-notices.md)은 Q1~Q11과 시안 검토 후 전체 구현을 승인받았다. 제품 구현·독립 검토 보정·로컬 전체7단계 검증을 완료했다. 최종 SHA의 원격 CI는 Actions와 완료 보고를 따른다. [구현 기록](../implementation/2026-11-17-member-holidays.md). 기존 MVP 지도 완료 상태는 유지한다.
 최신 후속: 0.8.5 릴리즈노트·저장 확인·창 외형·도움말 진단 구현·독립 검토·로컬 전체 검증 완료. 원격 CI는 최종 SHA의 Actions와 종료 보고를 따른다. [승인 설계](../design/release-notes-and-confirmations.md) · [검증 기록](../implementation/2026-11-17-release-notes-confirmations.md). 최초 도움말13초의 실제 성능 수정은 새 Windows 진단 이후이며, 사전 준비 시점은 유지한다.
 이전 후속: 0.8.4 [편집·탐색·전체 기능 도움말](../design/editing-navigation-and-help.md) Q1~Q8 구현·독립 검토·로컬 전체 검증 완료. 원격 CI와 최종 SHA는 종료 보고에서 확인한다. [구현 기록](../implementation/2026-11-16-editing-navigation-help.md)에서 검증 상태를 확인한다. 기존 MVP 지도는 유지한다.
 
