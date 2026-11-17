@@ -14,7 +14,7 @@ export function Select({id,label,value,options,onChange,disabled=false,escapeCli
  return <div className="custom-select"><Root value={value} onValueChange={onChange} disabled={disabled} open={open} onOpenChange={value=>{if(value){opening.current++;nextFocus.current=null}setOpen(value)}}>
   <SelectTrigger {...accessibility} ref={button} id={triggerId} aria-label={label} className="select-trigger"><SelectValue/></SelectTrigger>
   <span ref={setContainer} data-overlay-container=""/>
-  {container&&<SelectContent data-select-owner={triggerId} container={escapeClipping?(document.querySelector<HTMLElement>('.saving-content')??document.body):container} position="popper" align="start" sideOffset={6} collisionPadding={{top:48,bottom:9,left:9,right:9}} className="select-popover" aria-label={label}
+  {container&&<SelectContent data-select-owner={triggerId} container={escapeClipping?(button.current?.closest<HTMLElement>('[data-slot="alert-dialog-content"],[data-slot="dialog-content"]')??document.querySelector<HTMLElement>('.saving-content')??document.body):container} position="popper" align="start" sideOffset={6} collisionPadding={{top:48,bottom:9,left:9,right:9}} className="select-popover" aria-label={label}
    onEscapeKeyDown={e=>e.stopPropagation()}
    onKeyDown={e=>{if(e.key==='Escape')e.stopPropagation();if(e.key==='Tab'){e.preventDefault();e.stopPropagation();tab(e.shiftKey)}}}
    onCloseAutoFocus={e=>{

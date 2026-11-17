@@ -1,5 +1,5 @@
 import type { UpdateRoutes } from '../updates/transport'
-import {validateHolidayEnvelope} from '../../domain/holidays'
+import {validateHolidayEnvelope,expandHolidayCalendar} from '../../domain/holidays'
 import { validateChangeEnvelope } from '../../domain/change-notifications'
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:https'
@@ -105,9 +105,10 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
       if (req.headers['x-planrail-protocol'] !== '1') fail('PROTOCOL_MISMATCH', 409)
       const config = store.getConfig()
       if (req.method === 'GET' && req.url === '/v1/identity') { send(res, 200, { protocolVersion: 1, hostId: config.hostId, datasetId: config.datasetId }); return }
-      if(req.method==='GET'&&req.url==='/v1/holidays'&&options.holidays){
+      if(req.method==='GET'&&['/v1/holidays','/v1/holidays/ranges'].includes(req.url??'')&&options.holidays){
         authenticate(req,ip)
-        const value=validateHolidayEnvelope(options.holidays()),etag=`"${hashCredential(JSON.stringify(value))}"`
+        const envelope=validateHolidayEnvelope(options.holidays())
+        const value=req.url==='/v1/holidays'?{...envelope,calendar:expandHolidayCalendar(envelope.calendar)}:envelope,etag=`"${hashCredential(JSON.stringify(value))}"`
         send(res,req.headers['if-none-match']===etag?304:200,req.headers['if-none-match']===etag?undefined:value,etag);return
       }
       if (req.method === 'GET' && req.url === '/v1/snapshot') {

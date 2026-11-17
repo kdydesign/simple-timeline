@@ -28,7 +28,7 @@ export const cases:NativeCase[]=[
    assert.equal(service.memberSnapshot().projects.length,0);assert.equal(service.getState().holidays?.status,'current')
    assert.equal(extras.versions()[device.id].version,'0.8.6')
    const count=()=>h.db.prepare('SELECT COUNT(*) AS n FROM sharing_change_events').get()
-   const before=count(),sent=notifications,calendar={weekdays:[3],dates:[{date:'2026-11-20',name:'창립기념일'}]}
+   const before=count(),sent=notifications,calendar={weekdays:[3],dates:[{date:'2026-11-20',endDate:'2026-11-22',name:'창립기념일'}]}
    extras.saveCalendar(calendar);await service.sync()
    assert.deepEqual(service.getState().holidays?.calendar,calendar);assert.deepEqual(count(),before);assert.equal(notifications,sent)
    invalid=true;await service.sync();assert.equal(service.getState().holidays?.status,'error');assert.deepEqual(service.getState().holidays?.calendar,calendar)
@@ -57,6 +57,13 @@ export const cases:NativeCase[]=[
   assert.deepEqual(h.calendar.weekdays,[3]);assert.equal(x.hostCalendar().revision,h.revision)
   assert.throws(()=>x.saveCalendar({weekdays:[6],dates:[{date:'2026-02-29',name:'실패'}]}))
   assert.deepEqual(x.hostCalendar(),h);assert.deepEqual(repo.getSnapshot(),before)
+  const range=x.saveCalendar({weekdays:[3],dates:[{date:'2026-12-24',endDate:'2026-12-26',name:'연말 휴무'}]})
+  assert.deepEqual(createSharingExtras(db).hostCalendar(),range)
+  assert.throws(()=>x.saveCalendar({weekdays:[],dates:[...range.calendar.dates,{date:'2026-12-25',name:'겹침'}]}))
+  assert.deepEqual(x.hostCalendar(),range)
+  db.exec("CREATE TRIGGER fail_holiday_range BEFORE UPDATE ON sharing_holidays BEGIN SELECT RAISE(ABORT,'test disk write failure'); END")
+  assert.throws(()=>x.saveCalendar({weekdays:[],dates:[]}));assert.deepEqual(x.hostCalendar(),range)
+  db.exec('DROP TRIGGER fail_holiday_range')
  }},
  {name:'member holiday cache rejects another host and clears on explicit disconnect',run(ctx){
   const {db}=setup(ctx),s=createSharingStore(db),x=createSharingExtras(db)

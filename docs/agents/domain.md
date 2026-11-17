@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| 휴일 기간·날짜 삼각 표시 | [승인 설계](../design/holiday-ranges-and-markers.md) · [구현 기록](../implementation/2026-11-17-holiday-ranges.md) |
 | 멤버 버전·공통 휴일·승인 요청 알림 협의 | [승인 설계](../design/member-versions-holidays-and-pairing-notices.md) · [0.8.6 구현·검증](../implementation/2026-11-17-member-holidays.md). Q1~Q11·시안 승인 후 구현, 기존 프로토콜 호환 유지 |
 | 현재 작업 상태·인수 범위 | [STATUS](../wayfinder/STATUS.md), [MVP 사용자 인수](../release/user-acceptance.md) |
 | 최신 화면 재질·디자인 | [0.8.1 버튼 재질](../implementation/2026-11-12-startup-and-install.md), [0.6.10 참여자 한 줄 배치](../implementation/2026-11-11-participant-row.md), [0.6.9 참여자·알림 컨트롤](../implementation/2026-11-11-sharing-participants.md), [0.6.8 목록·알림 간편 편집](../implementation/2026-11-11-quick-actions.md), [0.6.7 저장 진행·필드 오류·공유 설정](../implementation/2026-11-11-form-experience.md), [0.6.5~0.6.6 다크 전용·간트 탐색·트랙 경계 구현 기록](../implementation/2026-11-11-dark-navigation.md), [Forest Crystal 승인 설계](../design/forest-crystal.md), [0.6.4 딥 그레이·스틸 블루](../implementation/2026-11-11-steel-blue.md), [0.6.3 행 밀도·알림 스위치](../implementation/2026-11-10-compact-rows.md), [0.6.2 투과·P 아이콘](../implementation/2026-11-10-glass-correction.md). 기존 C안 배치와 기능을 유지하며 색상·재질은 이 설계를 우선 |

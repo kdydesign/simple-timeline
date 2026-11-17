@@ -25,7 +25,8 @@ import {
   indexSnapshot,
   scheduleDescription,
 } from "../../visualization/presentation";
-import {holidayName} from "../../domain/holidays";
+import {HolidayDateTooltip} from "./HolidayDateTooltip";
+import {holidayName,namedHoliday} from "../../domain/holidays";
 import type {HolidayCalendar} from "../../shared/holidays";
 import { GanttNavigation } from "./GanttNavigation";
 import {IconButton} from './Icon';
@@ -82,7 +83,6 @@ export function GanttView({
   const now = new Date();
   const today = `${String(now.getFullYear()).padStart(4, "0")}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const todayOrdinal = toOrdinal(today), selectedOrdinal = selectedDate ? toOrdinal(selectedDate) : null;
-  const [focusedHoliday,setFocusedHoliday]=useState<string|null>(null);
   const [hoveredDate, setHoveredDate] = useState<number | null>(null);
   const [extension,setExtension] = useState<{start:number;end:number}|null>(null);
   const selectedBounds = monthBounds(selectedMonth);
@@ -362,7 +362,6 @@ export function GanttView({
 
       </div>
       {!hideEmptyChrome&&holidayNotice&&<p className="holiday-notice" role="status">{holidayNotice}</p>}
-      {!hideEmptyChrome&&<span className="gantt-holiday-name">{hoveredDate!==null?holidayName(fromOrdinal(hoveredDate),holidays):focusedHoliday?holidayName(focusedHoliday,holidays):''}</span>}
       {outside && !hideEmptyChrome && (
         <p className="range-notice" role="status">
           선택 월은 전체 일정 범위 밖입니다
@@ -392,12 +391,11 @@ export function GanttView({
               </span>
             ))}
           {dates.map((d) => (
-            <button
+            <HolidayDateTooltip key={d.date} date={d.date} calendar={holidays}><button
               disabled={disabled}
               tabIndex={d.i*P-x >= 0 && (d.i+1)*P-x <= size.width ? 0 : -1}
               aria-label={`${d.date} 일정 추가`}
-              aria-description={holidayName(d.date,holidays)||undefined}
-              onFocus={()=>setFocusedHoliday(d.date)} onBlur={()=>setFocusedHoliday(null)}
+              aria-description={namedHoliday(d.date,holidays)?.name}
               onClick={() => onAddDate?.(d.date)}
               aria-pressed={d.date === selectedDate}
               aria-current={d.date === today ? "date" : undefined}
@@ -408,7 +406,7 @@ export function GanttView({
               style={{ left: d.i * P - x, width: P }}
             >
               {Number(d.date.slice(8))}
-            </button>
+            </button></HolidayDateTooltip>
           ))}
         </div>
       </div>

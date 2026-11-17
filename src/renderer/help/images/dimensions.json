@@ -1,34 +1,54 @@
 {
   "updates-host.png": {
-    "width": 561,
-    "height": 302
+    "width": 880,
+    "height": 280
+  },
+  "project-editor.png": {
+    "width": 389,
+    "height": 820
   },
   "project-share.png": {
     "width": 388,
     "height": 635
   },
+  "app-overview.png": {
+    "width": 1440,
+    "height": 960
+  },
   "member-toolbar.png": {
     "width": 1440,
-    "height": 121
+    "height": 120
   },
   "updates-member.png": {
     "width": 320,
-    "height": 198
+    "height": 151
+  },
+  "calendar.png": {
+    "width": 1410,
+    "height": 1195
+  },
+  "holidays.png": {
+    "width": 880,
+    "height": 442
   },
   "participants.png": {
-    "width": 560,
-    "height": 372
+    "width": 880,
+    "height": 371
   },
   "member-address.png": {
-    "width": 569,
+    "width": 568,
     "height": 181
+  },
+  "schedule-editor.png": {
+    "width": 389,
+    "height": 820
   },
   "reminders.png": {
     "width": 347,
     "height": 172
   },
   "host-address.png": {
-    "width": 560,
+    "width": 880,
     "height": 229
   }
 }

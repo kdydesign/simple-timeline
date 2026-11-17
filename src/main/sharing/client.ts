@@ -35,6 +35,7 @@ export class SharingClient {
   private busy = false
   private changesSupported: boolean | null = null
   private holidaySupported:boolean|null=null
+  private holidayRanges:boolean|null=null
   private holidayEtag:string|undefined
   private readonly options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string;appVersion?:string }
   constructor(options: { installationId: string; trust: HostTrust; address: SharingAddress; persistence: CredentialPersistence; expectedDatasetId?: string; timeoutMs?: number; localAddress?: string;appVersion?:string }) {
@@ -168,7 +169,15 @@ export class SharingClient {
       if(this.holidaySupported===false&&!options.force)return {kind:'unsupported'}
       const etag=options.force?undefined:this.holidayEtag
       let response:TransportResponse
-      try{response=await this.request('/v1/holidays',{token:connection.token,etag,timeoutMs:1500},options.signal)}
+      try{
+        const ranges=this.holidayRanges!==false||options.force
+        try{response=await this.request(ranges?'/v1/holidays/ranges':'/v1/holidays',{token:connection.token,etag,timeoutMs:1500},options.signal);if(ranges)this.holidayRanges=true}
+        catch(error){
+          if(!ranges||this.holidayRanges===true||!(error instanceof SharingNetworkError)||error.status!==404)throw error
+          this.holidayRanges=false
+          response=await this.request('/v1/holidays',{token:connection.token,etag,timeoutMs:1500},options.signal)
+        }
+      }
       catch(error){if(error instanceof SharingNetworkError&&error.status===404){this.holidaySupported=false;this.holidayEtag=undefined;return {kind:'unsupported'}}throw error}
       if(response.status===304){if(!etag||response.etag!==etag)throw new SharingNetworkError('INVALID_RESPONSE');return {kind:'unchanged'}}
       let envelope

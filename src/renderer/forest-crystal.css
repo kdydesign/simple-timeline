@@ -110,7 +110,7 @@ html, body { background: transparent; }
 .toolbar .icon-button, .sharing-filter button, .editor-actions button,
 .calendar-top .icon-button, .project-list-row > .icon-button,
 .project-popup-heading .icon-button, .project-popup-footer .icon-button,
-.confirm .actions button, .sharing-settings button {
+.confirm .actions button, .sharing-settings button:not(.date-picker button) {
   border: 1px solid var(--control-border);
   background: var(--control);
   background-image: var(--control-sheen);
@@ -133,7 +133,7 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
   filter: none;
 }
 .toolbar .primary:hover:enabled { background-color: var(--selected-control); }
-.month-input .date-input input, .editor input:not([type="checkbox"]), .select-trigger {
+.month-input .date-input input, .editor input:not([type="checkbox"]), .holiday-form input, .select-trigger {
   background: var(--control);
   border: 1px solid var(--control-border);
   border-radius: 9px;
@@ -307,14 +307,12 @@ button:disabled { box-shadow: none; }
 .holiday-form { display:grid;grid-template-columns:minmax(165px,1fr) minmax(120px,1fr) auto;gap:8px;align-items:start;margin-top:10px; }
 .holiday-form label { display:block;margin-bottom:6px;font-size:12px; }
 .holiday-form>.holiday-actions { margin-top:24px; }
-.holiday-form input { width:100%;min-width:0; }
+.holiday-form > div > input,.holiday-form .date-input input { width:100%;min-width:0; }
 .holiday-notice { color:var(--muted);font-size:11px;margin:4px 14px; }
-.gantt-holiday-name { min-height:18px;flex-shrink:0;color:#edb6be;font-size:11px;padding:0 14px; }
 .calendar-dates>button { flex-direction:column;min-width:0; }
 .calendar-dates>button.nonworking-day { --date-base:var(--nonworking-day); }
 .calendar-dates>button.nonworking-day[aria-current=date] { --date-base:var(--today); }
 .calendar-dates>button.nonworking-day[aria-pressed=true] { --date-base:var(--selected-date); }
-.calendar-holiday-name { color:#edb6be;font-size:11px;line-height:18px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap; }
 .calendar-week { min-height:182px; }
 .calendar-lanes { padding-top:54px; }
 .calendar-preview-layer { top:54px; }
@@ -421,5 +419,18 @@ html[data-update-frozen="true"] .saving-content { opacity:.65; }
 .holiday-weekday-label { padding: 5px 9px; border: 1px solid transparent; border-radius: 5px; color: var(--muted); }
 .holiday-weekday-label[data-active="true"] { background: var(--nonworking-day); border-color: #bd65654d; color: var(--text); }
 
-.calendar-dates>button:hover .calendar-holiday-name:not(:empty),
-.calendar-dates>button:focus-visible .calendar-holiday-name:not(:empty) { overflow:visible;white-space:normal;overflow-wrap:anywhere;position:relative;z-index:4;background:var(--popup-glass);backdrop-filter:blur(10px);border-radius:4px; }
+
+/* Holiday range form shares the schedule date field and calendar controls. */
+.sharing-settings.sharing-settings-host { width:min(940px,calc(100vw - 48px));max-width:940px; }
+.holiday-form { grid-template-columns:minmax(145px,1fr) minmax(145px,1fr) minmax(130px,1.15fr) auto;gap:10px; }
+.holiday-form .schedule-date-field>label { margin:0 0 6px;font-size:12px; }
+.holiday-form > div > input,.holiday-form .date-input input { height:40px; }
+.holiday-form>.holiday-actions { margin-top:24px; }
+.holiday-form>.holiday-actions button { height:40px;white-space:nowrap; }
+.holiday-form .field-error { max-width:100%;overflow-wrap:anywhere; }
+.holiday-marker { position:absolute;top:2px;left:2px;width:0;height:0;border-top:6px solid #edb6be;border-right:6px solid transparent;pointer-events:none; }
+.calendar-dates>button { position:relative; }
+.holiday-tooltip { max-width:300px;white-space:normal;overflow-wrap:anywhere; }
+.holiday-tooltip strong,.holiday-tooltip span { display:block; }
+.holiday-tooltip span { font-size:11px;font-weight:400;margin-top:3px; }
+@media(max-width:800px){.holiday-form{grid-template-columns:repeat(2,minmax(0,1fr))}.holiday-form>.holiday-actions{grid-column:auto;justify-content:flex-end;margin-top:24px}}

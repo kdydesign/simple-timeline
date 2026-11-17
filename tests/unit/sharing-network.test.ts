@@ -78,6 +78,28 @@ describe('real loopback pinned HTTPS and pairing', () => {
     if(received.kind==='updated')f.client.acceptHolidayEtag(received.etag)
     expect(await f.client.pollHolidays()).toEqual({kind:'unchanged'})
   })
+  it('negotiates ranges while legacy peers receive independent dates with isolated ETags',async()=>{
+    const envelope={schemaVersion:1,hostId,datasetId,revision:installationId,calendar:{weekdays:[0,6],dates:[{date:'9999-12-30',endDate:'9999-12-31',name:'연말'}]}}
+    const f=await fixture({holidays:()=>envelope});await ready(f)
+    const legacy=await pinnedRequest({address:f.address,trust:f.trust,path:'/v1/holidays',token:f.saved()!.token})
+    expect((legacy.body as any).calendar.dates).toEqual([{date:'9999-12-30',name:'연말'},{date:'9999-12-31',name:'연말'}])
+    const ranges=await f.client.pollHolidays();expect(ranges).toMatchObject({kind:'updated',envelope})
+    if(ranges.kind==='updated'){expect(ranges.etag).not.toBe(legacy.etag);f.client.acceptHolidayEtag(ranges.etag)}
+    expect(await f.client.pollHolidays()).toEqual({kind:'unchanged'})
+    await expect(pinnedRequest({address:f.address,trust:f.trust,path:'/v1/holidays/ranges'})).rejects.toMatchObject({code:'UNAUTHORIZED'})
+  })
+  it('falls back to legacy holiday dates only on explicit unsupported range route',async()=>{
+    const f=await fixture();await ready(f);const paths:string[]=[]
+    const envelope={schemaVersion:1,hostId,datasetId,revision:installationId,calendar:{weekdays:[0],dates:[{date:'2026-12-25',name:'성탄절'}]}}
+    const server=createServer({cert:identity.certificate,key:identity.privateKey},(req,res)=>{
+      paths.push(req.url!);if(req.url==='/v1/snapshot'){res.setHeader('etag','"'+'b'.repeat(64)+'"');res.end(JSON.stringify(f.snapshot));return}if(req.url?.endsWith('/ranges')||req.url==='/v1/changes/sync'){res.writeHead(404);res.end(JSON.stringify({code:'NOT_FOUND'}));return}
+      res.setHeader('etag','"'+'a'.repeat(64)+'"');res.end(JSON.stringify(envelope))
+    })
+    const address=await listen(server),client=new SharingClient({installationId,address,trust:f.trust,persistence:{load:async()=>f.saved(),save:async()=>{}}});cleanup.push(async()=>client.close())
+    await client.poll();paths.length=0
+    expect(await client.pollHolidays()).toMatchObject({kind:'updated',envelope})
+    expect(paths).toEqual(['/v1/holidays/ranges','/v1/holidays'])
+  })
   it('reports version only with successful authenticated sync and notifies only first member confirmation',async()=>{
     const reports:unknown[]=[],notices:string[]=[]
     const f=await fixture({onSyncComplete:(_id,v)=>reports.push(v),onPairConfirmed:p=>notices.push(p.pairId)})

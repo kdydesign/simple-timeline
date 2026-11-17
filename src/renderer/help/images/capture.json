@@ -1,13 +1,13 @@
 {
-  "source": "f53b165beacd576ebd3e27c83c3e1f5aff780435",
+  "source": "1a054653ae5fab10de1687dd050190a7fcae773f",
   "dirty": true,
-  "version": "0.8.6",
+  "version": "0.8.7",
   "runtimeVersion": "0.0",
   "platform": "linux",
-  "recordedAt": "2026-11-17T05:05:13.838Z",
+  "recordedAt": "2026-11-17T07:32:10.530Z",
   "command": "tests/e2e/help-assets.spec.ts",
   "synthetic": true,
-  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only. Holiday settings from the isolated actual renderer, captured by holidays.spec.ts.",
+  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only. All 13 shipped help images refreshed, including member/update panels and holiday range form.",
   "files": [
     "app-overview.png",
     "calendar.png",
@@ -29,5 +29,5 @@
     "tests/e2e/help-update-assets.spec.ts",
     "tests/e2e/holidays.spec.ts"
   ],
-  "versionNote": "Source package 0.8.6; unpackaged isolated fixture reports runtimeVersion 0.0. All listed images recaptured with synthetic data. Not a Windows performance measurement."
+  "versionNote": "Source package 0.8.7; unpackaged isolated fixture reports runtimeVersion 0.0. Synthetic fixtures only. Not Windows performance evidence."
 }

@@ -24,3 +24,22 @@ describe('host common holiday calendar',()=>{
 })
 
 it('accepts bounded SemVer prerelease/build identifiers without accepting arbitrary text',()=>{expect(reportedVersion('0.8.6-rc.1+build.2')).toBe('0.8.6-rc.1+build.2');expect(reportedVersion('0.8.6-01')).toBeNull()})
+
+it('keeps inclusive ranges as one entry and finds every named date without weekly labels',()=>{
+ const c=validateHolidayCalendar({weekdays:[0,6],dates:[{date:'2026-12-24',endDate:'2026-12-26',name:' 연말 휴무 '}]})
+ expect(c.dates).toEqual([{date:'2026-12-24',endDate:'2026-12-26',name:'연말 휴무'}])
+ expect(holidayName('2026-12-25',c)).toBe('연말 휴무')
+ expect(holidayName('2026-12-26',c)).toBe('연말 휴무')
+})
+it('rejects overlapping periods naming the conflicting item and rejects inverted ranges',()=>{
+ expect(()=>validateHolidayCalendar({weekdays:[6],dates:[{date:'2026-12-24',endDate:'2026-12-26',name:'연말 휴무'},{date:'2026-12-26',endDate:'2026-12-28',name:'다른 휴무'}]})).toThrow(/연말 휴무.*2026-12-24.*2026-12-26/)
+ expect(()=>validateHolidayCalendar({weekdays:[],dates:[{date:'2026-12-26',endDate:'2026-12-24',name:'역전'}]})).toThrow(/종료일/)
+})
+it('bounds covered dates, handles leap and final year endpoints and normalizes one day',()=>{
+ expect(validateHolidayCalendar({weekdays:[],dates:[{date:'2028-02-28',endDate:'2028-03-01',name:'윤년'},{date:'9999-12-31',endDate:'9999-12-31',name:'끝'}]}).dates[1]).toEqual({date:'9999-12-31',name:'끝'})
+ expect(()=>validateHolidayCalendar({weekdays:[],dates:[{date:'0001-01-01',endDate:'9999-12-31',name:'너무 김'}]})).toThrow(/1,000/)
+})
+
+it('identifies the existing period even when the newly added period begins earlier',()=>{
+ expect(()=>validateHolidayCalendar({weekdays:[],dates:[{date:'2026-12-25',name:'성탄절'},{date:'2026-12-24',endDate:'2026-12-26',name:'신규'}]})).toThrow(/성탄절.*2026-12-25/)
+})

@@ -1,4 +1,5 @@
-import {holidayName} from "../../domain/holidays";
+import {HolidayDateTooltip} from "./HolidayDateTooltip";
+import {holidayName,namedHoliday} from "../../domain/holidays";
 import {restoreFocus} from '../state/restoreFocus';
 import {CalendarDragPreview, CalendarDragLabel} from './CalendarDragPreview';
 import {calendarPreviewSegments} from '../../visualization/calendar';
@@ -148,11 +149,11 @@ export function CalendarView({
                 const inMonth =
                   date && date >= bounds.start && date <= bounds.end;
                 return (
-                  <button
+                  <HolidayDateTooltip key={c} date={date} calendar={holidays}><button
                     type="button"
                     disabled={disabled || !date}
                     aria-label={date ? `${date} 일정 추가` : "날짜 없음"}
-                    aria-description={date?holidayName(date,holidays)||undefined:undefined}
+                    aria-description={date?namedHoliday(date,holidays)?.name:undefined}
                     aria-pressed={date === selectedDate}
                     aria-current={date === today ? "date" : undefined}
                     onClick={() => date && onAddDate?.(date)}
@@ -164,8 +165,7 @@ export function CalendarView({
                     <time dateTime={date ?? undefined}>
                       {date ? Number(date.slice(8)) : ""}
                     </time>
-                    <span className="calendar-holiday-name">{date?holidayName(date,holidays):""}</span>
-                  </button>
+                  </button></HolidayDateTooltip>
                 );
               })}
             </div>

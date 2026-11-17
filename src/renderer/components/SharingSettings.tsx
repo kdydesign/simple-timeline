@@ -51,7 +51,7 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
  };
  const affected=(id:string)=>state.projects.filter(p=>p.participants.some(v=>v.deviceId===id)).map(p=>projects.find(v=>v.id===p.id)?.name??p.id).join(', ')||'없음';
  const saveAddress=async()=>{const result=await run(()=>state.role==='host'||(state.role==='personal'&&choice==='host')?api.configureHost({address,port:Number(port)}):api.connect({address,port:Number(port)}));if(result.ok)setSavedAddress({address,port})};
- return <><AlertDialog open><AlertDialogContent ref={panel} role="dialog" className="sharing-settings" onOpenAutoFocus={e=>{e.preventDefault();const target=panel.current?.querySelector<HTMLElement>('.sharing-settings-scroll button:not(:disabled),.sharing-settings-scroll input:not(:disabled)');restoreFocus(target??panel.current)}} onEscapeKeyDown={escape} onCloseAutoFocus={e=>{
+ return <><AlertDialog open><AlertDialogContent ref={panel} role="dialog" className={`sharing-settings${state.role==='host'?' sharing-settings-host':''}`} onOpenAutoFocus={e=>{e.preventDefault();const target=panel.current?.querySelector<HTMLElement>('.sharing-settings-scroll button:not(:disabled),.sharing-settings-scroll input:not(:disabled)');restoreFocus(target??panel.current)}} onEscapeKeyDown={escape} onCloseAutoFocus={e=>{
   e.preventDefault();
   const original=returnTarget.current;
   const target=original?.isConnected&&original.tabIndex>=0&&!original.closest('[inert],[hidden]')&&!original.matches(':disabled')?original:[...document.querySelectorAll<HTMLElement>('#editor-name,[aria-label="편집 닫기"],[data-focus="project-add"]')].find(el=>!el.closest('[inert],[hidden]')&&!el.matches(':disabled'));

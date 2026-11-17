@@ -1,6 +1,10 @@
 export const releaseTypes={Feat:'기능 추가',Fix:'오류 수정',Perf:'성능 개선',Docs:'도움말·문서'} as const
 export interface ReleaseNote {version:string;summary:string;sections:{type:keyof typeof releaseTypes;items:string[]}[];notes?:string[]}
 export const releaseNotes:ReleaseNote[]=[
+ {version:'0.8.7',summary:'휴일 기간 관리와 날짜 표시 개선',sections:[
+  {type:'Feat',items:['시작일·종료일로 휴일을 한 기간으로 등록·수정·삭제합니다. 겹치는 기간은 기존 항목을 안내하고 저장하지 않습니다.']},
+  {type:'Fix',items:['휴일 입력을 한 줄로 정리하고 일정 날짜 선택기와 동일한 스타일을 적용했습니다. 공유 설정에서 월 선택 목록이 가려지거나 좁아지던 문제를 수정했습니다.','간트 상단 날짜 눈금과 달력 날짜 칸에 삼각형으로 등록된 휴일을 표시하며 마우스 오버·키보드 포커스 때 이름을 보여줍니다. 반복 요일 문구는 제거했습니다.']},
+  {type:'Docs',items:['휴일 기간 관리와 구버전 멤버 호환 안내를 갱신했습니다.']}],notes:['휴일 변경 알림과 일정 기간 계산은 기존과 같습니다. 구버전 멤버에는 기간을 날짜별로 전달합니다.']},
  {version:'0.8.6',summary:'멤버 버전 확인과 공통 휴일표',sections:[
   {type:'Feat',items:['호스트의 참여자 목록에서 멤버가 마지막으로 보고한 실행 버전을 확인합니다.','공유 설정에서 날짜별 휴일과 반복 요일을 관리하고 승인된 모든 멤버의 간트·달력에 동기화합니다.','멤버가 확인 코드를 확인하고 승인을 기다리면 호스트에게 Windows 알림을 보냅니다.']},
   {type:'Docs',items:['공통 휴일표와 멤버 버전·연결 승인 요청 알림 사용법을 도움말에 추가했습니다.']}],notes:['휴일 변경은 알림을 보내지 않으며 일정 기간·알림 날짜 계산을 바꾸지 않습니다. 공식 공휴일 자동 수집은 제공하지 않습니다.','구버전의 프로젝트·일정 동기화는 유지됩니다. 새 휴일표와 버전 보고는 호스트·멤버 업데이트가 필요합니다.']},

@@ -1,4 +1,5 @@
-export interface HolidayCalendar { weekdays: number[]; dates: {date:string;name:string}[] }
+export interface HolidayDate {date:string;endDate?:string;name:string}
+export interface HolidayCalendar { weekdays: number[]; dates: HolidayDate[] }
 export interface HolidayEnvelope {schemaVersion:1;hostId:string;datasetId:string;revision:string;calendar:HolidayCalendar}
 export interface HolidayState {
  calendar:HolidayCalendar
