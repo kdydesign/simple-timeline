@@ -19,6 +19,7 @@
 | 도구·명령·검증 범위 | [package.json](../../package.json), [CI](../../.github/workflows/), [검증 안내](../harness/validation.md) |
 | 공유 변경 Windows 알림 | [승인 설계](../design/shared-change-notifications.md). Q1~Q13 전체 확정. [0.7.0 구현·검증 기록](../implementation/2026-11-11-shared-change-notifications.md)에서 실제 검증 범위와 실기 잔여 항목 확인. 기존 날짜 알림과 별개 |
 | 업데이트 알림·전체 무음·접속 멤버·트레이 조회 | [승인 설계](../design/notification-controls-and-member-presence.md). Q1~Q8 개별 결정 및 Q9 문서 전체 확정. [0.8.3 구현 기록](../implementation/2026-11-16-notification-controls-and-presence.md). 도움말 빌드 성공 후 구현을 요청받아 반영했으며 검증 범위는 기록 참조 |
+| 릴리즈노트·저장 확인·도움말 진단 | [0.8.5 승인 설계](../design/release-notes-and-confirmations.md) · [구현·검증](../implementation/2026-11-17-release-notes-confirmations.md). 미저장 초안 폐기는 유지하고 실제 저장/삭제 확인, 별도 릴리즈노트, 도움말 구간 진단과 taskbar 아이콘을 추가 |
 | 편집 폐기·Space 탐색·전체 기능 도움말 | [0.8.4 승인 설계](../design/editing-navigation-and-help.md) · [구현·검증](../implementation/2026-11-16-editing-navigation-help.md). 기존 미저장 확인/UPDATE 대기를 갱신하고 도움말 사전 준비·재사용·성능 계측을 추가 |
 | 호스트·멤버 도움말 창 | [승인 설계·시안](../design/host-member-help.md). H1~H8 확정 후 별도 구현 요청. [0.8.2 구현·검증](../implementation/2026-11-16-host-member-help.md). 독립 창·역할별 목차/검색·이미지 확대·트레이 연동. 도움말 CI 실패는 bfb7887에서 수정하고 Windows/Linux 전체 성공 확인 |
 | 호스트 배포 기반 앱 업데이트 | [승인 설계](../design/lan-app-updates.md). Q1~Q20·문서 전체·구현 진행 승인. [0.8.0 구현·검증](../implementation/2026-11-11-lan-app-updates.md)에 구현과 실제 Windows 미검증 범위를 기록했다. 호스트 ZIP 등록·멤버 UPDATE·파일 검증·안전한 설치 인계 계약 |

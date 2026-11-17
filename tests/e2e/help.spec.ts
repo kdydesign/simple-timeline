@@ -36,7 +36,9 @@ test('offline help isolates capabilities, remembers reading and follows tray wit
  expect(await openHelp(d)).toBe(h)
  await expect(h.getByRole('heading',{name:'참여자 등록과 승인'})).toBeVisible();await expect.poll(()=>h.locator('main').evaluate(e=>e.scrollTop)).toBe(140)
  await expect.poll(async()=>{try{return JSON.parse(await readFile(join(d.profile,'help-latest.json'),'utf8')).requests.filter((r:any)=>r.readyMs!==undefined).length}catch{return 0}}).toBe(3)
+ await expect.poll(async()=>JSON.parse(await readFile(join(d.profile,'help-latest.json'),'utf8')).renderer?.moduleReady).toEqual(expect.any(Number))
  const timings=JSON.parse(await readFile(join(d.profile,'help-latest.json'),'utf8'));await info.attach('help-timings',{body:JSON.stringify(timings,null,2),contentType:'application/json'})
+ expect(timings.schemaVersion).toBe(2);expect(timings.preload.completed).toBeGreaterThanOrEqual(timings.preload.started);expect(timings.resourceRequests.some((r:any)=>r.kind==='document')).toBe(true)
  for(const r of timings.requests){expect(r.shownMs).toBeGreaterThanOrEqual(r.clickedMs);expect(r.readyMs).toBeGreaterThanOrEqual(r.clickedMs)}
  await h.getByRole('searchbox').fill('업데이트');await expect(h.getByRole('button',{name:/UPDATE로 설치하기/})).toBeVisible()
  await h.setViewportSize({width:560,height:600});await h.getByRole('button',{name:'목차 접기'}).click();expect(await h.locator('main').evaluate(e=>e.scrollWidth<=e.clientWidth)).toBe(true)

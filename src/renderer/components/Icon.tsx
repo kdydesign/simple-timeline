@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes } from 'react';
 import {Button} from './ui/button';
 import {Tooltip,TooltipTrigger,TooltipContent} from './ui/tooltip';
 const paths = {
+ release:'M6 3h8l4 4v14H6Z M14 3v5h4M9 12h6M9 16h6',
  help:'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5m0 3h.01',
  trash:'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7', bell:'M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9M10 21h4',
  refresh:'M20 7v5h-5M4 17v-5h5M6 8a7 7 0 0 1 12-2l2 3M4 15l2 3a7 7 0 0 0 12-2', connection:'M12 4a8 8 0 1 1 0 16 8 8 0 0 1 0-16Z M9 12l2 2 4-4',

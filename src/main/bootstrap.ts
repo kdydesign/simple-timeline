@@ -1,10 +1,12 @@
 /// <reference types="electron-vite/node" />
+import {configureTaskbarDetails} from './taskbar-details'
 import {createNotificationStore} from './db/notifications'
 import {createUpdateNotifications} from './notifications/updates'
 import {dueReminders} from '../domain/reminder'
 import { windowsLoginStartup } from './windows-login-startup'
 import { createHelpPerformance } from './help-performance'
 import { createHelpWindow } from './help-window'
+import { createReleaseWindow } from './release-window'
 import { parseInstallExit, createInstallExit } from './install-exit'
 import { UpdateCatalog } from './updates/catalog'
 import { createUpdateRoutes, type UpdateRoutes } from './updates/transport'
@@ -143,8 +145,9 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     desktopIcon,
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
+  configureTaskbarDetails(window,{platform:process.platform,packaged:app.isPackaged,exePath:process.execPath})
   let help:ReturnType<typeof createHelpWindow>|undefined
-  freezeInputs = () => { window.setEnabled(false); window.hide();help?.hideWithMain() }
+  freezeInputs = () => { window.setEnabled(false); window.hide();help?.hideWithMain();releases.hideWithMain() }
   let exiting = false, shutdownComplete = false, finishingShutdown = false
   const notificationPolicy=storage.state==='ready'?createNotificationStore(storage.db):undefined
   const localReminderStore=storage.state==='ready'?createReminderStore(storage.db):undefined
@@ -188,7 +191,8 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   help=createHelpWindow({performance:createHelpPerformance(profile,app.getVersion()),mainWindow:window,url:new URL('help.html',rendererUrl).href,preload:join(__dirname,'../preload/help.cjs'),role:()=>sharing?.getState().role??'personal',version:app.getVersion(),icon:desktopIcon,
     onError:()=>{show();dialog.showErrorBox('도움말을 열지 못했습니다','주 창은 계속 사용할 수 있습니다. 물음표 버튼을 눌러 도움말을 다시 열어 주세요.')},
   })
-  const unregisterWindow = registerWindowIpc(window, rendererUrl,()=>{if(!exiting&&!installPending)help?.open()})
+  const releases=createReleaseWindow({mainWindow:window,url:new URL('release-notes.html',rendererUrl).href,preload:join(__dirname,'../preload/release-notes.cjs'),version:app.getVersion(),icon:desktopIcon,onError:()=>{show();dialog.showErrorBox('릴리즈노트를 열지 못했습니다','주 창은 계속 사용할 수 있습니다. 릴리즈노트 버튼을 눌러 다시 열어 주세요.')}})
+  const unregisterWindow = registerWindowIpc(window, rendererUrl,()=>{if(!exiting&&!installPending)help?.open()},()=>{if(!exiting&&!installPending)releases.open()})
   const unregister = registerTimelineIpc(
     window,
     storage.state==='ready'&&sharing?{...storage,repository:sharing.repository}:storage,
@@ -226,7 +230,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     if (window.isDestroyed() || (installPending && !installExitFailed)) return
     if (window.isMinimized()) window.restore()
     window.show()
-    help?.restoreWithMain()
+    help?.restoreWithMain();releases.restoreWithMain()
     window.focus()
   }
   let reminderIpc: ReturnType<typeof registerReminderIpc> | undefined
@@ -284,7 +288,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       }),
     {
       allowClose:()=>shutdownComplete,
-      hide: tray ? () => {window.hide();help?.hideWithMain()} : undefined,
+      hide: tray ? () => {window.hide();help?.hideWithMain();releases.hideWithMain()} : undefined,
       chooseClose: tray ? undefined : () => options.chooseClose ? options.chooseClose(!!tray) : (async () => {
         const choices: CloseChoice[] = ['quit', 'cancel']
         const result = await dialog.showMessageBox(window, {
@@ -295,7 +299,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         })
         return choices[result.response] ?? 'cancel'
       })(),
-      beforeClose: async () => { await appMutationBarrier.freezeForShutdown();await updates?.dispose();await stopServices();exiting = true;help?.dispose() },
+      beforeClose: async () => { await appMutationBarrier.freezeForShutdown();await updates?.dispose();await stopServices();exiting = true;help?.dispose();releases.dispose() },
       afterClose: () => app.quit(),
     },
   )
@@ -309,7 +313,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
   async function finishShutdown(){
-    help?.dispose()
+    help?.dispose();releases.dispose()
     powerMonitor.removeListener('resume',resume);powerMonitor.removeListener('suspend',suspend)
     nativeReminders.dispose()
     if(storage.state==='ready'&&storage.db.open)storage.db.close()

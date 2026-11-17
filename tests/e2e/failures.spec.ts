@@ -47,6 +47,7 @@ for (const fault of ["schedule-full", "schedule-lost", "schedule-refresh"])
       await p.getByLabel("시작일", { exact: true }).fill("2026-12-20");
       await p.getByLabel("종료일", { exact: true }).fill("2026-12-20");
       await p.getByRole("button", { name: "저장", exact: true }).click();
+      await p.getByRole("alertdialog").getByRole("button", { name: "일정 추가", exact: true }).click();
       await expect(p.getByRole("alert")).toContainText(
         fault === "schedule-full"
           ? "저장 공간"
@@ -95,6 +96,7 @@ for (const fault of ["schedule-full", "schedule-lost", "schedule-refresh"])
         );
         expect(snapshot.ok && snapshot.data.schedules).toHaveLength(1);
         await p.getByRole("button", { name: "저장", exact: true }).click();
+        await p.getByRole("alertdialog").getByRole("button", { name: "일정 추가", exact: true }).click();
         await expect(calendar.locator('[data-segment="2"]')).toHaveCount(1);
       }
     });

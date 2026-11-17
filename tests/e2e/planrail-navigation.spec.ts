@@ -78,7 +78,7 @@ test.describe('Planrail zoom and Space pan',()=>{
       await target.click({trial:true})
       const box=await target.boundingBox()
       await p.mouse.move(box!.x+box!.width/2,box!.y+box!.height/2);await p.mouse.down()
-      await p.mouse.move(box!.x+box!.width/2+delta,box!.y+box!.height/2,{steps:4});await p.mouse.up()
+      await p.mouse.move(box!.x+box!.width/2+delta,box!.y+box!.height/2,{steps:4});await p.mouse.up();await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click()
       await expect(bar).toHaveAttribute('aria-label',new RegExp(dates))
     }
   })

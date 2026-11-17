@@ -27,8 +27,8 @@ test.describe('approved improvements',()=>{
     const p=d.page;await choose(p,'2026-12-01')
     const bar=p.locator('[data-bar="3"]')
     await expect(bar).toHaveAttribute('data-days','1')
-    await drag(p,bar,56,'end');await expect(bar).toHaveAttribute('data-days','3')
-    await drag(p,bar,-28);await expect(bar).toHaveAttribute('aria-label',/2026-12-17 — 2026-12-19/)
+    await drag(p,bar,56,'end');await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();await expect(bar).toHaveAttribute('data-days','3')
+    await drag(p,bar,-28);;await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();await expect(bar).toHaveAttribute('aria-label',/2026-12-17 — 2026-12-19/)
     await bar.click({trial:true})
     const b=await box(bar);await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down();await p.mouse.move(b.x+b.width/2-56,b.y+b.height/2,{steps:5})
     await p.keyboard.press('Escape');await p.mouse.up();await expect(bar).toHaveAttribute('aria-label',/2026-12-17 — 2026-12-19/)
@@ -37,7 +37,7 @@ test.describe('approved improvements',()=>{
   test('calendar drags by dates and blocks dirty editor changes',async({desktop:d})=>{
     const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12-01');await p.getByRole('button',{name:'달력',exact:true}).click()
     const bar=p.locator('[data-segment="3"]'),cell=await box(p.locator('[data-date="2026-12-18"]'))
-    await drag(p,bar,cell.width,'end')
+    await drag(p,bar,cell.width,'end');await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
     await expect(bar).toHaveAttribute('aria-label',/2026-12-18 — 2026-12-19/)
     await bar.click();await p.getByLabel('일정 이름',{exact:true}).fill('미저장')
     await expect(p.locator('main')).not.toHaveAttribute('inert')
@@ -83,7 +83,7 @@ test.describe('drag navigation and failure protection',()=>{
     await expect(p.locator('.calendar h2')).toHaveText('2027-01 월간 달력')
     await expect(p.getByLabel('선택 날짜',{exact:true})).toHaveValue('2026-12-01')
     const target=await box(p.locator('[data-date="2027-01-04"]'))
-    await p.mouse.move(target.x+target.width/2,target.y+20,{steps:4});await p.mouse.up()
+    await p.mouse.move(target.x+target.width/2,target.y+20,{steps:4});await p.mouse.up();await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click()
     await expect(p.locator('[data-segment="3"]')).toHaveAttribute('aria-label',/2027-01-04 — 2027-01-04/)
   })
   test('failed drag preserves data and a clean open editor',async({desktop:d})=>{
@@ -96,7 +96,7 @@ test.describe('drag navigation and failure protection',()=>{
       ipcMain.removeHandler('schedule:update')
       ipcMain.handle('schedule:update',()=>({ok:false,error:{code:'STORAGE_FULL',message:'드래그 저장 실패'}}))
     })
-    await drag(p,bar,28,'end')
+    await drag(p,bar,28,'end');await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
     await expect(p.getByRole('alert')).toContainText('드래그 저장 실패')
     await expect(bar).toHaveAttribute('data-days','1')
     await expect(p.getByLabel('종료일',{exact:true})).toHaveValue('2026-12-18')
@@ -138,7 +138,7 @@ test.describe('drag bounds and editor synchronization',()=>{
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
     await expect(p.locator('main')).not.toHaveAttribute('inert')
     await p.getByRole('scrollbar',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
-    await drag(p,bar,28,'end')
+    await drag(p,bar,28,'end');await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
     await expect(p.getByLabel('종료일',{exact:true})).toHaveValue('2026-12-19')
     await expect(p.locator('html')).toHaveAttribute('data-editor-dirty','false')
     await p.getByRole('button',{name:'편집 닫기'}).click()

@@ -43,6 +43,9 @@ test("keyboard CRUD remains usable at a 200 percent equivalent viewport with lon
   await p.keyboard.insertText("키보드 일정");
   await tabTo(p, p.getByRole("button", { name: "저장", exact: true }));
   await p.keyboard.press("Enter");
+  await expect(p.getByRole("alertdialog")).toBeVisible();
+  await tabTo(p,p.getByRole("alertdialog").getByRole("button",{name:"일정 추가",exact:true}));
+  await p.keyboard.press("Enter");
   const schedule = p.getByRole("button", {
     name: "키보드 일정 편집",
     exact: true,

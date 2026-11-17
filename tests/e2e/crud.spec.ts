@@ -31,6 +31,7 @@ test("UI → IPC → SQLite CRUD persists across restart and cascades atomically
     await p.getByLabel("시작일", { exact: true }).fill(start);
     await p.getByLabel("종료일", { exact: true }).fill(end);
     await p.getByRole("button", { name: "저장", exact: true }).click();
+    await p.getByRole("alertdialog").getByRole("button", { name: "일정 추가", exact: true }).click();
     await expect(
       p.getByRole("button", { name: `${name} 편집`, exact: true }),
     ).toBeVisible();
@@ -40,6 +41,7 @@ test("UI → IPC → SQLite CRUD persists across restart and cascades atomically
   await p.getByRole("button", { name: "QA 편집", exact: true }).click();
   await p.getByLabel("일정 이름", { exact: true }).fill("QA 수정");
   await p.getByRole("button", { name: "저장", exact: true }).click();
+  await p.getByRole("alertdialog").getByRole("button", { name: "변경", exact: true }).click();
   await expect(
     p.getByRole("button", { name: "QA 수정 편집", exact: true }),
   ).toBeVisible();

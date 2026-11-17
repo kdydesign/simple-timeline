@@ -1,7 +1,7 @@
 import {test,expect} from './fixture';
 test.use({seed:'hotfix'});
 
-test('approved graphite glass fills square window corners with a single fine border and blue actions',async({desktop:{page:p}})=>{
+test('approved graphite glass fills square window corners without a root border and with blue actions',async({desktop:{page:p}})=>{
 
  await p.locator('[data-focus="schedule-add"]').click();
  const paint=await p.evaluate(()=>{
@@ -14,7 +14,7 @@ test('approved graphite glass fills square window corners with a single fine bor
    blur:getComputedStyle(document.querySelector('.toolbar')!,'::before').backdropFilter,
    opacity:css('.editor').opacity};
  });
- expect(paint.radius).toBe('0px');expect(paint.border).toBe('1px');expect(paint.shadow).toBe('none');
+ expect(paint.radius).toBe('0px');expect(paint.border).toBe('0px');expect(paint.shadow).toBe('none');
  expect(paint.before).toBe('none');expect(paint.after).toBe('none');
  expect(paint.root).toBe('rgba(32, 34, 37, 0.42)');
  expect(paint.panel).toBe('rgba(43, 46, 49, 0.5)');

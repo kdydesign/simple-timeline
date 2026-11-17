@@ -22,6 +22,6 @@ test('participant field errors, deletion and compact reminder rows work in Elect
  const start=p.getByRole('switch',{name:'시작일 알림',exact:true}),end=p.getByRole('switch',{name:'종료일 알림',exact:true})
  const a=await start.boundingBox(),b=await end.boundingBox();expect(a?.width).toBe(32);expect(a?.height).toBe(18);expect(b!.y).toBeGreaterThan(a!.y+a!.height);expect(b!.x).toBe(a!.x)
  await start.focus();await p.keyboard.press('Space');await expect(start).toBeChecked()
- await p.screenshot({path:`${screens}/reminders.png`});await p.getByRole('button',{name:'저장',exact:true}).click();await expect(p.locator('.saving-shield')).toHaveCount(0)
+ await p.screenshot({path:`${screens}/reminders.png`});await p.getByRole('button',{name:'저장',exact:true}).click();await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();await expect(p.locator('.saving-shield')).toHaveCount(0)
  await p.getByRole('button',{name:'개발 알림 설정',exact:true}).click();const quick=p.getByRole('dialog',{name:'알림 설정',exact:true});expect((await quick.getByRole('switch',{name:'시작일 알림',exact:true}).boundingBox())?.width).toBe(32);await p.screenshot({path:`${screens}/quick-reminders.png`})
 })

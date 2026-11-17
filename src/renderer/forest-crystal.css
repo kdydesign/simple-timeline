@@ -71,7 +71,7 @@ html, body { background: transparent; }
   position: relative;
   isolation: isolate;
   padding: 0;
-  border: 1px solid var(--window-border);
+  border: 0;
   border-radius: 0;
   background: var(--window-glass);
   box-shadow: none;
@@ -386,3 +386,5 @@ button:disabled { box-shadow: none; }
 .update-distribution { border-top:1px solid #485360;padding-top:14px;margin-top:14px; }
 html[data-update-frozen="true"] .saving-content { opacity:.65; }
 .titlebar .update-anchor [data-overlay-container] { display:contents; }
+
+.window-control-separator { width:1px; height:18px; margin:0 6px; align-self:center; background:var(--border); pointer-events:none; }

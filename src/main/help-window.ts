@@ -1,5 +1,6 @@
 import {BrowserWindow,ipcMain,screen} from 'electron'
 import {helpChannel,helpOpened,initialHelpTopic,validHelpReading,type HelpReadingState} from '../shared/help'
+import {helpTimingProbe,observeHelpRequests} from './help-diagnostics'
 import type {createHelpPerformance} from './help-performance'
 interface HelpOptions {
  mainWindow:BrowserWindow;url:string;preload:string;role:()=>string;version:string;icon?:string;onError:()=>void
@@ -14,18 +15,23 @@ export function createHelpWindow(options:HelpOptions) {
   if(focus){if(window.isMinimized())window.restore();window.show();window.focus()}else window.showInactive()
   options.performance?.shown(openId)
  }
+ const collectTiming=(w:BrowserWindow)=>{
+  if(!options.performance)return Promise.resolve()
+  return w.webContents.executeJavaScript(helpTimingProbe).then(value=>{if(window===w&&!disposed&&!w.isDestroyed())options.performance?.renderer(value)}).catch(()=>{})
+ }
  const notifyOpen=()=>{if(window&&!window.isDestroyed())window.webContents.send(helpOpened)}
  ipcMain.handle(helpChannel,(event,...args:unknown[])=>{
   const w=window
   if(!w||w.isDestroyed()||event.sender!==w.webContents||event.senderFrame!==w.webContents.mainFrame||event.senderFrame?.url!==options.url)return {ok:false}
   const [command,state]=args
+  if(command==='preload-timing')return {ok:args.length===2&&(options.performance?.preload(state)??false)}
   if(command==='remember'){
    if(args.length!==2||!validHelpReading(state)||!opened)return {ok:false}
    reading={...state};return {ok:true}
   }
   if(command==='ready'){
    if(args.length!==2||!wanted||typeof state!=='number'||state!==openId||openId===0)return {ok:false}
-   options.performance?.ready(openId);return {ok:true}
+   options.performance?.ready(openId);void collectTiming(w);return {ok:true}
   }
   if(args.length!==1)return {ok:false}
   switch(command){
@@ -56,6 +62,11 @@ export function createHelpWindow(options:HelpOptions) {
   const fail=()=>{if(failed||disposed||w.isDestroyed())return;failed=true;options.performance?.mark('failed');w.destroy();if(wanted)options.onError()}
   w.webContents.on('did-fail-load',(_event,code,_description,_url,mainFrame)=>{if(mainFrame&&code!==-3)fail()})
   w.webContents.once('preload-error',fail);w.webContents.once('render-process-gone',fail)
+  const stopRequests=options.performance?observeHelpRequests(w,options.performance):()=>{}
+  w.webContents.once('did-finish-load',()=>{
+   options.performance?.mark('renderer-loaded')
+   void collectTiming(w).finally(stopRequests)
+  })
   w.webContents.once('dom-ready',()=>options.performance?.mark('dom-ready'))
   w.once('ready-to-show',()=>{if(window===w){ready=true;options.performance?.mark('first-paint-ready');if(wanted)notifyOpen();reveal(focusWhenReady)}})
   w.on('close',event=>{if(disposed)return;event.preventDefault();wanted=false;restoreTogether=false;focusWhenReady=false;w.hide()})

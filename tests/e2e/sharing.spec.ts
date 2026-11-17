@@ -26,7 +26,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   // Same local numeric project/schedule IDs in both real SQLite profiles.
   expect((await snapshot(host)).schedules[0].id).toBe('1');expect((await snapshot(member)).schedules[0].id).toBe('1');
   await member.page.getByRole('button',{name:'1.1.1 핫픽스 편집',exact:true}).click();await member.page.getByLabel('프로젝트 이름',{exact:true}).fill('개인 프로젝트');await member.page.getByRole('button',{name:'저장',exact:true}).click();
-  await member.page.getByRole('button',{name:'개발 편집',exact:true}).click();await member.page.getByLabel('일정 이름',{exact:true}).fill('개인 일정');await member.page.getByRole('button',{name:'저장',exact:true}).click();
+  await member.page.getByRole('button',{name:'개발 편집',exact:true}).click();await member.page.getByLabel('일정 이름',{exact:true}).fill('개인 일정');await member.page.getByRole('button',{name:'저장',exact:true}).click();await member.page.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
   let h=await settings(host);await expect(h.getByRole('button',{name:'호스트로 공유'})).toBeFocused();
   await h.getByRole('button',{name:'호스트로 공유'}).click();await h.getByLabel('공유할 LAN IP').click();await host.page.getByRole('option',{name:'127.0.0.1 · 이 PC에서만 사용'}).click();await h.getByLabel('포트',{exact:true}).fill(String(port));await h.getByRole('button',{name:'호스트 주소 저장'}).click();await h.getByRole('button',{name:'공유 시작',exact:true}).click();await expect.poll(async()=>(await sharingState(host)).status).toBe('connected');
   await h.getByLabel('새 참여자 이름').fill('멤버 PC');await h.getByLabel('새 참여자 IP').fill('127.0.0.2');await h.getByRole('button',{name:'등록',exact:true}).click();
@@ -51,9 +51,9 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   const mixed=await snapshot(member),remote=mixed.schedules.find(s=>s.sharing==='member')!;
   expect(remote.id).not.toBe('1');expect(mixed.schedules.find(s=>s.id==='1')?.name).toBe('개인 일정');
   const sync=member.page.getByRole('button',{name:'수동 동기화',exact:true});expect(await sync.evaluate(el=>el.nextElementSibling?.getAttribute('aria-label'))).toBe('조회 모드');await expect(member.page.locator('.brand .sharing-status')).toHaveClass(/connected/);
-  await member.page.getByRole('button',{name:'개발 편집',exact:true}).click();await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveAttribute('readonly','');await expect(member.page.getByRole('button',{name:'삭제',exact:true})).toHaveCount(0);await member.page.getByLabel('시작일 알림',{exact:true}).check();await member.page.getByRole('button',{name:'저장',exact:true}).click();
+  await member.page.getByRole('button',{name:'개발 편집',exact:true}).click();await expect(member.page.getByLabel('일정 이름',{exact:true})).toHaveAttribute('readonly','');await expect(member.page.getByRole('button',{name:'삭제',exact:true})).toHaveCount(0);await member.page.getByLabel('시작일 알림',{exact:true}).check();await member.page.getByRole('button',{name:'저장',exact:true}).click();await member.page.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
   expect((await snapshot(host)).schedules[0].reminder.start).toBe(false);expect((await snapshot(member)).schedules.find(s=>s.id===remote.id)?.reminder.start).toBe(true);expect((await snapshot(member)).schedules.find(s=>s.id==='1')?.reminder.start).toBe(false);
-  await host.page.getByRole('button',{name:'개발 편집',exact:true}).click();await host.page.getByLabel('일정 이름',{exact:true}).fill('공유 변경');await host.page.getByRole('button',{name:'저장',exact:true}).click();
+  await host.page.getByRole('button',{name:'개발 편집',exact:true}).click();await host.page.getByLabel('일정 이름',{exact:true}).fill('공유 변경');await host.page.getByRole('button',{name:'저장',exact:true}).click();await host.page.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
   await expect(member.page.getByRole('button',{name:'공유 변경 편집',exact:true})).toBeVisible();
   await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(2);
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages[1])).toMatchObject({title:'1.1.1 핫픽스',body:'공유 변경 · 이름 변경'});
@@ -94,7 +94,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await expect.poll(async()=>(await sharingState(member)).changeNotifications?.enabled).toBe(false);
   await host.page.getByRole('button',{name:'공유 변경 편집',exact:true}).click();
   await host.page.getByLabel('일정 이름',{exact:true}).fill('수신 꺼짐 중 변경');
-  await host.page.getByRole('button',{name:'저장',exact:true}).click();
+  await host.page.getByRole('button',{name:'저장',exact:true}).click();await host.page.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
   await expect.poll(async()=>(await snapshot(member)).schedules.find(s=>s.id===remote.id)?.name).toBe('수신 꺼짐 중 변경');
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);
   await changesSwitch.click();await expect(changesSwitch).toBeChecked();
@@ -104,7 +104,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await m.getByRole('button',{name:'공유 설정 닫기'}).click();
   await host.page.getByRole('button',{name:'수신 꺼짐 중 변경 편집',exact:true}).click();
   await host.page.getByLabel('일정 이름',{exact:true}).fill('공유 변경');
-  await host.page.getByRole('button',{name:'저장',exact:true}).click();
+  await host.page.getByRole('button',{name:'저장',exact:true}).click();await host.page.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
   await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(3);
   expect((await snapshot(member)).schedules.find(s=>s.id===remote.id)?.reminder.start).toBe(true);
   await capture(member,'dark-member-before-connected-toolbar');m=await settings(member);await capture(member,'dark-member-before-connected-settings');await m.getByRole('button',{name:'공유 설정 닫기'}).click();

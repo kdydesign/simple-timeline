@@ -6,7 +6,7 @@ test('real bridge persists reminders, handles click while dirty and suppresses r
  await p.getByRole('button',{name:'개발 편집',exact:true}).first().click()
  await expect(p.getByLabel('시작일 알림',{exact:true})).not.toBeChecked()
  await p.getByLabel('시작일 알림',{exact:true}).check()
- await p.getByRole('button',{name:'저장',exact:true}).click()
+ await p.getByRole('button',{name:'저장',exact:true}).click();await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click()
  await expect.poll(()=>app.evaluate(()=>((globalThis as any).reminderMessages??[]).length)).toBe(1)
  expect(await app.evaluate(()=>(globalThis as any).reminderMessages[0].body)).toContain('2일 후 시작')
  await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await p.getByLabel('프로젝트 이름',{exact:true}).fill('보존할 초안')

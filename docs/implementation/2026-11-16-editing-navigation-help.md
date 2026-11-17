@@ -40,3 +40,9 @@ Minor1건: 멤버 화면 그림의1번 번호가 연결 아이콘보다 역할 �
 `f84587a`의 Repository harness 양 OS와 Application Linux는 성공했다. Application Windows는 E2E99/100으로, 도움말 멤버 촬영의 최초 승인→connected 대기7초가 만료됐다(마지막 상태 connecting). 승인 자격 활성화와 첫 snapshot은 별도2초 poll에서 처리되므로, 촬영 검사를 승인 완료(pendingPair 해제, 최대15초)→connected(기존7초) 순으로 분리했다. 제품 poll/통신 제한·동기화 성능 목표는 바꾸지 않는다. 최초 승인의 추가 지연을 허용하는 테스트이므로 제품 속도 개선의 근거로 사용하지 않는다. 이후 CI 결과는 종료 보고에 기록한다.
 
 보정된 실제 Electron 도움말 멤버 촬영은 Linux에서5회 연속 통과했다(47.7초). 하네스·diff 검사도 통과했다. 이번 보정은 테스트 대기 조건과 이 기록만 변경한다.
+
+## 사용자 Windows 실측 후속(2026-11-17 KST)
+
+사용자가0.8.4 win32 `help-latest.json`을 제공했다. prepare18071ms, window/load18119ms, DOM/첫paint32868ms, 첫 클릭19761ms, 표시32886ms, 본문32942ms였다. 창 생성48ms에 비해 로딩 요청→DOM은14,749ms, 클릭→본문은13,181ms로 회사PC 최초 열기 목표에 미달한다. 사전 준비·재사용만으로 최초 renderer 로딩 지연을 해결했다고 판단할 수 없다. 원인은 이 로그만으로 특정되지 않는다.
+
+사용자는 초기 사전 준비를 늘리는 대신 원인 조사를 선택했다. 승인된 기존 정책과 후속 제안은 [릴리즈노트·확인창·도움말 조사 설계](../design/release-notes-and-confirmations.md)에서 구분한다. 이 기록 추가는 제품 동작을 바꾸지 않는다.

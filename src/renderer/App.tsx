@@ -46,6 +46,7 @@ interface Confirmation {
   confirmLabel: string;
   cancelLabel?: string;
   run: () => void;
+  cancel?: () => void;
 }
 export function App({
   api = window.simpleTimeline,
@@ -198,12 +199,35 @@ export function App({
     const current=timeline.snapshot?.projects.find(p=>p.id===model.id);
     if(current)editor.syncProject(current);
   },[timeline.snapshot,model?.kind,model?.id]);
-  const confirm = (value: Confirmation) => {
-    dialogCaller.current = document.activeElement as HTMLElement;
-    setConfirmation(value);
+  const activeConfirmation=useRef<Confirmation|null>(null);
+  const liveMutation=useRef({snapshot:timeline.snapshot,canEdit,saving,frozen:updates.frozen,model});
+  useLayoutEffect(()=>{liveMutation.current={snapshot:timeline.snapshot,canEdit,saving,frozen:updates.frozen,model}},[timeline.snapshot,canEdit,saving,updates.frozen,model]);
+  const stillCurrent=(kind:'project'|'schedule',id:string|undefined,before:Project|Schedule|undefined)=>{
+    const live=liveMutation.current;
+    if(!live.canEdit||live.saving||live.frozen)return false;
+    if(!id)return true;
+    const current=(kind==='project'?live.snapshot?.projects:live.snapshot?.schedules)?.find(v=>v.id===id);
+    return !!current&&JSON.stringify(current)===JSON.stringify(before);
   };
+  const childrenKey=(schedules:Schedule[]|undefined,id:string)=>JSON.stringify((schedules??[]).filter(s=>s.projectId===id));
+  const rejectStale=()=>setFormError({code:'NOT_FOUND',message:'대상이나 저장 상태가 변경되었습니다. 최신 내용을 확인하고 다시 시도해 주세요.'});
+  const confirm = (value: Confirmation) => {
+    if(activeConfirmation.current)return;
+    let done=false;
+    const finish=(accepted:boolean)=>{if(done)return;done=true;activeConfirmation.current=null;setConfirmation(null);if(accepted)value.run();else value.cancel?.()};
+    const entry={...value,run:()=>finish(true),cancel:()=>finish(false)};
+    activeConfirmation.current=entry;
+    dialogCaller.current = document.activeElement as HTMLElement;
+    setConfirmation(entry);
+  };
+  const askConfirmation=(value:Omit<Confirmation,'run'|'cancel'>)=>new Promise<boolean>(resolve=>{
+    if(activeConfirmation.current){resolve(false);return}
+    confirm({...value,run:()=>resolve(true),cancel:()=>resolve(false)});
+  });
+  useEffect(()=>{if(updates.frozen)activeConfirmation.current?.cancel?.()},[updates.frozen]);
+  useEffect(()=>()=>{activeConfirmation.current?.cancel?.()},[]);
   const cancelConfirm = () => {
-    setConfirmation(null);
+    activeConfirmation.current?.cancel?.();
     requestAnimationFrame(() => {
       if (dialogCaller.current?.isConnected) restoreFocus(dialogCaller.current);
       else document.getElementById("editor-name")?.focus();
@@ -246,6 +270,15 @@ export function App({
       const participants=model.draft.participants.map((name,i)=>`${name}: ${sharing.state?.devices.find(d=>d.id===model.draft.recipientIds?.[i])?.ip??'PC 미선택'}`).join(', ');
       const removed=model.original.participants.filter(name=>!model.draft.participants.includes(name)).join(', ')||'없음';
       confirm({title:'공유 프로젝트로 저장할까요?',message:`참여자 · IP: ${participants||'없음'}. 제거할 참여자: ${removed}. 기존 일정과 이 PC의 알림을 유지합니다.`,confirmLabel:'공유로 저장',run:()=>{setConfirmation(null);void save(true)}});return;
+    }
+    if(model.kind==='schedule'){
+      const before=timeline.snapshot?.schedules.find(v=>v.id===model.id);
+      const reminderOnly=!!before&&model.draft.name===before.name&&model.draft.startDate===before.startDate&&model.draft.endDate===before.endDate;
+      const accepted=await askConfirmation({title:!model.id?'일정을 추가하시겠습니까?':reminderOnly?'알림 설정을 변경하시겠습니까?':'일정을 변경하시겠습니까?',message:`${timeline.snapshot?.projects.find(p=>p.id===model.draft.projectId)?.name??''} / ${model.draft.name} · ${before?`${before.startDate} — ${before.endDate} → `:''}${model.draft.startDate} — ${model.draft.endDate} · 알림 ${model.draft.reminder?.daysBefore}일 전 ${model.draft.reminder?.time} · 시작 ${model.draft.reminder?.start?'켜짐':'꺼짐'} / 종료 ${model.draft.reminder?.end?'켜짐':'꺼짐'}`,confirmLabel:model.id?'변경':'일정 추가'});
+      if(!accepted)return;
+      const live=liveMutation.current;
+      const parent=live.snapshot?.projects.find(p=>p.id===model.draft.projectId);
+      if(!stillCurrent('schedule',model.id,before)||live.model?.session!==model.session||!parent||(!model.id&&parent.sharing==='member')){rejectStale();return;}
     }
     setNotice("");
     setFormError(null);
@@ -321,6 +354,7 @@ export function App({
     const i = candidates.findIndex((v) => v.id === id),
       next = candidates[i + 1] ?? candidates[i - 1];
     const count = snapshot.schedules.filter((s) => s.projectId === id).length;
+    const children=childrenKey(snapshot.schedules,id);
     confirm({
       title: "삭제할까요?",
       message:
@@ -329,7 +363,7 @@ export function App({
           : `${model.draft.name} 일정을 삭제합니다. ${model.kind === "schedule" ? model.draft.startDate + " — " + model.draft.endDate : ""}`,
       confirmLabel: kind === "project" ? "함께 삭제" : "일정 삭제",
       run: () => {
-        setConfirmation(null);
+        if(!stillCurrent(kind,id,(kind==='project'?snapshot.projects:snapshot.schedules).find(v=>v.id===id))||(kind==='project'&&children!==childrenKey(liveMutation.current.snapshot?.schedules,id))){rejectStale();return;}
         setNotice("");
         void (async () => {
           const result =
@@ -373,6 +407,10 @@ export function App({
   },[saving,saveShieldActive,timeline.mutation,model?.saved]);
   const deleteListedProject = async (project:Project) => {
     if(project.sharing==='member'||!allowQuickAction())return;
+    const count=timeline.snapshot?.schedules.filter(s=>s.projectId===project.id).length??0;
+    const children=childrenKey(timeline.snapshot?.schedules,project.id);
+    if(!await askConfirmation({title:'삭제할까요?',message:`${project.name} 프로젝트와 하위 일정 ${count}개를 함께 삭제합니다. 되돌릴 수 없습니다.`,confirmLabel:'함께 삭제'}))return;
+    if(!stillCurrent('project',project.id,project)||children!==childrenKey(liveMutation.current.snapshot?.schedules,project.id)){rejectStale();return;}
     listDeleteFocus.current=true;setProjectsOpen(false);setNotice('');
     const result=await timeline.mutate('deleteProject',{id:project.id,confirmed:true});
     if(result.ok){
@@ -380,9 +418,11 @@ export function App({
       setNotice('프로젝트와 하위 일정을 삭제했습니다.');
     }
   };
-  const saveQuickReminder = async (reminder:ReminderSettings):Promise<Result<Schedule>> => {
+  const saveQuickReminder = async (reminder:ReminderSettings):Promise<Result<Schedule>|null> => {
     const current=timeline.snapshot?.schedules.find(s=>s.id===quickReminder?.id);
     if(!current)return {ok:false,error:{code:'NOT_FOUND',message:'삭제되거나 공유가 해제된 일정입니다.'}};
+    if(!await askConfirmation({title:'알림 설정을 변경하시겠습니까?',message:`${current.name} · ${reminder.daysBefore}일 전 · ${reminder.time} · 시작 ${reminder.start?'켜짐':'꺼짐'} / 종료 ${reminder.end?'켜짐':'꺼짐'}`,confirmLabel:'변경'}))return null;
+    if(!stillCurrent('schedule',current.id,current))return {ok:false,error:{code:'NOT_FOUND',message:'일정이 변경되거나 공유가 해제되었습니다. 다시 확인해 주세요.'}};
     const result=current.sharing==='member'
       ? sharing.api ? await timeline.mutateExternal(()=>sharing.run(()=>sharing.api!.saveReminder({id:current.id,reminder})))
         : {ok:false as const,error:{code:'IPC_UNAVAILABLE' as const,message:'공유 알림을 저장할 수 없습니다.'}}
@@ -402,7 +442,10 @@ export function App({
     onDragEnd:sharingView.endDrag,
     onDragCommit: (schedule: Schedule, dates: {startDate:string;endDate:string}) => {
       if(schedule.sharing==='member')return;
+      if(dates.startDate===schedule.startDate&&dates.endDate===schedule.endDate)return;
       void (async () => {
+        if(!await askConfirmation({title:'일정 날짜를 변경하시겠습니까?',message:`${schedule.name}: ${schedule.startDate} — ${schedule.endDate} → ${dates.startDate} — ${dates.endDate}`,confirmLabel:'변경'}))return;
+        if(!stillCurrent('schedule',schedule.id,schedule)){rejectStale();return;}
         const result=await timeline.mutate("updateSchedule",{id:schedule.id,name:schedule.name,...dates});
         if(result.ok) { editor.syncSchedule(result.data); setNotice("일정을 변경했습니다."); }
       })();

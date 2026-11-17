@@ -6,7 +6,8 @@ $lm=@(Get-ChildItem HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall -E
 $shell=New-Object -ComObject WScript.Shell
 $shortcuts=@(foreach ($folder in @([Environment]::GetFolderPath('DesktopDirectory'),[Environment]::GetFolderPath('Programs'))) {
   Get-ChildItem -LiteralPath $folder -Filter '*.lnk' -Recurse -ErrorAction SilentlyContinue | Where-Object {$_.BaseName -in @('Simple Timeline','Planrail')} | ForEach-Object {
-    @{name=$_.BaseName;path=$_.FullName;target=$shell.CreateShortcut($_.FullName).TargetPath}
+    $shortcut=$shell.CreateShortcut($_.FullName)
+    @{name=$_.BaseName;path=$_.FullName;target=$shortcut.TargetPath;iconLocation=$shortcut.IconLocation}
   }
 })
 @{shortcuts=$shortcuts;powershellVersion=$PSVersionTable.PSVersion.ToString();powershellEdition=$PSVersionTable.PSEdition;firewallProfiles=@(Get-NetFirewallProfile | Select-Object Name,Enabled);osCaption=$os.Caption;osVersion=$os.Version;osBuild=$os.BuildNumber;installerSignature=[string](Get-AuthenticodeSignature -LiteralPath $Installer).Status;userInstalls=@($cu | Select-Object DisplayVersion,InstallLocation);machineInstallCount=$lm.Count} | ConvertTo-Json -Depth 4 -Compress

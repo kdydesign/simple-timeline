@@ -1,10 +1,10 @@
 {
-  "source": "a060eb6955f898939c6be541413aab83a55a5e38",
+  "source": "6fad3ca74a5f37452e0e276ba0c65a25b4d67fa1",
   "dirty": true,
-  "version": "0.8.4",
+  "version": "0.8.5",
   "runtimeVersion": "0.0",
   "platform": "linux",
-  "recordedAt": "2026-11-16T07:06:08.306Z",
+  "recordedAt": "2026-11-17T00:08:25.618Z",
   "command": "tests/e2e/help-assets.spec.ts",
   "synthetic": true,
   "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only.",
@@ -27,5 +27,5 @@
     "updates-host.png",
     "updates-member.png"
   ],
-  "versionNote": "Source package 0.8.4; unpackaged isolated fixture reports runtimeVersion 0.0. All listed assets were recaptured from this implementation with synthetic data."
+  "versionNote": "Source package 0.8.5; unpackaged isolated fixture reports runtimeVersion 0.0. All listed assets recaptured from this implementation with synthetic data; startup behavior was not benchmarked by these captures."
 }

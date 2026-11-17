@@ -17,7 +17,7 @@ test.describe('calendar live preview',()=>{
   await p.keyboard.press('Escape');await p.mouse.up();await expect(preview).toHaveCount(0)
   await expect(p.locator('[data-segment="3"]')).not.toHaveClass(/drag-origin/)
  })
- test('resizing both ends draws split week previews and saves only on release',async({desktop:d})=>{
+ test('resizing both ends draws split week previews and saves only after drop confirmation',async({desktop:d})=>{
   const p=d.page;await p.setViewportSize({width:1280,height:1000});await choose(p,'2026-12-01');await p.getByRole('button',{name:'달력',exact:true}).click()
   for(const [part,date] of [['end','2026-12-22'],['start','2026-12-16']] as const){
    const resize=p.locator(`[data-segment="3"] [data-resize="${part}"]`)
@@ -26,7 +26,7 @@ test.describe('calendar live preview',()=>{
    await p.mouse.move(handle.x+handle.width/2,handle.y+handle.height/2);await p.mouse.down();await p.mouse.move(target.x+target.width/2,target.y+55,{steps:5})
    const preview=p.locator('[data-calendar-preview="3"]');await expect(preview).toHaveCount(2)
    await expect(preview.first()).toHaveAttribute(part==='end'?'data-end':'data-start',date)
-   await p.mouse.up();await expect(preview).toHaveCount(0)
+   await p.mouse.up();await expect(preview).toHaveCount(0);await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click()
    await expect(p.locator('[data-segment="3"]').first()).toHaveAttribute('aria-label',new RegExp(date))
   }
  })
@@ -47,5 +47,17 @@ test.describe('calendar overlap preview',()=>{
   await p.mouse.move(5,5);await expect(preview).toHaveClass(/invalid/);await expect(p.locator('.calendar-drag-label')).toContainText('놓으면 취소')
   await p.mouse.up();await expect(preview).toHaveCount(0)
   const data=await p.evaluate(()=>window.simpleTimeline.getSnapshot());expect(data.ok&&data.data.schedules.find(s=>s.id==='3')?.startDate).toBe('2026-12-18')
+ })
+})
+
+test.describe('drop confirmation',()=>{
+ test.use({seed:'hotfix'})
+ test('cancelling a calendar drop leaves SQLite unchanged and shows the proposed dates',async({desktop:d},info)=>{
+  const p=d.page;await p.setViewportSize({width:1280,height:1000});await choose(p,'2026-12-01');await p.getByRole('button',{name:'달력',exact:true}).click();
+  const b=await box(p.locator('[data-segment="3"]')),target=await box(p.locator('[data-date="2026-12-20"]'));
+  await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down();await p.mouse.move(target.x+target.width/2,target.y+55,{steps:4});await p.mouse.up();
+  const dialog=p.getByRole('alertdialog');await expect(dialog).toContainText('2026-12-18');await expect(dialog).toContainText('2026-12-20');await expect(p.locator('.saving-shield')).toHaveCount(0);
+  let result=await p.evaluate(()=>window.simpleTimeline.getSnapshot());expect(result.ok&&result.data.schedules.find(s=>s.id==='3')?.startDate).toBe('2026-12-18');await p.screenshot({path:info.outputPath('date-confirmation.png')});
+  await dialog.getByRole('button',{name:'취소',exact:true}).click();result=await p.evaluate(()=>window.simpleTimeline.getSnapshot());expect(result.ok&&result.data.schedules.find(s=>s.id==='3')?.startDate).toBe('2026-12-18');await expect(p.locator('[data-segment="3"]')).not.toHaveClass(/drag-origin/);
  })
 })

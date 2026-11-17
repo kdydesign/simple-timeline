@@ -9,7 +9,7 @@ import {trapTab} from './ConfirmDialog'
 
 export function QuickReminder({schedule,caller,disabled,busy,covered,onClose,onGuard,onSave,onRefresh}:{
  schedule:Schedule|undefined;caller:HTMLElement;disabled:boolean;busy:boolean;covered:boolean;
- onClose:()=>void;onRefresh:()=>void;onGuard:(dirty:boolean)=>void;onSave:(value:ReminderSettings)=>Promise<Result<Schedule>>
+ onClose:()=>void;onRefresh:()=>void;onGuard:(dirty:boolean)=>void;onSave:(value:ReminderSettings)=>Promise<Result<Schedule>|null>
 }) {
  const original=useRef(schedule?.reminder??DEFAULT_REMINDER)
  const [draft,setDraft]=useState(original.current),[errors,setErrors]=useState<Record<string,string>>({}),[submitted,setSubmitted]=useState(false)
@@ -39,6 +39,7 @@ export function QuickReminder({schedule,caller,disabled,busy,covered,onClose,onG
   const next=validate(draft);setSubmitted(true);setErrors(next);setError('')
   if(Object.keys(next).length){document.getElementById(`quick-${Object.keys(next)[0]}`)?.focus();return}
   const result=await onSave(draft)
+  if(!result)return
   if(result.ok){setSaved(true);onGuard(false)}
   else if(result.error.code==='VALIDATION_ERROR'&&result.error.field)setErrors({[result.error.field]:result.error.message})
   else setError(result.error.message)

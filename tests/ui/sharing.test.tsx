@@ -25,7 +25,7 @@ it('places member sync immediately before modes and shows status beside title; s
  render(<App api={m.api}/>);const sync=await screen.findByRole('button',{name:'수동 동기화'});expect(sync.nextElementSibling).toHaveAttribute('aria-label','조회 모드');
  expect(screen.getByRole('button',{name:/공유 연결 상태/}).closest('.brand')).toHaveTextContent('Planrail');
  await u.click(screen.getByRole('button',{name:'공유 일정 편집'}));expect(screen.getByLabelText('일정 이름')).toHaveAttribute('readonly');expect(screen.queryByRole('button',{name:'삭제'})).not.toBeInTheDocument();
- await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await waitFor(()=>expect(f.api.saveReminder).toHaveBeenCalledOnce());
+ await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'변경'}));await waitFor(()=>expect(f.api.saveReminder).toHaveBeenCalledOnce());
  expect(f.api.saveReminder).toHaveBeenCalledWith(expect.objectContaining({id:p}));
 });
 it('opens settings from tray request while retaining personal draft; pending cleanup remains retryable in personal role',async()=>{
@@ -54,7 +54,8 @@ it('filters mixed sources together while preserving dirty input and navigation e
  act(()=>f.emit({snapshotRevision:1}));await waitFor(()=>expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('개인 원본 초안'));
  await u.click(screen.getByRole('button',{name:'편집 닫기'}));await u.click(screen.getByRole('button',{name:'공유'}));expect(screen.queryByRole('button',{name:'개인 원본 편집'})).not.toBeInTheDocument();expect(screen.getByRole('button',{name:'멀리 있는 공유 일정 편집'})).toBeVisible();
  fireEvent.change(screen.getByLabelText('선택 날짜'),{target:{value:'2031-05-10'}});fireEvent.keyDown(screen.getByLabelText('선택 날짜'),{key:'Enter'});expect(document.querySelector('[data-range]')).toHaveTextContent('2031-05-31');await u.click(screen.getByRole('button',{name:'전체'}));expect(document.querySelector('[data-range]')).toHaveTextContent('2031-05-31');await u.click(screen.getByRole('button',{name:'공유'}));await u.click(screen.getByRole('button',{name:'달력'}));await u.click(screen.getByRole('button',{name:'프로젝트 목록'}));expect(within(screen.getByRole('region',{name:'프로젝트 목록'})).queryByRole('button',{name:'개인 원본 편집'})).not.toBeInTheDocument();
-});
+// Multiple full-App filter/editor transitions; this is correctness, not a 5s benchmark.
+},10000);
 it('host editor converts an original through explicit participant-IP confirmation and sharing API',async()=>{
  const f=sharingFixture({role:'host',devices:[{id:'9',name:'민수',ip:'192.168.0.20',approved:true,revoked:false}]}),u=userEvent.setup(),m=memoryApi(hotfix);f.api.saveProject=vi.fn(async (input:SharedProjectInput)=>{const p={...m.snapshot.projects[0],...input,participants:input.participants.map(p=>p.name),sharing:'host' as const};m.snapshot.projects[0]=p;return{ok:true as const,data:p}});
  render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'1.1.1 핫픽스 편집'}));await u.click(screen.getByLabelText('공유 프로젝트로 저장'));
@@ -76,7 +77,7 @@ it('refreshes a member project readonly detail when the host changes its name',a
  const f=sharingFixture({role:'member'}),m=memoryApi(hotfix),u=userEvent.setup();m.snapshot.projects[0].sharing='member';render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'1.1.1 핫픽스 편집'}));m.snapshot.projects[0].name='변경된 공유 이름';act(()=>f.emit({snapshotRevision:1}));await waitFor(()=>expect(screen.getByLabelText('프로젝트 이름')).toHaveValue('변경된 공유 이름'));expect(screen.getByLabelText('프로젝트 이름')).toHaveAttribute('readonly');
 });
 it('never falls back to source CRUD when a member reminder capability is unavailable',async()=>{
- const m=memoryApi(hotfix),u=userEvent.setup();m.snapshot.projects[0].sharing='member';m.snapshot.schedules[0].sharing='member';const update=vi.spyOn(m.api,'updateSchedule');render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'개발 편집'}));await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));expect(update).not.toHaveBeenCalled();expect(screen.getByRole('alert')).toHaveTextContent('공유 알림');
+ const m=memoryApi(hotfix),u=userEvent.setup();m.snapshot.projects[0].sharing='member';m.snapshot.schedules[0].sharing='member';const update=vi.spyOn(m.api,'updateSchedule');render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'개발 편집'}));await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'변경'}));expect(update).not.toHaveBeenCalled();expect(screen.getByRole('alert')).toHaveTextContent('공유 알림');
 });
 it('shows member-intent red status and disabled sync while the first pairing still has personal privileges',async()=>{
  sharingFixture({role:'personal',status:'pairing',pendingPair:{pairId:'attempt',fingerprint:'A'.repeat(64),expiresAt:'2026-11-10T09:00:00Z'}});

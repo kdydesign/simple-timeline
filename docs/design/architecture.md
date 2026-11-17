@@ -209,3 +209,9 @@ main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본�
 [멤버 inbox](../../src/main/db/sharing/change-inbox.ts)는 cache·cursor·알림 대기를 한 트랜잭션으로 반영한다. [전달 실행기](../../src/main/sharing/change-delivery.ts)는 그 뒤 영속 claim을 먼저 하고 OS sender를 호출한다. 재시작 때 남은 claim은 결과 불명으로 취급하며 자동 재전송하지 않는다. 날짜 알림의 일정별 전송 이력과 공유 변경 inbox는 독립한다. 권한 회수 때 이름이 포함된 로컬 대기 내용을 제거하며 이미 OS에 제출된 과거 내용의 회수는 보장하지 않는다.
 
 고정 `timelineSharing` facade에 `setChangeNotifications({enabled})`, `retryChangeNotifications()`, `acknowledgeChange({token})`를 추가한다. 설정·결과 불명/실패·기준점·기능 지원 상태와 일정/프로젝트/목록 대상은 `SharingState.changeNotifications`로 전달한다. renderer에는 URL·자격·SQL을 노출하지 않는다. 알림 클릭은 최신 권한과 대상 확인 후 기존 미저장 입력 보호를 거치며 간트/달력 모드를 유지한다.
+
+### 정보 창과 저장 확인 (0.8.5)
+
+[승인 설계](release-notes-and-confirmations.md)·[구현 기록](../implementation/2026-11-17-release-notes-confirmations.md)을 따른다. 릴리즈노트는 `release-notes:command`와 전용 비영속 session을 사용하며 파일/DB/공유/업데이트 API를 노출하지 않는다. 명시적 첫 클릭 생성·닫기 재사용으로 시작 시 준비 부하는 늘리지 않는다. 도움말은 기존 사전 준비를 유지하고 숫자 allowlist 진단만 추가한다.
+
+renderer의 저장 확인은 실제 mutation 전에 유효성 검사·사용자 수락·최신 대상 검사를 수행한다. main의 기존 권한과 트랜잭션 검증을 대체하지 않는다. 프로젝트 삭제 확인 이후 하위 일정이 변경되면 새 내용을 다시 확인하도록 저장을 막는다. 확인 취소와 초안 폐기는 서로 다른 동작이다.

@@ -48,6 +48,7 @@ test.describe("two-mode hotfix", () => {
     await calendar.locator('[data-segment="2"]').first().click();
     await p.getByLabel("일정 이름", { exact: true }).fill("QA 수정");
     await p.getByRole("button", { name: "저장", exact: true }).click();
+    await p.getByRole("alertdialog").getByRole("button", { name: "변경", exact: true }).click();
     await expect(calendar.locator('[data-segment="2"]').first()).toContainText(
       "QA 수정",
     );
@@ -87,6 +88,7 @@ test.describe("two-mode hotfix", () => {
     await p.getByLabel("시작일", { exact: true }).fill("2026-12-20");
     await p.getByLabel("종료일", { exact: true }).fill("2026-12-20");
     await p.getByRole("button", { name: "저장", exact: true }).click();
+    await p.getByRole("alertdialog").getByRole("button", { name: "일정 추가", exact: true }).click();
     await expect(p.getByRole("status")).toContainText("현재 월 표시 대상 아님");
     await expect(p.locator('[data-focus="schedule-add"]')).toBeFocused();
     await expect(p.getByLabel("선택 날짜", { exact: true })).toHaveValue(

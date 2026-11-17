@@ -220,6 +220,8 @@ test("real production package installs, works offline, updates and retains DB af
     for (const shortcut of system.shortcuts) {
       expect(shortcut.name).toBe('Planrail');
       expect(shortcut.target.toLowerCase()).toBe(installed.toLowerCase());
+      // An empty icon location means the shortcut uses its target executable.
+      if(shortcut.iconLocation)expect(shortcut.iconLocation.replace(/,\s*0$/, '').replace(/^"|"$/g,'').toLowerCase()).toBe(installed.toLowerCase());
     }
     evidence.system = system;
     console.log("Packaged Windows environment: "+JSON.stringify(system));
@@ -245,6 +247,7 @@ test("real production package installs, works offline, updates and retains DB af
       .getByLabel("일정 이름", { exact: true })
       .fill("QA 오프라인 수정");
     await page.getByRole("button", { name: "저장", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button",{name:"변경",exact:true}).click();
     await expect(page.locator('[data-segment="2"]').first()).toContainText(
       "QA 오프라인 수정",
     );

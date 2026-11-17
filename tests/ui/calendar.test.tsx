@@ -167,6 +167,7 @@ it("uses the current mode and month when an outstanding save completes", async (
   );
   await u.type(screen.getByLabelText("일정 이름"), "저장 대기 중");
   await u.click(screen.getByRole("button", { name: "저장" }));
+  await u.click(screen.getByRole("button", { name: "일정 추가" }));
   await u.click(screen.getByRole("button", { name: "달력" }));
   const month = screen.getByLabelText("선택 날짜");
   fireEvent.change(month, {target:{value:"2027-03-01"}});

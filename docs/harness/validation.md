@@ -120,9 +120,12 @@ completed와 passed, 개별 검사 결과를 함께 읽는다. dirty 보고서�
   [검토 회귀](../../tests/e2e/review.spec.ts)를 따른다. 모달을 연 채 창을 좁혀도 최상위 모달을 inert 배경 밖에 두고 Escape/복귀를 확인한다.
 - 공통 UI: shadcn/Radix 변경은 [구성 지도](../design/architecture.md#renderer-공통-ui와-스타일)와
   [UI 회귀](../../tests/ui/planrail-design.test.tsx)·[실제 Electron 회귀](../../tests/e2e/planrail-design.spec.ts)를 대조한다.
-  중첩 Select/날짜 팝오버의 포커스·Escape, 7개 툴팁의 실제 위치, 확인창 중 제목 표시줄 클릭을 포함한다.
+  중첩 Select/날짜 팝오버의 포커스·Escape, 도움말·릴리즈노트를 포함한8개 툴팁의 실제 위치, 확인창 중 제목 표시줄 클릭을 포함한다.
   Linux에 창 관리자가 없으면 native 최소화/최대화 상태 검사는 환경 한계로 표시하지만 실제 명령 전달과 숨김/복원은 검사한다.
 - 범위·근거: 자동화 viewport·실패 주입을 실제 Windows 배율/Narrator·물리 장애 결과로 확대하지 않는다.
   대량 fixture 수치는 해당 환경의 관측이며 사용자 PC 성능 보장이나 SLA가 아니다.
 
 0.8.4의 사전 준비/재사용 및 전체 도움말 검사 확장 후 Linux 전체 Electron 실행은84개 통과 단계에서360초 제한에 도달했다. 한 건의 구형 확인창 기대도 함께 수정했으며, 전체 E2E 예산만600초로 늘려 남은 공유·업데이트 시나리오를 수행한다. 개별 케이스45초 및 IPC/저장 제한은 유지한다. 전체 멈춤 감지는 최대240초 늦어질 수 있으며 성공 여부는 최종 전체 실행으로 확인한다.
+
+
+0.8.5는 [릴리즈노트·저장 확인 검증](../implementation/2026-11-17-release-notes-confirmations.md)을 추가한다. `tests/e2e/release-notes.spec.ts`는 도움말과의 독립 IPC·동시 표시·닫기 재사용·트레이 복원을 검사한다. `tests/e2e/help.spec.ts`는 schema2의 main/request/preload/navigation/module 기록을 실제 격리 Electron에서 검사한다. 회사PC 첫 열기 지연은 새 `help-latest.json`과 같은 실행의 `startup-latest.json`으로 별도 확인하며 Linux 시간으로 해결 판정하지 않는다.

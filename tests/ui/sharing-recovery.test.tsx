@@ -14,7 +14,7 @@ it.each(['project','reminder'] as const)('keeps an externally committed %s draft
  render(<App api={m.api}/>);
  if(kind==='project'){
   const add=await screen.findByRole('button',{name:'프로젝트 추가'});await waitFor(()=>expect(add).toBeEnabled());await u.click(add);await u.type(screen.getByLabelText('프로젝트 이름'),'공유 저장 복구');await u.click(screen.getByLabelText('공유 프로젝트로 저장'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'공유로 저장'}));
- }else{await u.click(await screen.findByRole('button',{name:'개발 편집'}));await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}))}
+ }else{await u.click(await screen.findByRole('button',{name:'개발 편집'}));await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'변경'}))}
  const alert=await screen.findByRole('alert');expect(alert).toHaveTextContent('저장은 완료했지만 새로고침에 실패');expect(screen.getByRole('dialog')).toBeVisible();expect(screen.getByRole('button',{name:'저장'})).toBeDisabled();expect(screen.getByRole('status')).not.toHaveTextContent('추가했습니다');
  failRead=false;await u.click(screen.getByRole('button',{name:'다시 조회'}));await waitFor(()=>expect(screen.queryByRole('dialog')).not.toBeInTheDocument());expect(kind==='project'?f.api.saveProject:f.api.saveReminder).toHaveBeenCalledOnce();expect(m.creates).toBe(kind==='project'?1:0);
 });
