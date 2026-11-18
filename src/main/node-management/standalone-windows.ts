@@ -1,6 +1,6 @@
 import { win32 } from 'node:path'
 import { isSafeNvmPath } from './discovery'
-import { NODE_UPGRADE_CODE, type MsiEvidence } from './standalone'
+import { INTERACTIVE_USER_SID_PATTERN, NODE_UPGRADE_CODE, type MsiEvidence } from './standalone'
 
 /** Validate the original official package without executing it. Cached MSI bytes can
  * legitimately differ because Installer removes embedded cabinets; protected cached
@@ -180,7 +180,10 @@ try {
     if ($actual[$property.Name] -cne $property.Value) { exit 41001 }
   }
   if ($actual.nodeDigest -ne $expected.officialNodeDigest) { exit 41001 }
-  if ($expected.inspectingUserSid -notmatch '^S-1-5-21-(\\d+-){3}\\d+$') { exit 41001 }
+  if ($expected.inspectingUserSid -notmatch ${literal(INTERACTIVE_USER_SID_PATTERN)}) { exit 41001 }
+  # Windows validates subauthority bounds for both local/domain and Entra identities.
+  $validatedSid = New-Object Security.Principal.SecurityIdentifier $expected.inspectingUserSid
+  if ($validatedSid.Value -cne $expected.inspectingUserSid) { exit 41001 }
   $originEnvironment = [Microsoft.Win32.Registry]::Users.OpenSubKey($expected.inspectingUserSid + '\\Environment')
   try { if ($originEnvironment -and ($originEnvironment.GetValue('NVM_HOME') -or $originEnvironment.GetValue('NVM_SYMLINK'))) { exit 41001 } } finally { if ($originEnvironment) { $originEnvironment.Dispose() } }
   $key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment')

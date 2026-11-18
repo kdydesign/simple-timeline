@@ -9,6 +9,11 @@ import { isSafeNvmPath, type WindowsDiscovery } from './discovery'
  * executable hashes are obtained from that exact release's HTTPS SHASUMS.
  * Only signed, protected, per-machine x64 MSI installs can be selected.
  */
+export const INTERACTIVE_USER_SID_PATTERN = '^(?:S-1-5-21|S-1-12-1)(?:-(?:0|[1-9][0-9]{0,9})){4}$'
+export function isInteractiveUserSid(value: unknown): value is string {
+  return typeof value === 'string' && new RegExp(INTERACTIVE_USER_SID_PATTERN).test(value)
+    && value.split('-').slice(-4).every(component => Number(component) <= 0xffffffff)
+}
 export const NODE_UPGRADE_CODE = '{47C07A3A-42EF-4213-A85D-8F5A59077C28}'
 export interface MsiEvidence {
   inspectingUserSid: string; productCode: string; upgradeCode: string; version: string; scope: string; name: string; publisher: string
@@ -26,7 +31,7 @@ export function selectStandaloneTarget(entries: MsiEvidence[], discovery: Window
   if (discovery.manager.status !== 'missing' || entries.length !== 1) return null
   const target = entries[0]
   if (!target || typeof target.upgradeCode !== 'string' || typeof target.nodePath !== 'string' || typeof target.componentPath !== 'string' || typeof target.registryPath !== 'string') return null
-  if (!/^S-1-5-21-(\d+-){3}\d+$/.test(target.inspectingUserSid) || !guid.test(target.productCode) || !guid.test(target.componentId) || target.upgradeCode.toUpperCase() !== NODE_UPGRADE_CODE
+  if (!isInteractiveUserSid(target.inspectingUserSid) || !guid.test(target.productCode) || !guid.test(target.componentId) || target.upgradeCode.toUpperCase() !== NODE_UPGRADE_CODE
     || target.scope !== 'machine' || target.name !== 'Node.js' || target.publisher !== 'Node.js Foundation'
     || !isNodeVersion(target.version) || !/^[a-f0-9]{64}$/.test(target.officialNodeDigest) || target.officialNodeDigest !== target.nodeDigest || !/^[a-f0-9]{64}$/.test(target.packageDigest)
     || !target.nodeSignature || (!target.packageSignature && !target.packageSourceVerified) || !guid.test(target.packageCode) || !target.protectedLocation || !target.x64

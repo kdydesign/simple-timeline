@@ -146,3 +146,10 @@ it('accepts a stripped cached MSI only with verified signed official package cor
   expect(selectStandaloneTarget([{ ...evidence, packageSignature: false, packageSourceVerified: false }], missing)).toBeNull()
   expect(selectStandaloneTarget([{ ...evidence, packageSignature: false, packageSourceVerified: true, protectedLocation: false }], missing)).toBeNull()
 })
+
+it('accepts genuine Entra interactive user SIDs but rejects malformed or non-user identities', () => {
+  expect(selectStandaloneTarget([{ ...evidence, inspectingUserSid: 'S-1-12-1-123-456-789-4294967295' }], missing)).not.toBeNull()
+  for (const sid of ['S-1-12-1-123-456-789', 'S-1-12-1-123-456-789-4294967296', 'S-1-5-18', 'S-1-12-1-123-456-789-1\\Environment']) {
+    expect(selectStandaloneTarget([{ ...evidence, inspectingUserSid: sid }], missing)).toBeNull()
+  }
+})
