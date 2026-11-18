@@ -52,3 +52,28 @@ Windows 설치 호스트+dev:member 동시 실행, 회사 LAN/IP/방화벽/DPAPI
 - [Repository harness 실행 44218578827](https://github.com/kdydesign/simple-timeline/actions/runs/44218578827): 같은 소스의 Windows·Linux 모두 success.
 
 위 CI 성공은 로컬 `verify:app`의 104/106 실패 기록을 대체하지 않으며 간헐적 launch/종료 지연의 원인 해결을 뜻하지 않는다. 회사 Windows에서 설치 호스트와 개발 멤버의 동시 실행, 실제 LAN·보안 정책·OS 외형·알림 인수는 여전히 미검증이다. 최초 도움말 지연도 해결됐다고 보고하지 않는다.
+
+## 설정 스타일 후속 보정 (2026-11-18)
+
+사용자가 지정한 7개 스타일 변경을 반영했다. 기준은 `fd22140ece94342e404db6c00991367b6495de3c` 위의 작업 트리이며 버전·기능·API·데이터는 변경하지 않는다. Superpowers의 명확한 소규모 요청 경로와 frontend-design을 적용해 기존 다크 그레이·유리 재질, 서체·색상은 유지하고 간격과 아이콘만 보정했다.
+
+| 항목 | 반영 위치·값 |
+| --- | --- |
+| 제목 표시줄 | `forest-crystal.css`의 `.titlebar`에 `margin-top: 4px` |
+| 설정 아이콘 | 기존 의존성 `lucide-react`의 `Settings`, 기존 `.icon` 크기·1.6 선 굵기·currentColor 유지 |
+| 확인창 덮개 | `planrail.css`의 `.confirm-overlay`에 `inset: 52px 0 0` |
+| 업데이트 배포 | `.update-distribution`의 `border-top: 0px !important` |
+| 설정 섹션 | `display: grid`, `gap: 2px`, `border-top: 1px solid var(--border)`, `padding-top: 4px` |
+| 휴일 섹션 | 이미 있는 `section.holiday-settings`에 `margin-top: 18px`. 연속 섹션의 기존 18px padding override를 제거해 공통·개인 모두 4px padding 적용 |
+| 설정 설명 문구 | Radix 자동 생성 ID 대신 `.sharing-settings-description`을 붙이고 설정 범위에서 `margin: 0 0` |
+
+실제 Linux Electron을 일회성 SQLite 프로필·sandbox 유지 상태로 열어 변경 전후 화면을 비교했다. 호스트 기본 설정의 공통·개인 휴일 모두 계산된 margin/padding/gap이 18/4/2px이고, 배포 상단 선 0px·설명 상하 margin 0px·제목 margin 4px·overlay inset 52px도 확인했다. 증거는 `/workspace/output/settings-style/`의 `before.png`, `after.png`, 각 JSON에 있다. 초기 캡처 도구의 임시 프로필 이름이 테스트 진입점의 허용 접두사와 맞지 않아 창 생성 대기를 넘겼으며, 도구의 접두사만 수정한 뒤 양쪽 촬영을 완료했다.
+
+화면의 업데이트 배포 오류 문구는 변경 전후 모두 같은 격리 fixture에 표시된 상태로, 이번 스타일 보정의 업데이트 기능 성공 근거가 아니다. Windows 설치 화면·OS 투과 효과는 미검증이다. CI 금지 요청을 유지하여 push·원격 workflow 실행은 하지 않는다. 로컬 전체 검사 결과는 아래에 기록한다.
+
+로컬 검증 결과:
+
+- 최초 `verify:app`은 타입·release·3개 시간대 날짜 검사를 통과했지만 UI 205/207로 중단됐다. `improvements.test.tsx`의 테마 복원·날짜 선택기 2건이 5초 제한을 넘었으며 뒤의 build/native/E2E는 미실행이었다. `/workspace/output/settings-style/verify-first.json`, `ui-first.log`에 원래 실패를 보존했다.
+- 같은 파일을 현재 작업 트리와 기준 커밋의 별도 archive에서 각각 실행해 5/5 통과했다. 현재 5.17초·기준 5.54초의 파일 전체 실행이며 최초 2건의 시간 초과 원인은 확정하지 못했다. 제품 동작·테스트·제한 시간은 추가 수정하지 않았다.
+- 동일 작업 트리에서 `DISPLAY=:121 npm run verify:app` 재실행은 7단계 모두 PASS: 타입, release 26, 날짜 294×3 시간대, UI 207, 제품 build, native 89, Electron E2E 106. 결과는 `artifacts/app/latest.json`의 기준 SHA `fd22140...`, dirty=true, Linux x64·Node 24.22.1에 해당한다. 전체 로그는 `/workspace/output/settings-style/verify-retry.log`다. 재통과를 간헐 지연 원인 해결로 확대하지 않는다.
+- 문서 하네스·공백 검사도 통과했다. 새 의존성·제품 버전·CI 설정은 변경하지 않았고, 원격 CI와 push는 실행하지 않았다.

@@ -76,7 +76,7 @@ html, body { background: transparent; }
   background: var(--window-glass);
   box-shadow: none;
 }
-.titlebar { height: 42px; padding: 0 14px; border: 0; background: transparent; }
+.titlebar { height: 42px; margin-top: 4px; padding: 0 14px; border: 0; background: transparent; }
 .titlebar .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: -.5px; }
 .titlebar .brand-mark { width: 30px; height: 30px; background: transparent; box-shadow: none; }
 .titlebar .brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
@@ -412,7 +412,7 @@ button:disabled { box-shadow: none; }
 .update-popover { color:#dce3ea;background:#252b32;border:1px solid #485360;border-radius:10px;padding:14px;box-shadow:0 12px 32px #0008;font-size:12px;line-height:1.6;-webkit-app-region:no-drag; }
 .update-heading { display:flex;align-items:center;justify-content:space-between;gap:12px; }.update-heading h2 { font-size:14px;font-weight:600; }.update-popover p { margin:8px 0; }.update-popover progress { width:100%;height:7px;accent-color:#90b6d1; }
 .update-actions { display:flex;flex-wrap:wrap;gap:8px;margin-top:12px; }.update-blocked { position:fixed;top:49px;left:50%;transform:translateX(-50%);z-index:10000;max-width:calc(100vw - 32px);padding:12px 18px;border:1px solid #7993a9;border-radius:8px;background:#293540;color:#edf4fa;font-size:13px; }
-.update-distribution { border-top:1px solid #485360;padding-top:14px;margin-top:14px; }
+.update-distribution { border-top:0px !important;padding-top:14px;margin-top:14px; }
 html[data-update-frozen="true"] .saving-content { opacity:.65; }
 .titlebar .update-anchor [data-overlay-container] { display:contents; }
 
@@ -448,5 +448,5 @@ html[data-update-frozen="true"] .saving-content { opacity:.65; }
 .settings-tabs {display:flex;gap:6px;border-bottom:1px solid var(--border);padding:8px 0 12px;flex-shrink:0;}
 .sharing-settings .settings-tabs button[aria-selected=true] {background:var(--selected-control);border-color:var(--selected-border);}
 .sharing-settings [role=tabpanel][hidden] {display:none;}
-.sharing-settings .holiday-settings + .holiday-settings {border-top:1px solid var(--border);margin-top:18px;padding-top:18px;}
+.sharing-settings section.holiday-settings {margin-top:18px;}
 .working-days {color:#ffd0d0;}

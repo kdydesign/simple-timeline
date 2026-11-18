@@ -1,9 +1,9 @@
 import {isRestoringFocus} from '../state/restoreFocus';
 import type { ButtonHTMLAttributes } from 'react';
+import {Settings} from 'lucide-react';
 import {Button} from './ui/button';
 import {Tooltip,TooltipTrigger,TooltipContent} from './ui/tooltip';
 const paths = {
- settings:'m10 2 4 0 1 3 3 2 3 0 1 4-2 2-1 3-2 3-4-1-3 0-3 1-2-3-1-3-2-2 1-4 3 0 3-2Z M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
  release:'M6 3h8l4 4v14H6Z M14 3v5h4M9 12h6M9 16h6',
  help:'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18M9 9a3 3 0 0 1 6 0c0 2-3 2-3 5m0 3h.01',
  trash:'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7', bell:'M6 9a6 6 0 0 1 12 0c0 7 3 7 3 9H3c0-2 3-2 3-9M10 21h4',
@@ -15,8 +15,8 @@ const paths = {
  moon:'M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11Z', sun:'M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1M16 12a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
  today:'M12 2v3m0 14v3M2 12h3m14 0h3M18 12a6 6 0 1 1-12 0 6 6 0 0 1 12 0', check:'m5 12 4 4L19 6',
 } as const;
-export type IconName = keyof typeof paths;
-export function Icon({name}: {name: IconName}) {return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name==='gantt'?3:1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>}
+export type IconName = keyof typeof paths | 'settings';
+export function Icon({name}: {name: IconName}) {if(name==='settings')return <Settings className="icon" size={24} strokeWidth={1.6} aria-hidden="true"/>;return <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name==='gantt'?3:1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={paths[name]}/></svg>}
 export function IconButton({icon,label,tooltip=false,description,onFocus,className='',...props}: {icon:IconName;label:string;tooltip?:boolean;description?:string}&ButtonHTMLAttributes<HTMLButtonElement>) {
  const button=<Button type="button" variant="ghost" size="icon" {...props} onFocus={e=>{onFocus?.(e);if(isRestoringFocus())e.preventDefault()}} className={`icon-button ${icon==='close'?'icon-close':''} ${className}`} aria-label={label} aria-description={description??props['aria-description']}><Icon name={icon}/></Button>;
  return tooltip ? <Tooltip><TooltipTrigger asChild>{button}</TooltipTrigger><TooltipContent side="bottom" align="center" sideOffset={8} collisionPadding={8} className="app-tooltip">{description?`${label} · ${description}`:label}</TooltipContent></Tooltip> : button;

@@ -62,7 +62,7 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
   restoreFocus(target);
  }}>
  <div className="editor-title"><AlertDialogTitle>설정</AlertDialogTitle><IconButton icon="close" disabled={busy} label="설정 닫기" onClick={close}/></div>
- <AlertDialogDescription>같은 사내망에서 프로젝트를 공유합니다. 개인 일정은 이 PC에 보관합니다.</AlertDialogDescription>
+ <AlertDialogDescription className="sharing-settings-description">같은 사내망에서 프로젝트를 공유합니다. 개인 일정은 이 PC에 보관합니다.</AlertDialogDescription>
  <div className="settings-tabs" role="tablist" aria-label="설정 종류">{(['basic','sharing'] as const).map(value=><Button key={value} id={`settings-tab-${value}`} role="tab" aria-controls={`settings-panel-${value}`} aria-selected={tab===value} onClick={()=>setTab(value)}>{value==='basic'?'기본 설정':'공유 설정'}</Button>)}</div>
  <div className="sharing-settings-scroll">
  <div id="settings-panel-basic" role="tabpanel" aria-labelledby="settings-tab-basic" hidden={tab!=='basic'}>
