@@ -1,6 +1,6 @@
 # 0.8.8 설정 탭·개인 휴일·워킹데이
 
-2026-11-18. [Q10 승인 설계](../design/settings-and-working-days.md), [구현 계획](../superpowers/plans/2026-11-18-settings-working-days.md). 기준 커밋19e31b8에서 구현했다. 로컬 검증 결과와 한계는 아래와 같고, 커밋 후 원격 CI 결과는 별도 실행 증거로 보고한다.
+2026-11-18. [Q10 승인 설계](../design/settings-and-working-days.md), [구현 계획](../superpowers/plans/2026-11-18-settings-working-days.md). 기준 커밋19e31b8에서 구현했다. 로컬 검증 결과와 한계는 아래에 보존하며, 최종 제품 소스의 원격 CI 결과는 마지막 항목에 구분한다.
 
 ## 변경과 데이터 경계
 
@@ -41,3 +41,14 @@ Windows 설치 호스트+dev:member 동시 실행, 회사 LAN/IP/방화벽/DPAPI
 - 개발 멤버의 실제 업데이트 설치는 차단하지만, UI는 일반 설치 오류·재시도 안내를 사용한다. 개발 전용 안내와 버튼 구분은 이번 변경에서 보류했다.
 - 휴일 두 표의 요일 합집합 규칙은 도움말에 설명했다. 설정 영역에 추가 설명 한 문장을 넣는 문구 개선은 보류했다.
 - 이미지 촬영의 임시 버전 참조는 촬영 후 제거했으며, 변경은 상호 의존하는 API·UI·도움말을 하나의 기능 커밋으로 묶는다. 중간 단계별 커밋 대신 RED→GREEN과 검증 기록을 보존한다.
+
+
+## 최종 제품 소스의 원격 CI (2026-11-18 확인)
+
+제품 소스: `8a11bed1dacf158bc847832d4c26aa3642b93f5f` (0.8.8). 이후 문서 보정 커밋과 설치본 소스를 구분한다.
+
+- [Application 실행 44218578815](https://github.com/kdydesign/simple-timeline/actions/runs/44218578815): Linux job `134514489721`, Windows job `134514489983` 모두 success. 각각 전체 `verify:app`을 통과했다.
+- Windows job은 현재 NSIS 설치본, 고정 소스의 실제 0.2.1·0.8.0 설치본, 검증용 다음 버전 설치본 빌드와 실제 NSIS lifecycle 검사·artifact 업로드까지 success다. 배포용 파일은 [Windows 검증 기록](../release/windows-validation.md#planrail-088)에 고정한다.
+- [Repository harness 실행 44218578827](https://github.com/kdydesign/simple-timeline/actions/runs/44218578827): 같은 소스의 Windows·Linux 모두 success.
+
+위 CI 성공은 로컬 `verify:app`의 104/106 실패 기록을 대체하지 않으며 간헐적 launch/종료 지연의 원인 해결을 뜻하지 않는다. 회사 Windows에서 설치 호스트와 개발 멤버의 동시 실행, 실제 LAN·보안 정책·OS 외형·알림 인수는 여전히 미검증이다. 최초 도움말 지연도 해결됐다고 보고하지 않는다.

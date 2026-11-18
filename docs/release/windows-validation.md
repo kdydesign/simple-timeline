@@ -1,7 +1,25 @@
 # Windows 설치 검증
 
-현재 전달 기준은 Planrail 0.8.1이다. 이전 버전 검증·스테이지 7 사용자 인수는 뒤의 과거 기록으로 보존한다.
+현재 이 문서에 고정한 전달 기준은 Planrail 0.8.8이다. 이전 버전 검증·스테이지 7 사용자 인수는 뒤의 과거 기록으로 보존한다.
 정책은 [배포 정책](policy.md), 사용법은 [설치 안내](user-guide.md)를 따른다.
+
+## Planrail 0.8.8
+
+확인일: 2026-11-18 (한국 시간). 설치본 소스: `8a11bed1dacf158bc847832d4c26aa3642b93f5f`.
+[Application 실행](https://github.com/kdydesign/simple-timeline/actions/runs/44218578815)의 Windows·Linux 전체 앱 검사와 [Repository harness](https://github.com/kdydesign/simple-timeline/actions/runs/44218578827)가 모두 성공했다.
+Windows job `134514489983`은 현재 사용자 설치본·실제 구버전 0.2.1/0.8.0·검증용 다음 버전 빌드, production package 및 실제 NSIS lifecycle 검사, artifact 업로드를 통과했다.
+
+위 Application 실행의 Artifacts에서 목적에 맞는 파일을 받는다. 비공개 저장소 접근 권한이 필요하며 보관 기간이 지나면 다운로드할 수 없다.
+
+| 목적 | artifact 이름 | GitHub artifact ID |
+| --- | --- | --- |
+| 직접 설치·호스트 수동 업데이트 | `Planrail-Windows11-x64-unsigned-8a11bed1dacf158bc847832d4c26aa3642b93f5f` | `14390841694` |
+| 호스트 설정의 업데이트 ZIP 가져오기 | `Planrail-LAN-UPDATE-8a11bed1dacf158bc847832d4c26aa3642b93f5f` | `14390936390` |
+| Windows 자동 검증 보고서 | `app-windows-latest-8a11bed1dacf158bc847832d4c26aa3642b93f5f` | `14390757122` |
+
+GitHub가 제공한 artifact ZIP의 SHA-256은 설치 묶음 `e273b7a5985dd424a456b6ac4a2d0e0c342dfa669d217e6ea82021b89794da9f`, LAN 묶음 `46d526f797c09e80fa03044f4e3f7fa6996382854c71b1ba271bf79f94e9ec0f`다. 이는 내부 EXE의 해시나 코드 서명이 아니다. `UPDATE-TEST-ONLY`는 배포에 사용하지 않는다. 등록·배포 방법은 [사용 안내](user-guide.md)를 따른다.
+
+[0.8.8 구현 기록](../implementation/2026-11-18-settings-working-days.md)은 로컬 프로세스 종료/launch 간헐 실패와 최종 CI 성공을 구분한다. CI는 회사 Windows의 실제 LAN·DPAPI·방화벽·알림·DPI/유리 외형이나 최초 도움말 지연의 실기 인수를 대신하지 않는다. 후속 문서 커밋을 이 설치본의 소스 SHA로 바꾸지 않는다.
 
 ## Planrail 0.8.1
 

@@ -74,14 +74,13 @@ SQL은 준비된 문장에 값을 바인딩하고 renderer 문자열을 SQL 구�
 
 [승인된 C안](flat-glass-redesign.md)의 기본 제목 표시줄 제거에 따라,
 업무 API와 분리된 `window.timelineWindow.command(action)`을 제공한다.
-`window:command` 채널은 `minimize`, `toggle-maximize`, `close`, `state` 문자열 한 개만 받으며
+`window:command` 채널은 `minimize`, `toggle-maximize`, `close`, `state`, `help`, `release-notes` 중 문자열 한 개만 받으며
 동일한 최상위 frame·소유 창·URL 검증을 적용한다. 알 수 없는 명령·잘못된 인수는 거부한다.
 결과는 `{ok: boolean, maximized?: boolean}`이며 창 객체·범용 IPC는 노출하지 않는다.
-닫기는 `BrowserWindow.close()`를 호출한다. 0.5.0부터 main의 선택창에서 트레이 숨김·완전 종료·취소를 고른다.
-숨김은 입력과 진행 중 저장을 유지하며 중복 닫기 요청은 선택창을 쌓지 않는다.
-트레이 ‘종료’와 `app.quit()`는 창을 복원한 뒤 저장 대기·미저장 확인을 거쳐 실제 종료한다.
+닫기는 `BrowserWindow.close()`를 호출한다. 현재 X/Alt+F4는 확인 없이 트레이로 숨기며 입력과 진행 중 저장을 유지한다. 0.5.0의 매번 닫기 선택창은 [0.6.8 후속 구현](../implementation/2026-11-11-quick-actions.md)으로 대체됐다.
+트레이 Exit의 실제 종료는 진행 중 저장을 기다린 뒤 미저장 초안을 확인 없이 폐기한다. 저장 상태를 확인하지 못하면 오류를 안내하고 종료를 보류한다. [편집·종료 계약](editing-navigation-and-help.md)을 따른다.
 트레이 생성 실패 시에는 안내 후 완전 종료·취소만 제공한다. About은 main의 실제 버전과 기존 아이콘을 사용하는 native 정보창이다.
-기본 창은 1707×820 DIP를 표시 모니터의 작업 영역에 제한한다. 자세한 계약은 [데스크톱 개선 설계](calendar-preview-and-desktop-polish.md)를 따른다.
+현재 기본 창은 [window-bounds](../../src/main/window-bounds.ts)의 1707×890 DIP를 표시 모니터의 작업 영역에 제한한다. [데스크톱 개선 설계](calendar-preview-and-desktop-polish.md)의 최초 820 DIP 높이는 후속 변경으로 대체됐다.
 [close guard](../../src/main/close.ts)·[main 수명주기](../../src/main/bootstrap.ts)가 이 구분을 소유하며,
 복원·종료를 위해 renderer의 범용 권한이나 새 트레이 IPC를 추가하지 않았다.
 구현은 [창 IPC](../../src/main/window-ipc.ts), [타입](../../src/shared/window-api.ts)에 있다.
@@ -129,8 +128,8 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 | 일정 추가의 소속 프로젝트 | [EditorPanel](../../src/renderer/components/EditorPanel.tsx) → [앱 Select](../../src/renderer/components/Select.tsx) → [shadcn Select](../../src/renderer/components/ui/select.tsx) → Radix. 프로젝트 색상·이름·키보드 이동을 연결한다. 일정 편집에서는 읽기 전용이다. |
 | 날짜 입력·선택 달력 | [DatePicker](../../src/renderer/components/DatePicker.tsx)는 shadcn Input·Button·Popover·Select를 조합한다. 날짜 격자는 기존 [calendarGrid](../../src/visualization/calendar.ts)를 사용하며 shadcn Calendar/React DayPicker로 교체하지 않았다. 한국어·월요일 시작·0001~9999년 계약을 유지하기 위한 구성이다. |
 | 프로젝트 목록·날짜 팝오버 | [앱 Popover](../../src/renderer/components/Popover.tsx)가 shadcn/Radix 위치 계산과 로컬 portal container를 연결한다. 편집 패널 안의 중첩 선택기도 같은 DOM 포커스 범위를 유지한다. |
-| 아이콘 버튼·툴팁 | [IconButton](../../src/renderer/components/Icon.tsx)은 shadcn Button을 사용하고 tooltip을 명시적으로 켠 상단 6개 버튼만 Tooltip으로 감싼다. [App](../../src/renderer/App.tsx)의 Provider가 250ms 지연을 설정한다. |
-| 삭제·변경 버리기 확인 | [ConfirmDialog](../../src/renderer/components/ConfirmDialog.tsx)는 shadcn AlertDialog를 사용한다. 제목 표시줄은 모달 중에도 클릭 가능하지만 본문 차단과 확인창 포커스 보호는 유지한다. 실제 앱 종료의 확인은 main의 Electron 대화상자다. |
+| 아이콘 버튼·툴팁 | [IconButton](../../src/renderer/components/Icon.tsx)은 shadcn Button을 사용하고 호출부가 `tooltip`을 명시적으로 켠 버튼만 Tooltip으로 감싼다. 도움말·릴리즈노트·설정 등 추가된 제목 버튼도 포함한다. [App](../../src/renderer/App.tsx)의 Provider가 250ms 지연을 설정한다. |
+| 저장·삭제 확인 | [ConfirmDialog](../../src/renderer/components/ConfirmDialog.tsx)는 shadcn AlertDialog를 사용한다. 제목 표시줄은 모달 중에도 클릭 가능하지만 본문 차단과 확인창 포커스 보호는 유지한다. 미저장 초안 폐기는 확인 없이 처리한다. 트레이 생성 실패 등 main의 종료 예외 안내는 Electron 대화상자를 사용한다. |
 | 시작일·종료일 알림·공유 프로젝트로 저장 | [ReminderFields](../../src/renderer/components/ReminderFields.tsx) → [로컬 Switch](../../src/renderer/components/ui/switch.tsx) → 기존 `radix-ui`의 Switch. shadcn 원문 복사 없이 작성한 래퍼이며 별도 의존성을 추가하지 않는다. 두 알림 값과 저장 흐름은 유지한다. |
 
 스타일은 [App](../../src/renderer/App.tsx)에서 `shadcn.css` → `styles.css` → `flat-glass.css` → `planrail.css` → `forest-crystal.css` 순서로 가져온다.
@@ -138,8 +137,8 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 [기본 레이아웃](../../src/renderer/styles.css)·[C안 구조](../../src/renderer/flat-glass.css) 위에
 [Planrail 상태·동작 스타일](../../src/renderer/planrail.css), [Forest Crystal 재질](../../src/renderer/forest-crystal.css)을 적용한다.
 팝오버를 포함하는 패널의 블러는 별도 가상 요소에 둔다. 조상에 직접 `backdrop-filter`를 적용하면 fixed 포털의 기준 좌표가 바뀔 수 있다.
-기존 전역 규칙과 Tailwind 규칙이 함께 있으므로
-0.6.5는 다크 전용이며 테마 전환 버튼을 제공하지 않는다. 공통 스타일 수정 시 간트/달력, 편집 패널·중첩 팝오버를 함께 확인한다.
+기존 전역 규칙과 Tailwind 규칙이 함께 적용된다.
+0.6.5부터 다크 전용이며 테마 전환 버튼을 제공하지 않는다. 공통 스타일 수정 시 간트/달력, 편집 패널·중첩 팝오버를 함께 확인한다.
 회귀 위치와 실제 검증 범위는 [검증 안내](../harness/validation.md)를 따른다.
 
 ## 근거·승인·현재 검증
@@ -151,7 +150,7 @@ main은 DB commit 후에만 성공을 반환한다. renderer는 처리 중 중�
 IPC 거부·오류 변환·원자 삭제·저장 실패 검증은 [스테이지 5 기록](../implementation/stage-05.md)과
 [현재 검증 경로](../harness/validation.md)를 따른다. 자동화 통과를 별도의 침투 테스트 결과로 확대하지 않는다.
 Planrail 0.3.0은 [당시 구현 기록](../implementation/2026-11-05-planrail.md),
-0.4.0 알림·계층 개선은 [최신 구현 기록](../implementation/2026-11-05-reminders.md),
+0.4.0 알림·계층 개선은 [당시 구현 기록](../implementation/2026-11-05-reminders.md),
 Windows 설치와 과거 MVP 인수는 [Windows 검증 기록](../release/windows-validation.md)에서 버전별로 구분한다.
 
 ## 일정 알림 실행과 별도 IPC (0.4.0)
@@ -185,7 +184,7 @@ main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본�
 2초 폴링·5초 요청 제한·2/4/8/16/30초 재연결과 마지막 정상 확인 후7초의 초록 표시 한계를 적용한다.
 개인 저장과 수신 조회 실패는 독립적이다. 공유 알림의 실제 미처리 대상만 발송 직전 별도 최신 권한을 확인한다.
 
-트레이는 연결 상태 / 구분선 / About / 구분선 / Open / Exit 순서다. 연결 상태는 모든 역할의 공유 설정을 연다.
+0.6.0 당시 트레이는 연결 상태 / 구분선 / About / 구분선 / Open / Exit 순서였으며 연결 상태에서 공유 설정을 열었다. 현재는 About 아래 자동 실행·전체 알림 끄기가 있고, 0.8.8부터 연결 상태는 표시 전용이다. 설정 진입은 아래 0.8.8 계약을 따른다.
 멤버 제목 상태는 Planrail 옆, 수동 동기화는 간트/달력 왼쪽이다. 공유 설정은 기존 편집 입력과 초기·복귀·중첩 포커스를 보존한다.
 종료는 요청을 먼저 무효화하고 서버·타이머·알림을 정리한 뒤 DB를 닫는다.
 [실행 기록](../implementation/2026-11-10-lan-sharing.md)은 Linux loopback·시험 vault와 실제 Windows/LAN 인수를 구분한다.
@@ -215,3 +214,24 @@ main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본�
 [승인 설계](release-notes-and-confirmations.md)·[구현 기록](../implementation/2026-11-17-release-notes-confirmations.md)을 따른다. 릴리즈노트는 `release-notes:command`와 전용 비영속 session을 사용하며 파일/DB/공유/업데이트 API를 노출하지 않는다. 명시적 첫 클릭 생성·닫기 재사용으로 시작 시 준비 부하는 늘리지 않는다. 도움말은 기존 사전 준비를 유지하고 숫자 allowlist 진단만 추가한다.
 
 renderer의 저장 확인은 실제 mutation 전에 유효성 검사·사용자 수락·최신 대상 검사를 수행한다. main의 기존 권한과 트랜잭션 검증을 대체하지 않는다. 프로젝트 삭제 확인 이후 하위 일정이 변경되면 새 내용을 다시 확인하도록 저장을 막는다. 확인 취소와 초안 폐기는 서로 다른 동작이다.
+
+
+## 설정·개인 휴일·개발 멤버 경계 (0.8.8)
+
+[승인 설계](settings-and-working-days.md)의 Q1~Q10과 [구현·검증 기록](../implementation/2026-11-18-settings-working-days.md)을 따른다.
+제목 표시줄 설정 아이콘은 기본 설정 탭을 연다. 연결 승인 요청 알림은 공유 설정 탭으로 이동하며 요청 토큰을 한 번 소비한다.
+탭은 숨겨도 마운트를 유지해 입력을 보존하고, 팝업을 닫으면 미저장 초안을 폐기한다. 공유 상태를 조회하지 못하면 설정 진입을 비활성화한다.
+
+| 역할 | 기본 설정 | 공유 설정 |
+| --- | --- | --- |
+| 호스트 | 업데이트 배포, 공통 휴일, 개인 휴일 | 주소·공유 시작/중지·참여자·승인 |
+| 멤버 | 개인 휴일, 수신 공통 휴일 조회 | 연결·동기화·공유 변경 알림 등 기존 멤버 기능 |
+| 개인 전용 | 개인 휴일 | 호스트/멤버 역할 선택 |
+
+개인 휴일은 같은 PC의 모든 일정에 적용하지만 다른 PC에 보내지 않는다. 공통 표에 개인 표를 합쳐 저장하면 호스트의 연차 등이 공개될 수 있으므로, 저장 원본을 분리하고 화면·워킹데이 계산에서만 합산한다. 현재 구현은 [출처 선택](../../src/renderer/state/holidaySources.ts), [계산](../../src/domain/holidays.ts), [개인 저장소](../../src/main/db/personal-holidays.ts)를 분리한다.
+
+[SharingApi](../../src/shared/sharing.ts)의 `savePersonalHolidays({calendar}): Promise<Result<SharingState>>`는 로컬 preload API다. `calendar`는 `weekdays`(0=일요일~6=토요일)와 `dates`(`date`, 선택적 `endDate`, `name`)를 받으며 성공 시 저장 후 최신 공유 상태와 `personalHolidays`를 반환한다. 저장은 개인·호스트·멤버 모두 가능하다. 서비스 종료·절전·저장 차단 중에는 `FORBIDDEN`, 저장소 준비 전에는 `DB_NOT_READY`, 형식·날짜·겹침 위반은 필드가 있는 `VALIDATION_ERROR`를 반환한다. DB 오류는 [공통 오류 변환](../../src/main/errors.ts)을 따른다.
+
+[공유 IPC](../../src/main/sharing/ipc-core.ts)는 신뢰한 창·명령·인자 모양과 휴일 값을 검증하며 저장소도 다시 검증한다. 개인 표를 위한 LAN 쓰기 API는 추가하지 않았다. 기존 휴일 LAN 응답은 공통 원본만 읽고 개인 저장은 공유 revision·ETag·변경 알림 기록을 바꾸지 않는다. 합산 표는 유효한 단일 저장 원본으로 취급하지 않는다. 출처 간 겹침과 합산 개수는 각 표의 검증 제한과 다르기 때문이다.
+
+`npm run dev:member`는 unpackaged development에서만 `--planrail-dev-member`를 처리한다. 단일 실행 잠금과 DB 초기화 전에 `PlanrailDev/member`로 프로필을 분리하고 updater 캐시도 격리한다. 역할은 자동 승인하지 않으며 실제 호스트와 IP·지문·설치본 승인이 필요하다. 개발 실행에서 실제 업데이트 설치와 Windows 자동 실행 등록은 제공하지 않는다. 이 프로필은 지속되므로 자동 테스트에는 별도 일회성 프로필을 사용한다.

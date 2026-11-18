@@ -1,14 +1,17 @@
 # 진행 상태
-최신 후속: 0.8.7 [휴일 기간·삼각 표시](../design/holiday-ranges-and-markers.md)는 수정 시안 승인 후 구현·독립 검토·로컬 단계별 검증을 완료했다. 통합 실행의 시간 초과와 재실행 결과는 검증 기록에 구분했다. 최종 SHA의 원격 CI는 Actions와 완료 보고를 따른다. [검증 기록](../implementation/2026-11-17-holiday-ranges.md)을 따른다. 기존 MVP 완료 상태는 유지한다.
-최신 후속: 0.8.6 [멤버 버전·공통 휴일·연결 승인 요청 알림](../design/member-versions-holidays-and-pairing-notices.md)은 Q1~Q11과 시안 검토 후 전체 구현을 승인받았다. 제품 구현·독립 검토 보정·로컬 전체7단계 검증을 완료했다. 최종 SHA의 원격 CI는 Actions와 완료 보고를 따른다. [구현 기록](../implementation/2026-11-17-member-holidays.md). 기존 MVP 지도 완료 상태는 유지한다.
-최신 후속: 0.8.5 릴리즈노트·저장 확인·창 외형·도움말 진단 구현·독립 검토·로컬 전체 검증 완료. 원격 CI는 최종 SHA의 Actions와 종료 보고를 따른다. [승인 설계](../design/release-notes-and-confirmations.md) · [검증 기록](../implementation/2026-11-17-release-notes-confirmations.md). 최초 도움말13초의 실제 성능 수정은 새 Windows 진단 이후이며, 사전 준비 시점은 유지한다.
+
+최신 후속: 0.8.8 [설정 탭·개인 휴일·워킹데이](../design/settings-and-working-days.md)는 Q10 승인 후 구현·도움말 갱신·검토를 완료했다. 제품 소스 `8a11bed1dacf158bc847832d4c26aa3642b93f5f`의 Application과 Repository harness는 Windows·Linux 모두 성공했다. 로컬 전체 검사 실패와 회사 PC 미검증 범위는 [구현·검증 기록](../implementation/2026-11-18-settings-working-days.md)에 별도로 보존한다. 기존 MVP 완료 상태는 유지한다.
+
+이전 후속: 0.8.7 [휴일 기간·삼각 표시](../design/holiday-ranges-and-markers.md)는 수정 시안 승인 후 구현·독립 검토·로컬 단계별 검증을 완료했다. 통합 실행의 시간 초과와 재실행 결과는 검증 기록에 구분했다. 최종 SHA의 원격 CI는 Actions와 완료 보고를 따른다. [검증 기록](../implementation/2026-11-17-holiday-ranges.md)을 따른다. 기존 MVP 완료 상태는 유지한다.
+이전 후속: 0.8.6 [멤버 버전·공통 휴일·연결 승인 요청 알림](../design/member-versions-holidays-and-pairing-notices.md)은 Q1~Q11과 시안 검토 후 전체 구현을 승인받았다. 제품 구현·독립 검토 보정·로컬 전체7단계 검증을 완료했다. 최종 SHA의 원격 CI는 Actions와 완료 보고를 따른다. [구현 기록](../implementation/2026-11-17-member-holidays.md). 기존 MVP 지도 완료 상태는 유지한다.
+이전 후속: 0.8.5 릴리즈노트·저장 확인·창 외형·도움말 진단 구현·독립 검토·로컬 전체 검증 완료. 원격 CI는 최종 SHA의 Actions와 종료 보고를 따른다. [승인 설계](../design/release-notes-and-confirmations.md) · [검증 기록](../implementation/2026-11-17-release-notes-confirmations.md). 최초 도움말13초의 실제 성능 수정은 새 Windows 진단 이후이며, 사전 준비 시점은 유지한다.
 이전 후속: 0.8.4 [편집·탐색·전체 기능 도움말](../design/editing-navigation-and-help.md) Q1~Q8 구현·독립 검토·로컬 전체 검증 완료. 원격 CI와 최종 SHA는 종료 보고에서 확인한다. [구현 기록](../implementation/2026-11-16-editing-navigation-help.md)에서 검증 상태를 확인한다. 기존 MVP 지도는 유지한다.
 
 
 현재: 스테이지 7 완료. 기본 설치 인수 범위의 MVP를 마무리했다.
-최신 후속: 0.8.2 [호스트·멤버 도움말 창](../design/host-member-help.md). H1~H8 확정 후 사용자가 별도 구현을 요청했다. [구현·검증 기록](../implementation/2026-11-16-host-member-help.md)에서 오프라인 도움말과 실제 검증 범위를 확인한다.
-최신 후속: 0.8.3 업데이트 Windows 알림·전체 무음·호스트 접속 멤버·트레이 자동 실행 표시를 구현하고 독립 검토·로컬 전체 검증을 완료했다. 사용자가 도움말 완료 후 구현을 명시했다. [승인 설계](../design/notification-controls-and-member-presence.md)·[구현 기록](../implementation/2026-11-16-notification-controls-and-presence.md)을 따른다. 0.8.2 도움말 CI는 bfb7887에서 보정 후 양 OS·Windows 설치까지 성공했다. 기존 MVP 지도는 유지한다.
-최신 후속: 0.8.1 버튼 재질·로그인 자동 실행·수동 설치 종료 구현·독립 검토 완료. `c914232`의 양 OS 전체 앱 검사와 실제 Windows 설치3개 통과. 회사 PC의 실제 로그인 인수는 미검증이다. [확정 설계](../design/windows-login-startup.md)·[실행 기록](../implementation/2026-11-12-startup-and-install.md#최종-windows-결과)을 따른다. MVP 단계 완료 상태는 유지한다.
+이전 후속: 0.8.2 [호스트·멤버 도움말 창](../design/host-member-help.md). H1~H8 확정 후 사용자가 별도 구현을 요청했다. [구현·검증 기록](../implementation/2026-11-16-host-member-help.md)에서 오프라인 도움말과 실제 검증 범위를 확인한다.
+이전 후속: 0.8.3 업데이트 Windows 알림·전체 무음·호스트 접속 멤버·트레이 자동 실행 표시를 구현하고 독립 검토·로컬 전체 검증을 완료했다. 사용자가 도움말 완료 후 구현을 명시했다. [승인 설계](../design/notification-controls-and-member-presence.md)·[구현 기록](../implementation/2026-11-16-notification-controls-and-presence.md)을 따른다. 0.8.2 도움말 CI는 bfb7887에서 보정 후 양 OS·Windows 설치까지 성공했다. 기존 MVP 지도는 유지한다.
+이전 후속: 0.8.1 버튼 재질·로그인 자동 실행·수동 설치 종료 구현·독립 검토 완료. `c914232`의 양 OS 전체 앱 검사와 실제 Windows 설치3개 통과. 회사 PC의 실제 로그인 인수는 미검증이다. [확정 설계](../design/windows-login-startup.md)·[실행 기록](../implementation/2026-11-12-startup-and-install.md#최종-windows-결과)을 따른다. MVP 단계 완료 상태는 유지한다.
 이전 후속: 0.8.0 호스트 배포 기반 앱 업데이트를 구현했다. [승인 설계](../design/lan-app-updates.md)·[구현·검증 기록](../implementation/2026-11-11-lan-app-updates.md)에 로컬 검사와 실제 Windows 미검증 범위를 구분한다. 기존 MVP 완료 상태를 유지한다. 최종 SHA·CI 결과는 종료 메시지를 따른다.
 이전 후속: 0.7.0 공유 변경 알림 구현·로컬 전체 검증 완료. [구현·검증 기록](../implementation/2026-11-11-shared-change-notifications.md)을 따른다.
 이전 후속: 0.6.10 참여자 한 줄 배치·상태 배지 보정. [구현·검증](../implementation/2026-11-11-participant-row.md)을 따른다.

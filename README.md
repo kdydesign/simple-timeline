@@ -11,7 +11,7 @@ Windows 11 x64용 서명 없는 사용자별 NSIS 설치본을 비공개 GitHub 
 설치 방법은 [사용 안내](docs/release/user-guide.md), 정확한 다운로드·소스 SHA·해시는
 [Windows 검증 기록](docs/release/windows-validation.md)을 확인한다.
 `UPDATE-TEST-ONLY`는 같은 소스의 가상 다음 버전 fixture이며 일반 배포본이 아니다.
-현재 Planrail 변경과 검증 근거는 [구현 기록](docs/implementation/2026-11-05-planrail.md)을 따른다.
+현재 0.8.8 변경과 검증 근거는 [설정·개인 휴일·워킹데이 구현 기록](docs/implementation/2026-11-18-settings-working-days.md)을 따른다.
 업데이트·제거 후에도 DB를 보존한다. 0.8.0은 승인된 LAN 멤버의 UPDATE 업데이트를 제공한다. 호스트는 수동 설치하며 수동 백업/복원 기능은 없다. [업데이트 구현·검증](docs/implementation/2026-11-11-lan-app-updates.md)을 따른다.
 
 ## 개발 시작
@@ -50,7 +50,7 @@ main이 SQLite·트랜잭션을 소유하고 제한된 preload API로 React와 �
 날짜·간트·달력 계산은 [domain](src/domain/)과 [visualization](src/visualization/)의 순수 함수에 둔다.
 공통 UI는 shadcn/ui·Radix·Tailwind를 사용하며 [원본 출처와 라이선스](resources/licenses/shadcn-ui-NOTICE.md)를 설치본에도 포함한다.
 권한·오류 계약은 [구조 설계](docs/design/architecture.md), 데이터 보존은 [저장 설계](docs/design/storage.md),
-현재 화면·날짜 탐색·트레이 정책은 [Planrail 설계](docs/design/planrail-improvements.md)를 따른다. [HTML 목업](docs/design/mockups/stage-03.html)은 과거 설계 자료다.
+현재 설정·개인 휴일·워킹데이는 [0.8.8 승인 설계](docs/design/settings-and-working-days.md), 창·트레이 동작은 [구조 설계](docs/design/architecture.md)를 따른다. 버전별 변경은 [문서 지도](docs/agents/domain.md)에서 찾는다. [HTML 목업](docs/design/mockups/stage-03.html)은 과거 설계 자료다.
 전체 문서와 실제 코드의 탐색 경로는 [문서 기준](docs/agents/domain.md)에 있다.
 
 Codex 작업은 [AGENTS.md](AGENTS.md)에서 시작한다. Node 24 이상과 Git만으로 다음 하네스를 실행할 수 있다.

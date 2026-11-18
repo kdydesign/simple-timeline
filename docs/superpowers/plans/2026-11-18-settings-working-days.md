@@ -48,7 +48,7 @@
 - [x] Audit every help topic against implementation; update settings routes, personal/common/workdays, images, and release 0.8.8 Feat/Fix. Recapture synthetic images using isolated fixtures.
 - [x] Run `node scripts/harness/run.mjs verify` and `xvfb-run -a npm run verify:app` sequentially; investigate failures, record true limits.
 - [x] Fresh whole-change review and fix material findings with reproduction tests; prepare the verified changes and evidence for one integrated commit.
-- [ ] Observe exact-commit Linux/Windows CI after push; report its result separately from local evidence.
+- [x] Observe exact-commit Linux/Windows CI after push; report its result separately from local evidence. See the final CI evidence below.
 
 ## Execution ledger
 Pre-flight: Task1 types are Task2 inputs; Task3 profile options independently integrate bootstrap; Task4 help captures depend on Task2 UI. Signatures and scope agree with the approved spec.
@@ -77,3 +77,8 @@ Ruling: use inline execution and repository main workflow; user has explicitly a
 
 - 최종 로컬 E2E104/106: calendar-preview·reminders 프로세스 종료 wait timeout2건. 별도2회 반복11/12는 다른 테스트의 launch timeout. 최소 Electron20/20, 같은 DEBUG 조건의 기준archive18/18·현재18/18 통과. 원인 미확정이며 제품 코드·테스트 timeout·검사 대상을 변경하지 않았다.
 - Ruling: 로컬 전체 실패를 보존한 채 중요한 기능 회귀/검토 통과 변경을 통합 커밋하고 깨끗한 Linux/Windows CI로 전체 검사한다. 로컬 전체 통과로 표현하지 않으며 CI가 실패하면 후속 처리한다. 자세한 근거는 구현 기록에 둔다.
+
+
+### 최종 원격 CI 확인 (2026-11-18)
+
+제품 소스 `8a11bed1dacf158bc847832d4c26aa3642b93f5f`의 [Application](https://github.com/kdydesign/simple-timeline/actions/runs/44218578815)·[Repository harness](https://github.com/kdydesign/simple-timeline/actions/runs/44218578827)는 양 OS 모두 success. Windows 설치 lifecycle도 통과했다. 로컬 프로세스 종료/launch 간헐 실패 기록과 실기 미검증 범위는 그대로 보존한다. 상세는 [구현 기록](../../implementation/2026-11-18-settings-working-days.md#최종-제품-소스의-원격-ci-2026-11-18-확인)을 따른다.

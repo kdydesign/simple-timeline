@@ -32,7 +32,7 @@ better-sqlite3 13의 선택된 Windows binding은 `prebuilds/win32-x64.node`이�
 | `schedules` | `id INTEGER PRIMARY KEY AUTOINCREMENT`, `project_id INTEGER NOT NULL REFERENCES projects(id) ON DELETE CASCADE`, `name TEXT NOT NULL`, `start_date TEXT NOT NULL`, `end_date TEXT NOT NULL`, `created_at TEXT NOT NULL`, `updated_at TEXT NOT NULL` |
 
 참여자는 JSON 대신 자식 테이블로 저장한다. 목록 순서·이름 중복·프로젝트와의 연쇄 삭제를
-DB 제약으로 표현할 수 있다. 전역 사람 테이블이나 계정·권한은 만들지 않는다.
+DB 제약으로 표현할 수 있다. MVP의 표시 이름에는 전역 사람 테이블이나 계정·권한을 두지 않았다. 이후 LAN 공유의 승인 PC·접근 권한은 별도 schema v3 테이블로 관리하며 표시 이름과 구분한다.
 생성·수정 시 참여자 전체 교체와 프로젝트 변경을 같은 트랜잭션에 넣는다.
 
 - ID는 테이블별 생성 순서다. AUTOINCREMENT로 삭제한 ID를 재사용하지 않는다.
@@ -68,12 +68,12 @@ getSnapshot은 한 읽기 트랜잭션에서 프로젝트·일정·참여자를 
 
 - 고정 앱 정체성의 `app.getPath('userData')/data/timeline.sqlite3` 사용.
   설치 폴더·현재 작업 폴더에 저장하지 않는다. 현재 [profile.ts](../../src/main/profile.ts)는
-  앱 데이터의 SimpleTimeline 폴더를 userData로 사용한다. app ID·제품명은 [배포 정책](../release/policy.md)을 따른다.
+  일반 실행에서는 앱 데이터의 SimpleTimeline 폴더를 userData로 사용한다. `npm run dev:member`만 별도 `PlanrailDev/member` 프로필을 사용한다. app ID·제품명은 [배포 정책](../release/policy.md)을 따른다.
 - `requestSingleInstanceLock`을 DB 열기 전에 획득한다. 두 번째 실행은 첫 창을 활성화하고 종료한다.
 - 첫 실행은 DB 파일이 없을 때만 디렉터리·빈 schema를 만든다. 기존 DB 열기 실패와 빈 DB를 구분한다.
 - 앱 재실행·일반 업데이트 시 userData와 DB 경로를 유지한다. 설치 파일에 쓰기 가능한 DB를 넣지 않는다.
   제거 후에도 DB를 보존한다. 사용자 선택과 실제 확인 범위는 [사용자 인수](../release/user-acceptance.md)를 따른다.
-- 실제 종료 시 진행 중 쓰기를 정리하고 연결을 닫는다. 0.5.0부터 X/Alt+F4는 숨김/완전 종료/취소를 선택한다. 숨김은 연결과 진행 중 저장을 유지한다.
+- 실제 종료 시 진행 중 쓰기를 정리하고 연결을 닫는다. 현재 X/Alt+F4는 확인 없이 트레이로 숨기며 연결·편집 입력·진행 중 저장을 유지한다. 0.5.0의 닫기 선택창은 후속 변경으로 대체됐다.
   트레이 ‘종료’는 [보호 종료 계약](architecture.md#커스텀-창-제어-c안-후속-구현)을 거친다. 비정상 종료 후 SQLite 저널 복구 결과를 확인한다.
 - 기존 DB의 열기·검사·마이그레이션 실패 시 원본을 지우거나 빈 DB로 바꾸지 않는다.
   DB 사용을 차단하고 오류 원인·DB 경로·종료/재실행 안내를 제공한다.
@@ -81,12 +81,12 @@ getSnapshot은 한 읽기 트랜잭션에서 프로젝트·일정·참여자를 
 ## 화면 설정과 메모리 상태
 
 [usePreferences](../../src/renderer/state/usePreferences.ts)는 Chromium 프로필의 localStorage에
-`simple-timeline.preferences.v1` 키로 테마·접힌 프로젝트 ID·간트 1일 너비를 저장한다.
-SQLite 업무 데이터나 DB 스키마에 넣지 않는다. 기본값은 라이트·모두 펼침·28px이며,
+`simple-timeline.preferences.v1` 키로 고정된 `theme: 'dark'`·접힌 프로젝트 ID·간트 1일 너비를 저장한다.
+SQLite 업무 데이터나 DB 스키마에 넣지 않는다. 현재는 다크 전용이며 과거 라이트 값도 다크로 읽는다. 기본값은 모두 펼침·28px이고,
 유효하지 않은 날짜 너비는 28px로 복귀한다. localStorage 쓰기 실패는 일정 편집을 차단하지 않는다.
 
 표시명이 Planrail로 바뀌어도 내부 package/appId·SimpleTimeline 프로필·이 설정 키를 유지했다.
-기존 DB뿐 아니라 테마·접힘 설정을 이어 쓰기 위한 승인 결정이며 [설치 정책](../release/policy.md)을 따른다.
+이름 변경 당시 DB·화면 설정을 이어 쓰기 위한 승인 결정이었다. 현재 접힘·배율은 이어 쓰되 테마는 다크로 고정하며 [설치 정책](../release/policy.md)을 따른다.
 선택 날짜·달력 표시 월·스크롤·탐색으로 넓힌 범위는 실행 중 상태다. 창을 숨겨도 유지되지만
 새 실행에서는 선택일이 오늘로 초기화된다. 설치 제거 후 DB 보존과 설정 보존의 실제 확인 범위는
 [Windows 검증 기록](../release/windows-validation.md)을 따른다.
@@ -122,7 +122,7 @@ DB 파일은 평문이며 Windows 사용자 파일 권한을 따른다. 별도 �
 
 ## 검증과 남은 범위
 
-현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1~v6을 지원한다. v5는 공유 변경 이력·수신함, v6은 전역 알림 설정·업데이트 알림 이력과 날짜 알림 억제 flag를 추가한다. [v5→v6 보존 및 손상 차단 회귀](../../tests/native/notification-controls.case.ts)를 포함한다.
+현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1~v8을 지원한다. v5는 공유 변경 이력·수신함, v6은 전역 알림 제어, v7은 공통 휴일·멤버 버전·승인 요청 알림, v8은 개인 휴일을 추가한다. 각 저장 경계는 아래 버전별 항목을 따른다. [v5→v6 보존 및 손상 차단 회귀](../../tests/native/notification-controls.case.ts)도 유지한다.
 [알림 native 회귀](../../tests/native/reminders.case.ts)는 실제 v1→v2 데이터 보존을,
 [native lifecycle 회귀](../../tests/native/lifecycle.case.ts)는 현재 버전 이후의 시험용 추가 버전으로 성공·실패를 검사한다.
 0.1.0→검증용 0.1.1 설치는 같은 schema이므로 실제 제품 schema 업그레이드의 증거가 아니다.
@@ -192,3 +192,25 @@ Linux basic_text backend는 거부한다. 자동 테스트의 격리 AES vault�
 `notification_settings`는 해당 PC의 muted·generation과 공유 날짜/공유 변경/업데이트 재개 기준을 저장한다. singleton 또는 필수 schema가 없으면 시작을 차단한다. 설정 변경·개인 날짜 후보 억제·공유 대기 취소는 같은 transaction이며 실패하면 이전 실제 설정으로 복구한다. `reminder_deliveries`와 `sharing_reminder_deliveries`의 suppressed flag는 기존 전송 결과를 보존하면서 무음 억제를 실패/재시도 대상과 구분한다.
 
 `update_notification_deliveries`의 hostId/버전 키는 OS 제출 전에 claimed를 기록하며 submitted/failed/unknown/suppressed로 마무리한다. 중단된 claimed는 unknown으로 회복하고 자동 재전송하지 않는다. 호스트 재승인이나 같은 버전 재배포로 중복 알리지 않도록 연결 해제 후에도 이름·IP·자격을 포함하지 않는 최소 이력은 남긴다. 호스트 접속 멤버의 시각은 DB에 저장하지 않고 프로세스 메모리에서만 관리한다.
+
+
+## 공통 휴일·멤버 버전·승인 요청 알림 schema v7 (0.8.6)
+
+[extras 저장소](../../src/main/db/sharing/extras.ts)는 다음 테이블을 추가한다.
+
+| 테이블 | 소유 데이터 |
+| --- | --- |
+| `sharing_holidays` | 호스트 공통 휴일 원본·revision. 최초 반복 요일은 토·일 |
+| `sharing_holiday_cache` | 멤버가 받은 공통 휴일 envelope·수신 시각 |
+| `sharing_device_versions` | 승인 PC·설치본에 연결된 마지막 보고 버전·확인 시각 |
+| `pairing_notification_deliveries` | 연결 요청 알림의 선점·억제·제출·실패·결과 불명과 시각 |
+
+접속 중 여부는 여전히 메모리 상태이며 마지막 보고 버전과 구분한다. 날짜별 기간은 0.8.7부터 같은 calendar JSON 안의 선택적 `endDate`로 표현한다. 구버전 휴일 API에는 검증 후 하루 단위로 펼쳐 보내며 새 DB 버전은 추가하지 않았다. 근거는 [멤버 버전·휴일 설계](member-versions-holidays-and-pairing-notices.md)와 [기간 설계](holiday-ranges-and-markers.md)다.
+
+## 개인 휴일 schema v8 (0.8.8)
+
+[개인 휴일 저장소](../../src/main/db/personal-holidays.ts)는 STRICT `personal_holidays(singleton, calendar)`에 PC별 표 한 개를 저장한다. 최초 값은 토·일이며 기존 공통 원본·수신 캐시를 복사하거나 덮어쓰지 않는다. JSON은 읽을 때와 쓸 때 모두 검증하고, 저장은 트랜잭션으로 처리한다. 시작 시 필수 테이블·singleton·내용을 검사하므로 손상 데이터를 빈 휴일표로 대체하지 않는다.
+
+개인 표는 호스트·멤버·개인 전용 모두 같은 로컬 저장 경계를 사용한다. 역할 선택·연결 해제·승인 취소로 개인 표를 지우지 않는다. 호스트는 개인 표를 보관·적용하되 전송하지 않는다. 합산 결과와 워킹데이는 파생값이며 DB에 저장하지 않는다. 범위·겹침·출처별 제한은 [휴일 도메인 규칙](domain-rules.md#휴일과-워킹데이-088)을 따른다.
+
+멤버의 수신 공통 표는 일시 단절 시 유지하고, 승인 취소 확인·명시적 연결 해제 시 제거한다. 승인 취소 상태는 기존 `sharing_change_settings`의 회수 상태로도 확인하므로 오프라인 재시작·절전 복귀가 공통 토·일 기본값을 되살리지 않는다. 해당 상태를 해제하는 것은 정상 인증된 동기화이며 개인 저장 성공이 아니다. 원자성·마이그레이션·LAN 비공개 검증은 [0.8.8 구현 기록](../implementation/2026-11-18-settings-working-days.md)에 연결한다.
