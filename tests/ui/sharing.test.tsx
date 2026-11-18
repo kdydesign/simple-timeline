@@ -17,13 +17,16 @@ it('preserves nonhost participants as readonly even without sharing capability',
  await u.type(screen.getByLabelText('프로젝트 이름'),' 수정');await u.click(screen.getByRole('button',{name:'저장'}));
  await waitFor(()=>expect(m.snapshot.projects[0].name).toContain('수정'));expect(m.snapshot.projects[0].participants).toEqual(hotfix.projects[0].participants);
 });
-it('places member sync immediately before modes and shows status beside title; shared detail saves only own alarm',async()=>{
- const f=sharingFixture({role:'member',status:'connected',lastCheckedAt:'2026-11-10T08:00:00Z'}),u=userEvent.setup();
+it('places member sync immediately before modes and reports the connection in the footer; shared detail saves only own alarm',async()=>{
+ const f=sharingFixture({role:'member',status:'connected',message:'',lastCheckedAt:'2026-11-10T08:00:00Z'}),u=userEvent.setup();
  const data=structuredClone(hotfix),p=sharedId('11111111-1111-1111-1111-111111111111','22222222-2222-2222-2222-222222222222','1');
  data.projects.push({...data.projects[0],id:p,name:'공유 프로젝트',sharing:'member'});data.schedules.push({...data.schedules[0],id:p,projectId:p,name:'공유 일정',sharing:'member'});
  const m=memoryApi(data);f.api.saveReminder=vi.fn(async({id,reminder})=>{const s=m.snapshot.schedules.find(s=>s.id===id)!;s.reminder=reminder;return{ok:true as const,data:s}});
  render(<App api={m.api}/>);const sync=await screen.findByRole('button',{name:'수동 동기화'});expect(sync.nextElementSibling).toHaveAttribute('aria-label','조회 모드');
- expect(screen.getByRole('button',{name:/공유 연결 상태/}).closest('.brand')).toHaveTextContent('WorkRail');
+ const footer=screen.getByRole('contentinfo',{name:'PlanRail 상태'});
+ expect(within(footer).getByText('멤버')).toBeVisible();
+ const connection=within(footer).getByText('연결 정상');expect(connection).toHaveAttribute('data-connected','true');expect(connection).toHaveAttribute('title','마지막 정상 확인: 2026-11-10T08:00:00Z');
+ expect(screen.queryByRole('button',{name:/공유 연결 상태/})).toBeNull();
  await u.click(screen.getByRole('button',{name:'공유 일정 편집'}));expect(screen.getByLabelText('일정 이름')).toHaveAttribute('readonly');expect(screen.queryByRole('button',{name:'삭제'})).not.toBeInTheDocument();
  await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'변경'}));await waitFor(()=>expect(f.api.saveReminder).toHaveBeenCalledOnce());
  expect(f.api.saveReminder).toHaveBeenCalledWith(expect.objectContaining({id:p}));
@@ -80,10 +83,13 @@ it('never falls back to source CRUD when a member reminder capability is unavail
  const m=memoryApi(hotfix),u=userEvent.setup();m.snapshot.projects[0].sharing='member';m.snapshot.schedules[0].sharing='member';const update=vi.spyOn(m.api,'updateSchedule');render(<App api={m.api}/>);await u.click(await screen.findByRole('button',{name:'개발 편집'}));await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'변경'}));expect(update).not.toHaveBeenCalled();expect(screen.getByRole('alert')).toHaveTextContent('공유 알림');
 });
 it('shows member-intent red status and disabled sync while the first pairing still has personal privileges',async()=>{
- sharingFixture({role:'personal',status:'pairing',pendingPair:{pairId:'attempt',fingerprint:'A'.repeat(64),expiresAt:'2026-11-10T09:00:00Z'}});
+ sharingFixture({role:'personal',status:'pairing',message:'',pendingPair:{pairId:'attempt',fingerprint:'A'.repeat(64),expiresAt:'2026-11-10T09:00:00Z'}});
  render(<App api={memoryApi().api}/>);
  const sync=await screen.findByRole('button',{name:'수동 동기화'});expect(sync).toBeDisabled();expect(sync.nextElementSibling).toHaveAttribute('aria-label','조회 모드');
- expect(screen.getByRole('button',{name:/공유 연결 상태/})).toHaveClass('unavailable');
+ const footer=screen.getByRole('contentinfo',{name:'PlanRail 상태'});
+ expect(within(footer).getByText('개인 전용')).toBeVisible();
+ expect(within(footer).getByText('연결 승인 대기')).toHaveAttribute('data-connected','false');
+ expect(within(footer).queryByText('멤버')).toBeNull();
  expect(sync).toHaveAccessibleDescription('설정과 연결 승인이 필요합니다.');
 });
 
@@ -116,7 +122,16 @@ it('confirms participant removal with affected projects and permits removing rev
  await waitFor(()=>expect(within(dialog).queryByLabelText('민수 IP')).not.toBeInTheDocument());expect(f.api.deleteDevice).toHaveBeenCalledWith({id:'9'});
 });
 
-it.each(['host','member','personal'] as const)('shows a stable title role badge only for %s sharing roles',async role=>{
- const f=sharingFixture({role,status:'disconnected'});const {container}=render(<App api={memoryApi().api}/>);await screen.findByRole('button',{name:'프로젝트 추가'});
- const badge=container.querySelector('.role-badge');if(role==='personal')expect(badge).toBeNull();else expect(badge).toHaveTextContent(role==='host'?'호스트':'멤버');
+it.each(['host','member','personal'] as const)('keeps the committed %s role in the footer as connection state changes',async role=>{
+ const f=sharingFixture({role,status:role==='personal'?'personal':'disconnected',message:''});const {container}=render(<App api={memoryApi().api}/>);await screen.findByRole('button',{name:'프로젝트 추가'});
+ const footer=screen.getByRole('contentinfo',{name:'PlanRail 상태'}),label=role==='host'?'호스트':role==='member'?'멤버':'개인 전용';
+ expect(within(footer).getByText(label)).toBeVisible();
+ expect(within(footer).getByText(role==='personal'?'공유 미설정':'연결을 확인할 수 없습니다')).toHaveAttribute('data-connected','false');
+ expect(container.querySelector('.brand .role-badge')).toBeNull();
+ if(role!=='personal'){
+  act(()=>f.emit({status:'connected'}));expect(within(footer).getByText(label)).toBeVisible();
+  expect(within(footer).getByText(role==='host'?'공유 제공 중':'연결 정상')).toHaveAttribute('data-connected','true');
+  act(()=>f.emit({status:'error',message:'공유 연결 오류'}));expect(within(footer).getByText(label)).toBeVisible();
+  expect(within(footer).getByText('공유 연결 오류')).toHaveAttribute('data-connected','false');
+ }
 })
