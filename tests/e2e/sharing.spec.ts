@@ -42,7 +42,12 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await expect.poll(()=>host.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(1);
   await host.app.evaluate(()=>new Promise<void>(resolve=>setImmediate(()=>{(globalThis as any).changeClicks[0]();resolve()})));
   await expect(h.getByRole('heading',{name:'연결 승인',exact:true})).toBeVisible();
-  await h.getByRole('button',{name:'지문 확인 · 연결 승인'}).click();await host.page.getByRole('button',{name:'일치 확인 후 승인'}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');
+  await h.getByRole('button',{name:'지문 확인 · 연결 승인'}).click();await host.page.getByRole('button',{name:'일치 확인 후 승인'}).click();
+  // Credential delivery/ack and the first snapshot are separate serialized
+  // polls (2s cadence, 5s request deadlines). Verify each phase independently;
+  // the normal connected-data propagation assertions below remain unchanged.
+  await expect.poll(async()=>(await sharingState(member)).pendingPair).toBeNull();
+  await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');
   await expect.poll(async()=>(await sharingState(host)).connectedMembers).toBe(1);await expect(h.getByText('연결 1대',{exact:true})).toBeVisible();await expect(h.locator('.sharing-device-presence').getByText('연결됨',{exact:true})).toBeVisible();
   await m.getByRole('button',{name:'설정 닫기'}).click();await h.getByRole('button',{name:'설정 닫기'}).click();
   // Convert original host project without changing numeric source identity.

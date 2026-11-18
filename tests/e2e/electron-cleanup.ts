@@ -8,13 +8,18 @@ export function createTestAppCleanup(app: ElectronApplication): () => Promise<vo
   return async () => {
     if (process.exitCode !== null || process.signalCode !== null) return;
 
-    // Subscribe before exit. Calling app.close() after app.exit() issues another
-    // app.quit() through the inspector while Electron is already tearing down.
+    // Subscribe before initiating teardown and keep the existing bounded wait.
     const closed = app.waitForEvent('close', { timeout: 10000 });
-    // Leave the inspector evaluation before exiting on the normal event loop.
-    // The process may close the inspector before it can acknowledge this request;
-    // only the actual close event below counts as successful cleanup.
-    void app.evaluate(({ app }) => { setImmediate(() => app.exit(0)); }).catch(() => {});
-    await closed;
+    const closing = (async () => {
+      // Install the fixture-only exit policy without starting shutdown yet.
+      // Playwright's close() then owns both quit and inspector disconnection;
+      // a bare app.exit() otherwise relies on a stderr line to detach it.
+      await app.evaluate(({ app }) => {
+        app.quit = () => { setImmediate(() => app.exit(0)); };
+      });
+      await app.close();
+    })();
+    // Observe request failures instead of silently converting them into a timeout.
+    await Promise.all([closed, closing]);
   };
 }

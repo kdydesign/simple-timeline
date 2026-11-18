@@ -77,3 +77,20 @@ Windows 설치 호스트+dev:member 동시 실행, 회사 LAN/IP/방화벽/DPAPI
 - 같은 파일을 현재 작업 트리와 기준 커밋의 별도 archive에서 각각 실행해 5/5 통과했다. 현재 5.17초·기준 5.54초의 파일 전체 실행이며 최초 2건의 시간 초과 원인은 확정하지 못했다. 제품 동작·테스트·제한 시간은 추가 수정하지 않았다.
 - 동일 작업 트리에서 `DISPLAY=:121 npm run verify:app` 재실행은 7단계 모두 PASS: 타입, release 26, 날짜 294×3 시간대, UI 207, 제품 build, native 89, Electron E2E 106. 결과는 `artifacts/app/latest.json`의 기준 SHA `fd22140...`, dirty=true, Linux x64·Node 24.22.1에 해당한다. 전체 로그는 `/workspace/output/settings-style/verify-retry.log`다. 재통과를 간헐 지연 원인 해결로 확대하지 않는다.
 - 문서 하네스·공백 검사도 통과했다. 새 의존성·제품 버전·CI 설정은 변경하지 않았고, 원격 CI와 push는 실행하지 않았다.
+
+## 스타일 push 이후 CI 실패 보정 (2026-11-18)
+
+이후 사용자가 push와 새 설치 파일 생성을 명시적으로 요청했다. 소스 `7754487`의 [Application 44237307859](https://github.com/kdydesign/simple-timeline/actions/runs/44237307859)는 Windows에서 서로 다른 E2E 실패로 두 번 중단되어 설치본과 LAN-UPDATE를 생성하지 못했다. Linux 및 Repository harness는 통과했다.
+
+- 첫 Windows job `134576426841`: `sharing.spec.ts`의 최초 연결에서 7초 안에 `connected`가 되지 않고 `connecting`에 머물렀다. 105/106 통과. 같은 로컬 시나리오도 3회 중 1회 실패했다.
+- 두 번째 Windows job `134587782522`: 공유 테스트는 통과했지만 `help-assets.spec.ts`의 캡처 후 fixture 정리에서 Electron `close` 이벤트 10초 대기가 실패했다. 105/106 통과. 제품 build와 native 검사까지는 두 번 모두 통과했다.
+
+테스트 전용 계측으로 자격 수령/저장 완료(`ready`)와 첫 snapshot 사이에 실제로 2초 폴링 간격이 있음을 확인했다. 두 단계를 합쳐 하나의 7초 제한으로 기다리던 최초 연결 검사를 자격 수령 완료(`pendingPair === null`)와 첫 동기화 완료로 나눴다. 각 assertion의 7초, 제품의 요청 5초·폴링 2초, 연결 후 변경 전파 검증은 유지한다. 최초 실패에서 개별 요청이 얼마나 걸렸는지는 당시 로그가 없어 확정하지 않는다.
+
+종료 helper는 `app.exit()`를 먼저 호출하고 디버거 연결 해제를 Playwright의 stderr 종료 문구 감지에 의존했다. 실제 Electron의 해당 문구만 가리는 회귀 검사에서 동일한 10초 timeout을 재현했다. fixture에만 강제 종료 정책을 설치한 뒤 `app.close()`가 종료 요청과 inspector 해제를 함께 소유하도록 변경했다. 요청 오류를 무시하지 않고 종료 이벤트와 함께 await한다. 원래 Windows 실패에서 문구가 누락됐는지까지 확인된 것은 아니며, 보정 전 일반 캡처 반복 30개는 통과했다.
+
+제품 Exit·저장 완료 대기·사용자 데이터·프로덕션 코드는 변경하지 않는다. 종료 fixture 검사는 미저장 입력, 중복 dispose, 이미 종료된 프로세스, stderr 문구 누락을 검증한다. 회귀 검사는 보정 전 FAIL, 보정 후 종료 검사 3/3 PASS를 확인했다. 임시 계측은 제거했다. 원본 CI artifact와 진단 로그는 `/workspace/output/ci-stability/` 및 앞선 CI 실행에 보존한다. 전체 검증·새 설치본 결과는 최종 실행 기록을 따른다.
+
+보정 후 공유·도움말 캡처·종료 fixture를 각각 3회 반복한 24개 E2E가 모두 통과했다(`focused-green.log`, 2.7분). 테스트 외 제품 소스·의존성·workflow·버전은 그대로다.
+
+최종 로컬 `DISPLAY=:121 npm run verify:app`은 7단계 모두 통과했다. 기준 SHA `775448756f5b68aa98b196f107f7fadd8357d0de`, dirty=true, Linux x64·Node 24.22.1, 2026-11-18 05:36:11~05:46:44 UTC의 작업 트리 검증이다. E2E는 107 passed, 0 failed/skipped/flaky(342.99초)이며 `verify-app.log`와 `artifacts/app/latest.json`에 근거를 남겼다. 원격 Windows 설치 검증은 push 후 별도로 확인한다.
