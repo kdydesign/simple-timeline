@@ -94,3 +94,9 @@ Windows 설치 호스트+dev:member 동시 실행, 회사 LAN/IP/방화벽/DPAPI
 보정 후 공유·도움말 캡처·종료 fixture를 각각 3회 반복한 24개 E2E가 모두 통과했다(`focused-green.log`, 2.7분). 테스트 외 제품 소스·의존성·workflow·버전은 그대로다.
 
 최종 로컬 `DISPLAY=:121 npm run verify:app`은 7단계 모두 통과했다. 기준 SHA `775448756f5b68aa98b196f107f7fadd8357d0de`, dirty=true, Linux x64·Node 24.22.1, 2026-11-18 05:36:11~05:46:44 UTC의 작업 트리 검증이다. E2E는 107 passed, 0 failed/skipped/flaky(342.99초)이며 `verify-app.log`와 `artifacts/app/latest.json`에 근거를 남겼다. 원격 Windows 설치 검증은 push 후 별도로 확인한다.
+
+`c5fa387`의 [Application 44246651776](https://github.com/kdydesign/simple-timeline/actions/runs/44246651776)에서 Linux 7단계 및 양 OS 하네스는 통과했다. Windows는 앞선 공유/캡처 검사를 통과했지만, `help.spec.ts`에서 실제 Exit로 도움말 창이 닫힌 직후 teardown이 실행되어 inspector가 이미 닫혔다는 오류로 106/107에서 중단됐다. Windows wrapper 프로세스 종료보다 inspector 종료가 먼저 관측되는 경합이다. 설치본 생성은 다시 미실행이었다.
+
+이를 재현하기 위해 helper의 최초 생존 확인 직후 실제 Electron을 종료하고 inspector 요청을 실패시키는 회귀 검사를 추가했다. 보정 전 FAIL을 확인했고, 보정 후에는 요청 실패 여부와 별개로 기존 10초 안에 실제 프로세스 종료가 확인돼야만 정리 성공으로 처리한다. 프로세스가 계속 살아 있으면 timeout과 원래 요청 오류를 함께 보고한다. 살아 있는 프로세스에서 요청만 실패시키는 반대 경로도 검사했다. 종료 5개·도움말 2개가 모두 통과했다(`concurrent-red.log`, `concurrent-green.log`). 이번 보완도 fixture와 테스트만 수정하며 제품 종료 정책은 바꾸지 않는다.
+
+동시 종료 보완 후 `npm run typecheck`와 `DISPLAY=:121 npm run test:e2e` 전체 109개가 통과했다(6.2분, `typecheck-final.log`, `e2e-final.log`). 기준은 `c5fa387` 위의 dirty 작업 트리다. 제품 코드는 동일하므로 직전 7단계 검증을 보존하고 변경된 fixture의 전체 E2E·타입·하네스를 다시 검증했다. 최종 Windows 설치본은 이 후속 커밋 CI의 결과를 따른다.

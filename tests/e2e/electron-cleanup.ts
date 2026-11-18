@@ -10,6 +10,7 @@ export function createTestAppCleanup(app: ElectronApplication): () => Promise<vo
 
     // Subscribe before initiating teardown and keep the existing bounded wait.
     const closed = app.waitForEvent('close', { timeout: 10000 });
+    let requestError: unknown;
     const closing = (async () => {
       // Install the fixture-only exit policy without starting shutdown yet.
       // Playwright's close() then owns both quit and inspector disconnection;
@@ -18,8 +19,14 @@ export function createTestAppCleanup(app: ElectronApplication): () => Promise<vo
         app.quit = () => { setImmediate(() => app.exit(0)); };
       });
       await app.close();
-    })();
-    // Observe request failures instead of silently converting them into a timeout.
-    await Promise.all([closed, closing]);
+    })().catch(error => { requestError = error; });
+    // Product Exit tests can close the inspector before the wrapper process
+    // exits. A request error is harmless only if actual exit is also observed.
+    try {
+      await Promise.all([closed, closing]);
+    } catch (error) {
+      if (requestError) throw new Error(`Electron cleanup request failed: ${String(requestError)}`, { cause: error });
+      throw error;
+    }
   };
 }
