@@ -1,6 +1,8 @@
 # 진행 상태
 
-최신 후속 완료: [Node 경고·휴일 설정](../design/node-guidance-and-holiday-layout.md)의 Q1/Q2 선택과 MSI COM 판독 수정을 반영했다. clean `b42cb41`에서 Linux 전체 검사(UI 250·native 97·E2E 113)와 하네스 7개가 통과했다. Windows COM·실제 제거는 미검증이며 아이콘 교체는 보류한다. [구현 기록](../implementation/2026-11-18-node-guidance-and-holidays.md)을 따른다.
+2026-11-19 WR 앱·선 메뉴 아이콘, 화면 간격·표 헤더·경고 및 개발 복구 창 인계를 제품에 적용했다. clean `467be88`에서 Linux 앱 전체 7단계와 하네스가 통과했다. [후속 검증](../implementation/2026-11-18-workrail-polish-and-recovery.md#2026-11-19-후속-검증).
+
+이전 후속 완료: [Node 경고·휴일 설정](../design/node-guidance-and-holiday-layout.md)의 Q1/Q2 선택과 MSI COM 판독 수정을 반영했다. clean `b42cb41`에서 Linux 전체 검사(UI 250·native 97·E2E 113)와 하네스 7개가 통과했다. Windows COM·실제 제거는 미검증이며 아이콘 교체는 보류한다. [구현 기록](../implementation/2026-11-18-node-guidance-and-holidays.md)을 따른다.
 
 최신 구현·검증 완료: 사용자의 설계 반영 요청에 따라 [화면·역할 전환·Node 복구](../implementation/2026-11-18-workrail-polish-and-recovery.md)를 문서 선행 정리 후 구현했다. clean `f356b71`에서 로컬 전체 검사(3 TZ unit·UI·build·native·E2E)가 통과했다. Windows MSI/UAC/복구 실기 및 원격 CI는 미검증이다. 아래 설계 확인 대기·제품 미변경 문구는 이전 단계 이력이며 현재 완료 여부는 구현 기록을 따른다. 기존 MVP 지도는 다시 열지 않는다.
 
