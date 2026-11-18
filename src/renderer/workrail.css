@@ -431,7 +431,8 @@
 .workrail-today { display: flex; flex-direction: column; }
 .workrail-schedule-list { min-height: 0; overflow: auto; max-height: 240px; }
 .workrail-home-node .workrail-active { margin-top: 13px; margin-bottom: 7px; }
-.workrail-home-node .workrail-active .workrail-tag { font-size: 11px; margin-top: 6px; }
+.workrail-home-node .workrail-active strong { font-size: 38px; font-weight: 500; }
+.workrail-home-node .workrail-active .workrail-tag { justify-self: start; font-size: 11px; margin-top: 12px; }
 .workrail-home-node .workrail-summary-line { margin-top: auto; }
 .workrail-home-node .workrail-home-node-link { margin-top: 7px; }
 .workrail-home-summaries > .workrail-surface { flex: 0 1 auto; width: fit-content; max-width: 380px; overflow-wrap: anywhere; }
