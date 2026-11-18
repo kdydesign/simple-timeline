@@ -2,7 +2,7 @@
 
 NW 웹개발팀을 위한 Windows 통합 도구. Planrail 일정 관리와 내 PC의 Node 버전 관리를 하단 도크로 전환한다. 기존 Electron + React + SQLite 기반 일정·공유·알림과 사용자 데이터를 유지한다.
 
-WorkRail 1.0.0은 현재 로컬 구현·검증 중이며 아직 게시하지 않았다. [확정 설계와 구현 기본값](docs/design/team-tool-expansion.md) · [구현 계획](docs/superpowers/plans/2026-11-18-workrail.md) · [검증 기록](docs/implementation/2026-11-18-workrail.md).
+WorkRail 1.0.0은 로컬 구현·독립 검토·전체 자동 검증을 완료했다. 아직 게시하지 않았으며 실제 Windows UAC·nvm 동작과 설치본 업그레이드는 별도 확인 대상이다. [확정 설계와 구현 기본값](docs/design/team-tool-expansion.md) · [구현 계획](docs/superpowers/plans/2026-11-18-workrail.md) · [검증 기록](docs/implementation/2026-11-18-workrail.md).
 
 스테이지 1~7은 완료됐다. 사용자는 기본 설치·실행·업데이트·제거/재설치와 데이터 보존을 확인했으며,
 상세 개선·오류 검증은 별도 후속 요청으로 분리했다. [사용자 인수 기록](docs/release/user-acceptance.md)의 범위와 한계를 따른다.
