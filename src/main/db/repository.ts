@@ -49,6 +49,7 @@ type Row = Record<string, string | bigint>
 export function createRepository(
   db: DatabaseHandle,
   clock: () => string = () => new Date().toISOString(),
+  includeDormant = false,
 ): Repository {
   const participants = (id: string): string[] =>
     (
@@ -110,13 +111,16 @@ export function createRepository(
     inclusiveDays(startDate, endDate)
     return { name: normalizeName(v.name), startDate, endDate }
   }
+  const hasRoles=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sharing_role_state'").get()
+  const active=includeDormant||!hasRoles?'1':"((SELECT role FROM sharing_config)='host' AND (SELECT target FROM sharing_role_state) IS NULL) OR NOT EXISTS(SELECT 1 FROM sharing_projects WHERE project_id=projects.id)"
+  const activeSchedule=includeDormant||!hasRoles?'1':"((SELECT role FROM sharing_config)='host' AND (SELECT target FROM sharing_role_state) IS NULL) OR NOT EXISTS(SELECT 1 FROM sharing_projects WHERE project_id=schedules.project_id)"
   // Keep all three reads in one transaction; participant queries must not grow with project count.
-  const snapshotProjects = db.prepare('SELECT * FROM projects ORDER BY id')
+  const snapshotProjects = db.prepare(`SELECT * FROM projects WHERE ${active} ORDER BY id`)
   const snapshotParticipants = db.prepare(
     'SELECT project_id,name FROM project_participants ORDER BY project_id,position',
   )
   const snapshotSchedules = db.prepare(
-    'SELECT * FROM schedules ORDER BY project_id,start_date,end_date,id',
+    `SELECT * FROM schedules WHERE ${activeSchedule} ORDER BY project_id,start_date,end_date,id`,
   )
   return {
     getSnapshot: db.transaction(() => {

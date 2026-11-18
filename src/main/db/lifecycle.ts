@@ -1,3 +1,4 @@
+import {checkSharingRoles} from './sharing/roles'
 import {checkNotificationSchema} from './notifications'
 import {checkSharingExtras} from './sharing/extras'
 import {createPersonalHolidays} from './personal-holidays'
@@ -142,6 +143,7 @@ export async function initializeStorage(
     }
     if(target>=6){try{checkNotificationSchema(db)}catch(error){if(['DB_BUSY','STORAGE_IO','STORAGE_FULL'].includes(toPublicError(error).code))throw error;throw failure('DB_CORRUPT')}}
     if(target>=7){try{checkSharingExtras(db);if(target>=8)createPersonalHolidays(db).read()}catch(error){if(['DB_BUSY','STORAGE_IO','STORAGE_FULL'].includes(toPublicError(error).code))throw error;throw failure('DB_CORRUPT')}}
+    if(target>=9){try{checkSharingRoles(db)}catch(error){if(['DB_BUSY','STORAGE_IO','STORAGE_FULL'].includes(toPublicError(error).code))throw error;throw failure('DB_CORRUPT')}}
     return { state: 'ready', db, repository: createRepository(db) }
   } catch (error) {
     if (db?.open) db.close()

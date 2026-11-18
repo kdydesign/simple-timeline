@@ -39,3 +39,14 @@ it('validates the entire holiday calendar before invoking the fixed host command
  expect((await dispatchSharing(service,['saveHolidays',{calendar:{weekdays:[],dates:[]}}],false)).ok).toBe(false);expect(calls).toBe(0)
  expect((await dispatchSharing(service,['saveHolidays',{calendar:{weekdays:[],dates:[]}}],true)).ok).toBe(true);expect(calls).toBe(1)
 })
+
+it('only accepts confirmed host/member transitions and a read-only argument-free dormant query',async()=>{
+ const seen:unknown[]=[]
+ const service={switchRole:(input:unknown)=>{seen.push(input);return {role:'member'}},getDormantData:()=>({projects:[],schedules:[],holidays:{weekdays:[],dates:[]}})} as any
+ for(const args of [['switchRole',{role:'personal',confirmed:true}],['switchRole',{role:'host',confirmed:false}],['switchRole',{role:'member'}],['switchRole',{role:'member',confirmed:true,address:'127.0.0.1'}],['getDormantData',{}]])expect((await dispatchSharing(service,args,true)).ok).toBe(false)
+ expect((await dispatchSharing(service,['switchRole',{role:'member',confirmed:true}],false)).ok).toBe(false)
+ expect(seen).toEqual([])
+ expect((await dispatchSharing(service,['switchRole',{role:'member',confirmed:true}],true)).ok).toBe(true)
+ expect((await dispatchSharing(service,['getDormantData'],true)).ok).toBe(true)
+ expect(seen).toEqual([{role:'member',confirmed:true}])
+})

@@ -7,6 +7,7 @@ import {normalizeName,normalizeColor,validateId} from '../../domain/normalize'
 import {failure,toPublicError} from '../errors'
 import type {Result} from '../../shared/types'
 const shapes:Record<string,{required:string[];optional?:string[]}>= {
+  switchRole:{required:['role','confirmed']},
   saveHolidays:{required:['calendar']},
   savePersonalHolidays:{required:['calendar']},
   configureHost:{required:['address','port']},setHosting:{required:['enabled']},connect:{required:['address','port']},
@@ -28,7 +29,7 @@ export async function dispatchSharing(service:SharingService|undefined,args:unkn
     if(Buffer.byteLength(JSON.stringify(args),'utf8')>1024*1024)throw new DomainValidationError('input')
     const [command,value]=args
     if(typeof command!=='string')throw new DomainValidationError('input')
-    if(command==='getState'||command==='sync'||command==='retryChangeNotifications'){
+    if(command==='getDormantData'||command==='getState'||command==='sync'||command==='retryChangeNotifications'){
       if(args.length!==1)throw new DomainValidationError('input')
       return {ok:true,data:await service[command]()}
     }
@@ -38,6 +39,7 @@ export async function dispatchSharing(service:SharingService|undefined,args:unkn
     if(Object.hasOwn(v,'confirmed')&&v.confirmed!==true)throw new DomainValidationError('confirmed')
     if(Object.hasOwn(v,'enabled')&&typeof v.enabled!=='boolean')throw new DomainValidationError('enabled')
     for(const key of ['pairId','token','id'])if(Object.hasOwn(v,key)&&(typeof v[key]!=='string'||!v[key]))throw new DomainValidationError(key)
+    if(command==='switchRole'&&v.role!=='host'&&v.role!=='member')throw new DomainValidationError('role')
     if(command==='saveDevice'){normalizeName(v.name);normalizeIPv4(v.ip)}
     if(command==='saveHolidays'||command==='savePersonalHolidays')validateHolidayCalendar(v.calendar)
     if(command==='saveProject'){

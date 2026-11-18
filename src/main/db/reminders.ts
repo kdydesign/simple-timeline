@@ -14,10 +14,13 @@ export function addReminders(db:DatabaseHandle) {
  CREATE INDEX reminder_deliveries_schedule ON reminder_deliveries(schedule_id);`)
 }
 export function createReminderStore(db:DatabaseHandle):ReminderStore {
+ const hasRoles=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sharing_role_state'").get()
  const insert=db.prepare("INSERT OR IGNORE INTO reminder_deliveries(identity,schedule_id,state,updated_at) VALUES(?,?,'claimed',?)")
  const retry=db.prepare("UPDATE reminder_deliveries SET state='claimed',updated_at=? WHERE identity=? AND state='failed' AND suppressed=0")
  return {
   claim:db.transaction((items:ReminderOccurrence[],allowRetry:boolean):ReminderOccurrence[]=>items.filter(o=>{
+   const active=!hasRoles||db.prepare("SELECT 1 FROM schedules s WHERE s.id=? AND (NOT EXISTS(SELECT 1 FROM sharing_projects p WHERE p.project_id=s.project_id) OR ((SELECT role FROM sharing_config)='host' AND (SELECT target FROM sharing_role_state) IS NULL))").get(BigInt(o.scheduleId))
+   if(!active)return false
    const now=new Date().toISOString()
    if(insert.run(o.key,BigInt(o.scheduleId),now).changes)return true
    return allowRetry && !!retry.run(now,o.key).changes

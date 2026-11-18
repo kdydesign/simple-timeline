@@ -6,7 +6,7 @@ import { createMemberCache } from './cache'
 import { normalizeIPv4, validatePort, validateSharingIdentity } from '../../../domain/sharing'
 import { normalizeName, normalizeColor, validateId } from '../../../domain/normalize'
 import { DomainValidationError } from '../../../domain/error'
-import type { ApprovedDevice, SharedProjectInput, SharedProjectMapping, SharingAddress, SharingRole, WireSnapshot } from '../../../shared/sharing'
+import type { ApprovedDevice, SharedProjectInput, SharedProjectMapping, SharingAddress, SharingRole, RoleTransition, WireSnapshot } from '../../../shared/sharing'
 export interface SharingConfig {
   hostId:string; datasetId:string; role:SharingRole; roleHistory:'host'|'member'|null
   address:string|null; port:number; hostingEnabled:boolean
@@ -34,9 +34,22 @@ export function createSharingStore(db:DatabaseHandle) {
     if(r.remote_dataset_id!==null)validateSharingIdentity(r.remote_dataset_id)
     return {hostId,datasetId,role:r.role as SharingRole,roleHistory:r.role_history as SharingConfig['roleHistory'],address:r.address as string|null,port:Number(r.port),hostingEnabled:!!r.hosting_enabled,remoteHostId:r.remote_host_id as string|null,remoteDatasetId:r.remote_dataset_id as string|null,certificatePin:r.certificate_pin as string|null,credentialRef:r.credential_ref as string|null,pendingCredentialDeleteRef:r.pending_credential_delete_ref as string|null,certificateRef:r.certificate_ref as string|null,privateKeyRef:r.private_key_ref as string|null}
   }
+  const hasRoles=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sharing_role_state'").get()
+  const roleState=()=>{
+    const r=db.prepare('SELECT * FROM sharing_role_state WHERE singleton=1').get() as Row|undefined
+    if(!r)throw Error('SHARING_ROLE_METADATA_MISSING')
+    return r
+  }
+  const getRoleTransition=():RoleTransition|null=>{
+    if(!hasRoles)return null
+    const r=roleState()
+    return r.target?{target:r.target as RoleTransition['target'],phase:r.phase as RoleTransition['phase']}:null
+  }
+  const requireIdle=()=>{if(getRoleTransition())throw Error('SHARING_TRANSITION_PENDING')}
   // Missing metadata is corruption, never a trigger to generate another identity.
   getConfig()
-  const requireHost=()=>{if(getConfig().role!=='host')throw new Error('SHARING_ROLE_FORBIDDEN')}
+  if(hasRoles)getRoleTransition()
+  const requireHost=()=>{requireIdle();if(getConfig().role!=='host')throw new Error('SHARING_ROLE_FORBIDDEN')}
   const deviceDto=(r:Row):ApprovedDevice=>({id:String(r.id),name:String(r.name),ip:String(r.ip),revoked:!!r.revoked,approved:!!r.approved})
   const getDevice=(id:string):ApprovedDevice=>{
     requiredText(id,'deviceId')
@@ -52,7 +65,46 @@ export function createSharingStore(db:DatabaseHandle) {
     return [...result.values()]
   })
   return {
-    getConfig,getDevice,listDevices,listSharedProjects,
+    getConfig,getDevice,listDevices,listSharedProjects,getRoleTransition,
+    hasDormantData:()=>{
+      if(getConfig().role==='host'&&!getRoleTransition())return false
+      return (hasRoles&&roleState().host_address!==null)||listSharedProjects().length>0
+    },
+    dormantSnapshot:()=>{
+      if(getConfig().role==='host'&&!getRoleTransition())return {projects:[],schedules:[]}
+      const shared=new Set(listSharedProjects().map(p=>p.id)),all=createRepository(db,undefined,true).getSnapshot()
+      return {projects:all.projects.filter(p=>shared.has(p.id)).map(p=>({...p,sharing:'host' as const})),schedules:all.schedules.filter(s=>shared.has(s.projectId)).map(s=>({...s,sharing:'host' as const}))}
+    },
+    beginRoleTransition:db.transaction((input:{role:'host'|'member';confirmed:true})=>{
+      if(input.confirmed!==true||!['host','member'].includes(input.role))throw new DomainValidationError('role')
+      const existing=getRoleTransition(),c=getConfig()
+      if(existing){if(existing.target!==input.role)throw Error('SHARING_TRANSITION_PENDING');return existing}
+      if(c.role==='personal'&&!c.roleHistory)throw Error('SHARING_ROLE_FORBIDDEN')
+      if(c.role===input.role)return null
+      if(c.role==='host')db.prepare('UPDATE sharing_role_state SET host_address=?,host_port=?,host_pin=?,host_certificate_ref=?,host_private_key_ref=? WHERE singleton=1').run(c.address,c.port,c.certificatePin,c.certificateRef,c.privateKeyRef)
+      else db.prepare('UPDATE sharing_role_state SET member_address=?,member_port=?,member_pin=? WHERE singleton=1').run(c.address,c.port,c.certificatePin)
+      db.prepare("UPDATE sharing_role_state SET target=?,phase='stopping',generation=generation+1 WHERE singleton=1").run(input.role)
+      db.prepare('UPDATE sharing_config SET hosting_enabled=0 WHERE singleton=1').run()
+      db.prepare("UPDATE sharing_credentials SET status='revoked' WHERE status='pending'").run()
+      db.prepare('UPDATE notification_settings SET generation=generation+1,shared_resume=1,changes_resume=1,updates_resume=1 WHERE singleton=1').run()
+      db.prepare("UPDATE reminder_deliveries SET suppressed=1 WHERE state IN ('claimed','failed') AND schedule_id IN (SELECT id FROM schedules WHERE project_id IN (SELECT project_id FROM sharing_projects))").run()
+      return getRoleTransition()
+    }),
+    prepareRoleCleanup:db.transaction(()=>{
+      if(!getRoleTransition())throw Error('SHARING_TRANSITION_MISSING')
+      createChangeInbox(db).reset()
+      db.prepare("UPDATE sharing_config SET role='personal',hosting_enabled=0,remote_dataset_id=NULL,pending_credential_delete_ref=COALESCE(credential_ref,pending_credential_delete_ref),credential_ref=NULL WHERE singleton=1").run()
+      db.prepare("UPDATE sharing_role_state SET phase='cleanup' WHERE singleton=1").run()
+    }),
+    failRoleTransition:()=>{db.prepare("UPDATE sharing_role_state SET phase='failed' WHERE singleton=1 AND target IS NOT NULL").run()},
+    completeRoleTransition:db.transaction(()=>{
+      const r=roleState(),c=getConfig()
+      if(!r.target||c.pendingCredentialDeleteRef||c.credentialRef)throw Error('SHARING_TRANSITION_INCOMPLETE')
+      const host=r.target==='host'
+      db.prepare('UPDATE sharing_config SET role=?,role_history=?,address=?,port=?,certificate_pin=?,certificate_ref=?,private_key_ref=?,hosting_enabled=0 WHERE singleton=1').run(r.target,r.target,host?r.host_address:r.member_address,host?r.host_port:r.member_port,host?r.host_pin:r.member_pin,host?r.host_certificate_ref:null,host?r.host_private_key_ref:null)
+      db.prepare('UPDATE sharing_role_state SET target=NULL,phase=NULL WHERE singleton=1').run()
+      return getConfig()
+    }),
     getChangeSnapshot:(deviceId:string,cursor:string|null,reconnecting:boolean)=>getChangeSnapshot(db,deviceId,cursor,reconnecting,()=>createSharingStore(db).getWireSnapshot(deviceId)),
     getDeviceInstallationId:(id:string):string|null=>{
       getDevice(id)
@@ -60,6 +112,7 @@ export function createSharingStore(db:DatabaseHandle) {
       return row.installation_id as string|null
     },
     configureHost:db.transaction((input:SharingAddress)=>{
+      requireIdle()
       const c=getConfig()
       if(c.roleHistory==='member')throw new Error('SHARING_ROLE_FORBIDDEN')
       const address=normalizeIPv4(input.address),port=validatePort(input.port)
@@ -79,14 +132,15 @@ export function createSharingStore(db:DatabaseHandle) {
       return getConfig()
     }),
     connectMember:db.transaction((input:MemberConnection)=>{
+      requireIdle()
       const c=getConfig()
       if(c.roleHistory==='host')throw new Error('SHARING_ROLE_FORBIDDEN')
       if(c.pendingCredentialDeleteRef)throw new Error('SHARING_CREDENTIAL_DELETE_PENDING')
       const address=normalizeIPv4(input.address),port=validatePort(input.port),hostId=validateSharingIdentity(input.hostId),datasetId=validateSharingIdentity(input.datasetId)
       const pin=requiredText(input.certificatePin,'certificatePin'),credentialRef=requiredText(input.credentialRef,'credentialRef')
       if(c.remoteHostId && c.remoteHostId!==hostId)throw new Error('SHARING_HOST_MISMATCH')
-      if(c.role==='member' && c.certificatePin && c.certificatePin!==pin)throw new Error('SHARING_CERTIFICATE_MISMATCH')
-      if(c.role==='member' && c.remoteDatasetId && c.remoteDatasetId!==datasetId)throw new Error('SHARING_DATASET_MISMATCH')
+      if(c.role==='member' && c.credentialRef && c.certificatePin && c.certificatePin!==pin)throw new Error('SHARING_CERTIFICATE_MISMATCH')
+      if(c.role==='member' && c.credentialRef && c.remoteDatasetId && c.remoteDatasetId!==datasetId)throw new Error('SHARING_DATASET_MISMATCH')
       db.prepare("UPDATE sharing_config SET role='member',role_history='member',address=?,port=?,remote_host_id=?,remote_dataset_id=?,certificate_pin=?,credential_ref=? WHERE singleton=1").run(address,port,hostId,datasetId,pin,credentialRef)
       return getConfig()
     }),
@@ -141,7 +195,8 @@ export function createSharingStore(db:DatabaseHandle) {
       db.prepare("INSERT INTO sharing_credentials(hash,device_id,status,installation_id) VALUES(?,?,'pending',?)").run(hash,device.id,(db.prepare('SELECT installation_id FROM sharing_devices WHERE id=?').get(device.id) as Row).installation_id)
     }),
     revokePendingCredentials:db.transaction((deviceId:string)=>{
-      requireHost();getDevice(deviceId)
+      if(getConfig().role!=='host')throw Error('SHARING_ROLE_FORBIDDEN')
+      getDevice(deviceId)
       db.prepare("UPDATE sharing_credentials SET status='revoked' WHERE device_id=? AND status='pending'").run(deviceId)
     }),
     activateCredential:db.transaction((hash:string)=>{

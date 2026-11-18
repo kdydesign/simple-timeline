@@ -30,7 +30,11 @@ export interface ChangeNotificationState {
   openRequest:{token:string;target:ChangeTarget}|null
 }
 export interface MemberPresence {connected:boolean;lastSeenAt:string|null}
+export interface RoleTransition { target:'host'|'member'; phase:'stopping'|'cleanup'|'failed' }
+export interface DormantSharingData { projects:Project[]; schedules:Schedule[]; holidays:HolidayCalendar }
 export interface SharingState {
+  roleTransition?:RoleTransition|null
+  dormantAvailable?:boolean
   personalHolidays?:HolidayCalendar
   holidays?:HolidayState
   deviceVersions?:Record<string,{version:string|null;checkedAt:string}>
@@ -58,6 +62,8 @@ export interface SharingState {
   settingsRequestToken: string | null
 }
 export interface SharingApi {
+  switchRole(input:{role:'host'|'member';confirmed:true}):Promise<Result<SharingState>>
+  getDormantData():Promise<Result<DormantSharingData>>
   savePersonalHolidays(input:{calendar:HolidayCalendar}):Promise<Result<SharingState>>
   saveHolidays(input:{calendar:HolidayCalendar}):Promise<Result<SharingState>>
   getState(): Promise<Result<SharingState>>
