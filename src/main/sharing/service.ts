@@ -36,7 +36,7 @@ export interface SharingTransport {
 const productionTransport:SharingTransport={discover:discoverHost,client:o=>new SharingClient(o),host:createSharingHost,identity:createHostIdentity,interfaces:()=>Object.values(networkInterfaces()).flatMap(list=>(list??[]).filter(i=>i.family==='IPv4').map(i=>i.address))}
 interface Options {
   storage:Extract<StorageState,{state:'ready'}>;profile:string;changed:(state:SharingState)=>void
-  beforeRoleSwitch?:()=>Promise<void>;roleChanged?:()=>void
+  roleSwitchBlocked?:()=>boolean;beforeRoleSwitch?:()=>Promise<void>;roleChanged?:()=>void
   updates?:UpdateRoutes;updateChanged?:()=>void;mutationsBlocked?:()=>boolean
   changeSender?:ReminderSender;onChangeClick?:()=>void;appVersion?:string
   reminderClock?:()=>Date;clock?:()=>number;transport?:Partial<SharingTransport>;secrets?:(profile:string)=>Promise<ProtectedSecrets>
@@ -201,7 +201,7 @@ export function createSharingService(o:Options){
     }
   }
   async function switchRole(input:{role:'host'|'member';confirmed:true}){
-    if(disposed||suspended||switching||o.mutationsBlocked?.())throw failure('FORBIDDEN')
+    if(disposed||suspended||switching||o.mutationsBlocked?.()||o.roleSwitchBlocked?.())throw failure('FORBIDDEN')
     if(input.confirmed!==true||!['host','member'].includes(input.role))throw failure('FORBIDDEN')
     const transition=store.beginRoleTransition(input)
     if(!transition)return getState()

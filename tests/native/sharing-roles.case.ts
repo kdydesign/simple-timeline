@@ -142,5 +142,19 @@ export const cases:NativeCase[]=[
    assert.equal(service.getState().role,'host');assert.equal(service.getState().status,'stopped');assert.deepEqual(service.repository.getSnapshot().projects,[]);assert.deepEqual(store.readCache().projects,[]);assert.equal(await service.authorizeReminder(),false)
   }finally{await service.dispose()}
  }}
+,
+ {name:'a role-specific busy preflight refuses without journaling or stopping the existing host',async run(ctx){
+  const {db,repo}=setup(ctx),store=createSharingStore(db)
+  store.configureHost({address:'127.0.0.1',port:47831});store.setHosting({enabled:true})
+  let stops=0,blocked=true,withdrawals=0
+  const options={storage:{state:'ready' as const,db,repository:repo},profile:ctx.tempDir,changed:()=>{},roleSwitchBlocked:()=>blocked,beforeRoleSwitch:async()=>{withdrawals++},secrets:async()=>({read:async()=>{throw Error('unused')},write:async()=>{},remove:()=>{}}),transport:{host:()=>({start:async(address:string,port:number)=>({address,port}),stop:async()=>{stops++},pending:()=>[],needsApproval:()=>false,approve:()=>{},dispose:async()=>{}})}}
+  const service=createSharingService(options)
+  try{
+   await service.start();assert.equal(service.getState().status,'connected')
+   await assert.rejects(service.switchRole({role:'member',confirmed:true}))
+   assert.equal(store.getRoleTransition(),null);assert.equal(store.getConfig().role,'host');assert.equal(store.getConfig().hostingEnabled,true);assert.equal(service.getState().status,'connected');assert.equal(stops,0);assert.equal(withdrawals,0)
+   blocked=false;await service.switchRole({role:'member',confirmed:true});assert.equal(stops,1);assert.equal(withdrawals,1);assert.equal(service.getState().role,'member')
+  }finally{await service.dispose()}
+ }}
 
 ]
