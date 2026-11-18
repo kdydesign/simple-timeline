@@ -81,3 +81,11 @@
 `01094fb`는 레지스트리의 키·값 부재와 빈 AutoRun을 정상 처리하고, 설정 검증·레지스트리 읽기·등록된 AutoRun·임시 파일 준비 오류를 구분한다. Linux PowerShell 7.4.6에서 Get-ItemPropertyValue가 누락 속성에 대해 SilentlyContinue에도 예외를 내는 동작을 재현했고, PowerShell 레지스트리 제공자의 누락 값 오류 경로도 검토했다. 이는 해당 사용자 PC의 레지스트리 재현 결과를 뜻하지 않는다. Windows PowerShell 5.1 호환성을 읽기 전용으로 검토했으며 실제 Windows 임시 HKCU 키에서 다섯 상태를 검증할 회귀 테스트를 추가했다.
 
 clean `01094fbb69a2323cc34097800aa2cf7edac7da39`, Linux x64·Node 24.22.1에서 앱 전체 7단계와 하네스 7개가 통과했다. 단위 검사는 세 시간대별 388개, UI 251개, 네이티브 98개, E2E 114개가 통과했다. Windows 전용 COM·레지스트리 검사 2개는 플랫폼 조건에 따라 미실행이었다. 실제 Windows UAC 이후 Node 설치·사용 성공과 원격 CI 결과는 미검증이다. GitHub Actions API 조회는 Forbidden으로 차단됐다.
+
+## 2026-11-19 Windows CI 달력 드래그 검사 보정
+
+`3aa0297`의 Application 실행 `44339719783`에서 Windows E2E의 달력 다음 달 드래그 검사 1개가 실패했다. Windows 타입·릴리스·세 시간대 단위 390개·UI·빌드·네이티브 검사는 통과했으며, AutoRun Windows 레지스트리 회귀 검사도 세 시간대에서 실행됐다. E2E는 113개가 통과했다.
+
+진단 artifact의 화면은 1024×728이었다. 12월 18일 일정 막대가 달력 스크롤 영역 아래에 가려진 상태에서 raw pointer 좌표를 사용해 드래그가 시작되지 않았다. 같은 창 크기로 Linux Electron에서도 실패를 재현했다. 출발 일정과 목적 날짜에 Playwright trial click으로 화면 안 위치·고정 헤더 가림·클릭 가능 여부를 확인한 뒤 좌표를 구하도록 변경했다. 목적 날짜의 중앙에 놓고 기존 날짜 저장 결과까지 확인한다.
+
+수정 전 재현 실패와 수정 후 같은 작은 창에서 통과를 확인했다. 로컬 관련 E2E 파일 10개와 저장소 검사를 실행한다. 제품 코드 변경 없이 테스트 입력 경로를 보정했으며 제한 시간·재시도 횟수는 유지했다. 수정 커밋의 원격 결과는 Application·Repository harness 실행을 기준으로 확인한다.

@@ -75,16 +75,29 @@ test('startup records distinct process/window/data/UI phases on normal relaunch'
 test.describe('drag navigation and failure protection',()=>{
   test.use({seed:'hotfix'})
   test('calendar hover navigation moves the original schedule into the next month',async({desktop:d})=>{
-    const p=d.page;await choose(p,'2026-12-01');await p.getByRole('button',{name:'달력',exact:true}).click()
-    const bar=await box(p.locator('[data-segment="3"]'))
-    await p.mouse.move(bar.x+bar.width/2,bar.y+bar.height/2);await p.mouse.down()
-    const next=await box(p.locator('[data-drag-month="1"]'))
-    await p.mouse.move(next.x+next.width/2,next.y+next.height/2,{steps:4})
+    const p = d.page
+    await p.setViewportSize({width:1024,height:728})
+    await choose(p, '2026-12-01')
+    await p.getByRole('button', {name:'달력', exact:true}).click()
+    const schedule = p.locator('[data-segment="3"]')
+    // Short Windows viewports clip this row below the calendar scroller.
+    // Wait for a stable, unobscured hit target before using raw pointer coordinates.
+    await schedule.click({trial:true})
+    const bar = await box(schedule)
+    await p.mouse.move(bar.x + bar.width / 2, bar.y + bar.height / 2)
+    await p.mouse.down()
+    const next = await box(p.locator('[data-drag-month="1"]'))
+    await p.mouse.move(next.x + next.width / 2, next.y + next.height / 2, {steps:4})
     await expect(p.locator('.calendar h2')).toHaveText('2027-01 월간 달력')
-    await expect(p.getByLabel('선택 날짜',{exact:true})).toHaveValue('2026-12-01')
-    const target=await box(p.locator('[data-date="2027-01-04"]'))
-    await p.mouse.move(target.x+target.width/2,target.y+20,{steps:4});await p.mouse.up();await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click()
-    await expect(p.locator('[data-segment="3"]')).toHaveAttribute('aria-label',/2027-01-04 — 2027-01-04/)
+    await expect(p.getByLabel('선택 날짜', {exact:true})).toHaveValue('2026-12-01')
+    const destination = p.locator('[data-date="2027-01-04"]')
+    // The new month keeps its scroll position, including the sticky header.
+    await destination.click({trial:true})
+    const target = await box(destination)
+    await p.mouse.move(target.x + target.width / 2, target.y + target.height / 2, {steps:4})
+    await p.mouse.up()
+    await p.getByRole('alertdialog').getByRole('button', {name:'변경', exact:true}).click()
+    await expect(schedule).toHaveAttribute('aria-label', /2027-01-04 — 2027-01-04/)
   })
   test('failed drag preserves data and a clean open editor',async({desktop:d})=>{
     const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12-01')
