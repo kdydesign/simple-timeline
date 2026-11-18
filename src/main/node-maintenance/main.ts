@@ -7,13 +7,14 @@ import { dispatchNodeManagement } from '../node-management/ipc-core'
 import { createNodeManagementService, nodeManagementError } from '../node-management/service'
 import { createWindowsNodeAdapter } from '../node-management/windows'
 import { verifyMaintenance } from './runtime'
+import { prepareMaintenanceProfile } from './profile'
 
 // This entry deliberately never boots the regular app, DB, sharing or updater.
 const artifactDirectory = resolve(__dirname, '../..')
 const maintenanceRoot = dirname(artifactDirectory)
-const profile = join(maintenanceRoot, 'profile')
-app.setPath('userData', profile)
-app.setPath('sessionData', join(profile, 'session'))
+const profile = prepareMaintenanceProfile(maintenanceRoot)
+app.setPath('userData', profile.userData)
+app.setPath('sessionData', profile.sessionData)
 app.setName('WorkRail Node Recovery')
 const session = process.argv.find(value => value.startsWith('--workrail-maintenance-session='))?.split('=')[1]
 const needsHandoff = Boolean(process.send)
