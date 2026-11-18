@@ -73,3 +73,11 @@
 [화면 결정](../design/workrail-screen-polish.md)과 [개발 복구 창 인계](../design/node-conflict-removal.md)를 제품 커밋 `467be88`에 반영했다. Linux x64·Node 24.22.1·clean 상태에서 앱 전체 7단계와 하네스 7개를 통과했다. 릴리스 검사 30개, 세 시간대 단위 검사 각 387개, UI 251개, 네이티브 98개, Electron E2E 114개가 통과했다. Windows Installer COM 검사는 Windows에서 실행한다.
 
 실제 Electron 아카이브를 복구 디렉터리에 복사한 뒤 원본 바이트와 비교하고 변조 거부를 확인했다. 같은 복구 창의 뒤늦은 준비 응답은 원래 세션으로만 인계된다. 화면 검사는 600·800·1440px의 메뉴 아래 간격, 달력과 표 헤더의 재질, 호버·키보드 정렬을 확인했다. Windows 작업 표시줄·트레이의 실표시 및 개발 실행에서 UAC를 거친 실제 제거는 사용자 PC에서 추가 확인할 항목이다.
+
+## 2026-11-19 설치본의 Node 버전 설치 오류 후속
+
+사용자는 설치본에서 기존 Node 제거·nvm 설치 완료 후 버전 설치의 UAC를 승인했지만 무결성 오류가 표시됐다고 확인했다. 공식 설치본에서 추출한 `nvm.exe` SHA-256은 앱의 고정값과 일치했다. 기존 실행 코드는 설정 읽기, 선택적 AutoRun 조회, 임시 파일 준비의 예외를 1610으로 합쳐 사용자 PC의 실패 단계를 특정할 수 없었다.
+
+`01094fb`는 레지스트리의 키·값 부재와 빈 AutoRun을 정상 처리하고, 설정 검증·레지스트리 읽기·등록된 AutoRun·임시 파일 준비 오류를 구분한다. Linux PowerShell 7.4.6에서 Get-ItemPropertyValue가 누락 속성에 대해 SilentlyContinue에도 예외를 내는 동작을 재현했고, PowerShell 레지스트리 제공자의 누락 값 오류 경로도 검토했다. 이는 해당 사용자 PC의 레지스트리 재현 결과를 뜻하지 않는다. Windows PowerShell 5.1 호환성을 읽기 전용으로 검토했으며 실제 Windows 임시 HKCU 키에서 다섯 상태를 검증할 회귀 테스트를 추가했다.
+
+clean `01094fbb69a2323cc34097800aa2cf7edac7da39`, Linux x64·Node 24.22.1에서 앱 전체 7단계와 하네스 7개가 통과했다. 단위 검사는 세 시간대별 388개, UI 251개, 네이티브 98개, E2E 114개가 통과했다. Windows 전용 COM·레지스트리 검사 2개는 플랫폼 조건에 따라 미실행이었다. 실제 Windows UAC 이후 Node 설치·사용 성공과 원격 CI 결과는 미검증이다. GitHub Actions API 조회는 Forbidden으로 차단됐다.
