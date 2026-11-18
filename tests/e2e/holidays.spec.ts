@@ -1,6 +1,31 @@
 import {test,expect} from './fixture'
 import {settings,sharingState} from './sharing-fixture'
 test.use({seed:'single',fault:'help-capture'})
+test('holiday controls fit the dialog and keep dates with the name on one row',async({desktop:d},info)=>{
+ const p=d.page
+ await p.setViewportSize({width:1440,height:960})
+ const dialog=await settings(d)
+ await dialog.getByRole('tab',{name:'기본 설정'}).click()
+ const holidays=dialog.getByRole('region',{name:'휴일 관리 (개인)'})
+ for(const width of [1440,980,640]){
+  await p.setViewportSize({width,height:960})
+  await holidays.scrollIntoViewIfNeeded()
+  const layout=await holidays.evaluate(section=>{
+   const rect=(selector:string)=>{const r=section.querySelector(selector)!.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width}}
+   const repeat=rect('.holiday-repeat'),dated=rect('.holiday-dated')
+   const fields=['[data-holiday-start] input','[data-holiday-end] input','[data-holiday-name]'].map(rect)
+   const weekdays=Array.from(section.querySelectorAll('.holiday-weekdays [aria-pressed]')).map(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,right:r.right}})
+   return {repeat,dated,fields,weekdays,overflow:section.scrollWidth-section.clientWidth}
+  })
+  expect(layout.dated.y).toBeGreaterThanOrEqual(layout.repeat.bottom)
+  expect(layout.weekdays).toHaveLength(7)
+  for(const day of layout.weekdays){expect(day.y).toBeCloseTo(layout.weekdays[0].y,0);expect(day.x).toBeGreaterThanOrEqual(layout.repeat.x);expect(day.right).toBeLessThanOrEqual(layout.repeat.right)}
+  expect(layout.overflow).toBeLessThanOrEqual(1)
+  for(const field of layout.fields){expect(field.x).toBeGreaterThanOrEqual(layout.dated.x);expect(field.right).toBeLessThanOrEqual(layout.dated.right)}
+  if(width>=980){for(const field of layout.fields)expect(field.y).toBeCloseTo(layout.fields[0].y,0)}
+  await holidays.screenshot({path:info.outputPath(`holiday-layout-${width}.png`)})
+ }
+})
 test('host edits common holidays and both views reflect named dates and changed recurring weekdays',async({desktop:d},info)=>{
  const p=d.page;await p.setViewportSize({width:1440,height:960})
  const dialog=await settings(d);await dialog.getByRole('button',{name:'호스트로 공유'}).click();await dialog.getByLabel('공유할 LAN IP').click();await p.getByRole('option',{name:'192.168.0.10',exact:true}).click();await dialog.getByRole('button',{name:'호스트 주소 저장'}).click()

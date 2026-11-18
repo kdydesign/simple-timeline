@@ -112,7 +112,9 @@ function Test-OfficialSignature($path, $system = $false) {
 }
 function Read-MsiValue($db, $query) {
   $view = $db.OpenView($query)
-  try { $view.Execute(); $row = $view.Fetch(); if (!$row) { throw 'Missing MSI field' }; return [string]$row.StringData(1) } finally { $view.Close() }
+  # COM void methods can emit null records into PowerShell's success stream.
+  # Suppress them so the caller receives exactly one scalar, not an array.
+  try { [void]$view.Execute(); $row = $view.Fetch(); if (!$row) { throw 'Missing MSI field' }; return [string]$row.StringData(1) } finally { [void]$view.Close() }
 }
 function Read-NodeMsi {
   $installer = New-Object -ComObject WindowsInstaller.Installer

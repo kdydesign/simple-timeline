@@ -128,11 +128,39 @@ it('shows an incompatible manager with its conflict path and official upgrade in
     { code: 'manager-configuration', path, message: '호환되지 않는 nvm-windows입니다.' },
   ] })
   render(<App initialTool="node" api={memoryApi().api} />)
-  expect(await within(node()).findByText(path)).toBeVisible()
+  const detail = (await within(node()).findByText('자세히')).closest('details')!
+  expect(detail).not.toHaveAttribute('open')
+  fireEvent.click(within(node()).getByText('자세히'))
+  expect(within(node()).getByText(path)).toBeVisible()
   expect(within(node()).getByText('호환되지 않는 nvm-windows입니다.')).toBeVisible()
   expect(within(node()).getByText(/공식 nvm-windows 1\.2\.2.*수동/)).toBeVisible()
   expect(within(node()).queryByRole('button', { name: 'nvm-windows 설치' })).toBeNull()
   expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeDisabled()
+})
+
+it('summarizes a standalone conflict, keeps diagnostics folded, and enables installation only after clearance', async () => {
+  const path = 'C:\\Program Files\\nodejs\\node.exe'
+  const fixture = nodeFixture({ manager: { status: 'missing', version: null }, activeSource: 'standalone',
+    conflicts: [{ code: 'standalone-node', path, message: '기존 Node 설치가 PATH에 있습니다.' }],
+    removal: { status: 'manual', target: null, confirmationId: null, reason: '공식 MSI 설치 여부를 확인하지 못했습니다.', rebootRequired: false, msiExitCode: null },
+  })
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const guidance = await within(node()).findByRole('region', { name: 'Node 환경 충돌' })
+  expect(within(guidance).getByText('제거할 Node.js 설치 정보를 확인하지 못했습니다.')).toBeVisible()
+  expect(within(guidance).getByRole('button', { name: 'Node.js 제거' })).toBeDisabled()
+  expect(within(guidance).getByRole('button', { name: 'nvm-windows 설치' })).toBeDisabled()
+  const details = within(guidance).getByText('자세히').closest('details')!
+  expect(details).not.toHaveAttribute('open')
+  expect(within(details).getByText(path)).not.toBeVisible()
+  fireEvent.click(within(guidance).getByText('자세히'))
+  expect(within(details).getByText(path)).toBeVisible()
+  expect(within(details).getByText('공식 MSI 설치 여부를 확인하지 못했습니다.')).toBeVisible()
+  act(() => fixture.emit({ conflicts: [], activeSource: null, activeVersion: null,
+    removal: { status: 'unavailable', target: null, confirmationId: null, reason: null, rebootRequired: false, msiExitCode: 0 },
+  }))
+  expect(within(node()).queryByRole('button', { name: 'Node.js 제거' })).toBeNull()
+  fireEvent.click(within(node()).getByRole('button', { name: 'nvm-windows 설치' }))
+  await waitFor(() => expect(fixture.api.installManager).toHaveBeenCalledOnce())
 })
 
 it('keeps installed switching available when the catalog is offline and shows a service-side failure', async () => {
@@ -467,7 +495,7 @@ it('uses the Home title and live PlanRail badges while retaining the last succes
   render(<App initialTool="home" today={new Date(2026, 10, 18)} api={memoryApi().api} />)
   const widget = await within(home()).findByRole('region', { name: 'PlanRail 상태' })
   expect(within(home()).queryByRole('heading', { name: '작업 현황' })).toBeNull()
-  expect(within(widget).getByText('멤버')).toBeVisible()
+  expect(await within(widget).findByText('멤버')).toBeVisible()
   expect(within(widget).getByText('연결 정상')).toHaveAttribute('data-connected', 'true')
   expect(within(home()).getByRole('button', { name: 'NodeRail 열기' })).toBeVisible()
   act(() => sharing.emit({ status: 'disconnected' }))

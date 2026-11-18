@@ -1,5 +1,7 @@
 # 진행 상태
 
+진행 중인 후속: [Node 경고·휴일 설정](../design/node-guidance-and-holiday-layout.md)의 Q1/Q2 사용자 선택을 반영하고 MSI COM 판독 오류를 수정했다. UI 관련 28개와 휴일 Electron E2E 2개가 통과했고 전체 앱 검증은 진행 중이다. Windows COM·실제 제거는 아직 검증하지 않았다. 아이콘 교체는 보류한다.
+
 최신 구현·검증 완료: 사용자의 설계 반영 요청에 따라 [화면·역할 전환·Node 복구](../implementation/2026-11-18-workrail-polish-and-recovery.md)를 문서 선행 정리 후 구현했다. clean `f356b71`에서 로컬 전체 검사(3 TZ unit·UI·build·native·E2E)가 통과했다. Windows MSI/UAC/복구 실기 및 원격 CI는 미검증이다. 아래 설계 확인 대기·제품 미변경 문구는 이전 단계 이력이며 현재 완료 여부는 구현 기록을 따른다. 기존 MVP 지도는 다시 열지 않는다.
 
 이전 설계 협의 — 화면 설계: [Home·PlanRail·NodeRail 화면 정리](../design/workrail-screen-polish.md)에 초기 8개 요청·Q1~Q4 선택 및 후속 v2/v3 수정 요청을 반영했다. v3는 Home 두 카드 높이 일치·알림 색상/무음 심벌·Node 제목 제거·설정 밀도/휴일 구분·우측 공유 버튼 및 메뉴/앱 아이콘 4안이다. 추가 E~H 비교 후 메뉴 **E 모듈형**·앱 **F WR 모노그램**을 사용자가 선택했고 BrandKit 확인용 보드에 반영했다. 전체 화면 설계 확인은 대기 중이며 제품 코드는 변경하지 않았다.

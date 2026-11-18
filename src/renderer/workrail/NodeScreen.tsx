@@ -2,9 +2,9 @@ import { useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import type { NodeRelease } from '../../shared/node-management'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeOperationMessages, nodeProgress, platformScope, supportedManager } from './nodePresentation'
+import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeOperationMessages, nodeProgress, platformScope } from './nodePresentation'
 
-import {NodeRecovery} from './NodeRecovery'
+import {NodeGuidance} from './NodeRecovery'
 import { ToolIcon } from './ToolIcon'
 import { sortNodeCatalog, type NodeCatalogColumn, type NodeCatalogRow, type NodeCatalogSort } from './nodeCatalogSort'
 
@@ -48,14 +48,10 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
   const canChange = !state?.maintenance?.active && !state?.removal?.rebootRequired && !!state?.supported && !!state.checkedAt && !busy && !stale && !state.conflicts.length
     && state.error?.code !== 'operation-unknown' && state.error?.code !== 'shutdown'
   const managerReady = state?.manager.status === 'ready'
-  const managerMissing = state?.manager.status === 'missing'
-  const managerError = state?.manager.status === 'error'
   const canUse = canChange && managerReady
   const canInstall = canUse && catalog?.status === 'ready' && !catalogLoading
   const activeVersion = state?.activeVersion
   const activeManaged = state?.activeSource === 'nvm' && !stale
-  const detectedConflict = !!state?.conflicts.length
-  const manualManager = !unsupported && (!!managerError || !!managerMissing)
   const releaseMap = new Map(catalog?.releases.map(release => [release.version, release]))
   const query = search.trim().toLowerCase().replace(/^v(?=\d)/, '')
   const matches = (version: string, release?: NodeRelease) =>
@@ -100,27 +96,7 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
       )}
       {progress && <p className="workrail-note" aria-live="polite">{progress}</p>}
       {operationMessages.map(message => <p key={message} className="workrail-message" role="alert">{message}</p>)}
-      {!unsupported && (detectedConflict || manualManager) && (
-        <section className="workrail-surface workrail-node-guidance" aria-labelledby="workrail-node-guidance-heading">
-          <h3 id="workrail-node-guidance-heading">{detectedConflict ? 'Node 환경 충돌' : managerMissing ? supportedManager + ' 설치' : 'nvm-windows 상태 확인'}</h3>
-          {detectedConflict && (
-            <>
-              <ul>
-                {state.conflicts.map((conflict, index) => <li key={conflict.code + index}>
-                  {conflict.message}{conflict.path && <code>{conflict.path}</code>}
-                </li>)}
-              </ul>
-              {!managerMissing&&<p>표시된 경로와 Windows의 Node 설치 및 PATH 설정을 직접 정리한 뒤 환경을 다시 검사해 주세요.</p>}
-            </>
-          )}
-          <NodeRecovery node={node}/>
-          {manualManager && (!managerMissing||state?.removal?.status==='manual'||state?.error?.code==='download-failed') && (
-            <p>브라우저에서 공식 {supportedManager} 릴리스를 열어 수동 설치 또는 업그레이드를 진행한 뒤 환경을 다시 검사해 주세요.
-              <code>https://github.com/coreybutler/nvm-windows/releases/tag/1.2.2</code>
-            </p>
-          )}
-        </section>
-      )}
+      <NodeGuidance node={node}/>
       {state?.supported && (
         <div className="workrail-node-grid">
           <section className="workrail-node-catalog" aria-labelledby="workrail-catalog-heading">

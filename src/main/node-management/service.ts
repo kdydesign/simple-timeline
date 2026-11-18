@@ -22,7 +22,7 @@ export interface WindowsNodeAdapter {
 
 const messages: Record<NodeManagementErrorCode, string> = {
   'confirmation-expired': '제거 확인 후 대상이 바뀌었거나 확인이 만료되었습니다. 다시 검사하고 확인해 주세요.',
-  'removal-unavailable': '서명과 설치 소유권을 확인한 단일 공식 MSI가 아닙니다. Windows 설치된 앱에서 직접 확인해 주세요.',
+  'removal-unavailable': '공식 MSI 설치 여부를 확인하지 못했습니다. Windows 설치된 앱에서 설치 정보를 확인해 주세요.',
   'reboot-required': 'Windows 재부팅 후 환경을 다시 검사해야 다음 Node 작업을 진행할 수 있습니다.',
   'installer-busy': '다른 Windows 설치 작업이 진행 중입니다. 해당 작업을 마친 뒤 다시 시도해 주세요.',
   forbidden: '허용되지 않은 Node 관리 요청입니다.',

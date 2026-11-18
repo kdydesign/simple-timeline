@@ -462,17 +462,18 @@ html[data-update-frozen="true"] .saving-content { opacity:.65; }
 .sharing-settings .update-distribution-summary > div {display:grid;grid-template-columns:74px minmax(0,1fr);gap:8px;align-items:baseline;}
 .sharing-settings .update-distribution-summary dt {font-size:12px;color:var(--muted);}
 .sharing-settings .update-distribution-summary dd {margin:0;font-size:12px;overflow-wrap:anywhere;}
-.sharing-settings .holiday-sections {display:grid;grid-template-columns:minmax(210px,.75fr) minmax(0,2fr);gap:14px;align-items:start;}
+.sharing-settings .holiday-sections {display:grid;grid-template-columns:minmax(0,1fr);gap:14px;align-items:start;}
 .sharing-settings .holiday-sections > fieldset {display:block;border:1px solid var(--border);border-radius:8px;padding:10px;min-width:0;}
 .sharing-settings .holiday-sections legend {padding:0 5px;margin:0;}
 .sharing-settings .holiday-sections legend h4 {margin:0;}
 .sharing-settings .holiday-sections > fieldset > .help {margin:0 0 12px;}
-.sharing-settings .holiday-repeat .holiday-weekdays {gap:5px;}
+.sharing-settings .holiday-repeat-controls {display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.sharing-settings .holiday-repeat-controls > button {margin-left:auto;}
+.sharing-settings .holiday-repeat .holiday-weekdays {gap:5px;flex-wrap:nowrap;}
 .sharing-settings .holiday-repeat .holiday-weekdays button {min-width:28px;padding:5px 6px;}
-.sharing-settings .holiday-repeat .holiday-weekdays button:last-child:not([aria-pressed]) {margin:8px 0 0 auto;}
-.sharing-settings .holiday-dated .holiday-form {grid-template-columns:repeat(2,minmax(0,1fr));}
+.sharing-settings .holiday-dated .holiday-form {grid-template-columns:minmax(145px,1fr) minmax(145px,1fr) minmax(130px,1.2fr);}
 .sharing-settings .holiday-dated .holiday-form > div {min-width:0;}
-.sharing-settings .holiday-dated .holiday-form > .holiday-actions {justify-content:flex-end;}
+.sharing-settings .holiday-dated .holiday-form > .holiday-actions {grid-column:1/-1;justify-content:flex-end;margin-top:0;}
 .sharing-settings .holiday-dated .holiday-table {table-layout:fixed;}
 .sharing-settings .holiday-dated .holiday-table th:first-child {width:39%;}
 .sharing-settings .holiday-dated .holiday-table td:first-child {white-space:normal;overflow-wrap:anywhere;}
@@ -486,8 +487,11 @@ html[data-update-frozen="true"] .saving-content { opacity:.65; }
 .sharing-settings .dormant-holidays {display:flex;gap:16px;font-size:12px;flex-wrap:wrap;}
 .sharing-settings .dormant-holidays dd {margin:0;}
 @media(max-width:760px){
- .sharing-settings .holiday-sections {grid-template-columns:minmax(0,1fr);}
  .sharing-settings .update-distribution-summary {grid-template-columns:minmax(0,1fr);}
+}
+@media(max-width:640px){
+ .sharing-settings .holiday-dated .holiday-form {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .sharing-settings .holiday-dated .holiday-form > div:has([data-holiday-name]) {grid-column:1/-1;}
 }
 @media(max-width:480px){
  .sharing-settings .holiday-dated .holiday-form {grid-template-columns:minmax(0,1fr);}

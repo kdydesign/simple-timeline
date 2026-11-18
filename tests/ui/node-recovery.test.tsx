@@ -9,14 +9,14 @@ function node(dev=false){
 it('requires explicit confirmation and passes only the inspected identity',async()=>{
  const n=node();render(<NodeRecovery node={n}/>)
  expect(screen.getByRole('button',{name:'nvm-windows 설치'})).toBeDisabled()
- fireEvent.click(screen.getByRole('button',{name:'기존 Node.js 제거'}))
+ fireEvent.click(screen.getByRole('button',{name:'Node.js 제거'}))
  expect(n.mutate).not.toHaveBeenCalled()
  fireEvent.click(screen.getByRole('button',{name:'제거 진행'}))
  await waitFor(()=>expect(n.mutate).toHaveBeenCalledWith({kind:'remove-standalone',version:null,confirmationId:'abc'}))
 })
 it('hands development removal to independent management without removing in the parent',()=>{
  const n=node(true);render(<NodeRecovery node={n}/>)
- fireEvent.click(screen.getByRole('button',{name:'기존 Node.js 제거'}))
+ fireEvent.click(screen.getByRole('button',{name:'Node.js 제거'}))
  expect(n.openMaintenance).toHaveBeenCalledOnce()
  expect(n.mutate).not.toHaveBeenCalled()
 })
