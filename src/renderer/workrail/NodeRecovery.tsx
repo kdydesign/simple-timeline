@@ -10,7 +10,7 @@ export function NodeGuidance({node}:{node:NodeManagement}){
  const conflict=state.conflicts.length>0,missing=state.manager.status==='missing',manual=state.manager.status==='error'
  const maintenance=!!state.maintenance?.active
  if(!conflict&&!missing&&!manual&&!maintenance&&!state.removal?.rebootRequired)return null
- const title=maintenance?'Node 환경 설정 중':conflict?'Node 환경 충돌':missing?'nvm-windows 설치 필요':'nvm-windows 상태 확인'
+ const title=maintenance&&state.maintenance?.error?'관리 창 확인 필요':maintenance?'Node 환경 설정 중':conflict?'Node 환경 충돌':missing?'nvm-windows 설치 필요':'nvm-windows 상태 확인'
  const summary=maintenance?null:conflict
   ?missing?'기존 Node.js를 제거한 뒤 nvm-windows를 설치해 주세요.':'Node 설치 경로와 nvm-windows 설정을 확인해 주세요.'
   :missing?'nvm-windows를 설치해 Node 버전을 관리하세요.':'nvm-windows 설치 상태를 확인한 뒤 환경을 다시 검사해 주세요.'
@@ -33,9 +33,17 @@ export function NodeRecovery({node}:{node:NodeManagement}){
  const [confirmation,setConfirmation]=useState<{id:string;description:string}|null>(null)
  const {state,busy,mutate}=node
  if(!state?.supported)return null
- if(state.maintenance?.active)return <div className="node-recovery"><p role="status">별도 관리 창에서 Node 환경을 설정하고 있습니다.</p><button type="button" className="workrail-control" onClick={()=>void node.openMaintenance()}>관리 창 열기</button>{state.maintenance.recoveryShortcut&&<p className="workrail-note">복구 바로가기: {state.maintenance.recoveryShortcut}</p>}</div>
+ const maintenance = state.maintenance
+ if (node.openingMaintenance || maintenance?.status === 'preparing') {
+  return <p role="status">{maintenance?.status === 'ready' ? '관리 창을 열고 있습니다.' : '독립 관리 창을 준비하고 있습니다.'}</p>
+ }
+ if (maintenance?.active) return <div className="node-recovery">
+  {!maintenance.error && <p role="status">별도 관리 창에서 Node 환경을 설정하고 있습니다.</p>}
+  <button type="button" className="workrail-control" onClick={()=>void node.openMaintenance()}>관리 창 열기</button>
+  {maintenance.recoveryShortcut && <p className="workrail-note">복구 바로가기: {maintenance.recoveryShortcut}</p>}
+ </div>
  if(state.manager.status!=='missing')return state.removal?.rebootRequired?<p role="alert">Windows 재부팅 후 환경을 다시 검사해 주세요.</p>:null
- const removal=state.removal,conflict=state.conflicts.length>0,maintenance=state.maintenance
+ const removal=state.removal,conflict=state.conflicts.length>0
  const blocked=busy||!!node.error||!!maintenance?.active||!!removal?.rebootRequired||state.error?.code==='operation-unknown'
  const remove=()=>{
   if(maintenance?.required){void node.openMaintenance();return}

@@ -48,7 +48,6 @@ button.ui-switch[data-state="checked"],button.ui-switch[data-state="checked"]:ho
 .ui-switch [data-slot="switch-thumb"]{display:block;pointer-events:none;width:18px;height:18px;border-radius:50%;background:var(--muted);box-shadow:0 1px 2px #0003}
 .ui-switch[data-state="checked"] [data-slot="switch-thumb"]{transform:translateX(16px);background:var(--surface)}
 @media(forced-colors:active){button.ui-switch,button.ui-switch:hover:enabled{forced-color-adjust:none;background:Canvas;border-color:ButtonText}button.ui-switch[data-state="checked"],button.ui-switch[data-state="checked"]:hover:enabled{background:Highlight;border-color:Highlight}.ui-switch [data-slot="switch-thumb"]{background:ButtonText}.ui-switch[data-state="checked"] [data-slot="switch-thumb"]{background:HighlightText}button.ui-switch:focus-visible{outline-color:Highlight}}
-.reminder-notice{padding:10px 20px;background:var(--subtle);border-bottom:1px solid var(--border);font-size:13px}.reminder-notice p{margin:4px 0}.reminder-notice button{margin-top:6px}
 /* Preview is separate from saved lane layout and never intercepts pointer hit tests. */
 .calendar-bar.drag-origin{opacity:.3}
 .calendar-preview-layer{position:absolute;inset:36px 0 auto;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));pointer-events:none;z-index:3}

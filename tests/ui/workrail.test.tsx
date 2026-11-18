@@ -521,3 +521,28 @@ it('keeps the actual sharing failure visible when the Home connection badge beco
   expect(within(widget).getByText('공유 상태 확인 불가')).toHaveAttribute('data-connected', 'false')
   expect(within(widget).getByRole('alert')).toHaveTextContent(message)
 })
+
+it('shows a pending handoff immediately and allows retry after the recovery window fails to open', async () => {
+  const fixture = nodeFixture({
+    manager: { status: 'missing', version: null },
+    activeSource: 'standalone',
+    conflicts: [{ code: 'standalone-node', message: '기존 Node.js', path: null }],
+    removal: { status: 'available', target: { version: '24.11.0', path: 'node.exe' }, confirmationId: 'target', rebootRequired: false, msiExitCode: null, reason: null },
+    maintenance: { required: true, active: false },
+  })
+  let finish!: (result: NodeManagementResult) => void
+  fixture.api.openMaintenance.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const remove = await within(node()).findByRole('button', { name: 'Node.js 제거' })
+  fireEvent.click(remove)
+  expect(within(node()).getByText(/관리 창을 준비하고 있습니다/)).toBeVisible()
+  const message = '복구 파일을 저장할 디스크 공간이 부족합니다.'
+  await act(async () => finish({ ok: false, error: { code: 'operation-failed', message } }))
+  expect(within(node()).getByRole('alert')).toHaveTextContent(message)
+  const retry = within(node()).getByRole('button', { name: 'Node.js 제거' })
+  expect(retry).toBeEnabled()
+  await act(async () => fireEvent.click(retry))
+  expect(fixture.api.openMaintenance).toHaveBeenCalledTimes(2)
+  expect(fixture.api.removeStandalone).not.toHaveBeenCalled()
+  expect(within(node()).queryByText(message)).toBeNull()
+})

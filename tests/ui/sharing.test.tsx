@@ -47,6 +47,9 @@ it('background snapshot failure does not block a personal save, and an older ref
 it('never announces sync success for status failure or failed snapshot application; blocks duplicate sync',async()=>{
  const f=sharingFixture({role:'member',address:'192.168.0.10',status:'disconnected',message:'연결 실패'}),m=memoryApi(),u=userEvent.setup();render(<App api={m.api}/>);
  const sync=await screen.findByRole('button',{name:'수동 동기화'});await waitFor(()=>expect(sync).toBeEnabled());await u.click(sync);expect(screen.getByRole('status')).not.toHaveTextContent('동기화했습니다.');await waitFor(()=>expect(screen.getAllByRole('alert').filter(a=>a.textContent==='연결 실패')).toHaveLength(1));
+ const warning=screen.getAllByRole('alert').find(alert=>alert.textContent==='연결 실패')!
+ expect(warning).toHaveClass('workrail-surface','plan-warning')
+ expect(warning.querySelector('svg')).toHaveAttribute('aria-hidden','true')
  f.api.sync=vi.fn(async()=>({ok:true as const,data:{...personalState,role:'member' as const,status:'connected' as const,address:'192.168.0.10'}}));m.api.getSnapshot=async()=>({ok:false,error:{code:'STORAGE_IO',message:'읽기 실패'}});await u.click(sync);await waitFor(()=>expect(screen.getAllByRole('alert').some(a=>a.textContent?.includes('화면에 반영'))).toBe(true));expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled();
  m.api.getSnapshot=async()=>({ok:true,data:{projects:[],schedules:[]}});let finish!:()=>void;f.api.sync=vi.fn(()=>new Promise<Awaited<ReturnType<SharingApi["sync"]>>>(resolve=>{finish=()=>resolve({ok:true,data:{...personalState,role:'member' as const,status:'connected' as const,address:'192.168.0.10'}})}));await u.click(sync);expect(sync).toBeDisabled();await act(async()=>finish());await waitFor(()=>expect(screen.getByRole('status')).toHaveTextContent('동기화했습니다.'));
 });

@@ -114,7 +114,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     barrier: appMutationBarrier,
   })
   const nodeMaintenance=createNodeMaintenanceController({runtimeDirectory:dirname(process.execPath),buildDirectory:dirname(__dirname),maintenanceRoot:join(app.getPath('appData'),'WorkRail','node-maintenance'),version:app.isPackaged?app.getVersion():await readFile(join(app.getAppPath(),'package.json'),'utf8').then(value=>String(JSON.parse(value).version)).catch(()=>''),changed:()=>{void nodeManagement.getState().then(state=>nodeIpc?.changed(state)).catch(()=>{})}})
-  const nodeRouting=createNodeRouting(nodeManagement,{required:!app.isPackaged,isActive:()=>nodeMaintenance.isActive(),open:()=>nodeMaintenance.open(),shortcut:()=>nodeMaintenance.getState().recoveryShortcut??undefined})
+  const nodeRouting=createNodeRouting(nodeManagement,{required:!app.isPackaged,isActive:()=>nodeMaintenance.isActive(),open:()=>nodeMaintenance.open(),getState:nodeMaintenance.getState})
   function nodeOperationPreventsExit() {
     if (!nodeManagement.isBusy() && !nodeMaintenance.getState().busy) return false
     dialog.showErrorBox('Node 작업 진행 중', 'Node 작업이 완료된 뒤 WorkRail 종료 또는 업데이트를 다시 시도해 주세요.')

@@ -37,10 +37,12 @@ export function nodeActiveVersionLabel(node: NodeManagement) {
   return state?.checkedAt ? '사용 중인 버전 없음' : '환경 확인 중…'
 }
 
-export function nodeOperationMessages({ state, error, recoveryError }: NodeManagement) {
+export function nodeOperationMessages({ state, error, recoveryError, maintenanceError, openingMaintenance }: NodeManagement) {
   const operationError = state?.error?.code === 'operation-unknown' ? state.error : error ?? state?.error
   const messages = operationError ? [operationError.message] : []
   if (recoveryError) messages.push('환경 재검사 실패 · ' + recoveryError.message)
+  const handoffError = maintenanceError ?? state?.maintenance?.error
+  if (!openingMaintenance && handoffError) messages.push(handoffError)
   return messages
 }
 

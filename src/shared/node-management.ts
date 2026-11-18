@@ -47,7 +47,7 @@ export interface StandaloneRemovalState {
 }
 export interface NodeManagementState {
   removal?: StandaloneRemovalState
-  maintenance?: { required: boolean; active: boolean; recoveryShortcut?: string }
+  maintenance?: { required: boolean; active: boolean; status?: 'idle' | 'preparing' | 'ready' | 'error'; error?: string | null; recoveryShortcut?: string }
   revision: number
   platform: string
   supported: boolean

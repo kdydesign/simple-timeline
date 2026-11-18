@@ -1,8 +1,12 @@
 import { createHash } from 'node:crypto'
-import { createReadStream } from 'node:fs'
-import { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises'
+import fs from 'node:fs'
 import { builtinModules } from 'node:module'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
+
+// Electron's normal fs presents default_app.asar as a directory. Stage and
+// verify the physical archive bytes along with the rest of the runtime.
+const physicalFs = (process.getBuiltinModule('original-fs') as typeof fs | undefined) ?? fs
+const { copyFile, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } = physicalFs.promises
 
 export interface MaintenancePreparation {
   runtimeDirectory: string
@@ -26,7 +30,7 @@ async function digest(path: string) {
   const item = await lstat(path)
   if (!item.isFile() || item.isSymbolicLink()) throw Error('Maintenance integrity: expected a regular file')
   const digest = createHash('sha256')
-  for await (const chunk of createReadStream(path)) digest.update(chunk)
+  for await (const chunk of physicalFs.createReadStream(path)) digest.update(chunk)
   return digest.digest('hex')
 }
 async function files(root: string, prefix = ''): Promise<string[]> {

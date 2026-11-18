@@ -1,5 +1,6 @@
 .saving-content {
   --workrail-dock-space: 0px;
+  --workrail-content-top-gap: 6px;
 }
 
 .workrail-tools {
@@ -61,7 +62,7 @@
 
 .workrail-dock {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   width: fit-content;
   padding: 0;
   border: 0;
@@ -104,18 +105,9 @@
 
 .workrail-dock .workrail-control {
   min-width: 76px;
-  min-height: 34px;
-  padding-inline: 13px;
-}
-
-.workrail-dock .workrail-control:not([aria-current]) {
-  border-color: transparent;
-  background: transparent;
-  box-shadow: none;
-}
-
-.workrail-dock .workrail-control:not([aria-current]):hover:enabled {
-  background: var(--hover);
+  min-height: 36px;
+  padding-inline: 11px;
+  border-radius: 10px;
 }
 
 .workrail-screen {
@@ -149,7 +141,7 @@
 }
 
 .workrail-home-grid .workrail-surface,
-.workrail-node-current, .workrail-node-guidance, .workrail-node-installed, .workrail-node-empty {
+.workrail-node-current, .workrail-node-installed, .workrail-node-empty {
   padding: 15px 17px;
 }
 
@@ -316,7 +308,7 @@
   margin-top: 14px;
 }
 
-.workrail-node-guidance {
+.workrail-node-guidance, .plan-warning {
   display: grid;
   gap: 8px;
   padding: 10px 20px;
@@ -324,8 +316,17 @@
   font-size: 13px;
 }
 .workrail-node-guidance h3 { display: flex; align-items: center; gap: 8px; }
-.workrail-node-guidance h3 svg { flex: none; color: var(--warning-text); }
-.workrail-node-guidance p { margin: 0; }
+.workrail-node-guidance h3 svg, .plan-warning > svg { flex: none; color: var(--warning-text); }
+.workrail-node-guidance p, .plan-warning p { margin: 0; }
+.plan-warning {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  margin: 8px 14px 0;
+  overflow-wrap: anywhere;
+}
+.plan-warning > svg { margin-top: 1px; }
+.plan-warning-body { display: grid; justify-items: start; gap: 6px; min-width: 0; }
+.editor .plan-warning { margin-inline: 0; }
 .node-recovery { display: grid; gap: 8px; min-width: 0; }
 .node-recovery-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .node-recovery-hint { color: var(--muted); font-size: 12px; }
@@ -387,12 +388,17 @@
   min-height: 0;
   overflow: hidden;
 }
-.workrail-node-table-scroll { overflow: auto; min-height: 0; flex: 1; }
+.workrail-node-table-scroll { overflow: auto; min-height: 0; flex: 1; container: node-catalog / scroll-state; }
 .workrail-node-table .workrail-message { margin: 8px; flex: none; }
-.workrail-node-table thead { position: sticky; top: 0; z-index: 1; background: var(--popup-glass); }
+.workrail-node-table thead { position: sticky; top: 0; z-index: 1; }
+/* Keep scrolling row labels from competing with the transparent header. */
+@container node-catalog scroll-state(scrollable: top) {
+  .workrail-node-table thead { backdrop-filter: blur(12px); }
+}
 .workrail-catalog-progress { position: absolute; inset: 0 0 auto; height: 2px; overflow: hidden; z-index: 3; }
 .workrail-catalog-progress::before { content: ''; display: block; width: 30%; height: 100%; background: var(--accent); animation: save-flow 1.1s linear infinite; }
 .workrail-sort { display: grid; grid-template-columns: 12px auto 12px; align-items: center; gap: 4px; width: 100%; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; }
+.workrail-sort:hover:enabled { background: transparent; filter: none; }
 .workrail-sort > span:first-child { grid-column: 2; }
 .workrail-sort-direction { font-size: 9px; }
 .workrail-sort:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 2px; }
@@ -430,12 +436,10 @@
 
 .workrail-node-installed .workrail-note { margin-top: 10px; }
 
-.workrail-icon-accent { fill: var(--accent); }
 .workrail-dock::before { display: none; }
-.workrail-dock .workrail-control[aria-current="page"] { box-shadow: inset 0 -2px var(--accent); }
 .workrail-node-seat { grid-area: 1 / 1; min-height: 0; display: flex; }
 .workrail-node-seat > .workrail-node { flex: 1; }
-.workrail-node { display: flex; flex-direction: column; }
+.workrail-node { display: flex; flex-direction: column; padding-top: var(--workrail-content-top-gap); }
 .workrail-node > :not(.workrail-node-grid) { flex: none; }
 .workrail-current-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-inline-start: auto; }
 .workrail-node-installed { grid-column: 2; grid-row: 2; min-height: 0; overflow: auto; }
@@ -482,7 +486,6 @@
 @media (forced-colors: active) {
   .workrail-dock, .workrail-surface { border-color: CanvasText; background: Canvas; }
   .workrail-dock::before, .workrail-surface::before { display: none; }
-  .workrail-icon-accent { fill: currentColor; }
   .workrail-catalog-progress::before { background: Highlight; }
   .workrail-dock .workrail-control[aria-current="page"], .workrail-control[aria-pressed="true"] {
     border-color: Highlight;

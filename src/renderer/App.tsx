@@ -37,7 +37,7 @@ import { GanttView, type GanttHandle } from "./components/GanttView";
 import { CalendarView } from "./components/CalendarView";
 import { EditorPanel } from "./components/EditorPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
-import { StatusNotice } from "./components/StatusNotice";
+import { PlanWarning, StatusNotice } from "./components/StatusNotice";
 import {PlanRailStatus} from "./workrail/PlanRailStatus";
 import "./workrail/status.css";
 import { Home } from "./workrail/Home";
@@ -580,32 +580,32 @@ export function App({
     const settings=model?.kind==='schedule'&&model.id===schedule.id?model.draft.reminder:schedule.reminder;
     return !!settings&&((settings.start&&toOrdinal(schedule.startDate)-settings.daysBefore<1)||(settings.end&&toOrdinal(schedule.endDate)-settings.daysBefore<1));
   });
-  const reminderNotice = (reminders.error||reminders.failed||reminders.unknown||reminders.storageError) ? <div className="reminder-notice" role="alert">
+  const reminderNotice = (reminders.error||reminders.failed||reminders.unknown||reminders.storageError) ? <PlanWarning>
     {reminders.error&&<p>{reminders.error}</p>}
     {reminders.storageError&&<p>알림 처리 기록을 저장하지 못했습니다. 알림을 보내지 않았거나 전송 결과가 불명확할 수 있습니다.</p>}
     {reminders.unknown>0&&<p>알림 전송 결과를 확인하지 못했습니다. 중복 방지를 위해 자동으로 다시 보내지 않습니다.</p>}
     {reminders.failed>0&&<p>알림 전송에 실패했습니다. Windows 알림 설정을 확인해 주세요.</p>}
-    {reminders.failed>0&&<button type="button" onClick={()=>void reminders.retry()}>오늘의 실패한 알림 재시도</button>}
-    {reminders.error&&<button type="button" onClick={()=>void reminders.refresh()}>알림 상태 다시 조회</button>}
-  </div>:null;
+    {reminders.failed>0&&<button type="button" className="workrail-control" onClick={()=>void reminders.retry()}>오늘의 실패한 알림 재시도</button>}
+    {reminders.error&&<button type="button" className="workrail-control" onClick={()=>void reminders.refresh()}>알림 상태 다시 조회</button>}
+  </PlanWarning>:null;
   const statusView = (<>
     {reminderNotice}
-    {sharing.state?.role==='member'&&changeNotifications&&(changeNotifications.failed>0||changeNotifications.unknown>0||changeNotifications.storageError)&&<div className="reminder-notice" role="alert">
+    {sharing.state?.role==='member'&&changeNotifications&&(changeNotifications.failed>0||changeNotifications.unknown>0||changeNotifications.storageError)&&<PlanWarning>
       {changeNotifications.storageError&&<p>공유 변경 알림 처리 기록을 저장하지 못했습니다. 알림을 보내지 않았거나 전송 결과가 불명확할 수 있습니다.</p>}
       {changeNotifications.unknown>0&&<p>공유 변경 알림 전송 결과를 확인하지 못했습니다. 중복 방지를 위해 다시 보내지 않습니다.</p>}
       {changeNotifications.failed>0&&<p>공유 변경 알림 전송에 실패했습니다. Windows 알림 설정을 확인해 주세요.</p>}
-      {changeNotifications.failed>0&&sharing.api&&<button type="button" disabled={sharing.busy||!changeNotifications.enabled} onClick={()=>void sharing.run(()=>sharing.api!.retryChangeNotifications())}>실패한 공유 변경 알림 재시도</button>}
-    </div>}
-    {reminderCorrections.map(schedule=><div key={schedule.id} className="reminder-notice" role="alert">
+      {changeNotifications.failed>0&&sharing.api&&<button type="button" className="workrail-control" disabled={sharing.busy||!changeNotifications.enabled} onClick={()=>void sharing.run(()=>sharing.api!.retryChangeNotifications())}>실패한 공유 변경 알림 재시도</button>}
+    </PlanWarning>}
+    {reminderCorrections.map(schedule=><PlanWarning key={schedule.id}>
       <p>{schedule.name}: 알림 날짜가 0001-01-01 이전입니다. 며칠 전을 줄이거나 해당 알림을 끈 뒤 저장해 주세요. 수정 전까지 해당 알림을 보류합니다.</p>
-      <button type="button" onClick={()=>{
+      <button type="button" className="workrail-control" onClick={()=>{
         if(model?.kind==='schedule'&&model.id===schedule.id)document.getElementById('editor-daysBefore')?.focus();
         else request(caller=>editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller));
       }}>{schedule.name} 알림 설정</button>
-    </div>)}
-    {sharing.writeOutcomeUnknown&&<p className="reminder-notice" role="alert">공유 저장 결과를 확인하지 못해 업데이트를 설치할 수 없습니다. 앱을 완전히 종료한 뒤 다시 실행하여 공유 설정을 확인하고 설치를 다시 시도해 주세요.</p>}
-    {sharing.error&&sharing.error.message!==timeline.error?.message&&!(sharing.error.code==='VALIDATION_ERROR'&&sharing.error.field)&&<p className="reminder-notice" role="alert">{sharing.error.message}</p>}
-    {sharing.state&&["error","revoked","disconnected"].includes(sharing.state.status)&&sharing.error?.message!==sharingDescription(sharing.state)&&<p className="reminder-notice" role="alert">{sharingDescription(sharing.state)}</p>}
+    </PlanWarning>)}
+    {sharing.writeOutcomeUnknown&&<PlanWarning>공유 저장 결과를 확인하지 못해 업데이트를 설치할 수 없습니다. 앱을 완전히 종료한 뒤 다시 실행하여 공유 설정을 확인하고 설치를 다시 시도해 주세요.</PlanWarning>}
+    {sharing.error&&sharing.error.message!==timeline.error?.message&&!(sharing.error.code==='VALIDATION_ERROR'&&sharing.error.field)&&<PlanWarning>{sharing.error.message}</PlanWarning>}
+    {sharing.state&&["error","revoked","disconnected"].includes(sharing.state.status)&&sharing.error?.message!==sharingDescription(sharing.state)&&<PlanWarning>{sharingDescription(sharing.state)}</PlanWarning>}
     <StatusNotice
       phase={timeline.phase}
       error={formError ?? (timeline.error?.code==='VALIDATION_ERROR'&&timeline.error.field?null:timeline.error)}

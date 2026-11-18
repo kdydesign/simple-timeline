@@ -94,18 +94,11 @@ nav input {
 .danger {
   color: #b42335;
 }
-.status {
-  padding: 0 24px;
+.status > p {
+  margin-inline: 24px;
 }
 .status > p:empty {
   display: none;
-}
-.status [role="alert"] {
-  padding: 12px 16px;
-  border: 1px solid #e2a0a8;
-  border-radius: 8px;
-  background: var(--error-bg);
-  margin: 12px 0;
 }
 .workspace {
   display: flex;

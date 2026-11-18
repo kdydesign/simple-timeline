@@ -101,6 +101,7 @@ test('centers and sorts the Node catalog with aligned independently scrolling pa
   const installedHeading = installed.getByRole('heading', { name: '설치된 버전' })
   await catalogScroll.evaluate(element => { element.scrollTop = 240 })
   await expect.poll(() => catalogScroll.evaluate(element => element.scrollTop)).toBe(240)
+  await expect(table.locator('thead')).toHaveCSS('backdrop-filter', 'blur(12px)')
   expect(await installed.evaluate(element => element.scrollTop)).toBe(0)
   await installed.evaluate(element => { element.scrollTop = 160 })
   await expect.poll(() => installed.evaluate(element => element.scrollTop)).toBe(160)
@@ -115,6 +116,46 @@ test('centers and sorts the Node catalog with aligned independently scrolling pa
   await expectMatchingEdges(main.locator('.workrail-node-table'), installed)
   expect(await main.evaluate(element => element.scrollTop)).toBe(0)
   await page.screenshot({ path: info.outputPath('node-independent-scroll.png') })
+})
+
+test('matches the calendar header material and menu gap while retaining keyboard sorting', async ({ desktop }) => {
+  const { page } = desktop
+  await showWindowsNode(desktop)
+  const menu = page.getByRole('navigation', { name: 'WorkRail 도구' })
+  const table = page.getByRole('table', { name: '공식 배포 버전' })
+  for (const width of [1440, 800, 600]) {
+    await page.setViewportSize({ width, height: 900 })
+    await menu.getByRole('button', { name: 'PlanRail', exact: true }).click()
+    await page.getByRole('button', { name: '달력', exact: true }).click()
+    const calendar = page.locator('.calendar-top')
+    await expect(calendar).toBeVisible()
+    const calendarStyle = await calendar.evaluate(element => {
+      const style = getComputedStyle(element)
+      return { background: style.backgroundColor, blur: style.backdropFilter }
+    })
+    const toolbarTop = (await box(page.locator('.toolbar'))).y
+    await menu.getByRole('button', { name: 'NodeRail', exact: true }).click()
+    const panelTop = (await box(page.getByRole('region', { name: '현재 사용 버전' }))).y
+    expect(Math.abs(panelTop - toolbarTop)).toBeLessThanOrEqual(1)
+    await expect(table.locator('thead')).toHaveCSS('background-color', calendarStyle.background)
+    await expect(table.locator('thead')).toHaveCSS('backdrop-filter', calendarStyle.blur)
+  }
+  const sort = table.getByRole('button', { name: 'Node 버전 정렬' })
+  const restingStyle = await sort.evaluate(element => {
+    const style = getComputedStyle(element)
+    return { background: style.backgroundColor, filter: style.filter, shadow: style.boxShadow }
+  })
+  await sort.hover()
+  await sort.evaluate(async element => { await Promise.all(element.getAnimations().map(animation => animation.finished)) })
+  await expect(sort).toHaveCSS('background-color', restingStyle.background)
+  await expect(sort).toHaveCSS('filter', restingStyle.filter)
+  await expect(sort).toHaveCSS('box-shadow', restingStyle.shadow)
+  await table.getByRole('button', { name: '분류 정렬' }).focus()
+  await page.keyboard.press('Shift+Tab')
+  await expect(sort).toBeFocused()
+  await expect(sort).toHaveCSS('outline-style', 'solid')
+  await page.keyboard.press('Enter')
+  await expect(table.getByRole('columnheader', { name: 'Node 버전 정렬' })).toHaveAttribute('aria-sort', 'ascending')
 })
 
 test('matches Home card heights while keeping PlanRail status fit to its contents', async ({ desktop }, info) => {

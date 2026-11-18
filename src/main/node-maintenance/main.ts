@@ -17,7 +17,7 @@ app.setPath('userData', profile.userData)
 app.setPath('sessionData', profile.sessionData)
 app.setName('WorkRail Node Recovery')
 const session = process.argv.find(value => value.startsWith('--workrail-maintenance-session='))?.split('=')[1]
-const needsHandoff = Boolean(process.send)
+const needsHandoff = session !== undefined || typeof process.send === 'function'
 let accepted = !needsHandoff
 let window: BrowserWindow | undefined
 let ready = false
@@ -44,9 +44,8 @@ process.on('message', value => {
   const message = value as Record<string, unknown>
   if (message.type === 'accepted' && message.session === session && message.artifactId === artifactId) {
     accepted = true
-    void service.getState().then(state => window?.webContents.send('node-maintenance:changed', state))
   }
-  if (message.type === 'focus') focus()
+  if (message.type === 'focus') { focus(); sendReady() }
 })
 // A parent going away never terminates recovery, even during an elevated mutation.
 process.on('disconnect', () => {})
@@ -67,7 +66,7 @@ async function createRecoveryShortcut() {
 }
 async function start() {
   if (process.platform !== 'win32' || process.arch !== 'x64') throw Error('Node 복구는 Windows x64에서 사용할 수 있습니다.')
-  if (needsHandoff && (!session || !/^[a-f0-9]{64}$/.test(session))) throw Error('복구 창 인계 정보를 확인하지 못했습니다.')
+  if (needsHandoff && (!process.connected || !process.send || !session || !/^[a-f0-9]{64}$/.test(session))) throw Error('복구 창 인계 정보를 확인하지 못했습니다.')
   artifactId = await verifyMaintenance(artifactDirectory)
   if (resolve(process.execPath) !== resolve(artifactDirectory, 'runtime', 'electron.exe')) throw Error('독립 Electron 실행 경로를 확인하지 못했습니다.')
   recoveryShortcut = await createRecoveryShortcut()
@@ -115,7 +114,8 @@ async function start() {
     return result
   })
   await window.loadURL(localUrl)
-  await service.getState()
+  // The accepted renderer refreshes the catalog and inspects the MSI target.
+  // Network and Windows inspection deadlines must not delay the ready handshake.
   ready = true
   window.show()
   sendReady()

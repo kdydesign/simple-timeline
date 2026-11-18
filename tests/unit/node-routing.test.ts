@@ -4,7 +4,7 @@ import type {NodeManagementService} from '../../src/main/node-management/service
 it('never allows a development renderer to remove in its parent and blocks changes during handoff',async()=>{
  const getState=vi.fn(async()=>({revision:1})),removeStandalone=vi.fn(),installManager=vi.fn(),open=vi.fn(async()=>{})
  let active=false
- const routing=createNodeRouting({getState,removeStandalone,installManager} as unknown as NodeManagementService,{required:true,isActive:()=>active,open,shortcut:()=>undefined})
+ const routing=createNodeRouting({getState,removeStandalone,installManager} as unknown as NodeManagementService,{required:true,isActive:()=>active,open,getState:()=>({status:'idle' as const,error:null,recoveryShortcut:null})})
  expect((await routing.dispatch(['removeStandalone',{confirmed:true,confirmationId:'a'}],true)).ok).toBe(false)
  expect(removeStandalone).not.toHaveBeenCalled()
  expect((await routing.dispatch(['openMaintenance'],false)).ok).toBe(false)
@@ -16,7 +16,21 @@ it('never allows a development renderer to remove in its parent and blocks chang
 })
 it('focuses an existing maintenance window while its shared operation is busy',async()=>{
  const open=vi.fn(async()=>{}),getState=vi.fn(async()=>({revision:1}))
- const routing=createNodeRouting({getState,isBusy:()=>true} as unknown as NodeManagementService,{required:true,isActive:()=>true,open,shortcut:()=>undefined})
+ const routing=createNodeRouting({getState,isBusy:()=>true} as unknown as NodeManagementService,{required:true,isActive:()=>true,open,getState:()=>({status:'idle' as const,error:null,recoveryShortcut:null})})
  expect((await routing.dispatch(['openMaintenance'],true)).ok).toBe(true)
  expect(open).toHaveBeenCalledOnce()
+})
+
+it('reports the recovery process exiting before readiness without exposing internal errors',async()=>{
+ const { EventEmitter }=await import('node:events')
+ const { waitForMaintenanceReady }=await import('../../src/main/node-maintenance/controller')
+ const child=Object.assign(new EventEmitter(),{pid:12,send:vi.fn()})
+ const open=()=>{const result=waitForMaintenanceReady(child,{session:'private',artifactId:'bundle'});child.emit('exit',1);return result}
+ const maintenance={required:true,isActive:()=>false,open,getState:()=>({status:'idle' as const,error:null,recoveryShortcut:null})}
+ const service={} as NodeManagementService
+ const result=await createNodeRouting(service,maintenance).dispatch(['openMaintenance'],true)
+ expect(result).toMatchObject({ok:false,error:{code:'operation-failed',message:expect.stringContaining('준비 전에 종료')}})
+ const raw=await createNodeRouting(service,{...maintenance,open:async()=>{throw Error('private-path-and-token')}}).dispatch(['openMaintenance'],true)
+ expect(raw).toMatchObject({ok:false})
+ expect(JSON.stringify(raw)).not.toContain('private-path-and-token')
 })

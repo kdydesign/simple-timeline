@@ -57,9 +57,9 @@ describe('maintenance handoff',()=>{
   it('does not authorize a child with a mismatched session and only acknowledges verified readiness',async()=>{
     const { EventEmitter }=await import('node:events')
     const { waitForMaintenanceReady }=await import('../../src/main/node-maintenance/controller')
-    const child=Object.assign(new EventEmitter(),{pid:12,send:(message:unknown)=>sent.push(message)})
+    const child=Object.assign(new EventEmitter(),{pid:12,send:(message:unknown,done:(error:Error|null)=>void)=>{sent.push(message);done(null)}})
     const sent:unknown[]=[]
-    const pending=waitForMaintenanceReady(child,{session:'secret',artifactId:'bundle'},1000)
+    const pending=waitForMaintenanceReady(child,{session:'secret',artifactId:'bundle'},{timeoutMs:1000})
     child.emit('message',{type:'ready',pid:12,session:'other',artifactId:'bundle',rendererReady:true,shortcutReady:true,recoveryShortcut:'recover.lnk'})
     expect(sent).toEqual([])
     child.emit('message',{type:'ready',pid:12,session:'secret',artifactId:'bundle',rendererReady:true,shortcutReady:true,recoveryShortcut:'recover.lnk'})
@@ -70,9 +70,9 @@ describe('maintenance handoff',()=>{
     const { EventEmitter }=await import('node:events')
     const { waitForMaintenanceReady }=await import('../../src/main/node-maintenance/controller')
     const child=Object.assign(new EventEmitter(),{pid:12,send:()=>{throw Error('Must not acknowledge')}})
-    const pending=waitForMaintenanceReady(child,{session:'secret',artifactId:'bundle'},1000)
+    const pending=waitForMaintenanceReady(child,{session:'secret',artifactId:'bundle'},{timeoutMs:1000})
     child.emit('exit',1)
-    await expect(pending).rejects.toThrow(/ready/i)
+    await expect(pending).rejects.toThrow(/준비 전에 종료/)
   })
 })
 
@@ -89,7 +89,7 @@ it('fails readiness on timeout without terminating the independent process',asyn
   const { waitForMaintenanceReady }=await import('../../src/main/node-maintenance/controller')
   let killed=false
   const child=Object.assign(new EventEmitter(),{pid:12,send:()=>{},kill:()=>{killed=true}})
-  await expect(waitForMaintenanceReady(child,{session:'secret',artifactId:'bundle'},5)).rejects.toThrow(/blocked/i)
+  await expect(waitForMaintenanceReady(child,{session:'secret',artifactId:'bundle'},{timeoutMs:5})).rejects.toThrow(/준비 응답/)
   expect(killed).toBe(false)
 })
 
@@ -115,4 +115,17 @@ it('creates an isolated profile and session before Electron paths are registered
   await writeFile(join(paths.userData,'retained-preferences'),'keep')
   expect(prepareMaintenanceProfile(maintenanceRoot)).toEqual(paths)
   expect(await readFile(join(paths.userData,'retained-preferences'),'utf8')).toBe('keep')
+})
+
+it('reports a closed IPC channel when the parent cannot deliver acceptance',async()=>{
+  const { EventEmitter }=await import('node:events')
+  const { waitForMaintenanceReady }=await import('../../src/main/node-maintenance/controller')
+  const child=Object.assign(new EventEmitter(),{
+    pid:12,
+    send:(_message:unknown,done?:(error:Error|null)=>void)=>queueMicrotask(()=>done?.(Error('private pipe name'))),
+  })
+  const identity={session:'session',artifactId:'artifact'}
+  const pending=waitForMaintenanceReady(child,identity,{timeoutMs:1000})
+  child.emit('message',{type:'ready',...identity,pid:12,rendererReady:true,shortcutReady:true,recoveryShortcut:'recover.lnk'})
+  await expect(pending).rejects.toThrow(/복구 창과 통신/)
 })

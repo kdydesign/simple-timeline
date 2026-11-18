@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { NodeManagementApi, NodeManagementError, NodeManagementResult, NodeManagementState } from '../../shared/node-management'
 
 export type NodeMutation = { kind: 'install' | 'use'; version: string } | { kind: 'install-manager'; version: null } | {kind:'remove-standalone';version:null;confirmationId:string}
-type RequestKind = 'read' | 'recheck' | 'mutation'
+type RequestKind = 'read' | 'recheck' | 'mutation' | 'maintenance'
 
 const unavailable: NodeManagementError = {
   code: 'ipc-unavailable',
@@ -21,6 +21,7 @@ interface Connection {
   acceptedRequest: number
   mutation: NodeMutation | null
   catalogPending: boolean
+  openingMaintenance: boolean
 }
 
 export function useNodeManagement(active: boolean, api: NodeManagementApi | undefined = window.workrailNodeManagement) {
@@ -28,6 +29,8 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   const [state, setState] = useState<NodeManagementState | null>(null)
   const [readError, setReadError] = useState<NodeManagementError | null>(() => api ? null : unavailable)
   const [mutationFailure, setMutationFailure] = useState<MutationFailure | null>(null)
+  const [openingMaintenance, setOpeningMaintenance] = useState(false)
+  const [maintenanceError, setMaintenanceError] = useState<string | null>(null)
   const [mutation, setMutation] = useState<NodeMutation | null>(null)
   const [catalogPending, setCatalogPending] = useState(false)
 
@@ -50,6 +53,8 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       current.acceptedRequest = request
       setState(result.data)
       setReadError(null)
+    } else if (kind === 'maintenance') {
+      setMaintenanceError(result.error.message)
     } else if (kind === 'mutation') {
       // An unrelated snapshot cannot confirm a command that never returned a state.
       setMutationFailure({ request, error: result.error })
@@ -93,9 +98,11 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     setReadError(api ? null : unavailable)
     setMutationFailure(null)
     setMutation(null)
+    setOpeningMaintenance(false)
+    setMaintenanceError(null)
     setCatalogPending(false)
     if (!api) return
-    const current: Connection = { revision: -1, request: 0, acceptedRequest: 0, mutation: null, catalogPending: false }
+    const current: Connection = { revision: -1, request: 0, acceptedRequest: 0, mutation: null, catalogPending: false, openingMaintenance: false }
     connection.current = current
     const off = api.onChange(next => {
       if (connection.current !== current || next.revision <= current.revision) return
@@ -114,7 +121,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   }, [api, run])
 
   const catalogRequested = useRef(false)
-  const busy = !!mutation || !!state?.busy || !!state?.maintenance?.active
+  const busy = openingMaintenance || !!mutation || !!state?.busy || !!state?.maintenance?.active
   useEffect(() => {
     if (!active) catalogRequested.current = false
     if (!active || !state?.supported || catalogRequested.current || busy) return
@@ -141,9 +148,23 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     }
   }
 
-  const openMaintenance = async () => { if(api)await run(()=>api.openMaintenance(),'mutation') }
+  async function openMaintenance() {
+    const current = connection.current
+    if (!api || !current || current.openingMaintenance) return
+    current.openingMaintenance = true
+    setOpeningMaintenance(true)
+    setMaintenanceError(null)
+    try {
+      await run(() => api.openMaintenance(), 'maintenance')
+    } finally {
+      if (connection.current === current) {
+        current.openingMaintenance = false
+        setOpeningMaintenance(false)
+      }
+    }
+  }
   const error = mutationFailure?.error ?? readError
-  return { state, error, recoveryError: mutationFailure?.recoveryError, available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate, openMaintenance }
+  return { state, error, openingMaintenance, maintenanceError, recoveryError: mutationFailure?.recoveryError, available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate, openMaintenance }
 }
 
 export type NodeManagement = ReturnType<typeof useNodeManagement>
