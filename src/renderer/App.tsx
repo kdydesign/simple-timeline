@@ -38,11 +38,17 @@ import { CalendarView } from "./components/CalendarView";
 import { EditorPanel } from "./components/EditorPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { StatusNotice } from "./components/StatusNotice";
+import { Home } from "./workrail/Home";
+import { NodeScreen } from "./workrail/NodeScreen";
+import { ToolDock, type WorkRailTool } from "./workrail/ToolDock";
+import { useLocalWorkDate } from "./workrail/useLocalWorkDate";
+import { useNodeManagement } from "./workrail/useNodeManagement";
 import "./shadcn.css";
 import "./styles.css";
 import "./flat-glass.css";
 import "./planrail.css";
 import "./forest-crystal.css";
+import "./workrail.css";
 interface Confirmation {
   title: string;
   message: string;
@@ -53,11 +59,18 @@ interface Confirmation {
 }
 export function App({
   api = window.simpleTimeline,
-  today = new Date(),
+  today,
+  initialTool = "planrail",
 }: {
   api?: TimelineApi;
   today?: Date;
+  initialTool?: WorkRailTool;
 }) {
+  const [tool, setTool] = useState(initialTool);
+  const planrailActive = tool === "planrail";
+  const dockButton = useRef<HTMLButtonElement>(null);
+  const workDate = useLocalWorkDate(today);
+  const node = useNodeManagement(tool === "node");
   const reminders = useReminders();
   const handledReminder = useRef<number|null>(null);
   const timeline = useTimeline(api),
@@ -77,7 +90,7 @@ export function App({
     const recipientIds=project?.participants.map(name=>mapping?.participants.find(p=>p.name.trim()===name.trim())?.deviceId??'');
     editor.openProject(project,caller,recipientIds);
   };
-  const [selectedDate, setSelectedDate] = useState(() => localDate(today)),
+  const [selectedDate, setSelectedDate] = useState(workDate),
     [confirmation, setConfirmation] = useState<Confirmation | null>(null),
     [fieldErrors,setFieldErrors]=useState<FieldErrors>({}),
     [validationActive,setValidationActive]=useState(false),
@@ -88,13 +101,13 @@ export function App({
     [mode, setMode] = useState<"gantt" | "calendar">("gantt"),
     [dayModalOpen, setDayModalOpen] = useState(false),
     [narrow, setNarrow] = useState(window.innerWidth < 1100);
-  const [month,setMonth] = useState(() => monthOf(localDate(today)));
+  const [month,setMonth] = useState(() => monthOf(workDate));
   const handledChange=useRef<string|null>(null);
   const [changeToOpen,setChangeToOpen]=useState<{target:ChangeTarget;caller:HTMLElement|null;draftKey:string}|null>(null);
   const [projectToReveal,setProjectToReveal]=useState<string|null>(null);
   const preferences = usePreferences();
   const recentProject = useRef<string | null>(null);
-  const [todayRequest, setTodayRequest] = useState<{date:string;token:number}>(() => ({date:localDate(today),token:0}));
+  const [todayRequest, setTodayRequest] = useState(() => ({date:workDate,token:0}));
   useEffect(()=>{
     if(!warning)return;
     const timer=window.setTimeout(()=>setWarning(null),4000);
@@ -117,7 +130,7 @@ export function App({
       const target=document.getElementById(fieldId(pendingFieldFocus.current));
       if(target&&!target.closest('[inert]')){restoreFocus(target);pendingFieldFocus.current=null;}
     }
-  },[fieldErrors,saveShieldActive,timeline.mutation]);
+  },[fieldErrors,saveShieldActive,timeline.mutation,planrailActive]);
   const focusTarget = useRef<string | null>(null),
     dialogCaller = useRef<HTMLElement | null>(null);
   const completionView = useRef({ mode, month });
@@ -130,6 +143,12 @@ export function App({
     saving = timeline.phase === "saving" || sharing.busy;
   const updates=useUpdateGuard({known:(timeline.phase==='ready'||timeline.phase==='saving')&&!sharing.writeOutcomeUnknown,dirty:editor.dirty||settingsDirty||quickDirty,saving});
   const settingsVisible=!!sharing.state&&!!sharing.api&&sharing.settingsOpen&&!quickReminder&&!confirmation&&!dayModalOpen&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
+  const dockBlocked = updates.frozen || saveShieldActive || timeline.phase === 'saving'
+    || settingsVisible || !!quickReminder || !!confirmation || dayModalOpen;
+  const selectTool = (next: WorkRailTool) => {
+    if (dockBlocked) return;
+    setTool(next);
+  };
   useEffect(()=>{setFieldErrors({});serverFieldErrors.current={};pendingFieldFocus.current=null;setValidationActive(false)},[model?.session]);
   const patchForm:typeof editor.patch=(update)=>{
     editor.patch(update);
@@ -171,7 +190,7 @@ export function App({
     if (model?.saved && timeline.phase === "ready"&&!saveShieldActive) editor.close();
   }, [model?.saved, timeline.phase,saveShieldActive]);
   useEffect(() => {
-    if (!model && focusTarget.current) {
+    if (planrailActive && !model && focusTarget.current) {
       const key = focusTarget.current;
       const found = [
         ...document.querySelectorAll<HTMLElement>(`[data-focus="${key}"]`),
@@ -191,7 +210,7 @@ export function App({
       if (target && !target.matches(":disabled")) restoreFocus(target);
       else document.querySelector<HTMLElement>("[data-focus=refresh]")?.focus();
     }
-  }, [model]);
+  }, [model, planrailActive]);
   useEffect(() => {
     if (timeline.phase !== "ready" || model?.kind !== "schedule" || !model.id || (editor.dirty && model.sharing !== "member")) return;
     const current = timeline.snapshot?.schedules.find(s => s.id === model.id);
@@ -473,24 +492,27 @@ export function App({
     if (drag) setMonth(next);
     else navigateDate(dateInMonth(selectedDate,next));
   };
+  const notificationBlocked = !canEdit || saving || dockBlocked || sharing.settingsOpen
+    || settingsDirty || quickDirty || !!model?.saved;
   useEffect(()=>{
     const target=reminders.openRequest;
-    if(!target||handledReminder.current===target.token||!canEdit||confirmation||dayModalOpen||quickReminder||model?.saved)return;
+    if(!target||handledReminder.current===target.token||notificationBlocked)return;
     let cancelled=false;
     void api.getSnapshot().then(result=>{
       if(cancelled)return;
       handledReminder.current=target.token;
       void reminders.acknowledge(target.token);
+      setTool('planrail');
       if(!result.ok){setFormError(result.error);return}
       const schedule=result.data.schedules.find(s=>s.id===target.scheduleId);
       if(!schedule){setFormError({code:'NOT_FOUND',message:'이미 삭제된 일정입니다.'});return}
       request(caller=>{setFilter('all');navigateDate(schedule.startDate);editor.openSchedule(monthOf(schedule.startDate),schedule.projectId,schedule,caller)});
-    }).catch(()=>{if(!cancelled)setFormError({code:'IPC_UNAVAILABLE',message:'알림의 일정을 조회하지 못했습니다. 다시 조회해 주세요.'})});
+    }).catch(()=>{if(!cancelled){setTool('planrail');setFormError({code:'IPC_UNAVAILABLE',message:'알림의 일정을 조회하지 못했습니다. 다시 조회해 주세요.'})}});
     return()=>{cancelled=true};
-  },[reminders.openRequest,canEdit,confirmation,dayModalOpen,quickReminder,model?.saved,editor.dirty,api]);
+  },[reminders.openRequest,notificationBlocked,editor.dirty,api]);
   const changeNotifications=sharing.state?.changeNotifications;
   const changeDraftKey=JSON.stringify(model?{session:model.session,draft:model.kind==='schedule'&&model.sharing==='member'?model.draft.reminder:model.draft}:null);
-  const changeNavigationBlocked=!canEdit||saving||saveShieldActive||!!confirmation||dayModalOpen||!!quickReminder||sharing.settingsOpen||settingsDirty||quickDirty||!!model?.saved;
+  const changeNavigationBlocked=notificationBlocked;
   useEffect(()=>{
     const open=changeNotifications?.openRequest;
     if(!open||handledChange.current===open.token||changeNavigationBlocked||!sharing.api)return;
@@ -498,6 +520,7 @@ export function App({
     const frame=requestAnimationFrame(()=>{
       handledChange.current=open.token;
       void sharing.api!.acknowledgeChange({token:open.token}).catch(()=>{});
+      setTool('planrail');
       request(caller=>setChangeToOpen({target:open.target,caller,draftKey:changeDraftKey}));
     });
     return()=>cancelAnimationFrame(frame);
@@ -512,6 +535,7 @@ export function App({
       const snapshot=await timeline.reconcileSnapshot();
       if(cancelled)return;
       setChangeToOpen(null);
+      setTool('planrail');
       if(!snapshot){setFormError({code:'IPC_UNAVAILABLE',message:'공유 알림의 대상을 조회하지 못했습니다. 다시 동기화해 주세요.'});return;}
       const target=changeToOpen.target;
       const allowed=sharing.state?.role==='member'&&sharing.state.status!=='revoked';
@@ -538,7 +562,7 @@ export function App({
     return()=>{cancelled=true;};
   },[changeToOpen,changeNavigationBlocked,changeNotifications?.enabled,sharing.state?.role,sharing.state?.status,changeDraftKey,editor.dirty,api,timeline.reconcile,timeline.reconcileSnapshot,mode,preferences.collapsed]);
   useEffect(()=>{
-    if(!projectToReveal||model||confirmation||sharing.settingsOpen||quickReminder)return;
+    if(!planrailActive||!projectToReveal||model||confirmation||sharing.settingsOpen||quickReminder)return;
     const frame=requestAnimationFrame(()=>{
       if(mode==='gantt'){
         if(gantt.current?.focusItem(`project:${projectToReveal}`))setProjectToReveal(null);
@@ -548,7 +572,7 @@ export function App({
       }
     });
     return()=>cancelAnimationFrame(frame);
-  },[projectToReveal,visibleSnapshot,mode,model,confirmation,sharing.settingsOpen,quickReminder,projectsOpen]);
+  },[projectToReveal,visibleSnapshot,mode,model,confirmation,sharing.settingsOpen,quickReminder,projectsOpen,planrailActive]);
   const reminderCorrections = (timeline.snapshot?.schedules??[]).filter(schedule=>{
     if(schedule.sharing!=='member')return false;
     const settings=model?.kind==='schedule'&&model.id===schedule.id?model.draft.reminder:schedule.reminder;
@@ -592,9 +616,15 @@ export function App({
   </>);
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
-      <Titlebar onSettings={sharing.state&&sharing.api?sharing.openSettings:undefined} sharing={sharing.state} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
+      <Titlebar onSettings={sharing.state&&sharing.api?sharing.openSettings:undefined} sharing={planrailActive?sharing.state:null} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
       {updates.frozen&&<div className="update-blocked update-ui" role="alert">{updates.editingBlocked?'앱을 종료한 뒤 다시 열어 주세요. 종료 준비 실패로 편집을 잠시 중지했습니다.':'업데이트 설치 준비 중입니다. 저장을 마칠 때까지 기다려 주세요.'}</div>}
-      <div className="saving-content" inert={updates.frozen||saveShieldActive}>
+      <div className="saving-content" inert={updates.frozen||saveShieldActive} onKeyDownCapture={event => {
+        if (event.key !== "F6" || dockBlocked) return;
+        event.preventDefault();
+        dockButton.current?.focus();
+      }}>
+      <div className="workrail-tools">
+      <div className="workrail-plan" aria-hidden={!planrailActive || undefined} inert={!planrailActive}>
       <div
         className="app-shell"
         aria-hidden={settingsVisible || !!quickReminder || !!confirmation || dayModalOpen || (narrow && !!model)}
@@ -656,11 +686,12 @@ export function App({
                 todayRequest={todayRequest} onAddDate={addDate}
                 dayWidth={preferences.dayWidth} onDayWidth={preferences.setDayWidth}
                 active={mode === "gantt"}
+                interactive={planrailActive}
                 snapshot={visibleSnapshot!}
                 hideEmptyChrome={filter==='shared'&&!visibleSnapshot?.projects.length}
                 selectedMonth={month}
                 selectedDate={selectedDate}
-                disabled={!canEdit || sharingView.dragInvalidated}
+                disabled={!planrailActive || !canEdit || sharingView.dragInvalidated}
                 onReminder={(s,caller)=>{if(allowQuickAction())setQuickReminder({id:s.id,caller})}}
                 onEditProject={(p) =>
                   request((caller) => openProject(p, caller))
@@ -684,7 +715,7 @@ export function App({
                 selectedMonth={month}
                 selectedDate={selectedDate}
                 active={mode === "calendar"}
-                disabled={!canEdit || sharingView.dragInvalidated}
+                disabled={!planrailActive || !canEdit || sharingView.dragInvalidated}
                 onModalChange={setDayModalOpen}
                 onEditProject={(p) =>
                   request((caller) => openProject(p, caller))
@@ -723,7 +754,8 @@ export function App({
             disabled={!canEdit || model.saved || sharedMissing}
             busy={saving}
             narrow={narrow}
-            covered={!!confirmation || !!quickReminder || dayModalOpen || settingsVisible}
+            active={planrailActive}
+            covered={!planrailActive || !!confirmation || !!quickReminder || dayModalOpen || settingsVisible}
             error={sharedMissing?{code:'NOT_FOUND',message:'더 이상 공유되지 않거나 삭제된 항목입니다. 개인 알림을 저장할 수 없습니다.'}:formError ?? (timeline.error?.code==='VALIDATION_ERROR'&&timeline.error.field?null:timeline.error)}
             status={narrow ? statusView : null}
           />
@@ -731,6 +763,23 @@ export function App({
       </div>
       {warning&&<div className="toast warning-toast" role="alert">{warning.message}</div>}
       <div className="toast" hidden={!!warning} role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
+      </div>
+      {tool === "home" && <Home date={workDate} snapshot={timeline.snapshot} phase={timeline.phase} timelineError={timeline.error}
+        sharing={sharing.state} sharingError={sharing.error} node={node} onRefresh={() => void timeline.refresh()}
+        onPlanrail={() => {
+          selectTool("planrail");
+          setFilter("all");
+          navigateDate(workDate);
+          requestAnimationFrame(() => dockButton.current?.focus());
+        }} onNode={() => {
+          selectTool("node");
+          requestAnimationFrame(() => dockButton.current?.focus());
+        }}/>}
+      {tool === "node" && <NodeScreen node={node}/>}
+      </div>
+      <div className="workrail-dock-seat">
+        <ToolDock current={tool} blocked={dockBlocked} onSelect={selectTool} activeButton={dockButton}/>
+      </div>
       {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings request={sharing.settingsRequest} initialTab={sharing.settingsTab} state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
       {quickReminder&&<QuickReminder key={quickReminder.id} schedule={timeline.snapshot?.schedules.find(s=>s.id===quickReminder.id)} caller={quickReminder.caller}
         disabled={!canEdit||saving||saveShieldActive} busy={saving||saveShieldActive} covered={!!confirmation} onRefresh={()=>void timeline.refresh()} onGuard={setQuickDirty} onClose={requestCloseQuick} onSave={saveQuickReminder}/>}

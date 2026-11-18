@@ -28,6 +28,7 @@ export function EditorPanel({
   disabled,
   busy,
   narrow,
+  active = true,
   covered,
   error,
   fieldErrors={},
@@ -44,6 +45,7 @@ export function EditorPanel({
   disabled: boolean;
   busy: boolean;
   narrow: boolean;
+  active?: boolean;
   covered: boolean;
   error: ApiError | null;
   fieldErrors?:FieldErrors;
@@ -74,7 +76,7 @@ export function EditorPanel({
     <aside
       ref={panel}
       role="dialog"
-      aria-modal={narrow || undefined}
+      aria-modal={(narrow && active) || undefined}
       aria-labelledby="editor-title"
       aria-hidden={covered}
       inert={covered}

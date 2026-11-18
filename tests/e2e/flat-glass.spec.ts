@@ -1,4 +1,4 @@
-import {test,expect} from './fixture';
+import {test,expect,openPlanrail} from './fixture';
 import {readFile} from 'node:fs/promises';
 import {join} from 'node:path';
 test.use({seed:'hotfix',fault:'close-denied'});
@@ -20,7 +20,7 @@ test('custom titlebar keeps dirty close protection and isolated window API',asyn
 test('project popup keeps its size and fixed actions while long content scrolls',async({desktop:d})=>{
  const p=d.page;await p.setViewportSize({width:1440,height:900});
  await p.evaluate(async()=>{for(let i=0;i<20;i++)await window.simpleTimeline.createProject({name:`추가 프로젝트 ${i}`,participants:[],color:'#2563EB'})});
- await p.reload();await p.getByRole('button',{name:'프로젝트 목록',exact:true}).click();
+ await p.reload();await openPlanrail(p);await p.getByRole('button',{name:'프로젝트 목록',exact:true}).click();
  const panel=p.getByRole('region',{name:'프로젝트 목록',exact:true});
  const rect=(await panel.boundingBox())!;expect(rect.width).toBe(290);expect(rect.height).toBe(442);
  const heading=panel.getByRole('heading'),footer=panel.getByRole('button',{name:'프로젝트 추가',exact:true});

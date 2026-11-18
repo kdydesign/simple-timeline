@@ -1,6 +1,6 @@
 import { _electron } from 'playwright';
 import type { TestInfo } from '@playwright/test';
-import type { Desktop } from './fixture';
+import { openPlanrail, type Desktop } from './fixture';
 import { mkdtemp, rm, appendFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -16,7 +16,7 @@ export async function launchMember(info: TestInfo, fault='sharing'): Promise<Des
     const app = await _electron.launch({chromiumSandbox: true, executablePath: require('electron'), args: [resolve('artifacts/test-app/main/index.cjs')], env: {...env, SIMPLE_TIMELINE_TEST_PROFILE: profile, SIMPLE_TIMELINE_TEST_FAULT: fault, SIMPLE_TIMELINE_TEST_SEED: 'single'}});
     app.process().stderr?.on('data', chunk => void appendFile(info.outputPath('member-electron.log'), chunk));
     const page = await app.firstWindow();
-    await page.getByRole('button', {name:'프로젝트 추가', exact:true}).waitFor();
+    await openPlanrail(page);
     return {app,page,stopApp:createTestAppCleanup(app),launchMs:Date.now()-began,launchedAt:began};
   };
   const desktop = {...await launch(), profile, async restart() { await desktop.app.close(); Object.assign(desktop,await launch()); }, async dispose() {

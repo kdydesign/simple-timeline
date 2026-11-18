@@ -1,4 +1,4 @@
-import {test,expect} from './fixture'
+import {test,expect,openPlanrail} from './fixture'
 import {launchMember} from './sharing-fixture'
 test.use({fault:'updates',seed:'single'})
 test('real update IPC across two pinned TLS profiles discards dirty edits and restores failed-install waits',async({desktop:host},info)=>{
@@ -6,7 +6,7 @@ test('real update IPC across two pinned TLS profiles discards dirty edits and re
  try{
   const connection=await host.app.evaluate(()=> (globalThis as any).setupUpdateHost())
   await member.app.evaluate((_electron,connection)=>(globalThis as any).setupUpdateMember(connection),connection)
-  await member.page.reload()
+  await member.page.reload();await openPlanrail(member.page)
   await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).updateNotifications?.length??0)).toBe(1)
   await member.app.evaluate(()=>(globalThis as any).clickUpdateNotification())
   await expect(member.page.getByRole('group',{name:'앱 업데이트'})).toBeVisible()
@@ -32,7 +32,7 @@ test('real update IPC across two pinned TLS profiles discards dirty edits and re
   await expect(member.page.getByText('업데이트를 위한 앱 종료를 완료하지 못했습니다.',{exact:true})).toBeVisible()
   expect(await member.app.evaluate(()=>(globalThis as any).updateTrace)).toEqual(['shutdown','handoff-failed'])
   // The injected failed handoff has already closed its isolated DB. End that test-only process before relaunching.
-  await member.app.evaluate(({app})=>app.exit(0));await member.restart();await member.app.evaluate((_electron,connection)=>(globalThis as any).setupUpdateMember(connection),connection);await member.page.reload()
+  await member.app.evaluate(({app})=>app.exit(0));await member.restart();await member.app.evaluate((_electron,connection)=>(globalThis as any).setupUpdateMember(connection),connection);await member.page.reload();await openPlanrail(member.page)
   await member.page.getByRole('button',{name:'UPDATE',exact:true}).click();await expect(member.page.getByRole('button',{name:'설치 후 재시작'})).toBeEnabled();expect(await member.app.evaluate(()=>(globalThis as any).updateNotifications?.length??0)).toBe(0)
   await expect(member.page.getByText(/설치를 완료하지 못했습니다/)).toBeVisible()
   await expect(member.page.getByRole('button',{name:'개발 편집',exact:true})).toBeVisible()

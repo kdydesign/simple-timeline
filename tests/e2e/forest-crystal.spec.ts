@@ -1,4 +1,4 @@
-import {test,expect} from './fixture';
+import {test,expect,openPlanrail} from './fixture';
 test.use({seed:'hotfix'});
 
 test('approved graphite glass fills square window corners without a root border and with blue actions',async({desktop:{page:p}})=>{
@@ -124,7 +124,7 @@ test('schedule text remains legible for extreme project colors in both views',as
    const {id,name,participants}=s.data.projects[0];
    const r=await api.updateProject({id,name,participants,color});if(!r.ok)throw Error(r.error.message);
   },color);
-  await p.reload();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-01');await p.getByLabel('선택 날짜',{exact:true}).press('Enter');
+  await p.reload();await openPlanrail(p);await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-01');await p.getByLabel('선택 날짜',{exact:true}).press('Enter');
   for(const theme of ['dark']){
    for(const mode of ['간트','달력']){
     await p.getByRole('button',{name:mode,exact:true}).click();

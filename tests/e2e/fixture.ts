@@ -15,14 +15,27 @@ export interface Desktop {
   launchMs: number;
   launchedAt: number;
 }
+function toolDock(page: Page) {
+  return page.getByRole("navigation", { name: "WorkRail 도구" });
+}
+async function waitForHome(page: Page) {
+  await expect(toolDock(page).getByRole("button", { name: "홈", exact: true })).toHaveAttribute("aria-current", "page");
+}
+export async function openPlanrail(page: Page) {
+  await waitForHome(page);
+  await toolDock(page).getByRole("button", { name: "Planrail", exact: true }).click();
+  await page.getByRole("button", { name: "프로젝트 추가", exact: true }).waitFor();
+}
 export const test = base.extend<{
   desktop: Desktop;
   fault: string;
   seed: string;
+  initialTool: 'home' | 'planrail';
 }>({
   fault: ["", { option: true }],
   seed: ["", { option: true }],
-  desktop: async ({ fault, seed }, use, info) => {
+  initialTool: ["planrail", { option: true }],
+  desktop: async ({ fault, seed, initialTool }, use, info) => {
     const profile = await mkdtemp(join(tmpdir(), "simple-timeline-e2e-"));
     const log = info.outputPath("electron.log");
     await mkdir(info.outputDir, { recursive: true });
@@ -50,9 +63,8 @@ export const test = base.extend<{
         void appendFile(log, chunk);
       });
       const page = await app.firstWindow();
-      await page
-        .getByRole("button", { name: "프로젝트 추가", exact: true })
-        .waitFor();
+      if (initialTool === "home") await waitForHome(page);
+      else await openPlanrail(page);
       return { app, page, stopApp: createTestAppCleanup(app), launchMs: Date.now() - began, launchedAt: began };
     };
     const first = await launch();

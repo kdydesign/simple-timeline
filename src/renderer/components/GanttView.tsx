@@ -55,6 +55,7 @@ export interface GanttProps extends DragActions {
   onAddSchedule: (p: Project) => void;
   disabled?: boolean;
   active?: boolean;
+  interactive?: boolean;
   ref?: Ref<GanttHandle>;
 }
 const EXPANDED: string[] = [];
@@ -75,6 +76,7 @@ export function GanttView({
   onAddSchedule,
   disabled = false,
   active = true,
+  interactive = true,
   hideEmptyChrome=false,
   onReminder,
   ref,
@@ -308,7 +310,7 @@ export function GanttView({
       } else move(x+direction*P);
     },
   });
-  const navigation = useGanttNavigation({root,dateArea,active,offset:x,dayWidth:P,days,viewport:size.width,
+  const navigation = useGanttNavigation({root,dateArea,active:active && interactive,offset:x,dayWidth:P,days,viewport:size.width,
     move, onDayWidth, isScheduleDragging:drag.isActive});
   const w = viewportWindow({
       logicalOffset: x,

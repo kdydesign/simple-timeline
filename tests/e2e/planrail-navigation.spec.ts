@@ -1,4 +1,4 @@
-import { test, expect } from './fixture'
+import { test, expect, openPlanrail } from './fixture'
 import type { Page } from 'playwright'
 async function choose(p:Page,date:string) {
   const input=p.getByLabel('선택 날짜',{exact:true})
@@ -66,7 +66,7 @@ test.describe('Planrail zoom and Space pan',()=>{
   test('at 14px a one-day bar keeps distinct start, body and end hit areas',async({desktop:d})=>{
     const p=d.page
     await p.evaluate(()=>localStorage.setItem('simple-timeline.preferences.v1',JSON.stringify({theme:'light',collapsed:[],dayWidth:14})))
-    await p.reload();await choose(p,'2026-12-01')
+    await p.reload();await openPlanrail(p);await choose(p,'2026-12-01')
     const bar=p.locator('[data-bar="3"]')
     const b=await bar.boundingBox();expect(b!.width).toBe(14)
     for(const [part,delta,dates] of [

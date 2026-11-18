@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { wheelPixels, zoomAt } from '../../visualization/ganttNavigation'
 interface Options {
   root:RefObject<HTMLElement|null>
@@ -18,7 +18,8 @@ export function useGanttNavigation(options:Options) {
   const latest=useRef(options), suppress=useRef(false)
   const [panning,setPanning]=useState(false)
   useLayoutEffect(()=>{latest.current=options})
-  useEffect(()=>{
+  useLayoutEffect(()=>{
+    if (!options.active) return
     let space=false
     let session:{pointer:number;x:number;offset:number;moved:boolean}|null=null
     const finish=()=>{session=null;setPanning(false)}
@@ -90,6 +91,8 @@ export function useGanttNavigation(options:Options) {
     window.addEventListener('keydown',keydown,true)
     window.addEventListener('keyup',keyup,true)
     return()=>{
+      suppress.current=false
+      if(session)finish()
       root?.removeEventListener('pointerdown',down,true)
       root?.removeEventListener('wheel',wheel)
       window.removeEventListener('pointermove',move)
@@ -99,6 +102,6 @@ export function useGanttNavigation(options:Options) {
       window.removeEventListener('keydown',keydown,true)
       window.removeEventListener('keyup',keyup,true)
     }
-  },[])
+  },[options.active,options.root])
   return {panning,consumeClick:()=>suppress.current}
 }

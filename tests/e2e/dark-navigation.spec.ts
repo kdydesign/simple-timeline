@@ -1,4 +1,4 @@
-import {test,expect} from './fixture'
+import {test,expect,openPlanrail} from './fixture'
 test.use({seed:'hotfix'})
 
 test('dark-only surfaces, project popup and independent row background match the approved values',async({desktop:{page:p}})=>{
@@ -82,7 +82,7 @@ test('native vertical scrollbar reveals on hover and focus and remains draggable
    if(!r.ok)throw Error(r.error.message)
   }
  })
- await p.reload()
+ await p.reload();await openPlanrail(p)
  const body=p.locator('.gantt-body')
  await expect.poll(()=>body.evaluate(e=>e.scrollHeight>e.clientHeight)).toBe(true)
  const color=()=>body.evaluate(e=>getComputedStyle(e,'::-webkit-scrollbar-thumb').backgroundColor)
