@@ -1,6 +1,7 @@
 import {updatesChannel,updatesChanged,updatesGuard,updatesGuardReply,type UpdateApi,type UpdateState,type UpdateGuardRequest} from '../shared/updates'
 import {sharingChannel,sharingChanged,type SharingApi,type SharingState} from '../shared/sharing'
 import {reminderChannel,reminderChanged,type ReminderApi} from '../shared/reminder-api'
+import {nodeManagementChannel,nodeManagementChanged,type NodeManagementApi,type NodeManagementResult,type NodeManagementState} from '../shared/node-management'
 import { contextBridge, ipcRenderer } from 'electron'
 import { channels, type TimelineApi } from '../shared/api'
 import { windowChannel, type WindowCommand, type WindowApi } from '../shared/window-api'
@@ -77,3 +78,26 @@ contextBridge.exposeInMainWorld('timelineUpdates',{
     ipcRenderer.on(updatesGuard,listener);return ()=>ipcRenderer.removeListener(updatesGuard,listener)
   },
 } satisfies UpdateApi)
+
+const nodeInvoke = async (
+  command: 'getState' | 'refreshCatalog' | 'installManager' | 'install' | 'use',
+  ...args: [] | [version: string]
+): Promise<NodeManagementResult> => {
+  try {
+    return await ipcRenderer.invoke(nodeManagementChannel, command, ...args)
+  } catch {
+    return { ok: false, error: { code: 'ipc-unavailable', message: 'Node 관리 응답을 확인하지 못했습니다. 다시 조회해 주세요.' } }
+  }
+}
+contextBridge.exposeInMainWorld('workrailNodeManagement', {
+  getState: () => nodeInvoke('getState'),
+  refreshCatalog: () => nodeInvoke('refreshCatalog'),
+  install: version => nodeInvoke('install', version),
+  use: version => nodeInvoke('use', version),
+  installManager: () => nodeInvoke('installManager'),
+  onChange: callback => {
+    const listener = (_event: unknown, state: NodeManagementState) => callback(state)
+    ipcRenderer.on(nodeManagementChanged, listener)
+    return () => ipcRenderer.removeListener(nodeManagementChanged, listener)
+  },
+} satisfies NodeManagementApi)

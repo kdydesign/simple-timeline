@@ -13,6 +13,10 @@ import { createUpdateRoutes, type UpdateRoutes } from './updates/transport'
 import { createUpdateService, type UpdateService } from './updates/service'
 import { createInstallCoordinator, prepareProductionInstaller } from './updates/installer'
 import { registerUpdateIpc } from './updates/ipc'
+import { loadNodeCatalog } from './node-management/catalog'
+import { registerNodeManagementIpc } from './node-management/ipc'
+import { createNodeManagementService } from './node-management/service'
+import { createWindowsNodeAdapter } from './node-management/windows'
 import { appMutationBarrier } from './ipc-core'
 import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -24,7 +28,7 @@ import {createReminderStore} from './db/reminders'
 import {createReminderEngine,type ReminderSender} from './reminders/engine'
 import {createNativeReminderSender} from './reminders/native'
 import {registerReminderIpc} from './reminders/ipc'
-import { app, dialog, powerMonitor } from 'electron'
+import { app, dialog, net, powerMonitor } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import windowsIcon from '../../resources/icon.ico?asset'
 import { startupRecorder, rendererStartupProbe, observeStartupRequests } from './startup'
@@ -73,7 +77,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const profile = options.profileDir ?? profileDirectory(app.getPath('appData'))
   try {
     if (installRequest === 'none') mkdirSync(profile, { recursive: true })
-    app.setName('Planrail')
+    app.setName('WorkRail')
     app.setPath('userData', profile)
   } catch (error) {
     const blocked: StorageState = {
@@ -96,6 +100,21 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   // A cold request helper must never initialize services, SQLite, or a window.
   if (installRequest === 'valid') { app.exit(0); return null }
   const installExit = createInstallExit(appMutationBarrier)
+  let nodeIpc: ReturnType<typeof registerNodeManagementIpc> | undefined
+  const nodeFetch: Parameters<typeof loadNodeCatalog>[0] = (url, init) => net.fetch(url, init)
+  const nodeManagement = createNodeManagementService({
+    platform: process.platform,
+    arch: process.arch,
+    windows: createWindowsNodeAdapter(nodeFetch),
+    loadCatalog: () => loadNodeCatalog(nodeFetch),
+    changed: state => nodeIpc?.changed(state),
+    barrier: appMutationBarrier,
+  })
+  function nodeOperationPreventsExit() {
+    if (!nodeManagement.isBusy()) return false
+    dialog.showErrorBox('Node 작업 진행 중', 'Node 작업이 완료된 뒤 WorkRail 종료 또는 업데이트를 다시 시도해 주세요.')
+    return true
+  }
   let installPending = false, pendingShow = false, installExitFailed = false
   let freezeInputs = () => {}
   let showExisting = () => { pendingShow = true }
@@ -111,6 +130,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     } else if (request === 'none' && launchData?.planrailAutoStart !== true && !argv.includes('--planrail-autostart')) showExisting()
   })
   function requestInstallExit() {
+    if (nodeOperationPreventsExit()) return
     installPending = true; installExitFailed = false
     freezeInputs()
     void installExit.request().catch(() => {
@@ -146,6 +166,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     desktopIcon,
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
+  nodeIpc = registerNodeManagementIpc(window, rendererUrl, nodeManagement)
   configureTaskbarDetails(window,{platform:process.platform,packaged:app.isPackaged,exePath:process.execPath})
   let help:ReturnType<typeof createHelpWindow>|undefined
   freezeInputs = () => { window.setEnabled(false); window.hide();help?.hideWithMain();releases.hideWithMain() }
@@ -175,7 +196,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     updateRoutes=createUpdateRoutes(result);return result
   })().catch(error=>{catalogPromise=undefined;throw error})
   const coordinator=createInstallCoordinator({barrier:appMutationBarrier,prepare:prepareProductionInstaller,
-    freezeRenderer:()=>updatesIpc.guard.freeze(),releaseRenderer:()=>updatesIpc.guard.release(),
+    freezeRenderer:()=>nodeOperationPreventsExit()?Promise.resolve(false):updatesIpc.guard.freeze(),releaseRenderer:()=>updatesIpc.guard.release(),
     record:async(input,files)=>{if(!updates)throw Error('Updates unavailable');await updates.recordAttempt(input,files)},
     shutdown:async()=>{await stopServices();await finishShutdown();exiting=true;shutdownComplete=true},
   })
@@ -183,7 +204,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   if(storage.state==='ready')void (options.createUpdates??createUpdateService)({notifications:updateNotifications,root:join(updateRoot,'member'),version:app.getVersion(),catalog,
     updaterCacheRoot:options.developmentMember?join(profile,'updates','updater-cache'):join(localAppData,'simple-timeline-updater'),editingBlocked:()=>appMutationBarrier.blocked(),
     chooseBundle:async()=>{const choice=await dialog.showOpenDialog(window,{title:'업데이트 ZIP 등록',properties:['openFile'],filters:[{name:'Planrail update ZIP',extensions:['zip']}]});return choice.canceled?undefined:choice.filePaths[0]},
-    install:async input=>{if(options.developmentMember)throw Error('개발용 멤버에서는 앱 업데이트를 설치할 수 없습니다.');return coordinator.install(input)},changed:state=>updatesIpc.changed(state),
+    install:async input=>{if(options.developmentMember)throw Error('개발용 멤버에서는 앱 업데이트를 설치할 수 없습니다.');if(nodeOperationPreventsExit())throw Error('Node 작업이 진행 중입니다.');return coordinator.install(input)},changed:state=>updatesIpc.changed(state),
   }).then(async service=>{
     if(exiting||window.isDestroyed()){await service.dispose();return}
     updates=service
@@ -273,6 +294,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     if (installPending) { if (installExitFailed) requestInstallExit(); return }
     if (exiting) return
     show()
+    if (nodeOperationPreventsExit()) return
     requestClose()
   }
   try {
@@ -295,7 +317,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       chooseClose: tray ? undefined : () => options.chooseClose ? options.chooseClose(!!tray) : (async () => {
         const choices: CloseChoice[] = ['quit', 'cancel']
         const result = await dialog.showMessageBox(window, {
-          type: 'question', title: 'Planrail 닫기', message: '어떻게 닫을까요?',
+          type: 'question', title: 'WorkRail 닫기', message: '어떻게 닫을까요?',
           detail: '트레이에서는 일정 알림과 편집 중인 입력이 유지됩니다. 완전히 종료하면 일정 알림이 제공되지 않습니다.' + (tray ? '' : '\n트레이를 사용할 수 없습니다.'),
           buttons: ['완전 종료', '취소'],
           defaultId: choices.length - 1, cancelId: choices.length - 1, noLink: true,
@@ -320,7 +342,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     powerMonitor.removeListener('resume',resume);powerMonitor.removeListener('suspend',suspend)
     nativeReminders.dispose()
     if(storage.state==='ready'&&storage.db.open)storage.db.close()
-    reminderIpc?.dispose();sharingIpc?.dispose();if(tray&&!tray.isDestroyed())tray.destroy();unregister()
+    nodeIpc?.dispose();reminderIpc?.dispose();sharingIpc?.dispose();if(tray&&!tray.isDestroyed())tray.destroy();unregister()
   }
   app.on('will-quit', event => {
     if(shutdownComplete)return
