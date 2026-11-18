@@ -15,6 +15,7 @@ export type NodeManagementErrorCode =
   | 'manager-missing' | 'manager-present' | 'environment-conflict'
   | 'version-unavailable' | 'version-not-installed'
   | 'cancelled' | 'operation-failed' | 'operation-unknown' | 'operation-slow'
+  | 'confirmation-expired' | 'removal-unavailable' | 'reboot-required' | 'installer-busy'
   | 'download-failed' | 'integrity-failed' | 'verification-failed'
 
 export interface NodeManagementError {
@@ -30,12 +31,23 @@ export interface NodeConflict {
 }
 
 export interface NodeOperation {
-  kind: 'install' | 'use' | 'install-manager'
+  kind: 'install' | 'use' | 'install-manager' | 'remove-standalone'
   version: string | null
   phase: 'checking' | 'downloading' | 'waiting' | 'verifying'
 }
 
+export interface StandaloneRemovalConfirmation { confirmed: true; confirmationId: string }
+export interface StandaloneRemovalState {
+  status: 'available' | 'manual' | 'unavailable'
+  target: { version: string; path: string } | null
+  confirmationId: string | null
+  reason: string | null
+  rebootRequired: boolean
+  msiExitCode: number | null
+}
 export interface NodeManagementState {
+  removal?: StandaloneRemovalState
+  maintenance?: { required: boolean; active: boolean; recoveryShortcut?: string }
   revision: number
   platform: string
   supported: boolean
@@ -65,9 +77,17 @@ export interface NodeManagementApi {
   install(version: string): Promise<NodeManagementResult>
   use(version: string): Promise<NodeManagementResult>
   installManager(): Promise<NodeManagementResult>
+  removeStandalone(input: StandaloneRemovalConfirmation): Promise<NodeManagementResult>
+  openMaintenance(): Promise<NodeManagementResult>
   onChange(callback: (state: NodeManagementState) => void): () => void
 }
 
 export function isNodeVersion(value: unknown): value is string {
   return typeof value === 'string' && /^(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})\.(0|[1-9]\d{0,5})(?![\s\S])/.test(value)
+}
+
+export function isRemovalConfirmation(value: unknown): value is StandaloneRemovalConfirmation {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const input = value as Record<string, unknown>
+  return Object.keys(input).length === 2 && input.confirmed === true && typeof input.confirmationId === 'string' && /^[a-f0-9]{64}$/.test(input.confirmationId)
 }

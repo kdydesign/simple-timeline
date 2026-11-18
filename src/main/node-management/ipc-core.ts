@@ -1,4 +1,4 @@
-import { isNodeVersion, type NodeManagementResult } from '../../shared/node-management'
+import { isRemovalConfirmation, isNodeVersion, type NodeManagementResult } from '../../shared/node-management'
 import { nodeManagementError, type NodeManagementService } from './service'
 
 export async function dispatchNodeManagement(
@@ -11,6 +11,9 @@ export async function dispatchNodeManagement(
   try {
     if (args.length === 1 && (command === 'getState' || command === 'refreshCatalog' || command === 'installManager')) {
       return { ok: true, data: await service[command]() }
+    }
+    if (args.length === 2 && command === 'removeStandalone' && isRemovalConfirmation(version)) {
+      return { ok: true, data: await service.removeStandalone(version) }
     }
     if (args.length === 2 && (command === 'install' || command === 'use') && isNodeVersion(version)) {
       return { ok: true, data: await service[command](version) }

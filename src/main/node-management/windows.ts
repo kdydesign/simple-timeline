@@ -7,6 +7,9 @@ import { promisify } from 'node:util'
 import { isNodeVersion } from '../../shared/node-management'
 import { fetchBoundedAsset, type NodeFetch } from './catalog'
 import { discoverWindowsNode, isSafeNvmPath, NVM_EXE_DIGEST, type NvmInstallation } from './discovery'
+import { createMachineMutationLock } from './mutation-lock'
+import { fetchOfficialNodeDigest, fetchOfficialMsiDigest, readMsiResult, type MsiEvidence } from './standalone'
+import { createOfficialMsiProofScript, createMsiRemovalCommand, createMsiRemovalWorker, MACHINE_LOCK_CONTEXT_SCRIPT, MSI_INSPECTION_SCRIPT } from './standalone-windows'
 import type { ElevatedResult, WindowsNodeAdapter } from './service'
 
 export const NVM_INSTALLER_URL = 'https://github.com/nvm-windows/nvm/releases/download/1.2.2/nvm-setup.exe'
@@ -257,6 +260,18 @@ async function resolveSystemPowerShell() {
 }
 
 export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter {
+  const officialDigests = new Map<string, string>()
+  const officialPackages = new Set<string>()
+  let machineLock: Promise<ReturnType<typeof createMachineMutationLock>> | null = null
+  function lock() {
+    machineLock ??= (async () => {
+      const context = JSON.parse(await runPowerShell(MACHINE_LOCK_CONTEXT_SCRIPT.replace('__OWNER_PID__', String(process.pid))))
+      if (!isSafeNvmPath(context.directory) || typeof context.boot !== 'string' || !/^\d{10,20}$/.test(context.boot)) throw Error('Invalid machine mutation context')
+      return createMachineMutationLock(context.directory, context.boot, { startedAt: context.ownerStartedAt, userSid: context.userSid })
+    })().catch(error => { machineLock = null; throw error })
+    return machineLock
+  }
+
   async function runPowerShell(script: string, timeout = 8_000) {
     const { powershell, options } = await resolveSystemPowerShell()
     return (await exec(powershell, psArgs(script), { ...options, timeout })).stdout.trim()
@@ -282,6 +297,57 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
   }
 
   return {
+    acquireMutation: async kind => (await lock()).acquire(kind),
+    mutationStatus: async () => (await lock()).status(),
+    async inspectStandalone() {
+      const evidence: MsiEvidence[] = JSON.parse(await runPowerShell(MSI_INSPECTION_SCRIPT, 30_000))
+      if (!Array.isArray(evidence) || evidence.length > 64) throw Error('Invalid MSI evidence')
+      for (const candidate of evidence) {
+        if (!isNodeVersion(candidate.version)) continue
+        try {
+          let digest = officialDigests.get(candidate.version)
+          if (!digest) {
+            digest = await fetchOfficialNodeDigest(request, candidate.version)
+            officialDigests.set(candidate.version, digest)
+          }
+          candidate.officialNodeDigest = digest
+          const proofIdentity = [candidate.productCode, candidate.packageCode, candidate.componentId, candidate.packageDigest, candidate.version].join('|')
+          if (!candidate.packageSignature && candidate.protectedLocation && candidate.nodeSignature && candidate.nodeDigest === digest) {
+            if (!officialPackages.has(proofIdentity)) {
+              const expected = await fetchOfficialMsiDigest(request, candidate.version)
+              const bytes = await fetchBoundedAsset(request, 'https://nodejs.org/dist/v' + candidate.version + '/node-v' + candidate.version + '-x64.msi', new Set(['https://nodejs.org']), 128 * 1024 * 1024)
+              if (createHash('sha256').update(bytes).digest('hex') !== expected) throw Error('Untrusted original MSI')
+              const directory = await mkdtemp(win32.join(tmpdir(), 'workrail-official-msi-'))
+              try {
+                const path = win32.join(directory, 'original.msi')
+                await writeFile(path, bytes, { flag: 'wx' })
+                if (await runPowerShell(createOfficialMsiProofScript(path, expected, candidate), 30_000) !== 'VERIFIED') throw Error('Official MSI correspondence failed')
+                officialPackages.add(proofIdentity)
+              } finally { await rm(directory, { recursive: true, force: true }).catch(() => {}) }
+            }
+            candidate.packageSourceVerified = true
+          }
+        } catch { candidate.officialNodeDigest = '' }
+      }
+      return evidence
+    },
+    async removeStandalone(target) {
+      let directory: string | undefined
+      let result: ReturnType<typeof readMsiResult> = { status: 'unknown', msiExitCode: null }
+      try {
+        const shell = await resolveSystemPowerShell()
+        directory = await mkdtemp(win32.join(tmpdir(), 'workrail-node-removal-'))
+        const workerPath = win32.join(directory, 'verified-worker.ps1')
+        const worker = createMsiRemovalWorker(shell.system, target)
+        await writeFile(workerPath, worker, { flag: 'wx' })
+        const digest = createHash('sha256').update(worker).digest('hex')
+        // No timeout: losing the UAC bridge does not establish MSI completion.
+        const { stdout } = await exec(shell.powershell, createMsiRemovalCommand(shell.system, workerPath, digest), shell.options)
+        result = readMsiResult(stdout.trim())
+      } catch { /* Unknown completion retains the persistent machine reservation. */ }
+      finally { if (directory && result.status !== 'unknown') await rm(directory, { recursive: true, force: true }).catch(() => {}) }
+      return result
+    },
     discover: () => discoverWindowsNode({
       async readEnvironment() {
         const data = JSON.parse(await runPowerShell(registryEnvironmentScript))
