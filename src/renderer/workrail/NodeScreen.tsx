@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Hexagon, RefreshCw } from 'lucide-react'
 import type { NodeRelease } from '../../shared/node-management'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeInspectionStale, nodeManagerLabel, nodeProgress, platformScope, supportedManager } from './nodePresentation'
+import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeManagerLabel, nodeOperationError, nodeProgress, platformScope, supportedManager } from './nodePresentation'
 
 const filters = [
   { id: 'all', label: '전체' },
@@ -18,8 +18,9 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
   const { state, error, busy, catalogPending, refresh, refreshCatalog, mutate } = node
   const unsupported = state?.supported === false
   const stale = nodeInspectionStale(node)
+  const inventoryKnown = nodeInventoryKnown(node)
   const progress = nodeProgress(node)
-  const operationError = error ?? state?.error
+  const operationError = nodeOperationError(node)
   const installed = state?.installedVersions ?? []
   const catalog = state?.catalog
   const checking = !state && !error
@@ -43,11 +44,12 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
     ? installed.filter(version => matches(version, releaseMap.get(version)))
     : (catalog?.releases ?? []).filter(release =>
       (filter !== 'lts' || !!release.lts) && matches(release.version, release)).map(release => release.version)
+  const catalogLoadingMessage = '공식 배포 목록을 가져오고 있습니다…'
+  const noInventory = inventoryKnown ? '설치된 버전이 없습니다.' : '설치된 버전을 확인할 수 없습니다.'
 
   function versionAction(version: string, isInstalled: boolean) {
-    const using = isInstalled && activeManaged && activeVersion === version
     const action = isInstalled ? '사용' : '설치'
-    return using ? <span className="workrail-tag">사용 중</span> : (
+    return (
       <button type="button" className="workrail-control"
         aria-label={version + ' ' + action} disabled={isInstalled ? !canUse : !canInstall}
         onClick={() => void mutate({ kind: isInstalled ? 'use' : 'install', version })}>{action}</button>
@@ -66,7 +68,7 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
           <Hexagon aria-hidden="true" size={25} strokeWidth={1.5} />
           <div className="workrail-active">
             <h3 id="workrail-current-heading">현재 사용 버전</h3>
-            <strong>{stale ? '확인할 수 없음' : activeVersion ?? (state?.checkedAt ? '사용 중인 버전 없음' : '환경 확인 중…')}</strong>
+            <strong>{nodeActiveVersionLabel(node)}</strong>
           </div>
           {state?.activeSource && !stale && <span className="workrail-tag">{activeManaged ? 'nvm-windows' : '기존 Node 설치'}</span>}
           {state && <p className="workrail-manager">{nodeManagerLabel(state)}</p>}
@@ -119,7 +121,7 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
                 <RefreshCw aria-hidden="true" size={15} />
               </button>
             </div>
-            {catalogLoading && <p className="workrail-muted" aria-live="polite">공식 배포 목록을 가져오고 있습니다…</p>}
+            {catalogLoading && (visibleVersions.length > 0 || filter === 'installed') && <p className="workrail-muted" aria-live="polite">{catalogLoadingMessage}</p>}
             {catalog?.error && <div className="workrail-message">
               <p role="alert">{catalog.error.message}</p>
               {catalog.releases.length > 0 && <p>마지막으로 조회한 목록을 표시합니다.</p>}
@@ -137,7 +139,7 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
                         <th scope="row">{version}</th>
                         <td>{release ? release.lts ? <span className="workrail-tag">{release.lts}</span> : '일반' : '—'}</td>
                         <td>{release?.npm ?? '—'}</td>
-                        <td>{using ? '사용 중' : stale ? '확인 필요' : isInstalled ? '설치됨' : '미설치'}</td>
+                        <td>{using ? '사용 중' : !inventoryKnown ? '확인 필요' : isInstalled ? '설치됨' : '미설치'}</td>
                         <td>{versionAction(version, isInstalled)}</td>
                       </tr>
                     )
@@ -147,10 +149,12 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
                   onClick={() => setLimit(value => value + pageSize)}>버전 더 보기</button>}
               </div>
             ) : (
-              <div className="workrail-surface workrail-node-empty">
+              <div className="workrail-surface workrail-node-empty" aria-live="polite">
                 {filter === 'installed'
-                  ? stale || !state.checkedAt ? '설치된 버전을 확인할 수 없습니다.' : installed.length ? '검색에 맞는 버전이 없습니다.' : '설치된 버전이 없습니다.'
-                  : catalog?.status === 'ready' ? '조건에 맞는 배포 버전이 없습니다.' : '공식 배포 목록을 확인하지 못했습니다.'}
+                  ? inventoryKnown && installed.length ? '검색에 맞는 버전이 없습니다.' : noInventory
+                  : catalogLoading ? catalogLoadingMessage
+                  : catalog?.status === 'ready' ? '조건에 맞는 배포 버전이 없습니다.'
+                  : catalog?.status === 'error' ? '공식 배포 목록을 확인하지 못했습니다.' : '공식 배포 목록을 새로고침해 주세요.'}
               </div>
             )}
             <p className="workrail-muted workrail-source">목록 출처 nodejs.org/dist · Windows x64</p>
@@ -159,12 +163,18 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
             <h3 id="workrail-installed-heading">설치된 버전</h3>
             {installed.length > 0 ? (
               <>
-                {stale && <p className="workrail-note">마지막으로 확인한 버전을 표시합니다.</p>}
+                {!inventoryKnown && <p className="workrail-note">마지막으로 확인한 버전을 표시합니다.</p>}
                 <ul>{installed.map(version => (
-                  <li key={version}><strong>{version}</strong>{versionAction(version, true)}</li>
+                  <li key={version}>
+                    <div>
+                      <strong>{version}</strong>
+                      {activeManaged && activeVersion === version && <p className="workrail-muted">사용 중</p>}
+                    </div>
+                    {versionAction(version, true)}
+                  </li>
                 ))}</ul>
               </>
-            ) : <p className="workrail-muted">{stale || !state.checkedAt || managerError ? '설치된 버전을 확인할 수 없습니다.' : '설치된 버전이 없습니다.'}</p>}
+            ) : <p className="workrail-muted">{noInventory}</p>}
             <p className="workrail-note">버전을 바꾸면 Windows PATH에서 nvm-windows 경로를 사용하는 이후 Node 실행에 적용됩니다. 설치 후 PATH가 변경되면 터미널을 다시 열어 주세요.</p>
           </section>
         </div>

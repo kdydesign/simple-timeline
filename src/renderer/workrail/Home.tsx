@@ -5,7 +5,7 @@ import type { SharingState } from '../../shared/sharing'
 import { sharingDescription } from '../../shared/sharing-status'
 import type { TimelinePhase } from '../state/useTimeline'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeInspectionStale, nodeManagerLabel, nodeProgress, platformScope } from './nodePresentation'
+import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeManagerLabel, nodeOperationError, nodeProgress, platformScope } from './nodePresentation'
 
 const maxSchedules = 10
 const dateFormat = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
@@ -39,10 +39,10 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
       || a.name.localeCompare(b.name, 'ko') || a.id.localeCompare(b.id)), [date, projects, revoked, snapshot])
   const { state, error } = node
   const progress = nodeProgress(node)
-  const operationError = error ?? state?.error
+  const operationError = nodeOperationError(node)
   const sharingStale = sharing?.role === 'member' && sharing.status !== 'connected' && !revoked
   const scheduleStale = phase === 'stale' || phase === 'uncertain' || phase === 'blocked'
-  const installedStale = nodeInspectionStale(node) || state?.manager.status === 'error'
+  const inventoryKnown = nodeInventoryKnown(node)
   return (
     <main className="workrail-screen workrail-home" aria-label="홈">
       <div className="workrail-page-heading">
@@ -91,14 +91,14 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
             <>
               <div className="workrail-active">
                 <span>현재 사용 중인 Node</span>
-                <strong>{nodeInspectionStale(node) ? '확인할 수 없음' : state?.activeVersion ?? (state?.checkedAt ? '사용 중인 버전 없음' : '환경 확인 중…')}</strong>
+                <strong>{nodeActiveVersionLabel(node)}</strong>
                 {state?.activeSource && !nodeInspectionStale(node) && <span>{state.activeSource === 'nvm' ? 'nvm-windows' : '기존 Node 설치'}</span>}
               </div>
               {state && <p className="workrail-muted">{nodeManagerLabel(state)}</p>}
               {state?.checkedAt && (
                 <div className="workrail-summary-line">
-                  <span>{installedStale && state.installedVersions.length > 0 ? '마지막으로 확인한 설치 버전' : '설치된 버전'}</span>
-                  <strong>{installedStale && !state.installedVersions.length ? '확인할 수 없음' : state.installedVersions.length + '개'}</strong>
+                  <span>{!inventoryKnown && state.installedVersions.length > 0 ? '마지막으로 확인한 설치 버전' : '설치된 버전'}</span>
+                  <strong>{!inventoryKnown && !state.installedVersions.length ? '확인할 수 없음' : state.installedVersions.length + '개'}</strong>
                 </div>
               )}
               {!!state?.conflicts.length && <p className="workrail-note">Node 환경 충돌 {state.conflicts.length}건을 확인해 주세요.</p>}

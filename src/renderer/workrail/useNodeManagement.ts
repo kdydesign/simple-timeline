@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { NodeManagementApi, NodeManagementError, NodeManagementResult, NodeManagementState } from '../../shared/node-management'
 
 export type NodeMutation = { kind: 'install' | 'use'; version: string } | { kind: 'install-manager'; version: null }
+type RequestKind = 'read' | 'recheck' | 'mutation'
 
 const unavailable: NodeManagementError = {
   code: 'ipc-unavailable',
@@ -19,11 +20,12 @@ interface Connection {
 export function useNodeManagement(active: boolean, api: NodeManagementApi | undefined = window.workrailNodeManagement) {
   const connection = useRef<Connection | null>(null)
   const [state, setState] = useState<NodeManagementState | null>(null)
-  const [error, setError] = useState<NodeManagementError | null>(() => api ? null : unavailable)
+  const [readError, setReadError] = useState<NodeManagementError | null>(() => api ? null : unavailable)
+  const [mutationFailure, setMutationFailure] = useState<{ request: number; error: NodeManagementError } | null>(null)
   const [mutation, setMutation] = useState<NodeMutation | null>(null)
   const [catalogPending, setCatalogPending] = useState(false)
 
-  const run = useCallback(async (command: () => Promise<NodeManagementResult>, isMutation = false) => {
+  const run = useCallback(async (command: () => Promise<NodeManagementResult>, kind: RequestKind = 'read') => {
     const current = connection.current
     if (!current) return
     const startRevision = current.revision
@@ -41,14 +43,20 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       current.revision = revision
       current.acceptedRequest = request
       setState(result.data)
-      setError(null)
-    } else if (startRevision === current.revision && (isMutation || request === current.request)) {
-      setError(result.error)
+      setReadError(null)
+      if (kind === 'recheck' && !result.data.busy && result.data.error?.code !== 'inspection-failed') {
+        setMutationFailure(failure => failure && failure.request < request ? null : failure)
+      }
+    } else if (kind === 'mutation') {
+      // An unrelated snapshot cannot confirm a command that never returned a state.
+      setMutationFailure({ request, error: result.error })
+    } else if (startRevision === current.revision && request === current.request) {
+      setReadError(result.error)
     }
   }, [])
 
   const refresh = useCallback(() => {
-    if (api) return run(() => api.getState())
+    if (api && !connection.current?.mutation) return run(() => api.getState(), 'recheck')
   }, [api, run])
   const refreshCatalog = useCallback(async () => {
     const current = connection.current
@@ -67,7 +75,8 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
 
   useEffect(() => {
     setState(null)
-    setError(api ? null : unavailable)
+    setReadError(api ? null : unavailable)
+    setMutationFailure(null)
     setMutation(null)
     setCatalogPending(false)
     if (!api) return
@@ -77,16 +86,17 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       if (connection.current !== current || next.revision <= current.revision) return
       current.revision = next.revision
       setState(next)
-      setError(null)
+      setReadError(null)
     })
-    window.addEventListener('focus', refresh)
-    void refresh()
+    const inspect = () => { void run(() => api.getState()) }
+    window.addEventListener('focus', inspect)
+    inspect()
     return () => {
       connection.current = null
       off()
-      window.removeEventListener('focus', refresh)
+      window.removeEventListener('focus', inspect)
     }
-  }, [api, refresh])
+  }, [api, run])
 
   const catalogRequested = useRef(false)
   const busy = !!mutation || !!state?.busy
@@ -106,7 +116,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     current.mutation = operation
     setMutation(operation)
     try {
-      await run(command, true)
+      await run(command, 'mutation')
     } finally {
       if (connection.current === current) {
         current.mutation = null
@@ -115,6 +125,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     }
   }
 
+  const error = mutationFailure?.error ?? readError
   return { state, error, available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate }
 }
 

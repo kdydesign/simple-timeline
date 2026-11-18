@@ -23,6 +23,24 @@ export function nodeInspectionStale({ state, error }: NodeManagement) {
   return !!error || state?.error?.code === 'inspection-failed'
 }
 
+export function nodeInventoryKnown(node: NodeManagement) {
+  const { state } = node
+  return !!state?.checkedAt && !nodeInspectionStale(node)
+    && (state.manager.status === 'ready' || state.manager.status === 'missing')
+}
+
+export function nodeActiveVersionLabel(node: NodeManagement) {
+  const { state } = node
+  if (nodeInspectionStale(node)) return '확인할 수 없음'
+  if (state?.activeVersion) return state.activeVersion
+  if (state?.activeSource || state?.conflicts.some(conflict => conflict.code === 'path-priority')) return '확인할 수 없음'
+  return state?.checkedAt ? '사용 중인 버전 없음' : '환경 확인 중…'
+}
+
+export function nodeOperationError({ state, error }: NodeManagement) {
+  return state?.error?.code === 'operation-unknown' ? state.error : error ?? state?.error
+}
+
 export function nodeManagerLabel(state: NodeManagementState) {
   if (state.manager.status === 'missing') return 'nvm-windows 설치 필요'
   if (state.manager.status === 'error') return state.manager.version

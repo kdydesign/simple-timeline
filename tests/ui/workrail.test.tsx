@@ -247,3 +247,104 @@ it('routes shared notification clicks from Node to a visible Planrail editor', a
   expect(await screen.findByRole('textbox', { name: '일정 이름' })).toHaveValue('개발')
   expect(dock('Planrail')).toHaveAttribute('aria-current', 'page')
 })
+
+it.each(['catalog-first', 'rejection-first'] as const)(
+  'keeps a failed Use visible after a catalog publication in %s order',
+  async order => {
+    const fixture = nodeFixture({ catalog: { ...nodeState.catalog, status: 'idle', releases: [], checkedAt: null } })
+    const loaded = nodeState.catalog
+    let resolveCatalog!: (result: NodeManagementResult) => void
+    fixture.api.refreshCatalog.mockImplementationOnce(() => new Promise(resolve => { resolveCatalog = resolve }))
+    let finishUse!: () => void
+    const failure = order === 'catalog-first'
+      ? 'Node 관리 응답을 확인하지 못했습니다. 다시 검사해 주세요.'
+      : 'Node 전환 요청의 응답을 받지 못했습니다.'
+    fixture.api.use.mockImplementationOnce(() => new Promise((resolve, reject) => {
+      finishUse = order === 'catalog-first'
+        ? () => reject(new Error('renderer transport lost'))
+        : () => resolve({ ok: false, error: { code: 'ipc-unavailable', message: failure } })
+    }))
+    render(<App initialTool="node" api={memoryApi().api} />)
+    await within(node()).findByText('공식 배포 목록을 가져오고 있습니다…')
+    fireEvent.click(within(installed()).getByRole('button', { name: '22.20.0 사용' }))
+    const publishCatalog = () => act(async () => {
+      fixture.emit({ catalog: loaded })
+      resolveCatalog(await fixture.api.getState())
+    })
+    if (order === 'catalog-first') await publishCatalog()
+    await act(async () => finishUse())
+    expect(within(node()).getByRole('alert')).toHaveTextContent(failure)
+    if (order === 'rejection-first') await publishCatalog()
+    await act(async () => fireEvent(window, new Event('focus')))
+    expect(within(node()).getByRole('alert')).toHaveTextContent(failure)
+    fireEvent.click(dock('홈'))
+    expect(within(home()).getByRole('alert')).toHaveTextContent(failure)
+
+    fireEvent.click(dock('Node 관리'))
+    expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeDisabled()
+    fireEvent.click(within(node()).getByRole('button', { name: '환경 다시 검사' }))
+    await waitFor(() => expect(within(node()).queryByRole('alert')).toBeNull())
+    expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeEnabled()
+  },
+)
+
+it('reports an unread inventory consistently across the catalog, Installed filter, and panel', async () => {
+  nodeFixture({
+    manager: { status: 'error', version: null }, installedVersions: [], activeVersion: null, activeSource: null,
+    conflicts: [{ code: 'manager-configuration', path: 'C:\\nvm\\nvm.exe', message: '공식 nvm 버전이 필요합니다.' }],
+  })
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const list = await within(node()).findByRole('region', { name: '공식 배포 목록' })
+  expect(within(list).getAllByRole('cell', { name: '확인 필요' })).toHaveLength(2)
+  expect(within(list).queryByRole('cell', { name: '미설치' })).toBeNull()
+  fireEvent.click(within(list).getByRole('button', { name: '설치됨' }))
+  expect(within(list).getByText('설치된 버전을 확인할 수 없습니다.')).toBeVisible()
+  expect(within(installed()).getByText('설치된 버전을 확인할 수 없습니다.')).toBeVisible()
+})
+
+it('reports an unread active standalone version while showing the detected installation in both tools', async () => {
+  nodeFixture({
+    manager: { status: 'missing', version: null }, installedVersions: [],
+    activeVersion: null, activeSource: 'standalone',
+    conflicts: [{ code: 'standalone-node', path: 'C:\\Node\\node.exe', message: '기존 Node가 PATH에 있습니다.' }],
+  })
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const summary = within(home()).getByRole('region', { name: '내 개발 환경' })
+  expect(await within(summary).findByText('기존 Node 설치')).toBeVisible()
+  expect(within(summary).getByText('확인할 수 없음')).toBeVisible()
+  expect(within(summary).queryByText('사용 중인 버전 없음')).toBeNull()
+  fireEvent.click(dock('Node 관리'))
+  const current = within(node()).getByRole('region', { name: '현재 사용 버전' })
+  expect(within(current).getByText('기존 Node 설치')).toBeVisible()
+  expect(within(current).getByText('확인할 수 없음')).toBeVisible()
+  expect(within(current).queryByText('사용 중인 버전 없음')).toBeNull()
+})
+
+it('allows Use for the only installed version while nvm reports that version active', async () => {
+  const fixture = nodeFixture({ installedVersions: ['24.11.0'] })
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const list = await within(node()).findByRole('region', { name: '공식 배포 목록' })
+  expect(within(list).getByRole('row', { name: /^24\.11\.0.*사용 중/ })).toBeVisible()
+  expect(within(list).getByRole('button', { name: '24.11.0 사용' })).toBeEnabled()
+  expect(within(installed()).getByText('사용 중')).toBeVisible()
+  await act(async () => fireEvent.click(within(installed()).getByRole('button', { name: '24.11.0 사용' })))
+  expect(fixture.api.use).toHaveBeenCalledWith('24.11.0')
+})
+
+it('reports the first empty catalog as loading until its refresh actually fails', async () => {
+  const fixture = nodeFixture({ catalog: { status: 'idle', checkedAt: null, releases: [], error: null } })
+  let finish!: (result: NodeManagementResult) => void
+  fixture.api.refreshCatalog.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const list = await within(node()).findByRole('region', { name: '공식 배포 목록' })
+  expect(await within(list).findByText('공식 배포 목록을 가져오고 있습니다…')).toBeVisible()
+  expect(within(list).queryByText('공식 배포 목록을 확인하지 못했습니다.')).toBeNull()
+  expect(within(list).queryByRole('alert')).toBeNull()
+  const message = '공식 목록을 내려받지 못했습니다.'
+  await act(async () => finish({ ok: true, data: {
+    ...nodeState, revision: 2,
+    catalog: { status: 'error', checkedAt: null, releases: [], error: { code: 'catalog-unavailable', message } },
+  } }))
+  expect(within(list).getByRole('alert')).toHaveTextContent(message)
+  expect(within(list).queryByText('공식 배포 목록을 가져오고 있습니다…')).toBeNull()
+})
