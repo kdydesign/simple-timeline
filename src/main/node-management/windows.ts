@@ -1,30 +1,36 @@
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { lstat, mkdtemp, open, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdtemp, open, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { win32 } from 'node:path'
 import { promisify } from 'node:util'
 import { isNodeVersion } from '../../shared/node-management'
-import { readDownload, type NodeFetch } from './catalog'
-import { discoverWindowsNode, isSafeNvmPath, type NvmInstallation } from './discovery'
+import { fetchBoundedAsset, type NodeFetch } from './catalog'
+import { discoverWindowsNode, isSafeNvmPath, NVM_EXE_DIGEST, type NvmInstallation } from './discovery'
 import type { ElevatedResult, WindowsNodeAdapter } from './service'
 
 export const NVM_INSTALLER_URL = 'https://github.com/nvm-windows/nvm/releases/download/1.2.2/nvm-setup.exe'
 const NVM_INSTALLER_SHA256 = '2d5ad523aa6182205da77c0eb8210638aaa8792f4e6a4bc12e1ac854c5455a68'
 const MAX_INSTALLER_BYTES = 12 * 1024 * 1024
+const GITHUB_ASSET_ORIGINS = new Set(['https://release-assets.githubusercontent.com', 'https://objects.githubusercontent.com'])
 const exec = promisify(execFile)
 
-type ElevationInvocation =
-  | { executable: string; args: ['install' | 'use', string, '64']; nvmHome: string; nvmSymlink: string }
-  | { executable: string; args: [] }
+type ElevationInvocation = { executable: string; executableDigest: string } & (
+  | { args: ['install' | 'use', string, '64']; nvmHome: string; nvmSymlink: string; settingsDigest: string }
+  | { args: [] }
+)
 
 export function buildNvmInvocation(installation: NvmInstallation, command: 'install' | 'use', version: string): ElevationInvocation {
   for (const path of [installation.exe, installation.home, installation.root, installation.symlink]) {
     if (!isSafeNvmPath(path)) throw Error('Invalid nvm path')
   }
   if (win32.join(installation.home, 'nvm.exe').toLowerCase() !== installation.exe.toLowerCase()
-    || (command !== 'install' && command !== 'use') || !isNodeVersion(version)) throw Error('Invalid nvm command')
-  return { executable: installation.exe, args: [command, version, '64'], nvmHome: installation.home, nvmSymlink: installation.symlink }
+    || (command !== 'install' && command !== 'use') || !isNodeVersion(version) || !/^[a-f0-9]{64}$/.test(installation.settingsDigest)) throw Error('Invalid nvm command')
+  return {
+    executable: installation.exe, executableDigest: NVM_EXE_DIGEST,
+    args: [command, version, '64'], nvmHome: installation.home, nvmSymlink: installation.symlink,
+    settingsDigest: installation.settingsDigest,
+  }
 }
 
 const psLiteral = (value: string) => "'" + value.replaceAll("'", "''") + "'"
@@ -34,17 +40,20 @@ const psArgs = (script: string): string[] => [
 
 export function createElevationCommand(powershell: string, invocation: ElevationInvocation): string[] {
   const system = win32.dirname(win32.dirname(win32.dirname(powershell)))
-  let executable = invocation.executable
-  let argumentsOption = ''
-  let windowStyle = ''
+  let command = `
+$launching = $true
+$child = Start-Process -FilePath ${psLiteral(invocation.executable)} -WorkingDirectory ${psLiteral(system)} -PassThru -Wait
+if ($null -eq $child.ExitCode) { exit 1611 }
+exit $child.ExitCode
+`
   if ('nvmHome' in invocation) {
-    const [command, version, arch] = invocation.args
+    const [action, version, arch] = invocation.args
     // nvm 1.x launches cmd and may look for node on PATH. Do not carry the
     // renderer process's user PATH, current directory, or Node configuration
     // into an elevated command. cmd AutoRun is also checked under that account.
-    const elevatedScript = `
-$ErrorActionPreference = 'Stop'
-Set-Location -LiteralPath ${psLiteral(system)}
+    command = `
+$settings = Open-VerifiedFile ${psLiteral(win32.join(invocation.nvmHome, 'settings.txt'))} ${psLiteral(invocation.settingsDigest)}
+if ($null -eq $settings) { exit 1610 }
 $env:Path = ${psLiteral(system)}
 $env:ComSpec = ${psLiteral(win32.join(system, 'cmd.exe'))}
 $env:NoDefaultCurrentDirectoryInExePath = '1'
@@ -55,17 +64,63 @@ $env:NVM_SYMLINK = ${psLiteral(invocation.nvmSymlink)}
 foreach ($key in @('HKCU:\\Software\\Microsoft\\Command Processor', 'HKLM:\\Software\\Microsoft\\Command Processor')) {
   if (Get-ItemPropertyValue -LiteralPath $key -Name AutoRun -ErrorAction SilentlyContinue) { exit 1 }
 }
-& ${psLiteral(invocation.executable)} ${psLiteral(command)} ${psLiteral(version)} ${psLiteral(arch)}
+$stage = [IO.Path]::Combine([IO.Path]::GetTempPath(), ('workrail-nvm-run-' + [Guid]::NewGuid().ToString('N')))
+[void][IO.Directory]::CreateDirectory($stage)
+$stagedExe = [IO.Path]::Combine($stage, 'nvm.exe')
+$writer = [IO.File]::Open($stagedExe, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::None)
+try { $source.CopyTo($writer) } finally { $writer.Dispose() }
+$verifiedExe = Open-VerifiedFile $stagedExe ${psLiteral(invocation.executableDigest)}
+if ($null -eq $verifiedExe) { exit 1610 }
+# nvm can run an adjacent elevate.cmd when cmd fails. Control that fallback.
+$fallbackPath = [IO.Path]::Combine($stage, 'elevate.cmd')
+$fallback = [IO.File]::Open($fallbackPath, [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::Read)
+$fallbackBytes = [Text.Encoding]::ASCII.GetBytes('@exit /b 1' + [char]13 + [char]10)
+$fallback.Write($fallbackBytes, 0, $fallbackBytes.Length)
+$fallback.Flush()
+$launching = $true
+& $stagedExe ${psLiteral(action)} ${psLiteral(version)} ${psLiteral(arch)}
+$launching = $false
 exit $LASTEXITCODE
 `
-    executable = powershell
-    argumentsOption = ' -ArgumentList ' + psLiteral(psArgs(elevatedScript).join(' '))
-    windowStyle = ' -WindowStyle Hidden'
   }
+  const worker = `
+$ErrorActionPreference = 'Stop'
+function Open-VerifiedFile($path, $expected) {
+  $stream = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+  try {
+    $hash = [Security.Cryptography.SHA256]::Create()
+    try { $digest = [BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
+    if ($digest -ne $expected) { $stream.Dispose(); return $null }
+    $stream.Position = 0
+    return $stream
+  } catch {
+    $stream.Dispose()
+    throw
+  }
+}
+$launching = $false
+try {
+  Set-Location -LiteralPath ${psLiteral(system)}
+  $source = Open-VerifiedFile ${psLiteral(invocation.executable)} ${psLiteral(invocation.executableDigest)}
+  if ($null -eq $source) { exit 1610 }
+  ${command}
+} catch {
+  if ($launching) { exit 1611 }
+  exit 1610
+} finally {
+  foreach ($stream in @($fallback, $verifiedExe, $settings, $source)) {
+    if ($null -ne $stream) { $stream.Dispose() }
+  }
+  if ($stage -and !$launching) {
+    try { [IO.Directory]::Delete($stage, $true) } catch { }
+  }
+}
+`
+  const argumentsOption = psLiteral(psArgs(worker).join(' '))
   return psArgs(`
 $ErrorActionPreference = 'Stop'
 try {
-  $child = Start-Process -FilePath ${psLiteral(executable)} -WorkingDirectory ${psLiteral(system)} -Verb RunAs${argumentsOption}${windowStyle} -PassThru -Wait
+  $child = Start-Process -FilePath ${psLiteral(powershell)} -WorkingDirectory ${psLiteral(system)} -Verb RunAs -ArgumentList ${argumentsOption} -WindowStyle Hidden -PassThru -Wait
   if ($null -eq $child.ExitCode) { exit 1 }
   [Console]::WriteLine('WORKRAIL_EXIT:' + $child.ExitCode)
 } catch {
@@ -88,6 +143,8 @@ export function readElevatedExit(stdout: string, wrapperExit: number, installer 
   if (result === 'WORKRAIL_ELEVATION_CANCELLED') return { status: 'cancelled' }
   const code = /^WORKRAIL_EXIT:(-?\d+)$/.exec(result)?.[1]
   if (code === undefined) return { status: 'unknown' }
+  if (code === '1610') return { status: 'integrity-failed' }
+  if (code === '1611') return { status: 'unknown' }
   if (installer && ['2', '5'].includes(code)) return { status: 'cancelled' }
   return { status: code === '0' ? 'success' : 'failed' }
 }
@@ -128,10 +185,12 @@ export function mergeWindowsEnvironment(machine: Record<string, string>, user: R
     return value
   }
   const path = [system.get('PATH'), account.get('PATH')].filter(Boolean).join(';')
+  const pathext = lookup.get('PATHEXT')
   return {
     Path: expand(path || inherited.Path || inherited.PATH || ''),
     NVM_HOME: expand(lookup.get('NVM_HOME') ?? ''),
     NVM_SYMLINK: expand(lookup.get('NVM_SYMLINK') ?? ''),
+    ...(pathext ? { PATHEXT: expand(pathext) } : {}),
   }
 }
 
@@ -150,20 +209,16 @@ async function isX64Node(path: string) {
   }
 }
 
-async function downloadNvmInstaller(request: NodeFetch) {
-  const signal = AbortSignal.timeout(45_000)
-  const githubAssetHosts = new Set(['https://release-assets.githubusercontent.com', 'https://objects.githubusercontent.com'])
-  let url = new URL(NVM_INSTALLER_URL)
-  for (let redirects = 0; redirects <= 3; redirects++) {
-    const response = await request(url.href, { redirect: 'manual', credentials: 'omit', signal })
-    if (![301, 302, 303, 307, 308].includes(response.status)) return readDownload(response, MAX_INSTALLER_BYTES)
-    await response.body?.cancel()
-    const location = response.headers.get('location')
-    if (!location) throw Error('No installer redirect target')
-    url = new URL(location, url)
-    if (!githubAssetHosts.has(url.origin) || url.username || url.password) throw Error('Unexpected installer redirect')
+async function readBoundedFile(path: string, maxBytes: number) {
+  const handle = await open(path, 'r')
+  try {
+    const bytes = Buffer.alloc(Math.min((await handle.stat()).size, maxBytes) + 1)
+    const { bytesRead } = await handle.read({ buffer: bytes })
+    if (bytesRead === bytes.length) throw Error('Unexpected file size')
+    return bytes.subarray(0, bytesRead)
+  } finally {
+    await handle.close()
   }
-  throw Error('Too many installer redirects')
 }
 
 export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter {
@@ -181,7 +236,9 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
       // Killing this bridge at a timeout would lose the elevated process handle.
       const { stdout } = await exec(powershell, createElevationCommand(powershell, invocation), localOptions)
       return readElevatedExit(stdout, 0, !('nvmHome' in invocation))
-    } catch {
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code
+      if (code === 'ENOENT' || code === 'EACCES' || code === 'EPERM') return { status: 'failed' } as const
       return { status: 'unknown' } as const
     }
   }
@@ -205,18 +262,10 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
       },
       resolvePath: realpath,
       listDirectories: async path => (await readdir(path, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name),
-      async readSettings(path) {
-        const handle = await open(path, 'r')
-        try {
-          if ((await handle.stat()).size > 64 * 1024) throw Error('Unexpected nvm settings size')
-          return await handle.readFile('utf8')
-        } finally {
-          await handle.close()
-        }
-      },
-      getManagerVersion: async path => (await exec(path, ['version'], { ...localOptions, timeout: 5_000 })).stdout.trim(),
+      readSettings: path => readBoundedFile(path, 64 * 1024),
+      getManagerDigest: async path => createHash('sha256').update(await readBoundedFile(path, MAX_INSTALLER_BYTES)).digest('hex'),
       async getNodeVersion(path) {
-        if (!path.toLowerCase().endsWith('node.exe')) return null
+      if (!/\\node(?:64)?\.exe$/i.test(path)) return null
         // File metadata is sufficient for a diagnostic and avoids executing a
         // PATH-selected standalone program just to learn its version.
         const version = await runPowerShell(`[Console]::WriteLine([Diagnostics.FileVersionInfo]::GetVersionInfo(${psLiteral(path)}).ProductVersion)`)
@@ -224,12 +273,20 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
       },
       isX64Node,
     }),
-    changeVersion: (installation, command, version) => elevate(buildNvmInvocation(installation, command, version)),
+    async changeVersion(installation, command, version) {
+      let invocation: ElevationInvocation
+      try {
+        invocation = buildNvmInvocation(installation, command, version)
+      } catch {
+        return { status: 'integrity-failed' }
+      }
+      return elevate(invocation)
+    },
     async installManager(phase) {
       phase('downloading')
       let bytes: Buffer
       try {
-        bytes = await downloadNvmInstaller(request)
+        bytes = await fetchBoundedAsset(request, NVM_INSTALLER_URL, GITHUB_ASSET_ORIGINS, MAX_INSTALLER_BYTES)
       } catch {
         return { status: 'download-failed' }
       }
@@ -242,11 +299,11 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
         directory = await mkdtemp(win32.join(tmpdir(), 'workrail-nvm-'))
         const executable = win32.join(directory, 'nvm-setup.exe')
         await writeFile(executable, bytes, { flag: 'wx' })
-        const staged = createHash('sha256').update(await readFile(executable)).digest('hex')
-        if (staged !== NVM_INSTALLER_SHA256) return { status: 'integrity-failed' }
         phase('waiting')
-        outcome = await elevate({ executable, args: [] })
+        outcome = await elevate({ executable, executableDigest: NVM_INSTALLER_SHA256, args: [] })
         return outcome
+      } catch {
+        return { status: 'failed' }
       } finally {
         // If the bridge disappeared without an exit code, the installer may
         // still own files. Windows can remove the temporary directory later.

@@ -105,7 +105,8 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const nodeManagement = createNodeManagementService({
     platform: process.platform,
     arch: process.arch,
-    windows: createWindowsNodeAdapter(nodeFetch),
+    // Node fetch exposes the redirect response for the installer allowlist.
+    windows: createWindowsNodeAdapter(globalThis.fetch),
     loadCatalog: () => loadNodeCatalog(nodeFetch),
     changed: state => nodeIpc?.changed(state),
     barrier: appMutationBarrier,

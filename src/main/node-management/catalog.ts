@@ -60,3 +60,18 @@ export async function loadNodeCatalog(request: NodeFetch): Promise<NodeRelease[]
   const bytes = await readDownload(response, MAX_CATALOG_BYTES)
   return parseNodeCatalog(JSON.parse(bytes.toString('utf8')))
 }
+
+export async function fetchBoundedAsset(request: NodeFetch, source: string, allowedOrigins: ReadonlySet<string>, maxBytes: number) {
+  const signal = AbortSignal.timeout(45_000)
+  let url = new URL(source)
+  for (let redirects = 0; redirects <= 3; redirects++) {
+    const response = await request(url.href, { redirect: 'manual', credentials: 'omit', signal })
+    if (![301, 302, 303, 307, 308].includes(response.status)) return readDownload(response, maxBytes)
+    await response.body?.cancel()
+    const location = response.headers.get('location')
+    if (!location) throw Error('No installer redirect target')
+    url = new URL(location, url)
+    if (!allowedOrigins.has(url.origin) || url.username || url.password) throw Error('Unexpected installer redirect')
+  }
+  throw Error('Too many installer redirects')
+}

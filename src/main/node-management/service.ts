@@ -28,10 +28,10 @@ const messages: Record<NodeManagementErrorCode, string> = {
   'version-not-installed': '이 Windows x64 버전이 nvm에 설치되어 있지 않습니다.',
   cancelled: 'Windows 권한 요청 또는 설치가 취소되었습니다.',
   'operation-failed': 'Node 작업에 실패했습니다. Windows 권한, 인터넷 연결 및 nvm 설정을 확인해 주세요.',
-  'operation-unknown': 'Node 작업의 종료 결과를 확인하지 못했습니다. 열린 설치 창을 확인하고 환경을 다시 검사해 주세요.',
+  'operation-unknown': 'Node 작업이 아직 실행 중일 수 있습니다. Windows 작업 관리자에서 설치 프로그램과 승격 작업이 끝났는지 확인해 주세요. 확인한 뒤 작업 관리자에서 WorkRail을 종료하고 다시 실행해 주세요.',
   'operation-slow': '예상보다 오래 걸리고 있습니다. Windows 권한 확인 또는 설치 창을 확인해 주세요.',
-  'download-failed': '공식 nvm-windows 설치 파일을 내려받지 못했습니다. 인터넷 연결을 확인해 주세요.',
-  'integrity-failed': '공식 설치 파일의 무결성을 확인하지 못해 설치를 중단했습니다.',
+  'download-failed': '공식 nvm-windows 설치 파일을 내려받지 못했습니다. 시스템 프록시가 필요한 환경에서는 브라우저로 공식 nvm-windows 1.2.2 설치 파일을 받아 설치한 뒤 다시 검사해 주세요.',
+  'integrity-failed': 'nvm 실행 파일이나 설정의 무결성을 확인하지 못해 작업을 중단했습니다. 공식 nvm-windows 1.2.2 설치와 설정을 확인해 주세요.',
   'verification-failed': '요청한 변경이 적용된 것을 확인하지 못했습니다. 현재 환경과 새 터미널을 확인해 주세요.',
 }
 
@@ -94,6 +94,8 @@ export function createNodeManagementService(options: {
       } catch {
         publish({
           manager: { status: 'error', version: null },
+          activeVersion: null,
+          activeSource: null,
           error: nodeManagementError('inspection-failed'),
         })
         return null
@@ -120,7 +122,7 @@ export function createNodeManagementService(options: {
   }
 
   async function perform(kind: NodeOperation['kind'], version: string | null): Promise<NodeManagementErrorCode | null> {
-    const current = await inspect()
+    let current = await inspect()
     if (!current) return 'inspection-failed'
     let outcome: ElevatedResult
     if (kind === 'install-manager') {
@@ -135,7 +137,13 @@ export function createNodeManagementService(options: {
       if (!isNodeVersion(version)) return 'invalid-request'
       if (kind === 'install') {
         if (current.installedVersions.includes(version)) return null
-        if (state.catalog.status !== 'ready') await fetchCatalog()
+        if (state.catalog.status !== 'ready') {
+          await fetchCatalog()
+          current = await inspect()
+          if (!current) return 'inspection-failed'
+          if (!current.installation || current.manager.status !== 'ready' || current.conflicts.length) return 'environment-conflict'
+          if (current.installedVersions.includes(version)) return null
+        }
         if (state.catalog.status !== 'ready') return 'catalog-unavailable'
         if (!state.catalog.releases.some(release => release.version === version)) return 'version-unavailable'
       } else {
@@ -148,8 +156,8 @@ export function createNodeManagementService(options: {
     setPhase('verifying')
     const updated = await inspect()
     if (outcome.status !== 'success') return exitErrors[outcome.status]
-    const verified = updated && (
-      kind === 'install-manager' ? updated.manager.status === 'ready'
+    const verified = updated && updated.manager.status === 'ready' && updated.conflicts.length === 0 && (
+      kind === 'install-manager' ? updated.installation !== null
         : kind === 'install' ? version !== null && updated.installedVersions.includes(version)
         : updated.activeSource === 'nvm' && updated.activeVersion === version && updated.activeX64 !== false
     )
@@ -157,11 +165,17 @@ export function createNodeManagementService(options: {
   }
 
   async function operate(kind: NodeOperation['kind'], version: string | null = null): Promise<NodeManagementState> {
-    if (state.busy) return { ...state, error: nodeManagementError('busy') }
+    if (state.busy) return state.error?.code === 'operation-unknown' ? state : { ...state, error: nodeManagementError('busy') }
     if (barrier?.blocked()) return { ...state, error: nodeManagementError('shutdown') }
     if (!supported) return { ...state, error: nodeManagementError('unsupported') }
     if (kind !== 'install-manager' && !isNodeVersion(version)) return { ...state, error: nodeManagementError('invalid-request') }
 
+    let resolveResult!: (value: NodeManagementState) => void
+    let rejectResult!: (error: unknown) => void
+    const result = new Promise<NodeManagementState>((resolve, reject) => {
+      resolveResult = resolve
+      rejectResult = reject
+    })
     const run = async () => {
       const timer = setTimeout(() => publish({ error: nodeManagementError('operation-slow') }), options.slowAfterMs ?? 300_000)
       timer.unref()
@@ -175,13 +189,23 @@ export function createNodeManagementService(options: {
       } finally {
         clearTimeout(timer)
       }
-      publish({ busy: null, error: code ? nodeManagementError(code) : null })
-      return state
+      if (code === 'operation-unknown') {
+        setPhase('waiting')
+        publish({ error: nodeManagementError(code) })
+        resolveResult(state)
+        // A snapshot can show the expected files before the child has exited.
+        // Keep the shutdown reservation latched when its lifetime is unknown.
+        await new Promise<never>(() => {})
+      } else {
+        publish({ busy: null, error: code ? nodeManagementError(code) : null })
+        resolveResult(state)
+      }
     }
     // Reserve the barrier and the operation synchronously, before another IPC request can start.
     const scheduled = barrier?.run(() => run())
     publish({ busy: { kind, version, phase: 'checking' }, error: null })
-    return scheduled ?? run()
+    void (scheduled ?? run()).catch(rejectResult)
+    return result
   }
 
   return {

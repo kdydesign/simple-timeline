@@ -1,5 +1,7 @@
+import { createHash } from 'node:crypto'
+import { createServer } from 'node:http'
 import { describe, expect, it } from 'vitest'
-import { parseNodeCatalog } from '../../src/main/node-management/catalog'
+import { fetchBoundedAsset, parseNodeCatalog } from '../../src/main/node-management/catalog'
 import { discoverWindowsNode, type WindowsDiscovery } from '../../src/main/node-management/discovery'
 import { createNodeManagementService, type WindowsNodeAdapter } from '../../src/main/node-management/service'
 import { buildNvmInvocation, createElevationCommand, mergeWindowsEnvironment, readElevatedExit } from '../../src/main/node-management/windows'
@@ -17,13 +19,16 @@ const releases = [
 const home = 'C:\\Users\\Kim\\AppData\\Local\\nvm'
 const symlink = 'C:\\nvm4w\\nodejs'
 const exe = home + '\\nvm.exe'
+const officialDigest = '665b0b033e88098367381e929b71cfc96dc4058a3cb6fef760a0ccc9a883dd13'
+const settings = 'root: ' + home + '\r\npath: ' + symlink + '\r\narch: 64\r\nproxy: none\r\n'
+const settingsDigest = createHash('sha256').update(settings).digest('hex')
 const ready: WindowsDiscovery = {
   manager: { status: 'ready', version: '1.2.2' },
   activeVersion: '22.9.0',
   activeSource: 'nvm',
   installedVersions: ['22.9.0'],
   conflicts: [],
-  installation: { exe, home, root: home, symlink },
+  installation: { exe, home, root: home, symlink, settingsDigest },
 }
 const standalone = 'C:\\Program Files\\nodejs'
 const files = new Map([
@@ -34,18 +39,22 @@ const files = new Map([
   [(symlink + '\\node.exe').toLowerCase(), 'file'],
   [symlink.toLowerCase(), 'symlink'],
 ])
-function local(overrides: { settings?: string; path?: string[]; changes?: [string, string][]; env?: Record<string,string>; linkedVersion?: string } = {}) {
+function local(overrides: { settings?: string; path?: string[]; changes?: [string, string][]; env?: Record<string,string>; linkedVersion?: string; diskVersion?: string; digest?: string; onExecute?: () => void } = {}) {
   const entries = new Map([...files, ...(overrides.changes ?? []).map(([path, kind]) => [path.toLowerCase(), kind] as const)])
-  return discoverWindowsNode({
+  const probe = {
     readEnvironment: async () => overrides.env ?? { Path: [home, ...(overrides.path ?? []), symlink].join(';'), NVM_HOME: home, NVM_SYMLINK: symlink },
     pathKind: async path => entries.get(path.toLowerCase()) as 'file' | 'directory' | 'symlink' ?? 'missing',
     resolvePath: async path => path.toLowerCase() === symlink.toLowerCase() ? home + '\\v22.9.0' : path,
     listDirectories: async () => ['v22.9.0', 'v24.11.0', 'external'],
-    readSettings: async () => overrides.settings ?? 'root: ' + home + '\r\npath: ' + symlink + '\r\narch: 64\r\nproxy: none\r\n',
-    getManagerVersion: async () => '1.2.2',
-    getNodeVersion: async path => path.toLowerCase() === (symlink + '\\node.exe').toLowerCase() ? overrides.linkedVersion ?? '22.9.0' : '20.12.2',
+    readSettings: async () => Buffer.from(overrides.settings ?? settings),
+    getManagerDigest: async () => overrides.digest ?? officialDigest,
+    getManagerVersion: async () => { overrides.onExecute?.(); return '1.2.2' },
+    getNodeVersion: async (path: string) => path.toLowerCase().startsWith(home.toLowerCase())
+      ? overrides.diskVersion ?? '22.9.0'
+      : path.toLowerCase() === (symlink + '\\node.exe').toLowerCase() ? overrides.linkedVersion ?? '22.9.0' : '20.12.2',
     isX64Node: async () => true,
-  })
+  } satisfies Parameters<typeof discoverWindowsNode>[0] & {getManagerVersion(): Promise<string>}
+  return discoverWindowsNode(probe)
 }
 function adapter(overrides: Partial<WindowsNodeAdapter> = {}): WindowsNodeAdapter {
   return {
@@ -80,6 +89,31 @@ describe('official Windows x64 Node releases', () => {
 })
 
 describe('Windows Node discovery', () => {
+  it('recognizes a foreign nvm executable without starting it to learn its version', async () => {
+    let executions = 0
+    const state = await local({ digest: '0'.repeat(64), onExecute: () => { executions++ } })
+    expect({ executions, installation: state.installation, status: state.manager.status }).toEqual({ executions: 0, installation: null, status: 'error' })
+    expect(state.conflicts[0]?.message).toContain('1.2.2')
+  })
+
+  it.each(['${MIRROR_FIELD}: https://evil.test/', 'root : C:\\mismatch'])('rejects an ambiguous raw settings line %s', async line => {
+    const state = await local({ settings: 'root: ' + home + '\npath: ' + symlink + '\n' + line })
+    expect(state).toMatchObject({ installation: null, conflicts: [expect.objectContaining({ code: 'manager-configuration' })] })
+  })
+
+  it('omits a directory whose Node executable reports a different version', async () => {
+    expect((await local({ diskVersion: '23.1.0' })).installedVersions).toEqual([])
+  })
+
+  it.each(['\\\\server\\share', '.\\tools'])('does not report Node from a later link when an earlier PATH entry cannot be inspected: %s', async unsafe => {
+    const state = await local({ path: [unsafe] })
+    expect(state).toMatchObject({ activeVersion: null, activeSource: null, conflicts: [expect.objectContaining({ code: 'path-priority', path: unsafe })] })
+  })
+
+  it('treats an alternate Node executable in the link directory as a priority conflict', async () => {
+    const state = await local({ changes: [[symlink + '\\node.com', 'file']] })
+    expect(state.conflicts).toEqual([expect.objectContaining({ code: 'path-priority', path: symlink + '\\node.com' })])
+  })
   it('resolves nvm installation, complete local versions, and the effective version from the link', async () => {
     expect(await local()).toEqual(ready)
   })
@@ -113,6 +147,11 @@ describe('Windows Node discovery', () => {
     expect(state.conflicts).toEqual([expect.objectContaining({ code: 'mirror', path: null })])
   })
 
+  it('does not interpret a non-default proxy as the unset value', async () => {
+    const state = await local({ settings: 'root: ' + home + '\npath: ' + symlink + '\nproxy: none/' })
+    expect(state.conflicts).toEqual([expect.objectContaining({ code: 'mirror', path: null })])
+  })
+
   it('does not prepare an elevated command for an unsafe shell path or a replaced settings file', async () => {
     const unsafe = 'C:\\nvm\\%TEMP%'
     const state = await local({ env: { Path: home + ';' + unsafe, NVM_HOME: home, NVM_SYMLINK: unsafe }, settings: 'root: ' + home + '\npath: ' + unsafe })
@@ -138,9 +177,11 @@ describe('elevated Windows commands', () => {
   it('builds only precise x64 nvm actions and refuses injection', () => {
     expect(buildNvmInvocation(ready.installation!, 'use', '22.9.0')).toEqual({
       executable: exe,
+      executableDigest: officialDigest,
       args: ['use', '22.9.0', '64'],
       nvmHome: home,
       nvmSymlink: symlink,
+      settingsDigest,
     })
     expect(() => buildNvmInvocation(ready.installation!, 'install', '24.11.0\nRemove-Item C:\\')).toThrow()
     expect(() => buildNvmInvocation(ready.installation!, 'uninstall' as 'install', '24.11.0')).toThrow()
@@ -154,6 +195,16 @@ describe('elevated Windows commands', () => {
     expect(readElevatedExit('WORKRAIL_EXIT:5', 0)).toEqual({ status: 'failed' })
     expect(readElevatedExit('WORKRAIL_EXIT:0', 0)).toEqual({ status: 'success' })
     expect(readElevatedExit('WORKRAIL_STARTED', 1)).toEqual({ status: 'unknown' })
+  })
+
+  it('hands off the installer through a worker that verifies a read-locked file under elevation', () => {
+    const invocation = { executable: 'C:\\Temp\\nvm-setup.exe', args: [] as [], executableDigest: 'a'.repeat(64) }
+    const outer = Buffer.from(createElevationCommand('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', invocation).at(-1)!, 'base64').toString('utf16le')
+    const encoded = outer.match(/-EncodedCommand ([A-Za-z0-9+/=]+)/)?.[1]
+    expect(encoded).toBeTruthy()
+    const worker = Buffer.from(encoded!, 'base64').toString('utf16le')
+    expect(worker).toMatch(/FileShare\]::Read[\s\S]+ComputeHash[\s\S]+Start-Process[\s\S]+Dispose/)
+    expect(worker).toContain(invocation.executableDigest)
   })
 })
 
@@ -214,12 +265,46 @@ describe('Node operations', () => {
   it.each([
     ['cancelled', 'cancelled'],
     ['failed', 'operation-failed'],
-    ['unknown', 'operation-unknown'],
     ['success', 'verification-failed'],
   ] as const)('reports %s when the requested version is still missing', async (status, code) => {
     const { service } = makeService(adapter({ changeVersion: async () => ({ status }) }))
     await service.refreshCatalog()
     expect(await service.install('24.11.0')).toMatchObject({ error: { code }, busy: null, installedVersions: ['22.9.0'] })
+  })
+
+  it('returns an unknown result while retaining the quit/update barrier even if the files later look changed', async () => {
+    let changed = false
+    const barrier = createMutationBarrier()
+    const { service } = makeService(adapter({
+      discover: async () => changed ? { ...ready, installedVersions: ['24.11.0', '22.9.0'] } : ready,
+      changeVersion: async () => { changed = true; return { status: 'unknown' } },
+    }), { barrier })
+    await service.refreshCatalog()
+    expect(await service.install('24.11.0')).toMatchObject({ busy: { kind: 'install' }, error: { code: 'operation-unknown' } })
+    expect(service.isBusy()).toBe(true)
+    expect(await service.getState()).toMatchObject({ error: { code: 'operation-unknown' } })
+    expect((await service.use('22.9.0')).error?.code).toBe('operation-unknown')
+    const shutdown = barrier.freezeForShutdown()
+    expect(await Promise.race([shutdown.then(() => 'drained'), new Promise(resolve => setTimeout(() => resolve('blocked'), 20))])).toBe('blocked')
+  })
+
+  it('rechecks configuration changed while the official install catalog was loading', async () => {
+    let changed = false
+    const { service } = makeService(adapter({
+      discover: async () => changed ? { ...ready, conflicts: [{ code: 'mirror', path: null, message: 'custom mirror' }] } : ready,
+    }), { loadCatalog: async () => { changed = true; return parseNodeCatalog(releases) } })
+    expect(await service.install('24.11.0')).toMatchObject({ error: { code: 'environment-conflict' }, busy: null })
+  })
+
+  it('reports verification failure when the newly installed manager has a blocking conflict', async () => {
+    let installed = false
+    const { service } = makeService(adapter({
+      discover: async () => installed
+        ? { ...ready, conflicts: [{ code: 'link-not-on-path', path: symlink, message: 'PATH requires repair' }] }
+        : { ...ready, installation: null, manager: { status: 'missing', version: null } },
+      installManager: async () => { installed = true; return { status: 'success' } },
+    }))
+    expect(await service.installManager()).toMatchObject({ error: { code: 'verification-failed' } })
   })
 
   it('warns when an elevation runs long and keeps the shutdown barrier active until the process settles', async () => {
@@ -272,4 +357,22 @@ describe('Node operations', () => {
     expect(await service.refreshCatalog()).toMatchObject({ supported: false, catalog: { status: 'idle' }, checkedAt: null })
     expect((await service.installManager()).error?.code).toBe('unsupported')
   })
+})
+
+it('streams an allowed HTTP redirect through the real Node fetch transport', async () => {
+  const server = createServer((request, response) => {
+    if (request.url === '/initial') response.writeHead(302, { location: '/asset' }).end()
+    else response.end('bounded official asset')
+  })
+  await new Promise<void>(done => server.listen(0, '127.0.0.1', done))
+  try {
+    const address = server.address()
+    if (!address || typeof address === 'string') throw Error('No loopback address')
+    const origin = 'http://127.0.0.1:' + address.port
+    expect((await fetchBoundedAsset(globalThis.fetch, origin + '/initial', new Set([origin]), 100)).toString()).toBe('bounded official asset')
+    await expect(fetchBoundedAsset(globalThis.fetch, origin + '/initial', new Set(), 100)).rejects.toThrow()
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
+  }
 })
