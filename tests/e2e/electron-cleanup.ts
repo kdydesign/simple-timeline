@@ -1,32 +1,40 @@
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import type { ElectronApplication } from 'playwright';
 
-/** Dispose only an isolated test process, not the product's user-facing Exit flow. */
-export function createTestAppCleanup(app: ElectronApplication): () => Promise<void> {
-  // Capture while the Playwright channel exists; process() is unavailable once
-  // a test has already exited the app (for example, the real Exit tests).
-  const process = app.process();
-  return async () => {
-    if (process.exitCode !== null || process.signalCode !== null) return;
+const execFileAsync = promisify(execFile);
 
-    // Subscribe before initiating teardown and keep the existing bounded wait.
-    const closed = app.waitForEvent('close', { timeout: 10000 });
-    let requestError: unknown;
-    const closing = (async () => {
-      // Install the fixture-only exit policy without starting shutdown yet.
-      // Playwright's close() then owns both quit and inspector disconnection;
-      // a bare app.exit() otherwise relies on a stderr line to detach it.
-      await app.evaluate(({ app }) => {
-        app.quit = () => { setImmediate(() => app.exit(0)); };
-      });
-      await app.close();
-    })().catch(error => { requestError = error; });
-    // Product Exit tests can close the inspector before the wrapper process
-    // exits. A request error is harmless only if actual exit is also observed.
-    try {
-      await Promise.all([closed, closing]);
-    } catch (error) {
-      if (requestError) throw new Error(`Electron cleanup request failed: ${String(requestError)}`, { cause: error });
-      throw error;
-    }
+/** Dispose only the process tree launched by an isolated fixture, after assertions. */
+export function createTestAppCleanup(app: ElectronApplication): () => Promise<void> {
+  // Capture the owned ChildProcess before Playwright disposes its channel.
+  const child = app.process();
+  const exited = () => child.exitCode !== null || child.signalCode !== null;
+  return async () => {
+    if (exited()) return;
+    const pid = child.pid;
+    if (!pid || pid < 2 || pid === process.pid) throw Error('Invalid fixture process');
+
+    let terminationError: unknown;
+    const closed = new Promise<void>((resolve, reject) => {
+      const onExit = () => { clearTimeout(timer); resolve(); };
+      const timer = setTimeout(() => {
+        child.removeListener('exit', onExit);
+        reject(Error(`Fixture process ${pid} did not exit within 10000ms${terminationError ? `: ${String(terminationError)}` : ''}`));
+      }, 10000);
+      child.once('exit', onExit);
+    });
+    const terminate = (async () => {
+      // Match Playwright's owned-tree disposal: Windows launches via cmd.exe;
+      // on POSIX it creates a detached process group led by this exact PID.
+      // No executable-name match, inspector call, app.quit or user profile is used.
+      if (process.platform === 'win32') {
+        await execFileAsync('taskkill.exe', ['/pid', String(pid), '/T', '/F'], { windowsHide: true, timeout: 5000 });
+      } else {
+        process.kill(-pid, 'SIGKILL');
+      }
+    })().catch(error => { terminationError = error; });
+    // An already-exiting process can race the OS command. Only observed exit
+    // counts as success; an error while it stays alive still fails the fixture.
+    await Promise.all([closed, terminate]);
   };
 }

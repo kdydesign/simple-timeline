@@ -50,5 +50,5 @@ test('new app session chooses role again and closes help when the app really exi
  await d.restart();const next=await openHelp(d)
  await expect(next.getByRole('heading',{name:'Planrail 시작하기'})).toBeVisible()
  await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('종료 시 폐기');
- const closed=next.waitForEvent('close');await d.app.evaluate(()=> (globalThis as any).desktopController.requestQuit());await closed
+ const closed=next.waitForEvent('close'),exited=d.app.waitForEvent('close');await d.app.evaluate(()=> (globalThis as any).desktopController.requestQuit());await Promise.all([closed,exited])
 })

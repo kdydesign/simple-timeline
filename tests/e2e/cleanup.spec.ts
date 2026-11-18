@@ -1,4 +1,5 @@
 import { test, expect } from './fixture';
+import { launchMember } from './sharing-fixture';
 
 test('isolated cleanup waits for actual exit and tolerates a second disposal', async ({ desktop }) => {
   // Opening an editor leaves unsaved input: fixture cleanup must not depend on
@@ -6,9 +7,9 @@ test('isolated cleanup waits for actual exit and tolerates a second disposal', a
   await desktop.page.getByRole('button', { name: '프로젝트 추가', exact: true }).click();
   const process = desktop.app.process();
   await desktop.stopApp();
-  expect(process.exitCode).toBe(0);
+  expect(process.exitCode !== null || process.signalCode !== null).toBe(true);
   await desktop.stopApp();
-  expect(process.exitCode).toBe(0);
+  expect(process.exitCode !== null || process.signalCode !== null).toBe(true);
 });
 
 test('cleanup accepts a process already closed through normal app quit', async ({ desktop }) => {
@@ -18,53 +19,26 @@ test('cleanup accepts a process already closed through normal app quit', async (
   await desktop.stopApp();
 });
 
-test('cleanup accepts concurrent exit after the initial process check', async ({ desktop }) => {
-  const process = desktop.app.process();
+test('cleanup terminates its process even when inspector requests are unavailable', async ({ desktop }) => {
+  const child = desktop.app.process();
   const evaluate = desktop.app.evaluate;
-  // Exercise the real process exit between the helper's alive check and its
-  // inspector request, as when a product Exit test finishes before cmd.exe.
-  desktop.app.evaluate = async () => {
-    await desktop.app.close();
-    throw Error('Inspector closed during concurrent shutdown');
-  };
+  desktop.app.evaluate = async () => { throw Error('fixture inspector unavailable'); };
   try {
     await desktop.stopApp();
-    expect(process.exitCode).toBe(0);
+    expect(child.exitCode !== null || child.signalCode !== null).toBe(true);
   } finally {
     desktop.app.evaluate = evaluate;
   }
 });
 
-test('cleanup still fails when the inspector rejects shutdown and the process stays alive', async ({ desktop }) => {
-  const process = desktop.app.process();
-  const evaluate = desktop.app.evaluate;
-  desktop.app.evaluate = async () => { throw Error('fixture rejected shutdown'); };
-  try {
-    await expect(desktop.stopApp()).rejects.toThrow('fixture rejected shutdown');
-    expect(process.exitCode).toBeNull();
-  } finally {
-    desktop.app.evaluate = evaluate;
-  }
-});
-
-test('cleanup releases the inspector without relying on a stderr shutdown message', async ({ desktop }) => {
-  // Characterize our teardown boundary: the real process must exit even if the
-  // diagnostic line used by Playwright's passive disconnect listener is lost.
-  const process = desktop.app.process();
-  const stderr = process.stderr!;
-  const emit = stderr.emit;
-  stderr.emit = function(event: string | symbol, ...args: unknown[]) {
-    if (event === 'data' && String(args[0]).includes('Waiting for the debugger to disconnect...')) {
-      args[0] = Buffer.from(String(args[0]).replace(/Waiting for the debugger to disconnect\.\.\./g, ''));
-    }
-    return Reflect.apply(emit, this, [event, ...args]);
-  };
+test('cleanup leaves a separately launched Electron process usable', async ({ desktop }, info) => {
+  const other = await launchMember(info);
   try {
     await desktop.stopApp();
-    expect(process.exitCode).toBe(0);
+    await expect(other.page.getByRole('button', { name: '프로젝트 추가', exact: true })).toBeVisible();
+    expect(other.app.process().exitCode).toBeNull();
+    expect(other.app.process().signalCode).toBeNull();
   } finally {
-    stderr.emit = emit;
-    // Release a deliberately stranded inspector on the pre-fix implementation.
-    if (process.exitCode === null) await desktop.app.close();
+    await other.dispose();
   }
 });

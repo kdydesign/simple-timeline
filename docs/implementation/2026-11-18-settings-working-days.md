@@ -100,3 +100,13 @@ Windows 설치 호스트+dev:member 동시 실행, 회사 LAN/IP/방화벽/DPAPI
 이를 재현하기 위해 helper의 최초 생존 확인 직후 실제 Electron을 종료하고 inspector 요청을 실패시키는 회귀 검사를 추가했다. 보정 전 FAIL을 확인했고, 보정 후에는 요청 실패 여부와 별개로 기존 10초 안에 실제 프로세스 종료가 확인돼야만 정리 성공으로 처리한다. 프로세스가 계속 살아 있으면 timeout과 원래 요청 오류를 함께 보고한다. 살아 있는 프로세스에서 요청만 실패시키는 반대 경로도 검사했다. 종료 5개·도움말 2개가 모두 통과했다(`concurrent-red.log`, `concurrent-green.log`). 이번 보완도 fixture와 테스트만 수정하며 제품 종료 정책은 바꾸지 않는다.
 
 동시 종료 보완 후 `npm run typecheck`와 `DISPLAY=:121 npm run test:e2e` 전체 109개가 통과했다(6.2분, `typecheck-final.log`, `e2e-final.log`). 기준은 `c5fa387` 위의 dirty 작업 트리다. 제품 코드는 동일하므로 직전 7단계 검증을 보존하고 변경된 fixture의 전체 E2E·타입·하네스를 다시 검증했다. 최종 Windows 설치본은 이 후속 커밋 CI의 결과를 따른다.
+
+`fcb7cb7`의 [Application 44249372249](https://github.com/kdydesign/simple-timeline/actions/runs/44249372249)에서는 Linux의 포커스/툴팁 테스트 본문 이후 teardown이 다시 10초를 초과했다(108/109). inspector 기반 정리는 일반 캡처 반복에서 재현되지 않더라도 여전히 CI 종료를 보장하지 못했다. 이 결과도 앞선 통과 기록을 대체하지 않는다.
+
+최종 정리 방식은 앱/inspector 응답을 사용하는 대신, fixture가 직접 생성한 ChildProcess의 PID만 대상으로 프로세스 트리를 폐기한다. pinned Playwright의 자체 process launcher와 동일하게 POSIX의 detached 프로세스 그룹에는 SIGKILL, Windows의 cmd.exe wrapper와 자식에는 `taskkill.exe /pid <owned PID> /T /F`를 사용한다. 실행 파일명 검색이나 전체 Electron 종료는 없으며 Node의 실제 exit를 10초 안에 확인한 뒤 일회성 프로필을 삭제한다. 제품 main·설치 프로그램의 종료 정책에는 포함되지 않는다.
+
+새 회귀 검사는 inspector 호출을 사용할 수 없는 실제 Electron을 대상으로 하며, 기존 helper에서 FAIL을 확인했다(`disposal-red.log`). 보정 후 미저장 fixture 정리·중복 dispose·이미 정상 종료됨·inspector 불가·별도 Electron 생존 및 기존 포커스/도움말 검사 9개가 통과했다(`disposal-green.log`, 19.1초). 이전의 stderr 문구/inspector 경합 테스트는 이 폐기 경로에서 더 이상 사용하지 않아 해당 경계 검사로 대체했다. 제품 Exit를 가리지 않도록 `help.spec.ts`도 도움말 창뿐 아니라 실제 앱 프로세스 종료까지 teardown 전에 검증한다. 기존 tray·installer Exit 검사 역시 그대로 유지한다.
+
+프로세스 트리 정리 보완 후 타입 검사는 통과했다. 첫 전체 E2E는 106/108 통과였으며, 날짜 탐색과 빠른 알림 화면 캡처에서 각각 본문 45초 timeout이 발생했다(`disposal-e2e.log`). 이 실행에서는 teardown timeout이 없었지만 전체 통과로 기록하지 않는다. 해당 구간의 다른 테스트도 평소보다 느렸으며 환경 지연의 원인은 확정하지 못했다. 원본 실패 artifact는 `disposal-e2e-artifacts/`에 보존했다. 소스·제한 시간을 바꾸지 않고 실패가 포함된 두 파일을 각각 3회 실행한 15개 검사는 모두 통과했다(47.2초, `disposal-targets.log`). 하네스·공백 검사도 통과했다. 새 커밋의 원격 전체 검증과 로컬 전체 재확인을 이어간다.
+
+앞선 `fcb7cb7` 실행의 Windows job `134616004337`은 전체 앱 검사, 설치본 빌드, 실제 NSIS lifecycle 검증 및 업로드까지 success로 완료됐다. Windows 설치 artifact `14404317187`와 LAN-UPDATE artifact `14404605965`가 생성됐다(0.8.8). 같은 실행의 Linux 실패는 그대로 남으며, Windows 성공을 전체 workflow 성공으로 해석하지 않는다.
