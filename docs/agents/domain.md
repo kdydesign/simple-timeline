@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| 설정 탭·개인 휴일·워킹데이 후속 협의 | [설계 초안](../design/settings-and-working-days.md). Q1~Q9 반영, 호스트도 개인 휴일을 합산하되 전송하지 않음. 전체 승인 전이며 제품 구현은 미착수 |
 | 휴일 기간·날짜 삼각 표시 | [승인 설계](../design/holiday-ranges-and-markers.md) · [구현 기록](../implementation/2026-11-17-holiday-ranges.md) |
 | 멤버 버전·공통 휴일·승인 요청 알림 협의 | [승인 설계](../design/member-versions-holidays-and-pairing-notices.md) · [0.8.6 구현·검증](../implementation/2026-11-17-member-holidays.md). Q1~Q11·시안 승인 후 구현, 기존 프로토콜 호환 유지 |
 | 현재 작업 상태·인수 범위 | [STATUS](../wayfinder/STATUS.md), [MVP 사용자 인수](../release/user-acceptance.md) |
