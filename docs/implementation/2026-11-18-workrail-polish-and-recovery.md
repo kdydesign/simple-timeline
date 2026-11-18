@@ -1,6 +1,6 @@
 # WorkRail 화면·역할 전환·Node 복구 구현 기록
 
-2026-11-18. **문서 선행 정리·제품 구현 완료, 통합 검증 진행 중**. 사용자가 Superpowers·Wayfinder·frontend-design·BrandKit으로 설계 반영을 시작하고 agents-md·documentation-and-adrs로 먼저 문서를 갱신하도록 요청했다.
+2026-11-18. **문서 선행 정리·제품 구현·독립 검토·로컬 전체 검증 완료**. 사용자가 Superpowers·Wayfinder·frontend-design·BrandKit으로 설계 반영을 시작하고 agents-md·documentation-and-adrs로 먼저 문서를 갱신하도록 요청했다.
 
 ## 기준과 범위
 
@@ -25,12 +25,14 @@
 - [x] Task3 공식 MSI 제거·잠금
 - [x] Task4 독립 관리·복구
 - [x] Task5 API·설정·통합
-- [ ] Task6 아이콘·전체 검증·독립 검토
-- [ ] Task7 최종 기록
+- [x] Task6 아이콘·전체 검증·독립 검토
+- [x] Task7 최종 기록
 
 ## 검증
 
-첫 전체 `verify:app`은 clean `7f2c7bc57d6cea825c73b3728e7e5ea3f3365c77`에서 실행했다. 타입·release·3 TZ·UI·build를 통과했으나 native의 기존 bridge 허용 목록 1개가 새 역할 API를 누락하여 중단됐다. 보정 후 native 97개를 통과했다. 이후 첫 전체 E2E는 100개 통과/12개 실패였다. 숨겨진 NodeRail까지 선택하는 오래된 main 선택자 9개, 하단 도크 위치 기대 1개, 같은 API 목록 1개, 실제 날짜 팝업이 툴바 뒤에 가려지는 문제 1개를 확인했다. 화면/보안 검사 범위를 유지해 보정하고 날짜 팝업이 열린 편집기의 표시 순서를 올렸다. 전체 최종 검증은 보정 후 다시 실행한다. Linux x64, Node 24.22.1, 사용자 권한 Xorg dummy `DISPLAY=:122`, Electron sandbox 유지. 보고서는 `artifacts/app/latest.json`, 단계별 로그는 같은 디렉터리에 남긴다. 전체 통과 여부는 실행 종료 후 갱신한다.
+첫 전체 `verify:app`은 clean `7f2c7bc57d6cea825c73b3728e7e5ea3f3365c77`에서 실행했다. 타입·release·3 TZ·UI·build를 통과했으나 native의 기존 bridge 허용 목록 1개가 새 역할 API를 누락하여 중단됐다. 보정 후 native 97개를 통과했다. 이후 첫 전체 E2E는 100개 통과/12개 실패였다. 숨겨진 NodeRail까지 선택하는 오래된 main 선택자 9개, 하단 도크 위치 기대 1개, 같은 API 목록 1개, 실제 날짜 팝업이 툴바 뒤에 가려지는 문제 1개를 확인했다. 화면/보안 검사 범위를 유지해 보정하고 날짜 팝업이 열린 편집기의 표시 순서를 올렸다. 보정한 12개 검사(이름이 바뀐 위치 검사는 별도 실행)를 모두 통과한 뒤 전체 검증을 다시 실행했다. Linux x64, Node 24.22.1, 사용자 권한 Xorg dummy `DISPLAY=:122`, Electron sandbox 유지. 보고서는 `artifacts/app/latest.json`, 단계별 로그는 같은 디렉터리에 남긴다. 최종 결과는 아래와 같다.
+
+**최종 결과:** clean `f356b717a6689208f7908287dd27f5001db655a9`의 `DISPLAY=:122 npm run verify:app` 7단계 전체 통과. 2026-11-18 22:55~23:05 KST. 타입·release 30개·UTC/뉴욕/서울 unit 각각 383개·UI 249개·build·Electron native 97개·E2E 112개. `artifacts/app/latest.json`은 `passed:true`, `dirty:false`, Linux x64 / Node 24.22.1을 기록한다. 이후 변경은 본 결과와 문서 체크리스트뿐이며 최종 문서 커밋은 별도 하네스로 확인한다. 테스트 제외·skip·무조건 재시도·제한 시간 증가는 없다.
 
 사전 검사: TypeScript 통과, release 30개 통과, 전체 UI 249개 통과. Node adapter/잠금/제거 70개, 독립 관리 13개, 역할 전환 native 8개 및 기존 공유 회귀를 각각 확인했다. 실제 Electron Home/PlanRail/NodeRail 전환 1개와 Node 표현/배치 2개가 통과했다. Node 표현 검사는 Linux에서 읽기 전용 Windows 상태를 주입한 화면 검사이며 실제 Windows 설치/전환 성공을 뜻하지 않는다.
 
@@ -64,4 +66,4 @@
 4. 3010/1641 재부팅 상태, 작업 도중 부모 종료, 동시에 열린 다른 WorkRail과 잠금 경쟁, 재부팅 후 재검사.
 5. 호스트↔멤버 전환·실패 재시작·보관 자료 조회·승인 재사용/재승인 및 개인 자료 보존.
 
-`gh run list`의 원격 Actions API 요청은 이 환경에서 `Forbidden`으로 거부됐다. 이전 CI 성공을 이번 변경의 성공으로 간주하지 않는다. Git push/원격 CI 결과와 환경 게시/사용자 PC 배포는 별도로 기록한다.
+`gh run list`의 원격 Actions API 요청은 이 환경에서 `Forbidden`으로 거부됐다. 이전 CI 성공을 이번 변경의 성공으로 간주하지 않는다. 저장소 AGENTS.md의 기존 지시에 따라 검증 후 main에 일반 push하며 실제 push 결과는 최종 응답에서 확인한다. Git push는 환경 게시나 사용자 PC 배포가 아니다. 환경 게시·GitHub Release·사용자 PC 배포는 수행하지 않는다. 원격 CI는 API 제한으로 확인되지 않았으며 로컬 성공과 구분한다.
