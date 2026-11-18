@@ -1,7 +1,25 @@
 import {DomainValidationError} from './error'
-import {parseBusinessDate,toOrdinal,fromOrdinal} from './date'
+import {parseBusinessDate,toOrdinal,fromOrdinal,inclusiveDays} from './date'
 import {validateSharingIdentity} from './sharing'
-import {DEFAULT_HOLIDAYS,type HolidayCalendar,type HolidayEnvelope,type HolidayDate} from '../shared/holidays'
+import {DEFAULT_HOLIDAYS,type HolidayCalendar,type HolidayEnvelope,type HolidayDate,type HolidaySources} from '../shared/holidays'
+export function effectiveHolidayCalendar(sources:HolidaySources):HolidayCalendar{
+ return {weekdays:[...new Set([...(sources.common?.weekdays??[]),...sources.personal.weekdays])].sort((a,b)=>a-b),dates:[...(sources.common?.dates??[]),...sources.personal.dates]}
+}
+export function namedHolidays(date:string,sources:HolidaySources):{source:'common'|'personal';holiday:HolidayDate}[]{
+ const result:{source:'common'|'personal';holiday:HolidayDate}[]=[]
+ for(const source of ['common','personal'] as const){const calendar=sources[source];if(calendar){const holiday=namedHoliday(date,calendar);if(holiday)result.push({source,holiday})}}
+ return result
+}
+export function workingDays(start:string,end:string,sources:HolidaySources):number{
+ const total=inclusiveDays(start,end),first=toOrdinal(start),last=toOrdinal(end),calendar=effectiveHolidayCalendar(sources)
+ const weekdays=new Set(calendar.weekdays)
+ let excluded=Math.floor(total/7)*weekdays.size
+ for(let i=0;i<total%7;i++)if(weekdays.has((first+i)%7))excluded++
+ // Each validated source covers at most 1,000 named dates, regardless of schedule length.
+ const named=new Set<number>()
+ for(const holiday of calendar.dates)for(let day=Math.max(first,toOrdinal(holiday.date)),stop=Math.min(last,toOrdinal(holiday.endDate??holiday.date));day<=stop;day++)if(!weekdays.has(day%7))named.add(day)
+ return total-excluded-named.size
+}
 export const MAX_HOLIDAYS=1000
 function object(v:unknown,keys:string[],field='calendar'):Record<string,unknown>{
  if(!v||typeof v!=='object'||Array.isArray(v)||Object.keys(v).length!==keys.length||keys.some(k=>!Object.hasOwn(v,k)))throw new DomainValidationError(field)

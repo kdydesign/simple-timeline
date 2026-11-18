@@ -129,3 +129,22 @@ completed와 passed, 개별 검사 결과를 함께 읽는다. dirty 보고서�
 
 
 0.8.5는 [릴리즈노트·저장 확인 검증](../implementation/2026-11-17-release-notes-confirmations.md)을 추가한다. `tests/e2e/release-notes.spec.ts`는 도움말과의 독립 IPC·동시 표시·닫기 재사용·트레이 복원을 검사한다. `tests/e2e/help.spec.ts`는 schema2의 main/request/preload/navigation/module 기록을 실제 격리 Electron에서 검사한다. 회사PC 첫 열기 지연은 새 `help-latest.json`과 같은 실행의 `startup-latest.json`으로 별도 확인하며 Linux 시간으로 해결 판정하지 않는다.
+
+
+## 개발 멤버 실행 (0.8.8)
+
+`npm run dev:member`는 설치 호스트와 별도 프로필로 개발 멤버를 실행한다.
+Windows: `%APPDATA%\PlanrailDev\member`; 다른 OS: Electron appData 아래 `PlanrailDev/member`.
+DB·보호 저장소·업데이트 파일·updater 캐시를 이 폴더에 분리하며 재실행하면 보존한다.
+프로필을 정한 뒤 단일 인스턴스 잠금을 얻는다. 설치본 또는 production 실행은 개발 플래그를 무시한다.
+
+1. 설치된 호스트에서 공유를 시작하고 테스트 PC의 실제 LAN IP를 참여자로 등록한다.
+2. 저장소에서 `npm run dev:member`를 실행한다. 일반 dev 서버는 종료해 포트5173을 비워 둔다.
+3. 제목 표시줄 설정 → 공유 설정 → 멤버로 연결에서 호스트의 LAN IP·포트를 입력한다.
+4. 양쪽 지문을 대조하고 연결 승인을 완료한다. 자동 승인이나 IP 검사 우회는 하지 않는다.
+5. 개인 일정과 공유 자료의 동시 표시, 공통+개인 휴일 합산을 확인한다.
+
+개발 실행의 실제 업데이트 설치 인계와 Windows 자동 실행 등록은 차단한다.
+일반 `npm run dev`는 운영 프로필을 사용할 수 있으므로 자동화에서 실행하지 않는다.
+개발 멤버도 사용자가 테스트 자료를 보관하는 지속 프로필이므로 자동화는 임시 appData 또는 기존 E2E fixture를 사용한다.
+Windows 설치 호스트+개발 멤버의 방화벽·DPAPI·동일 LAN IP 실기는 Linux 테스트와 별도로 검증한다.

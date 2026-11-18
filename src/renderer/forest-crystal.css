@@ -365,7 +365,8 @@ button:disabled { box-shadow: none; }
 .editor-actions button.danger,
 :root[data-theme="dark"] .editor-actions button.danger,
 .project-list-row > button.danger,
-.sharing-settings .sharing-device-actions > button.danger {
+.sharing-settings .sharing-device-actions > button.danger,
+.sharing-settings .holiday-actions > button.danger {
   background: rgba(175, 90, 101, .18);
   background-image: linear-gradient(155deg, #e2919c20, #713b4410 65%);
   border: 1px solid rgba(226, 145, 156, .48);
@@ -375,7 +376,8 @@ button:disabled { box-shadow: none; }
 .editor-actions button.danger:hover:enabled,
 :root[data-theme="dark"] .editor-actions button.danger:hover:enabled,
 .project-list-row > button.danger:hover:enabled,
-.sharing-settings .sharing-device-actions > button.danger:hover:enabled {
+.sharing-settings .sharing-device-actions > button.danger:hover:enabled,
+.sharing-settings .holiday-actions > button.danger:hover:enabled {
   background-color: rgba(175, 90, 101, .28);
   border-color: rgba(226, 145, 156, .65);
   filter: none;
@@ -434,3 +436,17 @@ html[data-update-frozen="true"] .saving-content { opacity:.65; }
 .holiday-tooltip strong,.holiday-tooltip span { display:block; }
 .holiday-tooltip span { font-size:11px;font-weight:400;margin-top:3px; }
 @media(max-width:800px){.holiday-form{grid-template-columns:repeat(2,minmax(0,1fr))}.holiday-form>.holiday-actions{grid-column:auto;justify-content:flex-end;margin-top:24px}}
+
+/* Settings scope outranks shared button material without recoloring unrelated controls. */
+.sharing-settings .holiday-weekdays button[aria-pressed=true],
+.sharing-settings .sharing-role button[aria-pressed=true] {
+ background:linear-gradient(155deg,#ffffff0c,transparent),rgba(211,110,110,.14);
+ border-color:rgba(220,145,145,.55);color:#ffd0d0;
+}
+.sharing-settings .holiday-weekdays button[aria-pressed=true]:hover:enabled,
+.sharing-settings .sharing-role button[aria-pressed=true]:hover:enabled {background-color:rgba(211,110,110,.25);}
+.settings-tabs {display:flex;gap:6px;border-bottom:1px solid var(--border);padding:8px 0 12px;flex-shrink:0;}
+.sharing-settings .settings-tabs button[aria-selected=true] {background:var(--selected-control);border-color:var(--selected-border);}
+.sharing-settings [role=tabpanel][hidden] {display:none;}
+.sharing-settings .holiday-settings + .holiday-settings {border-top:1px solid var(--border);margin-top:18px;padding-top:18px;}
+.working-days {color:#ffd0d0;}

@@ -22,7 +22,7 @@ import type { YearMonth } from "../../shared/types";
 import { useScheduleDrag } from "../state/useScheduleDrag";
 import { DayScheduleList } from "./DayScheduleList";
 export function CalendarView({
-  snapshot, holidays, holidayNotice,
+  snapshot, holidays, holidaySources, holidayNotice,
   onAddDate, onDragStart, onDragCommit, onDragEnd, onMonth,
   selectedMonth, selectedDate,
   onEditSchedule,
@@ -149,7 +149,7 @@ export function CalendarView({
                 const inMonth =
                   date && date >= bounds.start && date <= bounds.end;
                 return (
-                  <HolidayDateTooltip key={c} date={date} calendar={holidays}><button
+                  <HolidayDateTooltip key={c} date={date} calendar={holidays} sources={holidaySources}><button
                     type="button"
                     disabled={disabled || !date}
                     aria-label={date ? `${date} 일정 추가` : "날짜 없음"}

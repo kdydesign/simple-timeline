@@ -1,3 +1,5 @@
+import {localHolidaySources} from './state/holidaySources'
+import {effectiveHolidayCalendar} from '../domain/holidays'
 import {holidayStatusDescription} from "./components/HolidaySettings";
 import {useUpdateGuard} from './state/useUpdates';
 import {validateEditor,fieldId,type FieldErrors} from './state/formValidation';
@@ -127,7 +129,7 @@ export function App({
     canEdit = timeline.phase === "ready",
     saving = timeline.phase === "saving" || sharing.busy;
   const updates=useUpdateGuard({known:(timeline.phase==='ready'||timeline.phase==='saving')&&!sharing.writeOutcomeUnknown,dirty:editor.dirty||settingsDirty||quickDirty,saving});
-  const settingsVisible=sharing.settingsOpen&&!quickReminder&&!confirmation&&!dayModalOpen&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
+  const settingsVisible=!!sharing.state&&!!sharing.api&&sharing.settingsOpen&&!quickReminder&&!confirmation&&!dayModalOpen&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
   useEffect(()=>{setFieldErrors({});serverFieldErrors.current={};pendingFieldFocus.current=null;setValidationActive(false)},[model?.session]);
   const patchForm:typeof editor.patch=(update)=>{
     editor.patch(update);
@@ -456,7 +458,7 @@ export function App({
     if (!canEdit) return;
     const projects = editableProjects;
     const project = projects.find(p => p.id === (projectId ?? recentProject.current)) ?? projects[0];
-    if (!project) { setSelectedDate(date); setMonth(monthOf(date)); setFormError({code:"VALIDATION_ERROR", message:"먼저 프로젝트를 추가해 주세요."}); return; }
+    if (!project) { setSelectedDate(date); setMonth(monthOf(date)); setWarning({message:"먼저 프로젝트를 추가해 주세요."}); return; }
     request(() => {
       const origin=document.querySelector<HTMLElement>(mode === 'calendar' ? `.calendar [data-date="${date}"]` : `.gantt [data-day="${date}"]`);
       setSelectedDate(date); setMonth(monthOf(date)); editor.openSchedule(monthOf(date), project.id, undefined, origin, date);
@@ -590,7 +592,7 @@ export function App({
   </>);
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
-      <Titlebar sharing={sharing.state} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
+      <Titlebar onSettings={sharing.state&&sharing.api?sharing.openSettings:undefined} sharing={sharing.state} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
       {updates.frozen&&<div className="update-blocked update-ui" role="alert">{updates.editingBlocked?'앱을 종료한 뒤 다시 열어 주세요. 종료 준비 실패로 편집을 잠시 중지했습니다.':'업데이트 설치 준비 중입니다. 저장을 마칠 때까지 기다려 주세요.'}</div>}
       <div className="saving-content" inert={updates.frozen||saveShieldActive}>
       <div
@@ -647,7 +649,7 @@ export function App({
           {timeline.snapshot ? (
             <>
               <GanttView
-                holidays={sharing.state?.holidays?.calendar} holidayNotice={holidayStatusDescription(sharing.state?.holidays)}
+                holidays={effectiveHolidayCalendar(localHolidaySources(sharing.state))} holidaySources={localHolidaySources(sharing.state)} holidayNotice={holidayStatusDescription(sharing.state?.holidays)}
                 {...dragActions}
                 ref={gantt}
                 collapsed={preferences.collapsed} onToggleProject={preferences.toggleProject}
@@ -675,7 +677,7 @@ export function App({
                 }
               />
               <CalendarView
-                holidays={sharing.state?.holidays?.calendar} holidayNotice={holidayStatusDescription(sharing.state?.holidays)}
+                holidays={effectiveHolidayCalendar(localHolidaySources(sharing.state))} holidaySources={localHolidaySources(sharing.state)} holidayNotice={holidayStatusDescription(sharing.state?.holidays)}
                 {...dragActions} onMonth={navigateMonth}
                 onAddDate={addDate}
                 snapshot={visibleSnapshot!}
@@ -729,7 +731,7 @@ export function App({
       </div>
       {warning&&<div className="toast warning-toast" role="alert">{warning.message}</div>}
       <div className="toast" hidden={!!warning} role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
-      {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
+      {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings request={sharing.settingsRequest} initialTab={sharing.settingsTab} state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
       {quickReminder&&<QuickReminder key={quickReminder.id} schedule={timeline.snapshot?.schedules.find(s=>s.id===quickReminder.id)} caller={quickReminder.caller}
         disabled={!canEdit||saving||saveShieldActive} busy={saving||saveShieldActive} covered={!!confirmation} onRefresh={()=>void timeline.refresh()} onGuard={setQuickDirty} onClose={requestCloseQuick} onSave={saveQuickReminder}/>}
       {confirmation && (

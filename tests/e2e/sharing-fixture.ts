@@ -34,7 +34,7 @@ export async function settings(d: Desktop) {
       catch (error) { reject(error); }
     });
   }));
-  return d.page.getByRole('dialog',{name:'공유 설정'});
+  return d.page.getByRole('dialog',{name:'설정'});
 }
 export const sharingState = (d: Desktop) => d.page.evaluate(async () => {
   const r = await window.timelineSharing!.getState();

@@ -37,6 +37,7 @@ import { useGanttNavigation } from "../state/useGanttNavigation";
 import { useScheduleDrag, type DragActions } from "../state/useScheduleDrag";
 export interface GanttProps extends DragActions {
   holidays?:HolidayCalendar;
+  holidaySources?:import("../../shared/holidays").HolidaySources;
   holidayNotice?:string;
   hideEmptyChrome?:boolean;
   onReminder?:(schedule:Schedule,caller:HTMLElement)=>void;
@@ -65,7 +66,7 @@ type Row = {
   height: number;
 };
 export function GanttView({
-  snapshot, holidays, holidayNotice,
+  snapshot, holidays, holidaySources, holidayNotice,
   onAddDate, collapsed = EXPANDED, onToggleProject, todayRequest,
   onDragStart, onDragCommit, onDragEnd,
   selectedMonth, selectedDate, dayWidth: P = 28, onDayWidth,
@@ -391,7 +392,7 @@ export function GanttView({
               </span>
             ))}
           {dates.map((d) => (
-            <HolidayDateTooltip key={d.date} date={d.date} calendar={holidays}><button
+            <HolidayDateTooltip key={d.date} date={d.date} calendar={holidays} sources={holidaySources}><button
               disabled={disabled}
               tabIndex={d.i*P-x >= 0 && (d.i+1)*P-x <= size.width ? 0 : -1}
               aria-label={`${d.date} 일정 추가`}

@@ -1,3 +1,4 @@
+import {createPersonalHolidays} from '../db/personal-holidays'
 import {createSharingExtras} from '../db/sharing/extras'
 import {createPairingNotifications} from '../notifications/pairing'
 import {DEFAULT_HOLIDAYS,type HolidayCalendar,type HolidayState} from '../../shared/holidays'
@@ -60,6 +61,7 @@ export function createSharingService(o:Options){
     open:()=>{if(disposed||suspended||o.mutationsBlocked?.())return;settingsRequestToken=randomUUID();approvalRequestToken=settingsRequestToken;o.onChangeClick?.();changed()},changed})
   function holidayState():HolidayState{
     const c=store.getConfig(),cache=c.role==='member'?extras.cachedCalendar():null
+    if(c.role==='member'&&changes.isRevoked())return {calendar:{weekdays:[],dates:[]},status:'revoked',lastReceivedAt:null,message:'공유 승인이 취소되어 공통 휴일표를 제거했습니다. 개인 휴일은 유지됩니다.'}
     const phase=c.role==='host'?'host':c.role==='personal'?'local':holidayPhase==='current'&&status!=='connected'?'stale':holidayPhase
     return {calendar:c.role==='host'?extras.hostCalendar().calendar:phase==='unsupported'?DEFAULT_HOLIDAYS:cache?.envelope.calendar??DEFAULT_HOLIDAYS,status:phase,lastReceivedAt:cache?.receivedAt??null,message:holidayError}
   }
@@ -67,7 +69,7 @@ export function createSharingService(o:Options){
   const check=(generation:number)=>{if(!current(generation))throw failure('FORBIDDEN')}
   function getState():SharingState{
     const c=store.getConfig(),memberPresence=c.role==='host'?presence.snapshot(store.listDevices().filter(d=>d.approved&&!d.revoked).map(d=>d.id)):undefined
-    return {holidays:holidayState(),deviceVersions:c.role==='host'?extras.versions():undefined,pairingNotificationError:pairing.error(),deviceVersionError:versionError,approvalRequestToken,...(memberPresence?{memberPresence,connectedMembers:Object.values(memberPresence).filter(p=>p.connected).length}:{}),changeNotifications:changes.state(),snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
+    return {personalHolidays:createPersonalHolidays(o.storage.db).read(),holidays:holidayState(),deviceVersions:c.role==='host'?extras.versions():undefined,pairingNotificationError:pairing.error(),deviceVersionError:versionError,approvalRequestToken,...(memberPresence?{memberPresence,connectedMembers:Object.values(memberPresence).filter(p=>p.connected).length}:{}),changeNotifications:changes.state(),snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
       pendingPair:pendingPair?{pairId:pendingPair.pairId,fingerprint:pendingPair.fingerprint,expiresAt:pendingPair.expiresAt}:null,
       pendingPairs:host?.pending()??[],devices:c.role==='host'?store.listDevices():[],projects:c.role==='host'?store.listSharedProjects():[],settingsRequestToken,
       availableAddresses:transport.interfaces(),
@@ -109,7 +111,7 @@ export function createSharingService(o:Options){
     client=transport.client({installationId:store.getConfig().hostId,trust,address:target,persistence,appVersion:o.appVersion,expectedDatasetId:store.getConfig().remoteDatasetId??undefined})
     const activeClient=client
     const generations=new WeakMap<object,number>()
-    const settle=(result:object)=>policy.resumeShared(generations.get(result)??-1,()=>memberReminderStore.suppress(store.readCache().schedules.flatMap(s=>dueReminders(s,(o.reminderClock??(()=>new Date()))()))))
+    const settle=(result:object)=>{changes.confirmAccess();policy.resumeShared(generations.get(result)??-1,()=>memberReminderStore.suppress(store.readCache().schedules.flatMap(s=>dueReminders(s,(o.reminderClock??(()=>new Date()))()))))}
     syncController=createSyncController({now:clock,cursor:changes.cursor,poll:async options=>{operationSignal=options.signal;const generation=policy.state().generation;const result=await activeClient.poll(options);generations.set(result,generation);return result},apply:(result,reconnecting)=>{check(generation);const before=JSON.stringify(store.readCache());o.storage.db.transaction(()=>{if(result.changes)changes.apply(result.changes,reconnecting,generations.get(result)??-1);else{store.applyCache(result.snapshot);if(result.changesSupported===false)changes.unsupported()}settle(result)})();if(before!==JSON.stringify(store.readCache())){snapshotRevision++;changed()}},
       outcome:result=>{check(generation);if(result.kind==='unchanged')settle(result);if(result.kind==='revoked'){extras.clearCalendar();holidayPhase='pending';holidayError='';changes.revoke();snapshotRevision++;pendingPair=null}else if(result.kind==='unchanged'&&result.changesSupported===false)changes.unsupported();else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
       afterSync:async options=>{
@@ -255,6 +257,7 @@ export function createSharingService(o:Options){
       return {role:c.role,connected:status==='connected',trustPending:c.role==='member'&&!!c.credentialRef&&!saved,revoked:updateTrustRejected||status==='revoked',
         ...(c.role==='member'&&c.credentialRef&&c.address&&saved?.activation==='active'?{connection:{address:{address:c.address,port:c.port},trust:saved.trust,token:saved.token}}:{})}
     },configureHost,setHosting,connect,confirmHost,approve,saveDevice,revokeDevice,deleteDevice,saveProject,saveReminder,disconnect,
+    savePersonalHolidays(input:{calendar:HolidayCalendar}){if(disposed||suspended||o.mutationsBlocked?.())throw failure('FORBIDDEN');createPersonalHolidays(o.storage.db).save(input.calendar);changed();return getState()},
     saveHolidays(input:{calendar:HolidayCalendar}){if(disposed||suspended||o.mutationsBlocked?.())throw failure('FORBIDDEN');extras.saveCalendar(input.calendar);changed();return getState()},
     setChangeNotifications(input:{enabled:boolean}){changes.setEnabled(input);return getState()},
     retryChangeNotifications:async()=>{await changes.retry();return getState()},

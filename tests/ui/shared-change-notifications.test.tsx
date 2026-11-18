@@ -18,7 +18,7 @@ function member(extra:Partial<ChangeNotificationState>={}){
 }
 it('persists the member switch only after success, blocks pending saves and preserves failure value',async()=>{
  const f=member(),u=userEvent.setup();render(<App api={f.m.api}/>);await screen.findByRole('button',{name:'수동 동기화'});await act(async()=>f.emit({settingsRequestToken:'settings'}))
- const dialog=await screen.findByRole('dialog',{name:'공유 설정'}),toggle=within(dialog).getByRole('switch',{name:'공유 변경 알림'})
+ const dialog=await screen.findByRole('dialog',{name:'설정'}),toggle=within(dialog).getByRole('switch',{name:'공유 변경 알림'})
  expect(toggle).toBeChecked();let finish!:(v:Awaited<ReturnType<typeof f.api.setChangeNotifications>>)=>void
  f.api.setChangeNotifications=vi.fn(()=>new Promise<Awaited<ReturnType<typeof f.api.setChangeNotifications>>>(r=>{finish=r}));toggle.focus();await u.keyboard('[Space]');expect(toggle).toBeDisabled();expect(toggle).toBeChecked()
  await act(async()=>finish({ok:false,error:{code:'STORAGE_IO',message:'설정 저장 실패'}}));expect(toggle).toBeChecked();expect(within(dialog).getByText('설정 저장 실패')).toBeVisible()
@@ -26,10 +26,10 @@ it('persists the member switch only after success, blocks pending saves and pres
  await u.click(toggle);await waitFor(()=>expect(toggle).not.toBeChecked());expect(f.m.snapshot.schedules[0].reminder).toEqual({daysBefore:2,time:'09:00',start:false,end:false})
 })
 it.each(['personal','host'] as const)('hides change reception control for %s role',async role=>{
- sharingFixture({role,settingsRequestToken:'settings',changeNotifications:changeState});render(<App api={memoryApi().api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});expect(within(dialog).queryByRole('switch',{name:'공유 변경 알림'})).not.toBeInTheDocument()
+ sharingFixture({role,settingsRequestToken:'settings',changeNotifications:changeState});render(<App api={memoryApi().api}/>);const dialog=await screen.findByRole('dialog',{name:'설정'});expect(within(dialog).queryByRole('switch',{name:'공유 변경 알림'})).not.toBeInTheDocument()
 })
 it('explains the persisted baseline and legacy-host capability in settings',async()=>{
- const f=member({baselining:true,supported:null});render(<App api={f.m.api}/>);await screen.findByRole('button',{name:'수동 동기화'});await act(async()=>f.emit({settingsRequestToken:'settings'}));const dialog=await screen.findByRole('dialog',{name:'공유 설정'})
+ const f=member({baselining:true,supported:null});render(<App api={f.m.api}/>);await screen.findByRole('button',{name:'수동 동기화'});await act(async()=>f.emit({settingsRequestToken:'settings'}));const dialog=await screen.findByRole('dialog',{name:'설정'})
  expect(within(dialog).getByText('다음 동기화부터 새 변경 알림을 받습니다.')).toBeVisible();await act(async()=>f.emit({changeNotifications:{...changeState,supported:false}}));expect(within(dialog).getByText('변경 알림을 사용하려면 호스트와 멤버를 업데이트하세요.')).toBeVisible()
 })
 it('keeps change delivery warnings persistent and retries definite failures independently from date alarms',async()=>{
@@ -67,12 +67,12 @@ it('defers notification while dirty sharing settings remain open then discards d
  await click(await screen.findByRole('button',{name:'프로젝트 추가'}))
  await act(async()=>{fireEvent.change(screen.getByLabelText('프로젝트 이름'),{target:{value:'편집 초안'}})})
  await act(async()=>f.emit({settingsRequestToken:'settings'}))
- const dialog=await screen.findByRole('dialog',{name:'공유 설정'})
+ const dialog=await screen.findByRole('dialog',{name:'설정'})
  await act(async()=>{fireEvent.change(within(dialog).getByLabelText('포트'),{target:{value:'47832'}})})
  await f.click({kind:'schedule',id:'1',projectId:'1'})
  expect(within(dialog).getByLabelText('포트')).toHaveValue(47832)
  expect(f.api.acknowledgeChange).not.toHaveBeenCalled()
- await click(within(dialog).getByRole('button',{name:'공유 설정 닫기'}))
+ await click(within(dialog).getByRole('button',{name:'설정 닫기'}))
  await screen.findByLabelText('일정 이름');expect(screen.queryByRole('alertdialog')).toBeNull();expect(screen.queryByLabelText('프로젝트 이름')).toBeNull();expect(f.api.acknowledgeChange).toHaveBeenCalledWith({token:'click-1'})
 
 })

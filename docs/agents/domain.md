@@ -5,7 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
-| 설정 탭·개인 휴일·워킹데이 후속 협의 | [설계 초안](../design/settings-and-working-days.md). Q1~Q9 반영, 호스트도 개인 휴일을 합산하되 전송하지 않음. 전체 승인 전이며 제품 구현은 미착수 |
+| 설정 탭·개인 휴일·워킹데이 후속 협의 | [승인 설계](../design/settings-and-working-days.md) · [0.8.8 구현·검증](../implementation/2026-11-18-settings-working-days.md). Q10 구현 승인. 호스트도 개인 휴일을 합산하되 전송하지 않음 |
 | 휴일 기간·날짜 삼각 표시 | [승인 설계](../design/holiday-ranges-and-markers.md) · [구현 기록](../implementation/2026-11-17-holiday-ranges.md) |
 | 멤버 버전·공통 휴일·승인 요청 알림 협의 | [승인 설계](../design/member-versions-holidays-and-pairing-notices.md) · [0.8.6 구현·검증](../implementation/2026-11-17-member-holidays.md). Q1~Q11·시안 승인 후 구현, 기존 프로토콜 호환 유지 |
 | 현재 작업 상태·인수 범위 | [STATUS](../wayfinder/STATUS.md), [MVP 사용자 인수](../release/user-acceptance.md) |
@@ -26,7 +26,7 @@
 | 편집 폐기·Space 탐색·전체 기능 도움말 | [0.8.4 승인 설계](../design/editing-navigation-and-help.md) · [구현·검증](../implementation/2026-11-16-editing-navigation-help.md). 기존 미저장 확인/UPDATE 대기를 갱신하고 도움말 사전 준비·재사용·성능 계측을 추가 |
 | 호스트·멤버 도움말 창 | [승인 설계·시안](../design/host-member-help.md). H1~H8 확정 후 별도 구현 요청. [0.8.2 구현·검증](../implementation/2026-11-16-host-member-help.md). 독립 창·역할별 목차/검색·이미지 확대·트레이 연동. 도움말 CI 실패는 bfb7887에서 수정하고 Windows/Linux 전체 성공 확인 |
 | 호스트 배포 기반 앱 업데이트 | [승인 설계](../design/lan-app-updates.md). Q1~Q20·문서 전체·구현 진행 승인. [0.8.0 구현·검증](../implementation/2026-11-11-lan-app-updates.md)에 구현과 실제 Windows 미검증 범위를 기록했다. 호스트 ZIP 등록·멤버 UPDATE·파일 검증·안전한 설치 인계 계약 |
-| 사내 프로젝트 공유·동기화 | [설계·검토](../design/lan-project-sharing.md). Q1~Q27·후속 참여자 권한·UI 위치 확정. 보안·상태·알림 계약 검토 보정 완료. 트레이 상태 클릭으로 공유 설정 진입·필터별 간트 기간 확정. 0.6.0 [구현·검증 기록](../implementation/2026-11-10-lan-sharing.md), 실제 Windows·사내망 인수는 별도 |
+| 사내 프로젝트 공유·동기화 | [설계·검토](../design/lan-project-sharing.md). Q1~Q27·후속 참여자 권한·UI 위치 확정. 보안·상태·알림 계약 검토 보정 완료. 당시 트레이 상태 클릭 진입은0.8.8 설정 버튼으로 대체. 필터별 간트 기간 유지. 0.6.0 [구현·검증 기록](../implementation/2026-11-10-lan-sharing.md), 실제 Windows·사내망 인수는 별도 |
 | Windows 자동 실행·수동 설치 종료 | [0.8.1 확정 설계](../design/windows-login-startup.md)·[구현 및 검증](../implementation/2026-11-12-startup-and-install.md). 사용자별 로그인 실행, 구버전0.8.0에 한정한 수동 설치 강제 종료와 기존 UPDATE 보호를 구분 |
 | 설치·사용·보존 정책 | [배포 정책](../release/policy.md), [사용 안내](../release/user-guide.md) |
 | 당시 실행 증거 | [구현 기록](../implementation/), [Windows 검증](../release/windows-validation.md), [단계 인수인계](../wayfinder/handoffs/)의 SHA·환경·한계 |

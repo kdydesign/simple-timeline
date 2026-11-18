@@ -1,5 +1,14 @@
 import {expect,it} from 'vitest'
 import {dispatchSharing} from '../../src/main/sharing/ipc-core'
+it('validates personal holiday writes and rejects remote/untrusted commands',async()=>{
+ let saved:unknown=null;const service={savePersonalHolidays:(v:unknown)=>{saved=v;return{}}} as any
+ const calendar={weekdays:[0,6],dates:[{date:'2026-11-26',name:'연차'}]}
+ expect((await dispatchSharing(service,['savePersonalHolidays',{calendar}],false)).ok).toBe(false)
+ expect((await dispatchSharing(service,['savePersonalHolidays',{calendar:{weekdays:[9],dates:[]}}],true)).ok).toBe(false)
+ expect(saved).toBe(null)
+ expect((await dispatchSharing(service,['savePersonalHolidays',{calendar}],true)).ok).toBe(true)
+ expect(saved).toEqual({calendar})
+})
 it('accepts only fixed bounded commands from trusted sender and never invokes a prototype method',async()=>{
  let calls=0
  const service={getState:()=>({role:'personal'}),configureHost:()=>{calls++;return {} }} as any

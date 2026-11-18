@@ -45,6 +45,7 @@ import type { Result } from '../shared/types'
 const desktopIcon = process.platform === 'win32' ? windowsIcon : icon
 
 export interface BootstrapOptions {
+  developmentMember?: boolean
   createUpdates?: typeof createUpdateService
   sharingTransport?: Partial<SharingTransport>
   sharingSecrets?: (profile:string)=>Promise<ProtectedSecrets>
@@ -180,9 +181,9 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   })
   // Rehash/catalog I/O never delays window creation, initial snapshot, or sharing startup.
   if(storage.state==='ready')void (options.createUpdates??createUpdateService)({notifications:updateNotifications,root:join(updateRoot,'member'),version:app.getVersion(),catalog,
-    updaterCacheRoot:join(localAppData,'simple-timeline-updater'),editingBlocked:()=>appMutationBarrier.blocked(),
+    updaterCacheRoot:options.developmentMember?join(profile,'updates','updater-cache'):join(localAppData,'simple-timeline-updater'),editingBlocked:()=>appMutationBarrier.blocked(),
     chooseBundle:async()=>{const choice=await dialog.showOpenDialog(window,{title:'업데이트 ZIP 등록',properties:['openFile'],filters:[{name:'Planrail update ZIP',extensions:['zip']}]});return choice.canceled?undefined:choice.filePaths[0]},
-    install:input=>coordinator.install(input),changed:state=>updatesIpc.changed(state),
+    install:async input=>{if(options.developmentMember)throw Error('개발용 멤버에서는 앱 업데이트를 설치할 수 없습니다.');return coordinator.install(input)},changed:state=>updatesIpc.changed(state),
   }).then(async service=>{
     if(exiting||window.isDestroyed()){await service.dispose();return}
     updates=service

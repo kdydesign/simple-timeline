@@ -40,7 +40,7 @@ export function createChangeNotifications(o:Options){
   openRequest={token:randomUUID(),target};o.changed();o.onClick?.()
  }
  return {
-  state,cursor:inbox.cursor,
+  state,cursor:inbox.cursor,isRevoked:inbox.isRevoked,confirmAccess:inbox.confirmAccess,
   apply(envelope:ChangeEnvelope,reconnecting:boolean,generation?:number){try{inbox.apply(envelope,reconnecting,generation);supported=true;storageError=false}catch(error){storageError=true;throw error}},
   revoke(){try{inbox.revoke();storageError=false}catch(error){storageError=true;throw error}},
   unsupported(){supported=false},

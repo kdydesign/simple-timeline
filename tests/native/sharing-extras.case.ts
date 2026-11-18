@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict'
 import {setup,type NativeCase} from './helpers'
 import {createSharingStore} from '../../src/main/db/sharing/store'
+import {createPersonalHolidays} from '../../src/main/db/personal-holidays'
 import {createSharingExtras} from '../../src/main/db/sharing/extras'
 import {createNotificationStore} from '../../src/main/db/notifications'
 import {createPairingNotifications} from '../../src/main/notifications/pairing'
 import {createSharingService} from '../../src/main/sharing/service'
 import {createSharingHost} from '../../src/main/sharing/host'
+import {pinnedRequest} from '../../src/main/sharing/transport'
 import {createHostIdentity} from '../../src/main/sharing/identity'
 import {createProtectedSecrets} from '../../src/main/sharing/secrets'
 import {mkdirSync} from 'node:fs'
@@ -29,13 +31,25 @@ export const cases:NativeCase[]=[
    assert.equal(extras.versions()[device.id].version,'0.8.6')
    const count=()=>h.db.prepare('SELECT COUNT(*) AS n FROM sharing_change_events').get()
    const before=count(),sent=notifications,calendar={weekdays:[3],dates:[{date:'2026-11-20',endDate:'2026-11-22',name:'창립기념일'}]}
-   extras.saveCalendar(calendar);await service.sync()
+   extras.saveCalendar(calendar);const revision=extras.hostCalendar().revision
+   const connection=service.getUpdateContext().connection!;assert(connection)
+   const responses=[]
+   for(const path of ['/v1/holidays','/v1/holidays/ranges'])responses.push({path,response:await pinnedRequest({...connection,path})})
+   createPersonalHolidays(h.db).save({weekdays:[1],dates:[{date:'2026-11-26',name:'호스트 비공개 연차'}]})
+   service.savePersonalHolidays({calendar:{weekdays:[2],dates:[{date:'2026-11-27',name:'멤버 비공개 연차'}]}})
+   for(const {path,response} of responses){
+    assert.equal(response.status,200)
+    const fresh=await pinnedRequest({...connection,path})
+    assert.deepEqual(fresh,response);assert.equal(JSON.stringify(fresh.body).includes('비공개'),false)
+    assert.equal((await pinnedRequest({...connection,path,etag:response.etag})).status,304)
+   }
+   await service.sync();assert.equal(extras.hostCalendar().revision,revision);assert.equal(service.getState().personalHolidays?.dates[0].name,'멤버 비공개 연차')
    assert.deepEqual(service.getState().holidays?.calendar,calendar);assert.deepEqual(count(),before);assert.equal(notifications,sent)
    invalid=true;await service.sync();assert.equal(service.getState().holidays?.status,'error');assert.deepEqual(service.getState().holidays?.calendar,calendar)
    invalid=false;await service.sync();assert.equal(service.getState().holidays?.status,'current')
    await host.stop();await service.sync();assert.equal(service.getState().holidays?.status,'stale');assert.deepEqual(service.getState().holidays?.calendar,calendar)
    await host.start(target.address,target.port);await service.sync();assert.equal(service.getState().holidays?.status,'current')
-   store.revokeDevice({id:device.id});await service.sync();assert.equal(service.getState().status,'revoked');assert.equal(createSharingExtras(m.db).cachedCalendar(),null);assert.deepEqual(service.getState().holidays?.calendar,{weekdays:[0,6],dates:[]})
+   store.revokeDevice({id:device.id});await service.sync();assert.equal(service.getState().status,'revoked');assert.equal(createSharingExtras(m.db).cachedCalendar(),null);assert.deepEqual(service.getState().holidays?.calendar,{weekdays:[],dates:[]})
   }finally{await service.dispose();await host.stop()}
  }},
  {name:'pair notification click opens current settings and failed deliveries never repeat or escape global mute',async run(ctx){

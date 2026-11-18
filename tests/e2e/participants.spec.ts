@@ -17,7 +17,7 @@ test('participant field errors, deletion and compact reminder rows work in Elect
  const existing=await snapshot(d)
  await dialog.getByRole('button',{name:'디자인 PC 참여자 삭제'}).click();await expect(p.getByRole('alertdialog')).toContainText('1.1.1 핫픽스');await p.getByRole('button',{name:'참여자 삭제',exact:true}).click()
  await expect(dialog.getByLabel('디자인 PC IP')).toHaveCount(0);expect((await sharingState(d)).projects[0].participants).toEqual([]);expect(await snapshot(d)).toEqual(existing)
- await dialog.getByRole('button',{name:'공유 설정 닫기'}).click()
+ await dialog.getByRole('button',{name:'설정 닫기'}).click()
  await p.getByRole('button',{name:'개발 편집',exact:true}).click()
  const start=p.getByRole('switch',{name:'시작일 알림',exact:true}),end=p.getByRole('switch',{name:'종료일 알림',exact:true})
  const a=await start.boundingBox(),b=await end.boundingBox();expect(a?.width).toBe(32);expect(a?.height).toBe(18);expect(b!.y).toBeGreaterThan(a!.y+a!.height);expect(b!.x).toBe(a!.x)

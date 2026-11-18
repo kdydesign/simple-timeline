@@ -39,7 +39,7 @@ Planrail — 오프라인 Windows 일정 관리 프로그램. Electron + React +
 | 앱 전체 검사 | `npm run verify:app` (Linux headless: `xvfb-run -a npm run verify:app`) |
 | Windows x64 설치본 | `npm run dist:win` (clean checkout, 기존 출력 없는 Windows 환경) |
 
-`npm run dev`는 일반 사용자 DB를 사용한다. 일회성 확인은 [프로필 격리 절차](docs/harness/validation.md)를 따른다.
+`npm run dev`는 일반 사용자 DB를 사용한다. `npm run dev:member`는 지속되는 개발 멤버 프로필을 사용하므로 자동 테스트는 여전히 일회성 프로필을 쓴다. 일회성 확인은 [프로필 격리 절차](docs/harness/validation.md)를 따른다.
 Electron sandbox를 끄지 않는다. 앱 검사를 겹쳐 실행하면 artifact 정리가 충돌하므로 순차 실행한다.
 verify:app은 기본 명령별180초, native 전체360초, 순차 Electron E2E 전체600초 제한이다. native 내부 Electron 전체 실행은300초이며 개별 테스트 제한은 유지한다.
 패키지 검사는 실제 AppData·방화벽을 사용하므로 기존 프로필 없는 일회성 Windows CI VM에서만 실행한다.

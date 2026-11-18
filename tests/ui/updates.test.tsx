@@ -76,11 +76,11 @@ it('dirty primary draft accepts freeze and survives release; a later clean draft
  await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);expect(document.documentElement).toHaveAttribute('data-update-frozen','true');await act(async()=>{await f.release()})
 })
 it('guards sharing device drafts and quick reminders, and keeps failed-teardown editing blocked',async()=>{
- const f=updates(),s=sharingFixture({role:'host',settingsRequestToken:'settings',devices:[{id:'9',name:'민수',ip:'192.168.0.20',approved:true,revoked:false}]}),u=userEvent.setup();render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});await u.type(within(dialog).getByLabelText('새 참여자 이름'),'초안');let clean=true;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);await act(async()=>{await f.release()});expect(within(dialog).getByLabelText('새 참여자 이름')).toHaveValue('초안')
+ const f=updates(),s=sharingFixture({role:'host',settingsRequestToken:'settings',devices:[{id:'9',name:'민수',ip:'192.168.0.20',approved:true,revoked:false}]}),u=userEvent.setup();render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'설정'});await u.type(within(dialog).getByLabelText('새 참여자 이름'),'초안');let clean=true;await act(async()=>{clean=await f.freeze()});expect(clean).toBe(true);await act(async()=>{await f.release()});expect(within(dialog).getByLabelText('새 참여자 이름')).toHaveValue('초안')
  act(()=>f.emit({editingBlocked:true,phase:'error',error:'shutdown'}));await act(async()=>{await f.release()});expect(document.documentElement).toHaveAttribute('data-update-frozen','true');expect(screen.getByText(/앱을 종료한 뒤 다시 열어/)).toBeVisible();expect(s.api.saveDevice).not.toHaveBeenCalled()
 })
 it('host import is separate from publish and errors retain the current release',async()=>{
- const f=updates({role:'host',host:{importing:false,currentVersion:'0.8.0',candidateVersion:null,candidateBytes:0,publishing:true,canPublish:false}});sharingFixture({role:'host',settingsRequestToken:'settings'});render(<App api={memoryApi().api}/>);await userEvent.click(await screen.findByRole('button',{name:'업데이트 ZIP 가져오기'}));expect(f.api.importBundle).toHaveBeenCalledOnce();expect(f.api.publish).not.toHaveBeenCalled()
+ const f=updates({role:'host',host:{importing:false,currentVersion:'0.8.0',candidateVersion:null,candidateBytes:0,publishing:true,canPublish:false}});sharingFixture({role:'host',settingsRequestToken:'settings'});render(<App api={memoryApi().api}/>);await userEvent.click(await screen.findByRole('tab',{name:'기본 설정'}));await userEvent.click(await screen.findByRole('button',{name:'업데이트 ZIP 가져오기'}));expect(f.api.importBundle).toHaveBeenCalledOnce();expect(f.api.publish).not.toHaveBeenCalled()
  act(()=>f.emit({host:{importing:false,currentVersion:'0.8.0',candidateVersion:'0.8.0',candidateBytes:1024,publishing:true,canPublish:true}}));await userEvent.click(screen.getByRole('button',{name:'배포 시작'}));expect(f.api.publish).toHaveBeenCalledOnce()
  act(()=>f.emit({error:'invalid-bundle'}));expect(screen.getByText(/ZIP/,{selector:'p[role="alert"]'})).toBeVisible();expect(screen.getByText('현재 배포: 0.8.0')).toBeVisible()
  act(()=>f.emit({error:'host-mismatch'}));expect(screen.getByText('호스트에 설치된 버전·소스와 같은 배포 파일이 필요합니다.')).toBeVisible();expect(screen.getByText('현재 배포: 0.8.0')).toBeVisible()
@@ -100,7 +100,7 @@ it('release cancels a pending save guard so its late completion cannot approve i
 })
 
 it('ignores a failed initial snapshot arriving after a valid state event',async()=>{
- const f=updates({role:'host',host:{importing:false,currentVersion:null,candidateVersion:null,candidateBytes:0,publishing:false,canPublish:false}});sharingFixture({role:'host',settingsRequestToken:'settings'});const pending:Array<(r:Awaited<ReturnType<UpdateApi['getState']>>)=>void>=[];f.api.getState=vi.fn(()=>new Promise<Awaited<ReturnType<UpdateApi['getState']>>>(resolve=>pending.push(resolve)));render(<App api={memoryApi().api}/>);await screen.findByRole('dialog',{name:'공유 설정'});act(()=>f.emit({}));await act(async()=>{pending.forEach(resolve=>resolve({ok:false,error:{code:'DB_NOT_READY',message:'초기 읽기 실패'}}))});expect(screen.queryByText('초기 읽기 실패')).toBeNull();expect(screen.getByRole('button',{name:'업데이트 ZIP 가져오기'})).toBeEnabled()
+ const f=updates({role:'host',host:{importing:false,currentVersion:null,candidateVersion:null,candidateBytes:0,publishing:false,canPublish:false}});sharingFixture({role:'host',settingsRequestToken:'settings'});const pending:Array<(r:Awaited<ReturnType<UpdateApi['getState']>>)=>void>=[];f.api.getState=vi.fn(()=>new Promise<Awaited<ReturnType<UpdateApi['getState']>>>(resolve=>pending.push(resolve)));render(<App api={memoryApi().api}/>);await screen.findByRole('dialog',{name:'설정'});act(()=>f.emit({}));await act(async()=>{pending.forEach(resolve=>resolve({ok:false,error:{code:'DB_NOT_READY',message:'초기 읽기 실패'}}))});expect(screen.queryByText('초기 읽기 실패')).toBeNull();await userEvent.click(screen.getByRole('tab',{name:'기본 설정'}));expect(screen.getByRole('button',{name:'업데이트 ZIP 가져오기'})).toBeEnabled()
 })
 it('notification opens UPDATE information without downloading or changing an editor draft',async()=>{
  const previousWidth=window.innerWidth;window.innerWidth=1440
@@ -130,7 +130,7 @@ it('accepts unsaved project and uncommitted date input for automatic install wit
 it.each(['unavailable','rejected'] as const)('blocks UPDATE after an uncertain sharing write (%s) even when polls and later commands succeed',async kind=>{
  const f=updates(),sharing=sharingFixture({role:'member',address:'192.168.0.10',status:'connected',settingsRequestToken:'open'}),u=userEvent.setup();
  sharing.api.connect=kind==='rejected'?vi.fn().mockRejectedValue(Error('late IPC failure')):vi.fn().mockResolvedValue({ok:false,error:{code:'IPC_UNAVAILABLE',message:'공유 작업 결과를 확인하지 못했습니다.'}});
- render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});
+ render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'설정'});
  const port=within(dialog).getByLabelText('포트');await u.clear(port);await u.type(port,'47832');await u.click(within(dialog).getByRole('button',{name:'연결'}));
  await within(dialog).findByText('공유 작업 결과를 확인하지 못했습니다.');await act(async()=>expect(await f.freeze()).toBe(false));await act(async()=>{await f.release()});
  act(()=>sharing.emit({snapshotRevision:2,status:'connected'}));await u.click(within(dialog).getByRole('switch',{name:'공유 변경 알림'}));
@@ -139,5 +139,5 @@ it.each(['unavailable','rejected'] as const)('blocks UPDATE after an uncertain s
 
 it('permits UPDATE after a definitive sharing validation failure',async()=>{
  const f=updates(),sharing=sharingFixture({role:'member',address:'192.168.0.10',status:'connected',settingsRequestToken:'open'}),u=userEvent.setup();sharing.api.connect=vi.fn().mockResolvedValue({ok:false,error:{code:'VALIDATION_ERROR',message:'잘못된 주소입니다.'}});
- render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'공유 설정'});await u.click(within(dialog).getByRole('button',{name:'연결'}));await within(dialog).findByText('잘못된 주소입니다.');await act(async()=>expect(await f.freeze()).toBe(true));
+ render(<App api={memoryApi(hotfix).api}/>);const dialog=await screen.findByRole('dialog',{name:'설정'});await u.click(within(dialog).getByRole('button',{name:'연결'}));await within(dialog).findByText('잘못된 주소입니다.');await act(async()=>expect(await f.freeze()).toBe(true));
 });

@@ -27,7 +27,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   expect((await snapshot(host)).schedules[0].id).toBe('1');expect((await snapshot(member)).schedules[0].id).toBe('1');
   await member.page.getByRole('button',{name:'1.1.1 핫픽스 편집',exact:true}).click();await member.page.getByLabel('프로젝트 이름',{exact:true}).fill('개인 프로젝트');await member.page.getByRole('button',{name:'저장',exact:true}).click();
   await member.page.getByRole('button',{name:'개발 편집',exact:true}).click();await member.page.getByLabel('일정 이름',{exact:true}).fill('개인 일정');await member.page.getByRole('button',{name:'저장',exact:true}).click();await member.page.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
-  let h=await settings(host);await expect(h.getByRole('button',{name:'호스트로 공유'})).toBeFocused();
+  let h=await settings(host);await expect(h.getByRole('tab',{name:'공유 설정'})).toBeFocused();
   await h.getByRole('button',{name:'호스트로 공유'}).click();await h.getByLabel('공유할 LAN IP').click();await host.page.getByRole('option',{name:'127.0.0.1 · 이 PC에서만 사용'}).click();await h.getByLabel('포트',{exact:true}).fill(String(port));await h.getByRole('button',{name:'호스트 주소 저장'}).click();await h.getByRole('button',{name:'공유 시작',exact:true}).click();await expect.poll(async()=>(await sharingState(host)).status).toBe('connected');
   await h.getByLabel('새 참여자 이름').fill('멤버 PC');await h.getByLabel('새 참여자 IP').fill('127.0.0.2');await h.getByRole('button',{name:'등록',exact:true}).click();
   let m=await settings(member);await m.getByRole('button',{name:'멤버로 연결'}).click();await m.getByLabel('호스트 IP').fill('127.0.0.1');await m.getByLabel('포트',{exact:true}).fill(String(port));await m.getByRole('button',{name:'연결',exact:true}).click();
@@ -36,7 +36,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await expect(member.page.locator('.sharing-status')).toHaveClass(/unavailable/);await expect(member.page.getByRole('button',{name:'수동 동기화',exact:true,includeHidden:true})).toBeDisabled();
   await expect(h.locator('code')).toHaveText(pair.fingerprint);await expect(m.locator('code')).toHaveText(pair.fingerprint);
   await h.locator('code').scrollIntoViewIfNeeded();await capture(host,'dark-host-before-pair-settings');await capture(member,'dark-member-before-pair-settings');
-  for(const d of [host,member]){await d.page.getByRole('button',{name:'공유 설정 닫기'}).click();const panel=await settings(d);if(d===member){await expect(panel.getByLabel('호스트 IP')).toHaveValue('127.0.0.1');await expect(panel.getByLabel('포트',{exact:true})).toHaveValue(String(port))}await panel.locator('code').scrollIntoViewIfNeeded();await capture(d,d===host?'dark-host-pair-settings':'dark-member-pair-settings');await panel.getByRole('button',{name:'공유 설정 닫기'}).click();await settings(d)}
+  for(const d of [host,member]){await d.page.getByRole('button',{name:'설정 닫기'}).click();const panel=await settings(d);if(d===member){await expect(panel.getByLabel('호스트 IP')).toHaveValue('127.0.0.1');await expect(panel.getByLabel('포트',{exact:true})).toHaveValue(String(port))}await panel.locator('code').scrollIntoViewIfNeeded();await capture(d,d===host?'dark-host-pair-settings':'dark-member-pair-settings');await panel.getByRole('button',{name:'설정 닫기'}).click();await settings(d)}
   expect(await host.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(0);
   await m.getByRole('button',{name:'전체 지문 일치 확인'}).click();
   await expect.poll(()=>host.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(1);
@@ -44,7 +44,7 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await expect(h.getByRole('heading',{name:'연결 승인',exact:true})).toBeVisible();
   await h.getByRole('button',{name:'지문 확인 · 연결 승인'}).click();await host.page.getByRole('button',{name:'일치 확인 후 승인'}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');
   await expect.poll(async()=>(await sharingState(host)).connectedMembers).toBe(1);await expect(h.getByText('연결 1대',{exact:true})).toBeVisible();await expect(h.locator('.sharing-device-presence').getByText('연결됨',{exact:true})).toBeVisible();
-  await m.getByRole('button',{name:'공유 설정 닫기'}).click();await h.getByRole('button',{name:'공유 설정 닫기'}).click();
+  await m.getByRole('button',{name:'설정 닫기'}).click();await h.getByRole('button',{name:'설정 닫기'}).click();
   // Convert original host project without changing numeric source identity.
   await host.page.getByRole('button',{name:'1.1.1 핫픽스 편집',exact:true}).click();await host.page.getByRole('button',{name:'참여자 2 삭제'}).click();await host.page.getByLabel('공유 프로젝트로 저장').check();
   for(const combo of await host.page.getByRole('combobox').all()){await combo.click();await host.page.getByRole('option',{name:'멤버 PC · 127.0.0.2'}).click()}
@@ -106,13 +106,13 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   await expect.poll(async()=>(await sharingState(member)).changeNotifications?.enabled).toBe(true);
   await expect.poll(async()=>(await sharingState(member)).changeNotifications?.baselining).toBe(false);
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(2);
-  await m.getByRole('button',{name:'공유 설정 닫기'}).click();
+  await m.getByRole('button',{name:'설정 닫기'}).click();
   await host.page.getByRole('button',{name:'수신 꺼짐 중 변경 편집',exact:true}).click();
   await host.page.getByLabel('일정 이름',{exact:true}).fill('공유 변경');
   await host.page.getByRole('button',{name:'저장',exact:true}).click();await host.page.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
   await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages.length)).toBe(3);
   expect((await snapshot(member)).schedules.find(s=>s.id===remote.id)?.reminder.start).toBe(true);
-  await capture(member,'dark-member-before-connected-toolbar');m=await settings(member);await capture(member,'dark-member-before-connected-settings');await m.getByRole('button',{name:'공유 설정 닫기'}).click();
+  await capture(member,'dark-member-before-connected-toolbar');m=await settings(member);await capture(member,'dark-member-before-connected-settings');await m.getByRole('button',{name:'설정 닫기'}).click();
   await capture(member,'dark-member-connected-toolbar');m=await settings(member);await capture(member,'dark-member-connected-settings');
   // Real modal keyboard focus and nested cancellation restore the initiating control.
   await m.getByRole('button',{name:'연결 해제',exact:true}).focus();await member.page.keyboard.press('Enter');await expect(member.page.getByRole('alertdialog')).toBeVisible();await member.page.keyboard.press('Escape');await expect(m.getByRole('button',{name:'연결 해제',exact:true})).toBeFocused();await member.page.keyboard.press('Escape');await expect(m).toHaveCount(0);
@@ -120,8 +120,8 @@ test('two isolated Electron profiles pair over pinned TLS, share readonly source
   expect(await member.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(0);
   // Stop/start on actual host and member red/green with explicit reconnect.
   h=await settings(host);await h.getByRole('button',{name:'공유 중지',exact:true}).click();await member.page.getByRole('button',{name:'수동 동기화',exact:true}).click();await expect(member.page.locator('.sharing-status')).toHaveClass(/unavailable/);await capture(member,'dark-member-disconnected-toolbar');
-  m=await settings(member);await capture(member,'dark-member-disconnected-settings');await m.getByRole('button',{name:'공유 설정 닫기'}).click();await capture(member,'dark-member-before-disconnected-toolbar');m=await settings(member);await capture(member,'dark-member-before-disconnected-settings');
-  await h.getByRole('button',{name:'공유 시작',exact:true}).click();await m.getByRole('button',{name:'연결',exact:true}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');await m.getByRole('button',{name:'공유 설정 닫기'}).click();
+  m=await settings(member);await capture(member,'dark-member-disconnected-settings');await m.getByRole('button',{name:'설정 닫기'}).click();await capture(member,'dark-member-before-disconnected-toolbar');m=await settings(member);await capture(member,'dark-member-before-disconnected-settings');
+  await h.getByRole('button',{name:'공유 시작',exact:true}).click();await m.getByRole('button',{name:'연결',exact:true}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');await m.getByRole('button',{name:'설정 닫기'}).click();
   await host.restart();await expect.poll(async()=>(await sharingState(host)).status).toBe('connected');await member.page.getByRole('button',{name:'수동 동기화',exact:true}).click();await expect(member.page.locator('.sharing-status')).toHaveClass(/connected/);
   h=await settings(host);await h.getByRole('button',{name:'승인 취소',exact:true}).click();await host.page.getByRole('alertdialog').getByRole('button',{name:'승인 취소',exact:true}).click();await member.page.getByRole('button',{name:'수동 동기화',exact:true}).click();await expect.poll(async()=>(await sharingState(member)).status).toBe('revoked');await expect.poll(async()=>(await snapshot(member)).schedules.filter(s=>s.sharing==='member').length).toBe(0);expect((await snapshot(member)).schedules[0].name).toBe('개인 일정');
   await expect.poll(()=>member.app.evaluate(()=>(globalThis as any).changeMessages?.length??0)).toBe(1);

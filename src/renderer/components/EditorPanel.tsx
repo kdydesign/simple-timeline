@@ -1,3 +1,5 @@
+import {workingDays} from '../../domain/holidays'
+import {localHolidaySources} from '../state/holidaySources'
 import {fieldId,type FieldErrors} from '../state/formValidation';
 import {Switch} from './ui/switch';
 import {ReminderFields} from './ReminderFields';
@@ -62,10 +64,10 @@ export function EditorPanel({
   const errors={...(error?.code==='VALIDATION_ERROR'&&error.field?{[error.field]:error.message}:{}),...fieldErrors};
   const invalid=(field:string)=>errors[field]?{'aria-invalid':true as const,'aria-describedby':`${fieldId(field)}-error`}:{};
   const message=(field:string)=>errors[field]?<p className="field-error" id={`${fieldId(field)}-error`} role="alert">{errors[field]}</p>:null;
-  let period = "";
+  let period:ReactNode = null;
   if (editor.kind === "schedule") {
     try {
-      period = `기간 ${inclusiveDays(editor.draft.startDate, editor.draft.endDate)}일`;
+      period = <>총 기간: {inclusiveDays(editor.draft.startDate, editor.draft.endDate)}일, <span className="working-days">워킹데이: {workingDays(editor.draft.startDate,editor.draft.endDate,localHolidaySources(sharing))}일</span></>;
     } catch {}
   }
   return (

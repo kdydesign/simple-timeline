@@ -7,6 +7,8 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
  // A later poll/other command cannot establish the outcome of a lost write reply.
  // Keep installation blocked for this session; relaunch reads persisted state anew.
  const [writeOutcomeUnknown,setWriteOutcomeUnknown]=useState(false)
+ const [settingsRequest,setSettingsRequest]=useState<{token:string;approval:boolean}|null>(null)
+ const [settingsTab,setSettingsTab]=useState<'basic'|'sharing'>('basic')
  const [busy,setBusy]=useState(false),[settingsOpen,setSettingsOpen]=useState(false)
  const revision=useRef<number|null>(null),pending=useRef(false),alive=useRef(true),locked=useRef(false),manual=useRef(false)
  const eventVersion=useRef(0),latest=useRef<SharingState|null>(null),read=useRef(reconcile);read.current=reconcile
@@ -36,7 +38,7 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
  },[state,ready,reconcile,busy])
  useEffect(()=>{
   const token=state?.settingsRequestToken;if(!token||!api)return
-  setSettingsOpen(true);void api.acknowledgeSettings({token}).catch(()=>{})
+  setSettingsRequest({token,approval:state?.approvalRequestToken===token});setSettingsTab('sharing');setSettingsOpen(true);void api.acknowledgeSettings({token}).catch(()=>{})
  },[state?.settingsRequestToken,api])
  async function run<T>(operation:()=>Promise<Result<T>>,receiveState=true,source:'command'|'sync'='command'):Promise<Result<T>> {
   if(locked.current)return{ok:false,error:{code:'DB_BUSY',message:'공유 작업을 마칠 때까지 기다려 주세요.'}}
@@ -73,5 +75,5 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
    return result.ok&&latest.current?.status==='connected'
   }finally{manual.current=false}
  }
- return{state,api,error,busy,writeOutcomeUnknown,settingsOpen,setSettingsOpen,run,sync}
+ return{state,api,error,busy,writeOutcomeUnknown,settingsOpen,setSettingsOpen,settingsTab,settingsRequest,openSettings:()=>{setSettingsRequest(null);setSettingsTab('basic');setSettingsOpen(true)},run,sync}
 }

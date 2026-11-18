@@ -54,6 +54,7 @@ const sharingInvoke=async(command:string,...args:unknown[])=>{
 }
 const sharingApi={
   saveHolidays:(v)=>sharingInvoke('saveHolidays',v),
+  savePersonalHolidays:(v)=>sharingInvoke('savePersonalHolidays',v),
   getState:()=>sharingInvoke('getState'),configureHost:(v)=>sharingInvoke('configureHost',v),setHosting:(v)=>sharingInvoke('setHosting',v),
   connect:(v)=>sharingInvoke('connect',v),confirmHost:(v)=>sharingInvoke('confirmHost',v),approve:(v)=>sharingInvoke('approve',v),
   saveDevice:(v)=>sharingInvoke('saveDevice',v),revokeDevice:(v)=>sharingInvoke('revokeDevice',v),deleteDevice:(v)=>sharingInvoke('deleteDevice',v),saveProject:(v)=>sharingInvoke('saveProject',v),

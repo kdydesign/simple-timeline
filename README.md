@@ -28,6 +28,13 @@ prebuilt가 없으면 대상 플랫폼의 C++ 빌드 도구가 필요하다. 제
 일반 개발 실행도 사용자 앱 데이터의 `SimpleTimeline/data/timeline.sqlite3`를 사용한다.
 시험 입력은 [프로필 격리 절차](docs/harness/validation.md)를 따른다.
 
+설치된 호스트와 같은 PC에서 멤버를 개발하려면 `npm run dev:member`를 사용한다.
+Windows의 `%APPDATA%\PlanrailDev\member`에 별도 DB·접속 자격·업데이트 캐시를 유지한다.
+제목 표시줄 **설정 → 공유 설정 → 멤버로 연결**에서 실제 호스트 주소를 입력하고,
+호스트에 멤버 IP를 등록한 뒤 양쪽 지문 확인과 연결 승인을 완료한다. 기존 호스트 역할을 변경하지 않는다.
+개발 멤버는 실제 업데이트 설치와 Windows 자동 실행 등록을 제공하지 않는다.
+일반 dev와 개발 멤버 개발 서버를 동시에 띄우는 구성은 지원하지 않는다.
+
 ```sh
 npm run verify:app
 npm run build

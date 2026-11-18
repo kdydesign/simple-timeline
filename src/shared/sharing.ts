@@ -31,6 +31,7 @@ export interface ChangeNotificationState {
 }
 export interface MemberPresence {connected:boolean;lastSeenAt:string|null}
 export interface SharingState {
+  personalHolidays?:HolidayCalendar
   holidays?:HolidayState
   deviceVersions?:Record<string,{version:string|null;checkedAt:string}>
   pairingNotificationError?:boolean
@@ -57,6 +58,7 @@ export interface SharingState {
   settingsRequestToken: string | null
 }
 export interface SharingApi {
+  savePersonalHolidays(input:{calendar:HolidayCalendar}):Promise<Result<SharingState>>
   saveHolidays(input:{calendar:HolidayCalendar}):Promise<Result<SharingState>>
   getState(): Promise<Result<SharingState>>
   configureHost(input: SharingAddress): Promise<Result<SharingState>>

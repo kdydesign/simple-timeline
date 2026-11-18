@@ -35,7 +35,7 @@ export function updateSharingTray(tray:Tray,state?:SharingState) {
  rendered.set(tray,key)
  tray.setToolTip(`Planrail · ${label}`)
  const menu=Menu.buildFromTemplate([
-  {label:'연결 상태',icon:statusIcon(state?.role==='personal'||!state?'gray':normal?'green':'red'),click:callback.settings},
+  {label:'연결 상태',icon:statusIcon(state?.role==='personal'||!state?'gray':normal?'green':'red'),enabled:false},
   {type:'separator'}, {label:'About',click:callback.about},
   ...(callback.startup?[{label:callback.startupState?'Windows 시작 시 자동 실행':'자동 실행 상태 확인 불가',type:callback.startupState?'checkbox' as const:'normal' as const,checked:callback.startupState?.enabled??false,enabled:!callback.writing&&(callback.startupState?.supported??false),click:async(item:{checked:boolean})=>{
    invalidate(tray);callback.writing=true

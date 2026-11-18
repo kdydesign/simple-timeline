@@ -1,6 +1,6 @@
 {
   "name": "simple-timeline",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "private": true,
   "description": "Offline project timeline for Windows",
   "main": "out/main/index.cjs",
@@ -23,7 +23,8 @@
     "test:release": "node --test tests/release/*.test.mjs",
     "dist:win": "npm run build && node scripts/release/build-windows.mjs",
     "dist:win:test-update": "node scripts/release/build-windows.mjs --validation-update",
-    "test:packaged": "node scripts/testing/build-update-harness.mjs && node scripts/testing/packaged-smoke.mjs && playwright test --config playwright.packaged.config.mts"
+    "test:packaged": "node scripts/testing/build-update-harness.mjs && node scripts/testing/packaged-smoke.mjs && playwright test --config playwright.packaged.config.mts",
+    "dev:member": "electron-vite dev --config electron.vite.config.mts -- --planrail-dev-member"
   },
   "dependencies": {
     "@peculiar/x509": "2.2.0",

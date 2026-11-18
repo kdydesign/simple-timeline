@@ -1,6 +1,6 @@
 export const helpChannel = 'help:command'
 export const helpOpened = 'help:opened'
-export const helpTopicIds = ['app-overview', 'projects', 'schedules', 'gantt-navigation', 'schedule-drag', 'calendar', 'personal-reminders', 'window-tray', 'installation', 'saving-errors', 'help-reading','getting-started','host-start','host-participants','shared-holidays','host-projects','host-access','host-updates','member-connect','member-sync','member-reminders','member-updates','member-disconnect','troubleshoot-connection','troubleshoot-updates','troubleshoot-notifications'] as const
+export const helpTopicIds = ['settings','personal-holidays','app-overview', 'projects', 'schedules', 'gantt-navigation', 'schedule-drag', 'calendar', 'personal-reminders', 'window-tray', 'installation', 'saving-errors', 'help-reading','getting-started','host-start','host-participants','shared-holidays','host-projects','host-access','host-updates','member-connect','member-sync','member-reminders','member-updates','member-disconnect','troubleshoot-connection','troubleshoot-updates','troubleshoot-notifications'] as const
 export type HelpTopicId = typeof helpTopicIds[number]
 export interface HelpReadingState {topicId:HelpTopicId;query:string;scrollTop:number}
 export type HelpCommand = 'state'|'remember'|'minimize'|'toggle-maximize'|'close'|'ready'

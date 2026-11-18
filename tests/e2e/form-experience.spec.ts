@@ -27,8 +27,8 @@ test.describe('tray request during pending mutation',()=>{
   await d.app.evaluate(()=>(globalThis as any).desktopController.openSharingSettings());
   // Acknowledgement proves the renderer received the request while saving.
   await expect.poll(()=>p.evaluate(async()=>{const r=await window.timelineSharing!.getState();return r.ok?r.data.settingsRequestToken:'unavailable'})).toBeNull();
-  await expect(p.locator('.saving-shield')).toBeVisible();await expect(p.getByRole('dialog',{name:'공유 설정'})).toHaveCount(0);await p.keyboard.type('차단');await expect(p.locator('#editor-name')).toHaveValue('트레이 요청 저장');
-  const dialog=p.getByRole('dialog',{name:'공유 설정'});await expect(dialog).toBeVisible();await expect(p.locator('.saving-shield')).toHaveCount(0);await expect(dialog.getByRole('button',{name:'호스트로 공유'})).toBeFocused();
-  await dialog.getByRole('button',{name:'공유 설정 닫기'}).click();await expect(p.getByRole('button',{name:'프로젝트 추가',exact:true})).toBeFocused();await expect(p.getByRole('button',{name:'트레이 요청 저장 편집'})).toBeEnabled();
+  await expect(p.locator('.saving-shield')).toBeVisible();await expect(p.getByRole('dialog',{name:'설정'})).toHaveCount(0);await p.keyboard.type('차단');await expect(p.locator('#editor-name')).toHaveValue('트레이 요청 저장');
+  const dialog=p.getByRole('dialog',{name:'설정'});await expect(dialog).toBeVisible();await expect(p.locator('.saving-shield')).toHaveCount(0);await expect(dialog.getByRole('tab',{name:'공유 설정'})).toBeFocused();
+  await dialog.getByRole('button',{name:'설정 닫기'}).click();await expect(p.getByRole('button',{name:'프로젝트 추가',exact:true})).toBeFocused();await expect(p.getByRole('button',{name:'트레이 요청 저장 편집'})).toBeEnabled();
  });
 });

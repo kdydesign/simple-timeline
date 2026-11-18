@@ -16,7 +16,7 @@ test('captures authenticated member toolbar without network addresses or credent
   // Pair credential activation and the following snapshot are separate 2s poll turns.
   // Wait for the approval handshake first; the normal connected-state deadline remains 7s.
   await expect.poll(async()=>(await sharingState(member)).pendingPair,{timeout:15000,message:'first-pair credential activation completes before snapshot capture'}).toBeNull()
-  await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');await m.getByRole('button',{name:'공유 설정 닫기'}).click();await member.page.setViewportSize({width:1440,height:960})
+  await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');await m.getByRole('button',{name:'설정 닫기'}).click();await member.page.setViewportSize({width:1440,height:960})
   const toolbar=await member.page.locator('.toolbar').boundingBox();await mkdir('artifacts/help-assets',{recursive:true});await member.page.screenshot({path:'artifacts/help-assets/member-toolbar.png',clip:{x:0,y:0,width:1440,height:Math.ceil(toolbar!.y+toolbar!.height+8)}})
   // Role-driven help is independently verified in an authenticated real member.
   await member.page.getByRole('button',{name:'도움말',exact:true}).click();await expect.poll(()=>member.app.windows().length).toBe(2);const help=member.app.windows().find(p=>p!==member.page)!

@@ -8,6 +8,9 @@ import {
 } from 'node:fs'
 import { spawn } from 'node:child_process'
 import { join } from 'node:path'
+import {createPersonalHolidays} from '../../src/main/db/personal-holidays'
+import {createSharingStore} from '../../src/main/db/sharing/store'
+import {createSharingExtras} from '../../src/main/db/sharing/extras'
 import { initializeStorage } from '../../src/main/db/lifecycle'
 import { migrations } from '../../src/main/db/migrations'
 import { openDatabase } from '../../src/main/db/repository'
@@ -25,6 +28,19 @@ const ready = async (
   return s
 }
 export const cases: NativeCase[] = [
+ {name:'v7 upgrade preserves common holidays and projects, and personal choices survive reopen',async run(ctx){
+  const old=await ready(ctx,migrations.filter(m=>m.version<=7))
+  const project=old.repository.createProject({name:'기존 프로젝트',color:'#2563EB',participants:[]})
+  createSharingStore(old.db).configureHost({address:'127.0.0.1',port:47831})
+  const common=createSharingExtras(old.db).saveCalendar({weekdays:[3],dates:[{date:'2026-11-25',name:'공통 휴무'}]})
+  old.db.close();const next=await ready(ctx)
+  assert.deepEqual(createPersonalHolidays(next.db).read(),{weekdays:[0,6],dates:[]})
+  assert.deepEqual(createSharingExtras(next.db).hostCalendar(),common)
+  assert.equal(next.repository.getSnapshot().projects[0].id,project.id)
+  const personal={weekdays:[],dates:[{date:'2026-11-26',name:'개인 연차'}]}
+  createPersonalHolidays(next.db).save(personal);next.db.close()
+  const reopened=await ready(ctx);assert.deepEqual(createPersonalHolidays(reopened.db).read(),personal);assert.deepEqual(createSharingExtras(reopened.db).hostCalendar(),common)
+ }},
   {name:'v6 upgrade preserves projects and active credentials while binding version reports and default holidays',async run(ctx){
     const old=await ready(ctx,migrations.filter(m=>m.version<=6))
     const project=old.repository.createProject({name:'업그레이드 보존',color:'#2563EB',participants:[]})

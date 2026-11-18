@@ -145,6 +145,6 @@ export function createChangeInbox(db:DatabaseHandle) {
   for(const r of db.prepare("SELECT state,count(*) AS n FROM sharing_change_inbox WHERE state IN ('failed','unknown') GROUP BY state").all() as {state:'failed'|'unknown';n:bigint}[])result[r.state]=Number(r.n)
   return result
  }
- return {notificationGeneration:()=>notifications.state().generation,settings,setEnabled,cursor,apply,revoke,reset,recover,pending,claim,finish,issues,retry}
+ return {isRevoked:()=>!!settingsRow().revoked,confirmAccess:()=>{if(settingsRow().revoked)db.prepare('UPDATE sharing_change_settings SET revoked=0 WHERE singleton=1').run()},notificationGeneration:()=>notifications.state().generation,settings,setEnabled,cursor,apply,revoke,reset,recover,pending,claim,finish,issues,retry}
 }
 export type ChangeInbox=ReturnType<typeof createChangeInbox>
