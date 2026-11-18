@@ -17,7 +17,7 @@ test('installer configuration conforms to the installed builder schema',async()=
   const {validateConfiguration}=require('app-builder-lib/out/util/config/config.js')
   await validateConfiguration(load(readFileSync('electron-builder.yml','utf8')),{add(){}})
 })
-test('the W rail icon provides native Windows sizes for window, tray and installer',()=>{
+test('the WR monogram icon provides native Windows sizes for window, tray and installer',()=>{
   const c=load(readFileSync('electron-builder.yml','utf8'))
   assert.equal(c.win.icon,'resources/icon.ico')
   assert.ok(c.files.includes('resources/icon.png'), 'package the window icon referenced by main')

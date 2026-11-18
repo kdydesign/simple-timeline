@@ -25,7 +25,7 @@ it('places member sync immediately before modes and reports the connection in th
  render(<App api={m.api}/>);const sync=await screen.findByRole('button',{name:'수동 동기화'});expect(sync.nextElementSibling).toHaveAttribute('aria-label','조회 모드');
  const footer=screen.getByRole('contentinfo',{name:'PlanRail 상태'});
  expect(within(footer).getByText('멤버')).toBeVisible();
- const connection=within(footer).getByText('연결 정상');expect(connection).toHaveAttribute('data-connected','true');expect(connection).toHaveAttribute('title','마지막 정상 확인: 2026-11-10T08:00:00Z');
+ const connection=within(footer).getByText('연결 정상');expect(connection).toHaveAttribute('data-connected','true');expect(connection).toHaveAttribute('aria-label','공유 연결 상태: 연결 정상 · 마지막 정상 확인: 2026-11-10T08:00:00Z');
  expect(screen.queryByRole('button',{name:/공유 연결 상태/})).toBeNull();
  await u.click(screen.getByRole('button',{name:'공유 일정 편집'}));expect(screen.getByLabelText('일정 이름')).toHaveAttribute('readonly');expect(screen.queryByRole('button',{name:'삭제'})).not.toBeInTheDocument();
  await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'변경'}));await waitFor(()=>expect(f.api.saveReminder).toHaveBeenCalledOnce());

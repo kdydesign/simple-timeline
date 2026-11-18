@@ -1,7 +1,7 @@
 import {updatesChannel,updatesChanged,updatesGuard,updatesGuardReply,type UpdateApi,type UpdateState,type UpdateGuardRequest} from '../shared/updates'
 import {sharingChannel,sharingChanged,type SharingApi,type SharingState} from '../shared/sharing'
 import {reminderChannel,reminderChanged,type ReminderApi} from '../shared/reminder-api'
-import {nodeManagementChannel,nodeManagementChanged,type NodeManagementApi,type NodeManagementResult,type NodeManagementState} from '../shared/node-management'
+import {nodeManagementChannel,nodeManagementChanged,type NodeManagementApi,type NodeManagementResult,type NodeManagementState,type StandaloneRemovalConfirmation} from '../shared/node-management'
 import { contextBridge, ipcRenderer } from 'electron'
 import { channels, type TimelineApi } from '../shared/api'
 import { windowChannel, type WindowCommand, type WindowApi } from '../shared/window-api'
@@ -54,6 +54,8 @@ const sharingInvoke=async(command:string,...args:unknown[])=>{
   catch{return {ok:false,error:{code:'IPC_UNAVAILABLE',message:'공유 상태를 확인하지 못했습니다.'}}}
 }
 const sharingApi={
+  switchRole:(v)=>sharingInvoke('switchRole',v),
+  getDormantData:()=>sharingInvoke('getDormantData'),
   saveHolidays:(v)=>sharingInvoke('saveHolidays',v),
   savePersonalHolidays:(v)=>sharingInvoke('savePersonalHolidays',v),
   getState:()=>sharingInvoke('getState'),configureHost:(v)=>sharingInvoke('configureHost',v),setHosting:(v)=>sharingInvoke('setHosting',v),
@@ -80,8 +82,8 @@ contextBridge.exposeInMainWorld('timelineUpdates',{
 } satisfies UpdateApi)
 
 const nodeInvoke = async (
-  command: 'getState' | 'refreshCatalog' | 'installManager' | 'install' | 'use',
-  ...args: [] | [version: string]
+  command: 'getState' | 'refreshCatalog' | 'installManager' | 'install' | 'use' | 'removeStandalone' | 'openMaintenance',
+  ...args: [] | [version: string] | [confirmation:StandaloneRemovalConfirmation]
 ): Promise<NodeManagementResult> => {
   try {
     return await ipcRenderer.invoke(nodeManagementChannel, command, ...args)
@@ -95,6 +97,8 @@ contextBridge.exposeInMainWorld('workrailNodeManagement', {
   install: version => nodeInvoke('install', version),
   use: version => nodeInvoke('use', version),
   installManager: () => nodeInvoke('installManager'),
+  removeStandalone: input => nodeInvoke('removeStandalone',input),
+  openMaintenance: () => nodeInvoke('openMaintenance'),
   onChange: callback => {
     const listener = (_event: unknown, state: NodeManagementState) => callback(state)
     ipcRenderer.on(nodeManagementChanged, listener)

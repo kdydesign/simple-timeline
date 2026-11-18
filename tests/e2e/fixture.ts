@@ -19,11 +19,11 @@ function toolDock(page: Page) {
   return page.getByRole("navigation", { name: "WorkRail 도구" });
 }
 async function waitForHome(page: Page) {
-  await expect(toolDock(page).getByRole("button", { name: "홈", exact: true })).toHaveAttribute("aria-current", "page");
+  await expect(toolDock(page).getByRole("button", { name: "Home", exact: true })).toHaveAttribute("aria-current", "page");
 }
 export async function openPlanrail(page: Page) {
   await waitForHome(page);
-  await toolDock(page).getByRole("button", { name: "Planrail", exact: true }).click();
+  await toolDock(page).getByRole("button", { name: "PlanRail", exact: true }).click();
   await page.getByRole("button", { name: "프로젝트 추가", exact: true }).waitFor();
 }
 export const test = base.extend<{

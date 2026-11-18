@@ -15,6 +15,8 @@ import { createInstallCoordinator, prepareProductionInstaller } from './updates/
 import { registerUpdateIpc } from './updates/ipc'
 import { loadNodeCatalog } from './node-management/catalog'
 import { registerNodeManagementIpc } from './node-management/ipc'
+import {createNodeMaintenanceController} from './node-maintenance/controller'
+import {createNodeRouting} from './node-management-routing'
 import { createNodeManagementService } from './node-management/service'
 import { createWindowsNodeAdapter } from './node-management/windows'
 import { appMutationBarrier } from './ipc-core'
@@ -33,7 +35,7 @@ import icon from '../../resources/icon.png?asset'
 import windowsIcon from '../../resources/icon.ico?asset'
 import { startupRecorder, rendererStartupProbe, observeStartupRequests } from './startup'
 import { mkdirSync } from 'node:fs'
-import { join } from 'node:path'
+import { join,dirname } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { initializeStorage, type StorageState } from './db/lifecycle'
 import { profileDirectory } from './profile'
@@ -111,8 +113,10 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     changed: state => nodeIpc?.changed(state),
     barrier: appMutationBarrier,
   })
+  const nodeMaintenance=createNodeMaintenanceController({runtimeDirectory:dirname(process.execPath),buildDirectory:dirname(__dirname),maintenanceRoot:join(app.getPath('appData'),'WorkRail','node-maintenance'),version:app.isPackaged?app.getVersion():await readFile(join(app.getAppPath(),'package.json'),'utf8').then(value=>String(JSON.parse(value).version)).catch(()=>''),changed:()=>{void nodeManagement.getState().then(state=>nodeIpc?.changed(state)).catch(()=>{})}})
+  const nodeRouting=createNodeRouting(nodeManagement,{required:!app.isPackaged,isActive:()=>nodeMaintenance.isActive(),open:()=>nodeMaintenance.open(),shortcut:()=>nodeMaintenance.getState().recoveryShortcut??undefined})
   function nodeOperationPreventsExit() {
-    if (!nodeManagement.isBusy()) return false
+    if (!nodeManagement.isBusy() && !nodeMaintenance.getState().busy) return false
     dialog.showErrorBox('Node 작업 진행 중', 'Node 작업이 완료된 뒤 WorkRail 종료 또는 업데이트를 다시 시도해 주세요.')
     return true
   }
@@ -167,7 +171,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     desktopIcon,
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
-  nodeIpc = registerNodeManagementIpc(window, rendererUrl, nodeManagement)
+  nodeIpc = registerNodeManagementIpc(window, rendererUrl, nodeManagement,nodeRouting)
   configureTaskbarDetails(window,{platform:process.platform,packaged:app.isPackaged,exePath:process.execPath})
   let help:ReturnType<typeof createHelpWindow>|undefined
   freezeInputs = () => { window.setEnabled(false); window.hide();help?.hideWithMain();releases.hideWithMain() }
@@ -183,9 +187,15 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   let sharingIpc:ReturnType<typeof registerSharingIpc>|undefined
   let runningVersion=app.isPackaged?app.getVersion():undefined
   if(!app.isPackaged){try{runningVersion=JSON.parse(await readFile(join(app.getAppPath(),'package.json'),'utf8')).version+'-dev'}catch{/* Unavailable development metadata must not report Electron's version. */}}
-  const sharing=storage.state==='ready'?createSharingService({storage,profile,appVersion:runningVersion,mutationsBlocked:()=>appMutationBarrier.blocked(),updateChanged:()=>refreshUpdates(),updates:async(req,res,authenticate)=>{if(!updateRoutes)throw new SharingNetworkError('UNAVAILABLE',503);await updateRoutes(req,res,authenticate)},transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,reminderClock:options.reminderClock,changeSender:options.changeSender??nativeReminders.send,onChangeClick:show,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
+  const sharing=storage.state==='ready'?createSharingService({storage,profile,appVersion:runningVersion,mutationsBlocked:()=>appMutationBarrier.blocked(),roleSwitchBlocked:()=>{const state=updates?.getState();return !!(state?.host?.importing||state?.phase==='installing'||state?.editingBlocked)},beforeRoleSwitch:async()=>{
+    const state=updates?.getState()
+    if(state?.host?.importing||state?.phase==='installing'||state?.editingBlocked)throw new Error('공유 역할을 변경하기 전에 업데이트 작업을 마쳐 주세요.')
+    await updates?.setSharing({role:'personal',connected:false,revoked:true})
+    await updates?.cancel()
+    // Withdrawal is a durable prerequisite, even during recovery before the UI service exists.
+    await (await catalog()).withdraw()
+  },roleChanged:()=>{evaluateReminders();refreshUpdates()},updateChanged:()=>refreshUpdates(),updates:async(req,res,authenticate)=>{if(!updateRoutes)throw new SharingNetworkError('UNAVAILABLE',503);await updateRoutes(req,res,authenticate)},transport:options.sharingTransport,secrets:options.sharingSecrets,clock:options.sharingClock,reminderClock:options.reminderClock,changeSender:options.changeSender??nativeReminders.send,onChangeClick:show,changed:state=>{sharingIpc?.changed(state);if(tray)updateSharingTray(tray,state)}}):undefined
   sharingIpc=registerSharingIpc(window,rendererUrl,sharing,()=>evaluateReminders())
-  void sharing?.start()
   const updatesIpc=registerUpdateIpc(window,rendererUrl,()=>updates)
   const localAppData=process.env.LOCALAPPDATA??join(homedir(),'AppData','Local')
   const updateRoot=options.profileDir||process.platform!=='win32'?join(profile,'updates'):join(localAppData,'Planrail','updates')
@@ -213,6 +223,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     refreshUpdates();updatesIpc.changed(service.getState())
     if(uiReady)await service.confirmHealthyStartup()
   }).catch(()=>{/* Storage initialization failure is exposed by unavailable update IPC; existing app data remains usable. */})
+  void sharing?.start()
   help=createHelpWindow({performance:createHelpPerformance(profile,app.getVersion()),mainWindow:window,url:new URL('help.html',rendererUrl).href,preload:join(__dirname,'../preload/help.cjs'),role:()=>sharing?.getState().role??'personal',version:app.getVersion(),icon:desktopIcon,
     onError:()=>{show();dialog.showErrorBox('도움말을 열지 못했습니다','주 창은 계속 사용할 수 있습니다. 물음표 버튼을 눌러 도움말을 다시 열어 주세요.')},
   })
@@ -270,7 +281,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   }):undefined
   const reminderIssues=()=>{
     const local=reminderEngine?.issues()??{failed:0,unknown:0,storageError:true},shared=sharedReminderEngine?.issues()
-    return {failed:local.failed+(shared?.failed??0),unknown:local.unknown+(shared?.unknown??0),storageError:local.storageError||!!shared?.storageError}
+    return {muted:notificationPolicy?.state().muted??null,failed:local.failed+(shared?.failed??0),unknown:local.unknown+(shared?.unknown??0),storageError:local.storageError||!!shared?.storageError}
   }
   reminderIpc=registerReminderIpc(window,rendererUrl,reminderIssues,async()=>{await Promise.all([reminderEngine?.evaluate(true),sharedReminderEngine?.evaluate(true)])})
   evaluateReminders=()=>{if(appMutationBarrier.blocked())return;void reminderEngine?.evaluate();void sharedReminderEngine?.evaluate()}
@@ -299,7 +310,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     requestClose()
   }
   try {
-    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState(), windowsLoginStartup(app.isPackaged), error => { show(); dialog.showErrorBox('Windows 시작 설정을 변경하지 못했습니다', String(error)) }, {read:()=>{if(!notificationPolicy)throw Error('저장소를 사용할 수 없습니다');return notificationPolicy.state().muted},set:muted=>{if(!notificationPolicy||storage.state!=='ready'||appMutationBarrier.blocked())throw Error('지금 알림 설정을 변경할 수 없습니다');const result=notificationPolicy.setMuted(muted,()=>localReminderStore!.suppress(storage.repository.getSnapshot().schedules.flatMap(s=>dueReminders(s,(options.reminderClock??(()=>new Date()))()))));evaluateReminders();if(!muted){void sharing?.sync().catch(()=>{});void updates?.check(true)}return result.muted},error:error=>{show();dialog.showErrorBox('알림 설정을 변경하지 못했습니다',String(error))}})
+    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState(), windowsLoginStartup(app.isPackaged), error => { show(); dialog.showErrorBox('Windows 시작 설정을 변경하지 못했습니다', String(error)) }, {read:()=>{if(!notificationPolicy)throw Error('저장소를 사용할 수 없습니다');return notificationPolicy.state().muted},set:muted=>{if(!notificationPolicy||storage.state!=='ready'||appMutationBarrier.blocked())throw Error('지금 알림 설정을 변경할 수 없습니다');const result=notificationPolicy.setMuted(muted,()=>localReminderStore!.suppress(storage.repository.getSnapshot().schedules.flatMap(s=>dueReminders(s,(options.reminderClock??(()=>new Date()))()))));reminderIpc?.changed();evaluateReminders();if(!muted){void sharing?.sync().catch(()=>{});void updates?.check(true)}return result.muted},error:error=>{show();dialog.showErrorBox('알림 설정을 변경하지 못했습니다',String(error))}})
   } catch {
     show()
     if (options.notifyTrayFailure) options.notifyTrayFailure()

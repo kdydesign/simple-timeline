@@ -38,6 +38,8 @@ import { CalendarView } from "./components/CalendarView";
 import { EditorPanel } from "./components/EditorPanel";
 import { ConfirmDialog } from "./components/ConfirmDialog";
 import { StatusNotice } from "./components/StatusNotice";
+import {PlanRailStatus} from "./workrail/PlanRailStatus";
+import "./workrail/status.css";
 import { Home } from "./workrail/Home";
 import { NodeScreen } from "./workrail/NodeScreen";
 import { ToolDock, type WorkRailTool } from "./workrail/ToolDock";
@@ -616,13 +618,16 @@ export function App({
   </>);
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
-      <Titlebar onSettings={sharing.state&&sharing.api?sharing.openSettings:undefined} sharing={planrailActive?sharing.state:null} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
+      <Titlebar onSettings={sharing.state&&sharing.api?sharing.openSettings:undefined} sharing={null} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
       {updates.frozen&&<div className="update-blocked update-ui" role="alert">{updates.editingBlocked?'앱을 종료한 뒤 다시 열어 주세요. 종료 준비 실패로 편집을 잠시 중지했습니다.':'업데이트 설치 준비 중입니다. 저장을 마칠 때까지 기다려 주세요.'}</div>}
       <div className="saving-content" inert={updates.frozen||saveShieldActive} onKeyDownCapture={event => {
         if (event.key !== "F6" || dockBlocked) return;
         event.preventDefault();
         dockButton.current?.focus();
       }}>
+      <div className="workrail-dock-seat">
+        <ToolDock current={tool} blocked={dockBlocked} onSelect={selectTool} activeButton={dockButton}/>
+      </div>
       <div className="workrail-tools">
       <div className="workrail-plan" aria-hidden={!planrailActive || undefined} inert={!planrailActive}>
       <div
@@ -775,12 +780,10 @@ export function App({
           selectTool("node");
           requestAnimationFrame(() => dockButton.current?.focus());
         }}/>}
-      {tool === "node" && <NodeScreen node={node}/>}
+      <div className="workrail-node-seat" aria-hidden={tool!=="node"||undefined} inert={tool!=="node"}><NodeScreen node={node}/></div>
       </div>
-      <div className="workrail-dock-seat">
-        <ToolDock current={tool} blocked={dockBlocked} onSelect={selectTool} activeButton={dockButton}/>
-      </div>
-      {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings request={sharing.settingsRequest} initialTab={sharing.settingsTab} state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
+      {planrailActive&&<PlanRailStatus sharing={sharing.error?.code==='IPC_UNAVAILABLE'?null:sharing.state} muted={reminders.muted} loading={reminders.loading}/>}
+      {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings externalDirty={editor.dirty} request={sharing.settingsRequest} initialTab={sharing.settingsTab} state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
       {quickReminder&&<QuickReminder key={quickReminder.id} schedule={timeline.snapshot?.schedules.find(s=>s.id===quickReminder.id)} caller={quickReminder.caller}
         disabled={!canEdit||saving||saveShieldActive} busy={saving||saveShieldActive} covered={!!confirmation} onRefresh={()=>void timeline.refresh()} onGuard={setQuickDirty} onClose={requestCloseQuick} onSave={saveQuickReminder}/>}
       {confirmation && (

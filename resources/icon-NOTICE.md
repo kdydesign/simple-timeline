@@ -1,18 +1,17 @@
-# Planrail P icon
+# WorkRail WR icon
 
-The user requested the emerald glass tile and white P monogram shown in their
-approved Planrail mockups. The icon was recreated with image generation on
-2026-11-10, then encoded as the existing `icon.png` and six-size `icon.ico`
-(16, 24, 32, 48, 64, 256 pixels). It replaces the earlier navy Gantt icon.
+On 2026-11-18 the user selected app option F (WR monogram) and menu option E
+(modular). BrandKit art direction and image generation recreated the selected
+WR tile on a transparent background. `workrail-wr-source.png` is the generated
+source; ImageMagick encodes the deployed `icon.png` at 256px and `icon.ico` at
+16, 24, 32, 48, 64 and 256px. These are raster derivatives, not independently
+pixel-hinted artwork. No external logo pack was imported.
 
-On 2026-11-11 the user approved the Deep Gray / Steel Blue design and asked to
-improve the small taskbar/tray icon. Image generation recreated the same P with
-a thicker white stroke, reduced margin, a blue tile and less reflective detail.
-The source was independently encoded to PNG256 and ICO16/24/32/48/64/256 using
-ImageMagick. These are size-specific raster frames from one simplified source,
-not individually hand-drawn pixel icons.
+Windows window/tray/executable/installer use ICO; renderer/About/notifications
+and other platforms use PNG. The source PNG is not added to packaged resources.
+Small-size visual inspection and platform verification are recorded in
+`docs/implementation/2026-11-18-workrail-polish-and-recovery.md`.
 
-Windows window/tray, executable and installer/uninstaller use the multi-size ICO.
-The renderer, About, notifications and other platforms use PNG. No external icon
-pack or third-party logo was imported. Original generated artwork remains in the
-session artifacts; packaged derivatives are icon.png and icon.ico.
+The older `icon.svg` is the previous W-rail artwork, retained for the historical
+WorkRail 1.0.0 implementation record. It is not the source of the current icon
+and is not used by the app or installer.

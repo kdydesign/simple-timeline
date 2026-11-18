@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { NodeManagementApi, NodeManagementError, NodeManagementResult, NodeManagementState } from '../../shared/node-management'
 
-export type NodeMutation = { kind: 'install' | 'use'; version: string } | { kind: 'install-manager'; version: null }
+export type NodeMutation = { kind: 'install' | 'use'; version: string } | { kind: 'install-manager'; version: null } | {kind:'remove-standalone';version:null;confirmationId:string}
 type RequestKind = 'read' | 'recheck' | 'mutation'
 
 const unavailable: NodeManagementError = {
@@ -114,7 +114,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   }, [api, run])
 
   const catalogRequested = useRef(false)
-  const busy = !!mutation || !!state?.busy
+  const busy = !!mutation || !!state?.busy || !!state?.maintenance?.active
   useEffect(() => {
     if (!active) catalogRequested.current = false
     if (!active || !state?.supported || catalogRequested.current || busy) return
@@ -125,7 +125,8 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   async function mutate(operation: NodeMutation) {
     const current = connection.current
     if (!api || !current || !state?.supported || state.busy || current.mutation) return
-    const command = operation.kind === 'install-manager' ? () => api.installManager()
+    const command = operation.kind === 'remove-standalone' ? () => api.removeStandalone({confirmed:true,confirmationId:operation.confirmationId})
+      : operation.kind === 'install-manager' ? () => api.installManager()
       : operation.kind === 'install' ? () => api.install(operation.version)
       : () => api.use(operation.version)
     current.mutation = operation
@@ -140,8 +141,9 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     }
   }
 
+  const openMaintenance = async () => { if(api)await run(()=>api.openMaintenance(),'mutation') }
   const error = mutationFailure?.error ?? readError
-  return { state, error, recoveryError: mutationFailure?.recoveryError, available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate }
+  return { state, error, recoveryError: mutationFailure?.recoveryError, available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate, openMaintenance }
 }
 
 export type NodeManagement = ReturnType<typeof useNodeManagement>

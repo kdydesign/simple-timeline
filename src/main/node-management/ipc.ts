@@ -1,12 +1,12 @@
 import { ipcMain, type BrowserWindow } from 'electron'
-import { nodeManagementChanged, nodeManagementChannel, type NodeManagementState } from '../../shared/node-management'
+import { nodeManagementChanged, nodeManagementChannel, type NodeManagementState,type NodeManagementResult } from '../../shared/node-management'
 import { isTrustedSender } from '../ipc-core'
 import { dispatchNodeManagement } from './ipc-core'
 import type { NodeManagementService } from './service'
 
-export function registerNodeManagementIpc(window: BrowserWindow, url: string, service: NodeManagementService) {
+export function registerNodeManagementIpc(window: BrowserWindow, url: string, service: NodeManagementService,route?:{dispatch(args:unknown[],trusted:boolean):Promise<NodeManagementResult>;decorate(state:NodeManagementState):NodeManagementState}) {
   ipcMain.handle(nodeManagementChannel, (event, ...args: unknown[]) =>
-    dispatchNodeManagement(service, args, isTrustedSender(event, window, url)),
+    route?route.dispatch(args,isTrustedSender(event,window,url)):dispatchNodeManagement(service, args, isTrustedSender(event, window, url)),
   )
   return {
     changed(state: NodeManagementState) {
@@ -14,7 +14,7 @@ export function registerNodeManagementIpc(window: BrowserWindow, url: string, se
       const contents = window.webContents
       if (!isTrustedSender({ sender: contents, senderFrame: contents.mainFrame }, window, url)) return
       try {
-        contents.send(nodeManagementChanged, state)
+        contents.send(nodeManagementChanged, route?route.decorate(state):state)
       } catch {
         // A removed frame may disappear between validation and delivery.
       }

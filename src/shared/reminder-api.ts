@@ -1,5 +1,6 @@
 import type {Result} from './types'
 export interface ReminderState {
+ muted?:boolean|null
  failed:number
  unknown:number
  storageError:boolean

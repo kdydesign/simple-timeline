@@ -8,7 +8,7 @@ import {ConfirmDialog} from '../../src/renderer/components/ConfirmDialog';
 it('opts in six toolbar tooltips plus help and release entries without native titles',async()=>{
  render(<App api={memoryApi(hotfix).api}/>);
  await waitFor(()=>expect(screen.getByRole('button',{name:'프로젝트 추가'})).toBeEnabled());
- const triggers=Array.from(document.querySelectorAll('[data-slot="tooltip-trigger"]'));
+ const triggers=Array.from(document.querySelectorAll('.toolbar [data-slot="tooltip-trigger"], .titlebar [data-slot="tooltip-trigger"]'));
  expect(triggers.map(e=>e.getAttribute('aria-label')).sort()).toEqual(['프로젝트 목록','간트','달력','오늘','프로젝트 추가','일정 추가','도움말','릴리즈노트','설정'].sort());
  expect(document.querySelectorAll('[title]')).toHaveLength(0);
 });

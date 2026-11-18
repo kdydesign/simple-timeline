@@ -14,7 +14,7 @@ export function nodeProgress({ state, mutation }: NodeManagement) {
   if (state?.error?.code === 'operation-unknown') return '작업 완료 여부 확인 필요'
   const operation = state?.busy ?? mutation
   if (!operation) return null
-  const name = operation.kind === 'install-manager' ? supportedManager + ' 설치'
+  const name = operation.kind === 'remove-standalone' ? '기존 Node.js 제거' : operation.kind === 'install-manager' ? supportedManager + ' 설치'
     : operation.kind === 'install' ? operation.version + ' 설치' : operation.version + ' 사용'
   return name + ' · ' + phases[state?.busy?.phase ?? 'checking']
 }
