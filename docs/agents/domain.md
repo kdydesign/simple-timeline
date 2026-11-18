@@ -5,7 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
-| WorkRail 화면 정리 설계 | [설계·시안](../design/workrail-screen-polish.md). Home/PlanRail/NodeRail 표기, Node 표 진행·정렬·높이, PlanRail 하단 상태, Home 배지·제목·N 아이콘. Q1~Q4 선택 및 독립 검토 완료, 전체 확인 대기·제품 구현 전 |
+| WorkRail 화면 정리 설계 | [설계·수정 시안 v2](../design/workrail-screen-polish.md). Home/PlanRail/NodeRail 표기, Node 표 진행·정렬·높이, 컴팩트 상태 위젯·첨부 홈 B 카드·설명 정리·nvm 배지 이동·footer 상태색/종 아이콘. Q1~Q4 선택 후 Q5 수정 요청 반영, 전체 확인 대기·제품 구현 전 |
 | 기존 Node 충돌·제거 지원 설계 | [확정 설계](../design/node-conflict-removal.md). 공식 MSI 제거·Windows 표준 UI·개발 실행의 독립 관리 창을 Q6에서 전체 확정. 사용자의 코드 수정 금지에 따라 제품 구현 전이며 기존 충돌 안내 동작과 구분 |
 | WorkRail 통합 도구·Node 관리 | [승인 설계](../design/team-tool-expansion.md) · [이전 구현 계획](../superpowers/plans/2026-11-18-workrail.md) · [구현·검증](../implementation/2026-11-18-workrail.md). 현재 메뉴 설계는 Q10 변경으로 B 상단 탭이며 제품은 아직 D 하단 도크다. 통합 홈·Node 목록 A와 기존 스타일은 유지하며 설계 변경과 구현 기록을 구분 |
 | 설정 탭·개인 휴일·워킹데이 | [승인 설계](../design/settings-and-working-days.md) · [0.8.8 구현·검증](../implementation/2026-11-18-settings-working-days.md). 구현 및 최종 소스의 양 OS CI 완료. 호스트도 개인 휴일을 합산하되 전송하지 않음. 저장·IPC 경계는 [저장](../design/storage.md)·[구조](../design/architecture.md), 합산 규칙은 [도메인](../design/domain-rules.md) |

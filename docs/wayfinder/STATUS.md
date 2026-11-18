@@ -1,6 +1,6 @@
 # 진행 상태
 
-최신 화면 설계: [Home·PlanRail·NodeRail 화면 정리](../design/workrail-screen-polish.md)에 사용자 요청 8개와 Q1~Q4 선택을 반영했다. 독립 설계 검토와 클릭형 시안 확인을 마쳤으며 전체 설계·시안의 사용자 확인을 기다린다. 제품 코드는 변경하지 않았다.
+최신 화면 설계: [Home·PlanRail·NodeRail 화면 정리](../design/workrail-screen-polish.md)에 사용자 요청 8개와 Q1~Q4 선택을 반영했다. Q5에서 수정 요청 후, 컴팩트 PlanRail 상태 위젯·첨부 홈 B 카드·Node 설명 정리·nvm 배지 이동·footer 아이콘 색상/종 아이콘을 v2에 반영했다. 전체 설계·수정 시안의 사용자 확인을 기다리며 제품 코드는 변경하지 않았다.
 
 최신 메뉴 설계 변경: [통합 도구 설계 Q10](../design/team-tool-expansion.md#q10-변경-반영-기준--상단-탭-b)을 사용자가 D 하단 도크에서 **B 상단 탭**으로 변경했다. 제목 표시줄 아래 홈·Planrail·Node 관리를 배치하고 기존 글래스 색상·재질과 상태 보존을 유지한다. Node 목록 A·통합 홈 B는 그대로다. 설계만 반영했으며 제품 코드는 여전히 하단 도크이고 후속 구현은 시작하지 않았다.
 
