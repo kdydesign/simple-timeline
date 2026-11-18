@@ -16,7 +16,7 @@ export function createUpdateNotifications(o:{store:NotificationStore;send:Remind
     const live=()=>!stopped&&!o.store.state().muted&&generation===o.store.state().generation
     if(!live()){o.store.finishUpdate(key.hostId,key.version,'suppressed');return}
     let result:'submitted'|'failed'|'unknown'='unknown',failed=false
-    try{result=await o.send({title:'Planrail 업데이트',body:`새 버전 ${key.version}을 사용할 수 있습니다. 클릭하면 업데이트 안내를 엽니다.`},()=>{if(!stopped)o.open()},()=>{
+    try{result=await o.send({title:'WorkRail 업데이트',body:`새 버전 ${key.version}을 사용할 수 있습니다. 클릭하면 업데이트 안내를 엽니다.`},()=>{if(!stopped)o.open()},()=>{
      if(stopped)return
      try{if(!live())return;failed=true;o.store.finishUpdate(key.hostId,key.version,'failed')}catch{error=true}o.changed()
     })}catch{/* Delivery may already have reached Windows. */}

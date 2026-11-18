@@ -2,7 +2,7 @@
 
 ## 프로젝트
 
-Planrail — 개인·사내 LAN 공유 프로젝트를 관리하는 Windows 일정 앱. Electron + React + SQLite.
+WorkRail — Planrail 일정·사내 LAN 공유와 로컬 Node 버전을 관리하는 Windows 팀 도구. Electron + React + SQLite.
 사용자와 한국어로 소통한다. Teams·모바일은 범위 밖이며 현재 구현·인수 상태는 아래 문서에서 확인한다.
 
 ## 시작 순서

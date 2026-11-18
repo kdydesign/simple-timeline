@@ -1,6 +1,8 @@
 # 진행 상태
 
-최신 후속: 0.8.8 [설정 탭·개인 휴일·워킹데이](../design/settings-and-working-days.md)는 Q10 승인 후 구현·도움말 갱신·검토를 완료했다. 제품 소스 `8a11bed1dacf158bc847832d4c26aa3642b93f5f`의 Application과 Repository harness는 Windows·Linux 모두 성공했다. 로컬 전체 검사 실패와 회사 PC 미검증 범위는 [구현·검증 기록](../implementation/2026-11-18-settings-working-days.md)에 별도로 보존한다. 기존 MVP 완료 상태는 유지한다.
+최신 후속: WorkRail 1.0.0 [통합 도구 설계](../design/team-tool-expansion.md)는 이름·도크 D·Node 목록 A·통합 현황 홈 B·W 아이콘 A와 구현 요청을 받았다. [구현·검증 기록](../implementation/2026-11-18-workrail.md)에 따라 로컬 구현·검증 중이다. 기존 MVP 완료 상태는 유지하며 게시·push·Windows 실기는 아직 수행하지 않았다.
+
+이전 후속: 0.8.8 [설정 탭·개인 휴일·워킹데이](../design/settings-and-working-days.md)는 Q10 승인 후 구현·도움말 갱신·검토를 완료했다. 제품 소스 `8a11bed1dacf158bc847832d4c26aa3642b93f5f`의 Application과 Repository harness는 Windows·Linux 모두 성공했다. 로컬 전체 검사 실패와 회사 PC 미검증 범위는 [구현·검증 기록](../implementation/2026-11-18-settings-working-days.md)에 별도로 보존한다. 기존 MVP 완료 상태는 유지한다.
 
 이전 후속: 0.8.7 [휴일 기간·삼각 표시](../design/holiday-ranges-and-markers.md)는 수정 시안 승인 후 구현·독립 검토·로컬 단계별 검증을 완료했다. 통합 실행의 시간 초과와 재실행 결과는 검증 기록에 구분했다. 최종 SHA의 원격 CI는 Actions와 완료 보고를 따른다. [검증 기록](../implementation/2026-11-17-holiday-ranges.md)을 따른다. 기존 MVP 완료 상태는 유지한다.
 이전 후속: 0.8.6 [멤버 버전·공통 휴일·연결 승인 요청 알림](../design/member-versions-holidays-and-pairing-notices.md)은 Q1~Q11과 시안 검토 후 전체 구현을 승인받았다. 제품 구현·독립 검토 보정·로컬 전체7단계 검증을 완료했다. 최종 SHA의 원격 CI는 Actions와 완료 보고를 따른다. [구현 기록](../implementation/2026-11-17-member-holidays.md). 기존 MVP 지도 완료 상태는 유지한다.

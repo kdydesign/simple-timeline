@@ -1,11 +1,11 @@
 param([Parameter(Mandatory=$true)][string]$Installer)
 $ErrorActionPreference='Stop'
 $os=Get-CimInstance Win32_OperatingSystem
-$cu=@(Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object {$_.DisplayName -match '^(?:Simple Timeline|Planrail)(?: \d.*)?$'})
-$lm=@(Get-ChildItem HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object {$_.DisplayName -match '^(?:Simple Timeline|Planrail)(?: \d.*)?$'})
+$cu=@(Get-ChildItem HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object {$_.DisplayName -match '^(?:Simple Timeline|Planrail|WorkRail)(?: \d.*)?$'})
+$lm=@(Get-ChildItem HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall -ErrorAction SilentlyContinue | Get-ItemProperty | Where-Object {$_.DisplayName -match '^(?:Simple Timeline|Planrail|WorkRail)(?: \d.*)?$'})
 $shell=New-Object -ComObject WScript.Shell
 $shortcuts=@(foreach ($folder in @([Environment]::GetFolderPath('DesktopDirectory'),[Environment]::GetFolderPath('Programs'))) {
-  Get-ChildItem -LiteralPath $folder -Filter '*.lnk' -Recurse -ErrorAction SilentlyContinue | Where-Object {$_.BaseName -in @('Simple Timeline','Planrail')} | ForEach-Object {
+  Get-ChildItem -LiteralPath $folder -Filter '*.lnk' -Recurse -ErrorAction SilentlyContinue | Where-Object {$_.BaseName -in @('Simple Timeline','Planrail','WorkRail')} | ForEach-Object {
     $shortcut=$shell.CreateShortcut($_.FullName)
     @{name=$_.BaseName;path=$_.FullName;target=$shortcut.TargetPath;iconLocation=$shortcut.IconLocation}
   }

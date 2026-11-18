@@ -1,3 +1,4 @@
+import {openPackagedPlanrail} from './packaged-navigation'
 import {test,expect} from '@playwright/test'
 import {_electron,type ElectronApplication} from 'playwright'
 import {execFileSync,spawnSync} from 'node:child_process'
@@ -16,7 +17,7 @@ test('actual updater waits for safe exit, installs per-user and automatically re
  const evidence:Record<string,unknown>={sourceSha:base.sourceSha,targetVersion:next.version,scope:'production adapter/loopback updater/cache/NSIS + real bootstrap shutdown; synthetic installer bypass confined to test harness',autoRelaunched:false}
  try{
   const env=Object.fromEntries(Object.entries(process.env).filter((entry):entry is [string,string]=>typeof entry[1]==='string'));delete env.ELECTRON_RUN_AS_NODE
-  instance=await _electron.launch({chromiumSandbox:true,executablePath:exe,env,timeout:30000});const page=await instance.firstWindow()
+  instance=await _electron.launch({chromiumSandbox:true,executablePath:exe,env,timeout:30000});const page=await instance.firstWindow();await openPackagedPlanrail(page)
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('업데이트 보존 확인');await page.getByRole('button',{name:'저장',exact:true}).click();await expect(page.locator('.saving-shield')).toHaveCount(0)
   await instance.evaluate(async(_electron,{harness,directory,handoff})=>{await process.mainModule!.require(harness).prepare(directory,handoff)},{harness,directory:resolve('artifacts/windows-update'),handoff})
   await page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await page.getByLabel('프로젝트 이름',{exact:true}).fill('저장하지 않고 폐기할 초안')

@@ -103,7 +103,7 @@ try {
   $pids=Update-OwnedProcesses
   foreach($window in [PlanrailInstallerUI]::Windows([int[]]$pids)) {
    $children=[PlanrailInstallerUI]::Children($window)
-   $checkbox=@($children|Where-Object {[PlanrailInstallerUI]::Text($_) -eq 'Windows 로그인 시 Planrail 자동 실행'})
+   $checkbox=@($children|Where-Object {[PlanrailInstallerUI]::Text($_) -in @('Windows 로그인 시 Planrail 자동 실행','Windows 로그인 시 WorkRail 자동 실행')})
    if($checkbox.Count -gt 0){
     if(-not $visited){$initial=[PlanrailInstallerUI]::SendMessage($checkbox[0],0xF0,[IntPtr]::Zero,[IntPtr]::Zero).ToInt64() -eq 1;$visited=$true}
     if($Startup -ne 'Keep'){$value=if($Startup -eq 'On'){1}else{0};[void][PlanrailInstallerUI]::SendMessage($checkbox[0],0xF1,[IntPtr]$value,[IntPtr]::Zero)}

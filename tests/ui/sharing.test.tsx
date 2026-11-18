@@ -23,7 +23,7 @@ it('places member sync immediately before modes and shows status beside title; s
  data.projects.push({...data.projects[0],id:p,name:'공유 프로젝트',sharing:'member'});data.schedules.push({...data.schedules[0],id:p,projectId:p,name:'공유 일정',sharing:'member'});
  const m=memoryApi(data);f.api.saveReminder=vi.fn(async({id,reminder})=>{const s=m.snapshot.schedules.find(s=>s.id===id)!;s.reminder=reminder;return{ok:true as const,data:s}});
  render(<App api={m.api}/>);const sync=await screen.findByRole('button',{name:'수동 동기화'});expect(sync.nextElementSibling).toHaveAttribute('aria-label','조회 모드');
- expect(screen.getByRole('button',{name:/공유 연결 상태/}).closest('.brand')).toHaveTextContent('Planrail');
+ expect(screen.getByRole('button',{name:/공유 연결 상태/}).closest('.brand')).toHaveTextContent('WorkRail');
  await u.click(screen.getByRole('button',{name:'공유 일정 편집'}));expect(screen.getByLabelText('일정 이름')).toHaveAttribute('readonly');expect(screen.queryByRole('button',{name:'삭제'})).not.toBeInTheDocument();
  await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'변경'}));await waitFor(()=>expect(f.api.saveReminder).toHaveBeenCalledOnce());
  expect(f.api.saveReminder).toHaveBeenCalledWith(expect.objectContaining({id:p}));

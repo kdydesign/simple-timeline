@@ -80,7 +80,7 @@ test('today and hovered dates remain distinguishable in both views', async ({ de
     expect(await hoveredCell.evaluate(e => [getComputedStyle(e).backgroundColor, getComputedStyle(e).boxShadow])).toEqual(barTint);
     await p.mouse.wheel(0, 100);
     await expect(p.locator('.calendar .date-hovered')).toHaveCount(0);
-    await p.getByRole('heading', { name: 'Planrail' }).hover();
+    await p.getByRole('heading', { name: 'WorkRail' }).hover();
     await expect(p.locator('.calendar .date-hovered')).toHaveCount(0);
   }
 });

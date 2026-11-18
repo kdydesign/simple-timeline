@@ -1,3 +1,4 @@
+import {openPackagedPlanrail} from './packaged-navigation'
 import { probeNetwork } from "./network-probe";
 import { migrations } from "../../src/main/db/migrations";
 import { test, expect } from "@playwright/test";
@@ -106,6 +107,7 @@ test("real production package installs, works offline, updates and retains DB af
     });
     app = instance;
     const page = await instance.firstWindow();
+    await openPackagedPlanrail(page);
     await expect(
       page.getByRole("button", { name: "프로젝트 추가", exact: true }),
     ).toBeEnabled();
@@ -218,7 +220,7 @@ test("real production package installs, works offline, updates and retains DB af
     expect(system.machineInstallCount).toBe(0);
     expect(system.shortcuts.length).toBeGreaterThanOrEqual(2);
     for (const shortcut of system.shortcuts) {
-      expect(shortcut.name).toBe('Planrail');
+      expect(shortcut.name).toBe('WorkRail');
       expect(shortcut.target.toLowerCase()).toBe(installed.toLowerCase());
       // An empty icon location means the shortcut uses its target executable.
       if(shortcut.iconLocation)expect(shortcut.iconLocation.replace(/,\s*0$/, '').replace(/^"|"$/g,'').toLowerCase()).toBe(installed.toLowerCase());

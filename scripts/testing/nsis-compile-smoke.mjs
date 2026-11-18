@@ -11,7 +11,11 @@ const {getMakeNsisPath,getNsisPluginsPath}=require('app-builder-lib/out/toolsets
 const {NsisScriptGenerator}=require('app-builder-lib/out/targets/nsis/nsisScriptGenerator')
 const {LangConfigurator,createAddLangsMacro,addCustomMessageFileInclude}=require('app-builder-lib/out/targets/nsis/nsisLang')
 const {nsisTemplatesDir}=require('app-builder-lib/out/targets/nsis/nsisUtil')
+const {AppInfo}=require('app-builder-lib/out/appInfo')
+const {getWindowsInstallationDirName}=require('app-builder-lib/out/targets/targetUtil')
 const config=load(await readFile('electron-builder.yml','utf8'))
+const pkg=JSON.parse(await readFile('package.json','utf8'))
+const appInfo=new AppInfo({metadata:pkg,config},undefined,config.win)
 const [compiler,plugins]=await Promise.all([getMakeNsisPath(config.toolsets?.nsis,config.nsis.customNsisBinary),getNsisPluginsPath(config.toolsets?.nsis,config.nsis.customNsisResources)])
 const directory=await mkdtemp(join(tmpdir(),'simple-timeline-nsis-compile-'))
 try{
@@ -32,7 +36,7 @@ try{
  const payload=join(directory,'payload.7z'),uninstaller=join(directory,'uninstaller-placeholder.exe')
  await writeFile(payload,'compile-only archive placeholder; never executed')
  await writeFile(uninstaller,'compile-only uninstaller placeholder; never executed')
- const defines={PRODUCT_NAME:'Planrail',PRODUCT_FILENAME:'Planrail',APP_PRODUCT_FILENAME:'Planrail',APP_FILENAME:'Planrail',APP_DESCRIPTION:'Planrail compile smoke',APP_ID:config.appId,APP_GUID:'compile-only-planrail',UNINSTALL_APP_KEY:'compile-only-planrail',APP_PACKAGE_NAME:'simple-timeline',VERSION:'0.8.1',PROJECT_DIR:resolve('.'),BUILD_RESOURCES_DIR:resolve('resources'),APP_64:payload,APP_64_NAME:'payload.7z',APP_64_UNPACKED_SIZE:'1',COMPRESSION_METHOD:'7z',APP_INSTALLER_STORE_FILE:'simple-timeline-updater\\installer.exe',SHORTCUT_NAME:'Planrail',UNINSTALL_DISPLAY_NAME:'Planrail',UNINSTALL_SECTION_NAME:'Uninstall',UNINSTALLER_OUT_FILE:uninstaller,INSTALL_MODE_PER_ALL_USERS_REQUIRED:null}
+ const defines={PRODUCT_NAME:appInfo.productName,PRODUCT_FILENAME:appInfo.productFilename,APP_FILENAME:getWindowsInstallationDirName(appInfo,true),APP_DESCRIPTION:appInfo.description,APP_ID:config.appId,APP_GUID:'compile-only-planrail',UNINSTALL_APP_KEY:'compile-only-planrail',APP_PACKAGE_NAME:pkg.name,VERSION:pkg.version,PROJECT_DIR:resolve('.'),BUILD_RESOURCES_DIR:resolve('resources'),APP_64:payload,APP_64_NAME:'payload.7z',APP_64_UNPACKED_SIZE:'1',COMPRESSION_METHOD:'7z',APP_INSTALLER_STORE_FILE:'simple-timeline-updater\\installer.exe',SHORTCUT_NAME:appInfo.sanitizedProductName,UNINSTALL_DISPLAY_NAME:`${appInfo.productName} ${appInfo.version}`,UNINSTALL_SECTION_NAME:'Uninstall',UNINSTALLER_OUT_FILE:uninstaller,INSTALL_MODE_PER_ALL_USERS_REQUIRED:null}
  for(const mode of ['installer','uninstaller']){
   const flags={...defines,...(mode==='uninstaller'?{BUILD_UNINSTALLER:null}:{})}
   const args=['-WX','-INPUTCHARSET','UTF8',...Object.entries(flags).map(([key,value])=>`-D${key}${value===null?'':'='+value}`),'-XUnicode true',`-XOutFile "${join(directory,mode+'.exe')}"`,'-']

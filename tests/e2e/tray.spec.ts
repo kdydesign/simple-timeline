@@ -105,7 +105,7 @@ test('initial bounds fit display and hidden About uses current app metadata with
   try {(globalThis as any).desktopController.showAbout();await Promise.resolve();return {title:captured.title,detail:captured.detail,version:app.getVersion()}}
   finally{dialog.showMessageBox=original}
  });
- expect(info.title).toBe('About Planrail');expect(info.detail).toContain(info.version);expect(info.detail).toContain('daeyong');
+ expect(info.title).toBe('About WorkRail');expect(info.detail).toContain(info.version);expect(info.detail).toContain('daeyong');
  await expect.poll(()=>visible(d)).toBe(false);
  await control(d,'show');
  await expect(d.page.getByLabel('프로젝트 이름',{exact:true})).toHaveValue('About 입력 보호');

@@ -1,3 +1,4 @@
+import {openPackagedPlanrail} from './packaged-navigation'
 import {test,expect} from '@playwright/test'
 import {_electron,type ElectronApplication} from 'playwright'
 import {execFileSync,spawn,spawnSync} from 'node:child_process'
@@ -32,7 +33,7 @@ test('actual0.8.0 manual migration and assisted startup choices preserve OS disa
  const evidence:Record<string,unknown>={sourceSha:base.sourceSha,legacySourceSha:legacy.sourceSha,legacyInstallerSha256:legacy.sha256,executionPolicy:command('Get-ExecutionPolicy'),windowsPowerShell:windowsVersion,inheritedModulePath:process.env.PSModulePath??null,foreignModules,nativeModuleCommands:JSON.parse(command('Get-Command Add-Type,Get-CimInstance,Get-ExecutionPolicy,Get-Acl,Set-Acl,ConvertTo-Json | Select-Object Name,ModuleName,@{Name="ModulePath";Expression={$_.Module.Path}} | ConvertTo-Json -Compress')),windowsAnsiCodePage:command('[Text.Encoding]::Default.CodePage'),unicodeInstallationPath:directory,cases:[]}
  const cases=evidence.cases as unknown[]
  let instance:ElectronApplication|undefined,restoreAcl:string|undefined,hadFailure=false
- const launch=async(path=exe,args:string[]=[])=>{instance=await _electron.launch({chromiumSandbox:true,executablePath:path,args,env:envFor(),timeout:30000});const page=await instance.firstWindow();await page.getByRole('button',{name:'프로젝트 추가',exact:true}).waitFor();return page}
+ const launch=async(path=exe,args:string[]=[])=>{instance=await _electron.launch({chromiumSandbox:true,executablePath:path,args,env:envFor(),timeout:30000});const page=await instance.firstWindow();await openPackagedPlanrail(page);return page}
  const close=async()=>{if(!instance)return;await instance.evaluate(({app})=>app.exit(0)).catch(()=>{});await instance.close().catch(()=>{});instance=undefined}
  // Observe both promises immediately and finish the installer before cleanup.
  // Report its actual failure ahead of a secondary close timeout.

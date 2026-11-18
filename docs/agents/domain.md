@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| WorkRail 통합 도구·Node 관리 | [승인 설계](../design/team-tool-expansion.md) · [구현 계획](../superpowers/plans/2026-11-18-workrail.md) · [구현·검증](../implementation/2026-11-18-workrail.md). 기존 Planrail은 일정 모듈로 유지. 하단 도크·통합 홈·로컬 Windows Node 관리는 이 문서를 우선 |
 | 설정 탭·개인 휴일·워킹데이 | [승인 설계](../design/settings-and-working-days.md) · [0.8.8 구현·검증](../implementation/2026-11-18-settings-working-days.md). 구현 및 최종 소스의 양 OS CI 완료. 호스트도 개인 휴일을 합산하되 전송하지 않음. 저장·IPC 경계는 [저장](../design/storage.md)·[구조](../design/architecture.md), 합산 규칙은 [도메인](../design/domain-rules.md) |
 | 휴일 기간·날짜 삼각 표시 | [승인 설계](../design/holiday-ranges-and-markers.md) · [구현 기록](../implementation/2026-11-17-holiday-ranges.md) |
 | 멤버 버전·공통 휴일·승인 요청 알림 협의 | [승인 설계](../design/member-versions-holidays-and-pairing-notices.md) · [0.8.6 구현·검증](../implementation/2026-11-17-member-holidays.md). Q1~Q11·시안 승인 후 구현, 기존 프로토콜 호환 유지 |
