@@ -288,6 +288,35 @@ it.each(['catalog-first', 'rejection-first'] as const)(
   },
 )
 
+it.each(['ipc', 'inspection'] as const)('shows the failed mutation and explicit %s recheck and keeps changes disabled', async failure => {
+  const fixture = nodeFixture()
+  const mutationError = { code: 'ipc-unavailable', message: 'Node 전환 응답을 확인하지 못했습니다.' } as const
+  const recoveryError = { code: 'inspection-failed', message: 'Windows 환경 재검사에 실패했습니다.' } as const
+  fixture.api.use.mockResolvedValueOnce({ ok: false, error: mutationError })
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const panel = await within(node()).findByRole('region', { name: '설치된 버전' })
+  const use = within(panel).getByRole('button', { name: '22.20.0 사용' })
+  await act(async () => fireEvent.click(use))
+  expect(use).toBeDisabled()
+  fixture.api.getState.mockResolvedValueOnce(failure === 'ipc'
+    ? { ok: false, error: recoveryError }
+    : { ok: true, data: { ...nodeState, error: recoveryError } })
+  const recheck = within(node()).getByRole('button', { name: '환경 다시 검사' })
+  await act(async () => fireEvent.click(recheck))
+  expect(within(node()).getByText(mutationError.message)).toBeVisible()
+  expect(within(node()).getByText(recoveryError.message, { exact: false })).toBeVisible()
+  expect(use).toBeDisabled()
+  await act(async () => fireEvent(window, new Event('focus')))
+  fireEvent.click(dock('홈'))
+  expect(within(home()).getByText(mutationError.message)).toBeVisible()
+  expect(within(home()).getByText(recoveryError.message, { exact: false })).toBeVisible()
+  fireEvent.click(dock('Node 관리'))
+  await act(async () => fireEvent.click(within(node()).getByRole('button', { name: '환경 다시 검사' })))
+  expect(within(node()).queryByText(mutationError.message)).toBeNull()
+  expect(within(node()).queryByText(recoveryError.message, { exact: false })).toBeNull()
+  expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeEnabled()
+})
+
 it('reports an unread inventory consistently across the catalog, Installed filter, and panel', async () => {
   nodeFixture({
     manager: { status: 'error', version: null }, installedVersions: [], activeVersion: null, activeSource: null,

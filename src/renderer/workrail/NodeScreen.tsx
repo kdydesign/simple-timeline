@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Hexagon, RefreshCw } from 'lucide-react'
 import type { NodeRelease } from '../../shared/node-management'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeManagerLabel, nodeOperationError, nodeProgress, platformScope, supportedManager } from './nodePresentation'
+import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeManagerLabel, nodeOperationMessages, nodeProgress, platformScope, supportedManager } from './nodePresentation'
 
 const filters = [
   { id: 'all', label: '전체' },
@@ -20,7 +20,7 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
   const stale = nodeInspectionStale(node)
   const inventoryKnown = nodeInventoryKnown(node)
   const progress = nodeProgress(node)
-  const operationError = nodeOperationError(node)
+  const operationMessages = nodeOperationMessages(node)
   const installed = state?.installedVersions ?? []
   const catalog = state?.catalog
   const checking = !state && !error
@@ -77,7 +77,7 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
         </section>
       )}
       {progress && <p className="workrail-note" aria-live="polite">{progress}</p>}
-      {operationError && <p className="workrail-message" role="alert">{operationError.message}</p>}
+      {operationMessages.map(message => <p key={message} className="workrail-message" role="alert">{message}</p>)}
       {!unsupported && (detectedConflict || manualManager) && (
         <section className="workrail-surface workrail-node-guidance" aria-labelledby="workrail-node-guidance-heading">
           <h3 id="workrail-node-guidance-heading">{detectedConflict ? 'Node 환경 충돌' : managerMissing ? supportedManager + ' 설치' : 'nvm-windows 상태 확인'}</h3>

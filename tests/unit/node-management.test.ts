@@ -188,7 +188,7 @@ describe('elevated Windows commands', () => {
   })
 
   it('keeps trusted commands encoded and distinguishes unknown completion from a cancelled UAC prompt', () => {
-    const args = createElevationCommand('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', buildNvmInvocation(ready.installation!, 'install', '24.11.0'))
+    const args = createElevationCommand('C:\\Windows\\System32', buildNvmInvocation(ready.installation!, 'install', '24.11.0'))
     expect(args.slice(0, -1)).toEqual(['-NoProfile', '-NonInteractive', '-EncodedCommand'])
     expect(Buffer.from(args.at(-1)!, 'base64').toString('utf16le')).toContain('-Verb RunAs')
     expect(readElevatedExit('WORKRAIL_ELEVATION_CANCELLED', 0)).toEqual({ status: 'cancelled' })
@@ -199,7 +199,7 @@ describe('elevated Windows commands', () => {
 
   it('hands off the installer through a worker that verifies a read-locked file under elevation', () => {
     const invocation = { executable: 'C:\\Temp\\nvm-setup.exe', args: [] as [], executableDigest: 'a'.repeat(64) }
-    const outer = Buffer.from(createElevationCommand('C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', invocation).at(-1)!, 'base64').toString('utf16le')
+    const outer = Buffer.from(createElevationCommand('C:\\Windows\\System32', invocation).at(-1)!, 'base64').toString('utf16le')
     const encoded = outer.match(/-EncodedCommand ([A-Za-z0-9+/=]+)/)?.[1]
     expect(encoded).toBeTruthy()
     const worker = Buffer.from(encoded!, 'base64').toString('utf16le')

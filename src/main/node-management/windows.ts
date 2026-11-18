@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { lstat, mkdtemp, open, readdir, realpath, rm, writeFile } from 'node:fs/promises'
+import { lstat, mkdtemp, open, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { win32 } from 'node:path'
 import { promisify } from 'node:util'
@@ -38,8 +38,9 @@ const psArgs = (script: string): string[] => [
   '-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64'),
 ]
 
-export function createElevationCommand(powershell: string, invocation: ElevationInvocation): string[] {
-  const system = win32.dirname(win32.dirname(win32.dirname(powershell)))
+const powershellPath = (system: string) => win32.join(system, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+
+export function createElevationCommand(system: string, invocation: ElevationInvocation): string[] {
   let command = `
 $launching = $true
 $child = Start-Process -FilePath ${psLiteral(invocation.executable)} -WorkingDirectory ${psLiteral(system)} -PassThru -Wait
@@ -54,8 +55,6 @@ exit $child.ExitCode
     command = `
 $settings = Open-VerifiedFile ${psLiteral(win32.join(invocation.nvmHome, 'settings.txt'))} ${psLiteral(invocation.settingsDigest)}
 if ($null -eq $settings) { exit 1610 }
-$env:Path = ${psLiteral(system)}
-$env:ComSpec = ${psLiteral(win32.join(system, 'cmd.exe'))}
 $env:NoDefaultCurrentDirectoryInExePath = '1'
 $env:NODE_OPTIONS = $null
 $env:NODE_PATH = $null
@@ -100,6 +99,12 @@ function Open-VerifiedFile($path, $expected) {
 }
 $launching = $false
 try {
+  if ([Environment]::SystemDirectory -ine ${psLiteral(system)}) { exit 1610 }
+  $env:SystemRoot = ${psLiteral(win32.dirname(system))}
+  $env:windir = $env:SystemRoot
+  $env:Path = ${psLiteral(system)}
+  $env:ComSpec = ${psLiteral(win32.join(system, 'cmd.exe'))}
+  $env:PSModulePath = ${psLiteral(win32.join(win32.dirname(powershellPath(system)), 'Modules'))}
   Set-Location -LiteralPath ${psLiteral(system)}
   $source = Open-VerifiedFile ${psLiteral(invocation.executable)} ${psLiteral(invocation.executableDigest)}
   if ($null -eq $source) { exit 1610 }
@@ -120,7 +125,8 @@ try {
   return psArgs(`
 $ErrorActionPreference = 'Stop'
 try {
-  $child = Start-Process -FilePath ${psLiteral(powershell)} -WorkingDirectory ${psLiteral(system)} -Verb RunAs -ArgumentList ${argumentsOption} -WindowStyle Hidden -PassThru -Wait
+  if ([Environment]::SystemDirectory -ine ${psLiteral(system)}) { [Console]::WriteLine('WORKRAIL_EXIT:1610'); exit 0 }
+  $child = Start-Process -FilePath ${psLiteral(powershellPath(system))} -WorkingDirectory ${psLiteral(system)} -Verb RunAs -ArgumentList ${argumentsOption} -WindowStyle Hidden -PassThru -Wait
   if ($null -eq $child.ExitCode) { exit 1 }
   [Console]::WriteLine('WORKRAIL_EXIT:' + $child.ExitCode)
 } catch {
@@ -221,20 +227,52 @@ async function readBoundedFile(path: string, maxBytes: number) {
   }
 }
 
-export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter {
-  const system = win32.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32')
-  const powershell = win32.join(system, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
-  const localOptions = { cwd: system, windowsHide: true, shell: false as const, maxBuffer: 512 * 1024 }
+// Open the kernel's SystemRoot link without running a helper or consulting a
+// DOS drive or environment variable. Native realpath returns the final DOS
+// path for the handle. Check the drive path identifies that same directory.
+const kernelSystemDirectory = String.raw`\\?\GLOBALROOT\SystemRoot\System32`
 
+async function resolveSystemPowerShell() {
+  const system = await realpath(kernelSystemDirectory)
+  if (!isSafeNvmPath(system) || win32.normalize(system) !== system || win32.basename(system).toLowerCase() !== 'system32') {
+    throw Error('Invalid Windows system directory')
+  }
+  const [kernel, local] = await Promise.all([
+    stat(kernelSystemDirectory, { bigint: true }), stat(system, { bigint: true }),
+  ])
+  if (!kernel.isDirectory() || !local.isDirectory() || !kernel.ino || kernel.ino !== local.ino || kernel.dev !== local.dev) {
+    throw Error('Windows system directory identity mismatch')
+  }
+  const root = win32.dirname(system)
+  const powershell = powershellPath(system)
+  const options = {
+    cwd: system, windowsHide: true, shell: false as const, maxBuffer: 512 * 1024,
+    env: {
+      SystemRoot: root, windir: root, SystemDrive: win32.parse(root).root.slice(0, 2),
+      Path: system, ComSpec: win32.join(system, 'cmd.exe'),
+      PSModulePath: win32.join(win32.dirname(powershell), 'Modules'),
+    },
+  }
+  return { system, powershell, options }
+}
+
+export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter {
   async function runPowerShell(script: string, timeout = 8_000) {
-    return (await exec(powershell, psArgs(script), { ...localOptions, timeout })).stdout.trim()
+    const { powershell, options } = await resolveSystemPowerShell()
+    return (await exec(powershell, psArgs(script), { ...options, timeout })).stdout.trim()
   }
 
   async function elevate(invocation: ElevationInvocation) {
+    let shell: Awaited<ReturnType<typeof resolveSystemPowerShell>>
+    try {
+      shell = await resolveSystemPowerShell()
+    } catch {
+      return { status: 'integrity-failed' } as const
+    }
     try {
       // Start-Process -Wait tracks process completion through the UAC bridge.
       // Killing this bridge at a timeout would lose the elevated process handle.
-      const { stdout } = await exec(powershell, createElevationCommand(powershell, invocation), localOptions)
+      const { stdout } = await exec(shell.powershell, createElevationCommand(shell.system, invocation), shell.options)
       return readElevatedExit(stdout, 0, !('nvmHome' in invocation))
     } catch (error) {
       const code = (error as NodeJS.ErrnoException).code

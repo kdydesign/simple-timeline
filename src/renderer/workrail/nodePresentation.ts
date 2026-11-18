@@ -37,8 +37,11 @@ export function nodeActiveVersionLabel(node: NodeManagement) {
   return state?.checkedAt ? '사용 중인 버전 없음' : '환경 확인 중…'
 }
 
-export function nodeOperationError({ state, error }: NodeManagement) {
-  return state?.error?.code === 'operation-unknown' ? state.error : error ?? state?.error
+export function nodeOperationMessages({ state, error, recoveryError }: NodeManagement) {
+  const operationError = state?.error?.code === 'operation-unknown' ? state.error : error ?? state?.error
+  const messages = operationError ? [operationError.message] : []
+  if (recoveryError) messages.push('환경 재검사 실패 · ' + recoveryError.message)
+  return messages
 }
 
 export function nodeManagerLabel(state: NodeManagementState) {

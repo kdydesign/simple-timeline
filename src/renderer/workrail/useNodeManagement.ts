@@ -9,6 +9,12 @@ const unavailable: NodeManagementError = {
   message: 'Node 관리 응답을 확인하지 못했습니다. 다시 검사해 주세요.',
 }
 
+interface MutationFailure {
+  request: number
+  error: NodeManagementError
+  recoveryError?: NodeManagementError
+}
+
 interface Connection {
   revision: number
   request: number
@@ -21,7 +27,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   const connection = useRef<Connection | null>(null)
   const [state, setState] = useState<NodeManagementState | null>(null)
   const [readError, setReadError] = useState<NodeManagementError | null>(() => api ? null : unavailable)
-  const [mutationFailure, setMutationFailure] = useState<{ request: number; error: NodeManagementError } | null>(null)
+  const [mutationFailure, setMutationFailure] = useState<MutationFailure | null>(null)
   const [mutation, setMutation] = useState<NodeMutation | null>(null)
   const [catalogPending, setCatalogPending] = useState(false)
 
@@ -44,14 +50,23 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       current.acceptedRequest = request
       setState(result.data)
       setReadError(null)
-      if (kind === 'recheck' && !result.data.busy && result.data.error?.code !== 'inspection-failed') {
-        setMutationFailure(failure => failure && failure.request < request ? null : failure)
-      }
     } else if (kind === 'mutation') {
       // An unrelated snapshot cannot confirm a command that never returned a state.
       setMutationFailure({ request, error: result.error })
     } else if (startRevision === current.revision && request === current.request) {
       setReadError(result.error)
+    } else {
+      return
+    }
+    // Only an explicit, completed inspection can resolve an unconfirmed change.
+    // Keep its last failed recovery visible across focus and catalog snapshots.
+    if (kind === 'recheck' && (!result.ok || !result.data.busy)) {
+      const recoveryError = result.ok ? result.data.error : result.error
+      const recovered = result.ok && recoveryError?.code !== 'inspection-failed'
+      setMutationFailure(failure => {
+        if (!failure || failure.request >= request) return failure
+        return recovered ? null : { ...failure, recoveryError: recoveryError ?? undefined }
+      })
     }
   }, [])
 
@@ -126,7 +141,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   }
 
   const error = mutationFailure?.error ?? readError
-  return { state, error, available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate }
+  return { state, error, recoveryError: mutationFailure?.recoveryError, available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate }
 }
 
 export type NodeManagement = ReturnType<typeof useNodeManagement>

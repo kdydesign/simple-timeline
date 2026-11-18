@@ -5,7 +5,7 @@ import type { SharingState } from '../../shared/sharing'
 import { sharingDescription } from '../../shared/sharing-status'
 import type { TimelinePhase } from '../state/useTimeline'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeManagerLabel, nodeOperationError, nodeProgress, platformScope } from './nodePresentation'
+import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeManagerLabel, nodeOperationMessages, nodeProgress, platformScope } from './nodePresentation'
 
 const maxSchedules = 10
 const dateFormat = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
@@ -39,7 +39,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
       || a.name.localeCompare(b.name, 'ko') || a.id.localeCompare(b.id)), [date, projects, revoked, snapshot])
   const { state, error } = node
   const progress = nodeProgress(node)
-  const operationError = nodeOperationError(node)
+  const operationMessages = nodeOperationMessages(node)
   const sharingStale = sharing?.role === 'member' && sharing.status !== 'connected' && !revoked
   const scheduleStale = phase === 'stale' || phase === 'uncertain' || phase === 'blocked'
   const inventoryKnown = nodeInventoryKnown(node)
@@ -116,7 +116,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
           <section className="workrail-surface" aria-labelledby="workrail-progress-heading">
             <h3 id="workrail-progress-heading">Node 작업</h3>
             <p aria-live="polite">{progress ?? (state && !error ? '진행 중인 Node 작업이 없습니다.' : 'Node 작업 상태를 확인할 수 없습니다.')}</p>
-            {operationError && <p role="alert">{operationError.message}</p>}
+            {operationMessages.map(message => <p key={message} role="alert">{message}</p>)}
           </section>
         </div>
       </div>
