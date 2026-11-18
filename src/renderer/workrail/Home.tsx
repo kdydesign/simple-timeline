@@ -1,4 +1,5 @@
-import { CalendarDays, Hexagon } from 'lucide-react'
+import { CalendarDays } from 'lucide-react'
+import { ToolIcon } from './ToolIcon'
 import { useMemo } from 'react'
 import type { ApiError, TimelineSnapshot } from '../../shared/types'
 import type { SharingState } from '../../shared/sharing'
@@ -44,16 +45,15 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
   const scheduleStale = phase === 'stale' || phase === 'uncertain' || phase === 'blocked'
   const inventoryKnown = nodeInventoryKnown(node)
   return (
-    <main className="workrail-screen workrail-home" aria-label="홈">
+    <main className="workrail-screen workrail-home" aria-label="Home">
       <div className="workrail-page-heading">
-        <h2>작업 현황</h2>
         <time dateTime={date}>{todayFormat(date)}</time>
       </div>
       <div className="workrail-home-grid">
         <section className="workrail-surface workrail-today" aria-labelledby="workrail-today-heading">
           <header className="workrail-card-heading">
             <h3 id="workrail-today-heading"><CalendarDays aria-hidden="true" size={18} />오늘의 일정</h3>
-            <button type="button" className="workrail-control" onClick={onPlanrail}>Planrail에서 전체 일정 보기</button>
+            <button type="button" className="workrail-control" onClick={onPlanrail}>PlanRail에서 전체 일정 보기</button>
           </header>
           {phase === 'loading' && <p className="workrail-muted" aria-live="polite">일정을 조회하고 있습니다…</p>}
           {scheduleStale && (
@@ -85,16 +85,17 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
         </section>
         <section className="workrail-surface workrail-home-node" aria-labelledby="workrail-home-node-heading">
           <header className="workrail-card-heading">
-            <h3 id="workrail-home-node-heading"><Hexagon aria-hidden="true" size={18} />내 개발 환경</h3>
+            <h3 id="workrail-home-node-heading">내 개발 환경</h3>
+            <ToolIcon tool="node" size={27} />
           </header>
           {state?.supported === false ? <p className="workrail-muted">{platformScope}</p> : (
             <>
               <div className="workrail-active">
                 <span>현재 사용 중인 Node</span>
                 <strong>{nodeActiveVersionLabel(node)}</strong>
-                {state?.activeSource && !nodeInspectionStale(node) && <span>{state.activeSource === 'nvm' ? 'nvm-windows' : '기존 Node 설치'}</span>}
+                {state?.activeSource && !nodeInspectionStale(node) && <span className="workrail-tag">{state.activeSource === 'nvm' ? 'nvm-windows 사용 중' : '기존 Node 설치'}</span>}
               </div>
-              {state && <p className="workrail-muted">{nodeManagerLabel(state)}</p>}
+              {state && state.manager.status !== 'ready' && <p className="workrail-muted">{nodeManagerLabel(state)}</p>}
               {state?.checkedAt && (
                 <div className="workrail-summary-line">
                   <span>{!inventoryKnown && state.installedVersions.length > 0 ? '마지막으로 확인한 설치 버전' : '설치된 버전'}</span>
@@ -104,14 +105,19 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
               {!!state?.conflicts.length && <p className="workrail-note">Node 환경 충돌 {state.conflicts.length}건을 확인해 주세요.</p>}
             </>
           )}
-          <button type="button" className="workrail-control workrail-home-node-link" onClick={onNode}>Node 관리 열기</button>
+          <button type="button" className="workrail-control workrail-home-node-link" onClick={onNode}>NodeRail 열기</button>
         </section>
         <div className="workrail-home-summaries">
           <section className="workrail-surface" aria-labelledby="workrail-sharing-heading">
-            <h3 id="workrail-sharing-heading">일정 공유</h3>
-            <p>{sharing ? <>{shareRole[sharing.role]} · {sharingDescription(sharing)}</> : '공유 상태를 확인할 수 없습니다.'}</p>
+            <h3 id="workrail-sharing-heading">PlanRail 상태</h3>
+            <div className="workrail-sharing-badges">
+              {sharing && <span className="workrail-tag">{shareRole[sharing.role]}</span>}
+              <span className="workrail-tag workrail-connection" data-connected={!!sharing && !sharingError && sharing.status === 'connected' && sharing.role !== 'personal'}>
+                {sharing && !sharingError ? sharingDescription(sharing) : '공유 상태 확인 불가'}
+              </span>
+            </div>
             {sharing?.lastCheckedAt && <p className="workrail-muted">마지막 정상 확인 <time dateTime={sharing.lastCheckedAt}>{new Date(sharing.lastCheckedAt).toLocaleString('ko-KR')}</time></p>}
-            {sharingError && sharingError.message !== (sharing && sharingDescription(sharing)) && <p role="alert">{sharingError.message}</p>}
+            {sharingError && <p role="alert">{sharingError.message}</p>}
           </section>
           <section className="workrail-surface" aria-labelledby="workrail-progress-heading">
             <h3 id="workrail-progress-heading">Node 작업</h3>
