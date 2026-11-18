@@ -8,6 +8,7 @@ import type { NvmInstallation, WindowsDiscovery } from './discovery'
 
 export interface ElevatedResult {
   status: 'success' | 'cancelled' | 'failed' | 'unknown' | 'download-failed' | 'integrity-failed'
+    | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
 }
 
 export interface WindowsNodeAdapter {
@@ -44,6 +45,10 @@ const messages: Record<NodeManagementErrorCode, string> = {
   'operation-slow': '예상보다 오래 걸리고 있습니다. Windows 권한 확인 또는 설치 창을 확인해 주세요.',
   'download-failed': '공식 nvm-windows 설치 파일을 내려받지 못했습니다. 시스템 프록시가 필요한 환경에서는 브라우저로 공식 nvm-windows 1.2.2 설치 파일을 받아 설치한 뒤 다시 검사해 주세요.',
   'integrity-failed': 'nvm 실행 파일이나 설정의 무결성을 확인하지 못해 작업을 중단했습니다. 공식 nvm-windows 1.2.2 설치와 설정을 확인해 주세요.',
+  'nvm-settings-check': '관리자 권한으로 nvm의 settings.txt를 읽거나 다시 검증하지 못했습니다. 파일 접근 권한을 확인하고 환경을 다시 검사해 주세요.',
+  'command-processor-check': 'Windows 명령 처리기의 AutoRun 설정을 읽을 수 없습니다. 관리자 계정의 레지스트리 읽기 권한을 확인해 주세요.',
+  'command-autorun': 'Windows 명령 처리기에 AutoRun이 설정되어 있어 nvm 실행을 중단했습니다. 사용자 또는 시스템의 Command Processor 설정을 관리자와 확인해 주세요.',
+  'nvm-staging-failed': '관리자 권한으로 임시 폴더에 nvm 실행 파일을 준비하지 못했습니다. 임시 폴더의 여유 공간과 쓰기 권한을 확인해 주세요.',
   'verification-failed': '요청한 변경이 적용된 것을 확인하지 못했습니다. 현재 환경과 새 터미널을 확인해 주세요.',
 }
 
@@ -57,6 +62,10 @@ const exitErrors = {
   unknown: 'operation-unknown',
   'download-failed': 'download-failed',
   'integrity-failed': 'integrity-failed',
+  'nvm-settings-check': 'nvm-settings-check',
+  'command-processor-check': 'command-processor-check',
+  'command-autorun': 'command-autorun',
+  'nvm-staging-failed': 'nvm-staging-failed',
 } as const
 
 export function createNodeManagementService(options: {

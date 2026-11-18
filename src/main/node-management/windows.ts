@@ -56,16 +56,20 @@ exit $child.ExitCode
     // renderer process's user PATH, current directory, or Node configuration
     // into an elevated command. cmd AutoRun is also checked under that account.
     command = `
+$failure = 1620
 $settings = Open-VerifiedFile ${psLiteral(win32.join(invocation.nvmHome, 'settings.txt'))} ${psLiteral(invocation.settingsDigest)}
-if ($null -eq $settings) { exit 1610 }
+if ($null -eq $settings) { exit $failure }
 $env:NoDefaultCurrentDirectoryInExePath = '1'
 $env:NODE_OPTIONS = $null
 $env:NODE_PATH = $null
 $env:NVM_HOME = ${psLiteral(invocation.nvmHome)}
 $env:NVM_SYMLINK = ${psLiteral(invocation.nvmSymlink)}
-foreach ($key in @('HKCU:\\Software\\Microsoft\\Command Processor', 'HKLM:\\Software\\Microsoft\\Command Processor')) {
-  if (Get-ItemPropertyValue -LiteralPath $key -Name AutoRun -ErrorAction SilentlyContinue) { exit 1 }
+$failure = 1621
+foreach ($key in @('HKEY_CURRENT_USER\\Software\\Microsoft\\Command Processor', 'HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Command Processor')) {
+  $autoRun = [Microsoft.Win32.Registry]::GetValue($key, 'AutoRun', $null)
+  if ($null -ne $autoRun -and !($autoRun -is [string] -and $autoRun.Length -eq 0)) { exit 1622 }
 }
+$failure = 1623
 $stage = [IO.Path]::Combine([IO.Path]::GetTempPath(), ('workrail-nvm-run-' + [Guid]::NewGuid().ToString('N')))
 [void][IO.Directory]::CreateDirectory($stage)
 $stagedExe = [IO.Path]::Combine($stage, 'nvm.exe')
@@ -101,6 +105,7 @@ function Open-VerifiedFile($path, $expected) {
   }
 }
 $launching = $false
+$failure = 1610
 try {
   if ([Environment]::SystemDirectory -ine ${psLiteral(system)}) { exit 1610 }
   $env:SystemRoot = ${psLiteral(win32.dirname(system))}
@@ -114,7 +119,7 @@ try {
   ${command}
 } catch {
   if ($launching) { exit 1611 }
-  exit 1610
+  exit $failure
 } finally {
   foreach ($stream in @($fallback, $verifiedExe, $settings, $source)) {
     if ($null -ne $stream) { $stream.Dispose() }
@@ -154,6 +159,12 @@ export function readElevatedExit(stdout: string, wrapperExit: number, installer 
   if (code === undefined) return { status: 'unknown' }
   if (code === '1610') return { status: 'integrity-failed' }
   if (code === '1611') return { status: 'unknown' }
+  if (!installer) {
+    if (code === '1620') return { status: 'nvm-settings-check' }
+    if (code === '1621') return { status: 'command-processor-check' }
+    if (code === '1622') return { status: 'command-autorun' }
+    if (code === '1623') return { status: 'nvm-staging-failed' }
+  }
   if (installer && ['2', '5'].includes(code)) return { status: 'cancelled' }
   return { status: code === '0' ? 'success' : 'failed' }
 }

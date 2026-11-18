@@ -17,6 +17,7 @@ export type NodeManagementErrorCode =
   | 'cancelled' | 'operation-failed' | 'operation-unknown' | 'operation-slow'
   | 'confirmation-expired' | 'removal-unavailable' | 'reboot-required' | 'installer-busy'
   | 'download-failed' | 'integrity-failed' | 'verification-failed'
+  | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
 
 export interface NodeManagementError {
   code: NodeManagementErrorCode
