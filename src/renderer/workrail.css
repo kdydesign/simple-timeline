@@ -475,3 +475,6 @@
     color: Highlight;
   }
 }
+
+/* Local date portals keep editor focus ownership while crossing the toolbar. */
+.workrail-plan .editor:has(.date-popover) { z-index: 30; }

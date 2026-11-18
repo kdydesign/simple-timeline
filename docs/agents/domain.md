@@ -6,10 +6,10 @@
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
 | WorkRail 개선 구현 진행 | [구현 계획](../superpowers/plans/2026-11-18-workrail-polish-and-recovery.md) · [실행 기록](../implementation/2026-11-18-workrail-polish-and-recovery.md). 사용자 구현 시작 요청으로 화면·역할 전환·Node 복구를 진행. 아래 과거 설계-only 상태와 구분 |
-| WorkRail 화면 정리 설계 | [설계·수정 시안 v3](../design/workrail-screen-polish.md). 상단 메뉴·Node 표·Home 카드 높이·footer 색상/무음 심벌·설정 밀도/휴일 구분·공유 버튼·메뉴 E 모듈형·앱 F WR 모노그램 선택과 확인용 보드. 전체 화면 설계 확인 대기·제품 구현 전 |
-| 호스트·멤버 역할 전환 | [후속 설계](../design/sharing-role-switch.md). 양방향 전환·호스트 원본/등록/승인 보관·별도 조회와 현재 일정/알림 제외·수신 자료/자격 정리 후 재승인. 전체 확인 대기이며 현재 제품의 역할 고정 정책과 구분 |
-| 기존 Node 충돌·제거 지원 설계 | [확정 설계](../design/node-conflict-removal.md). 공식 MSI 제거·Windows 표준 UI·개발 실행의 독립 관리 창을 Q6에서 전체 확정. 사용자의 코드 수정 금지에 따라 제품 구현 전이며 기존 충돌 안내 동작과 구분 |
-| WorkRail 통합 도구·Node 관리 | [승인 설계](../design/team-tool-expansion.md) · [이전 구현 계획](../superpowers/plans/2026-11-18-workrail.md) · [구현·검증](../implementation/2026-11-18-workrail.md). 현재 메뉴 설계는 Q10 변경으로 B 상단 탭이며 제품은 아직 D 하단 도크다. 통합 홈·Node 목록 A와 기존 스타일은 유지하며 설계 변경과 구현 기록을 구분 |
+| WorkRail 화면 정리 설계 | [설계·수정 시안 v3](../design/workrail-screen-polish.md). 상단 메뉴·Node 표·Home 카드 높이·footer 색상/무음 심벌·설정 밀도/휴일 구분·공유 버튼·메뉴 E 모듈형·앱 F WR 모노그램 선택과 확인용 보드. 후속 구현 요청으로 반영, 검증은 최신 실행 기록 참조 |
+| 호스트·멤버 역할 전환 | [후속 설계](../design/sharing-role-switch.md). 양방향 전환·호스트 원본/등록/승인 보관·별도 조회와 현재 일정/알림 제외·수신 자료/자격 정리 후 재승인. 후속 구현에서 기존 역할 고정 정책을 대체, schema 9·복구 검증은 실행 기록 참조 |
+| 기존 Node 충돌·제거 지원 설계 | [확정 설계](../design/node-conflict-removal.md). 공식 MSI 제거·Windows 표준 UI·개발 실행의 독립 관리 창을 Q6에서 전체 확정. 설계-only 이후 별도 구현 요청으로 반영했으며 Windows 실기와 코드 검증을 구분 |
+| WorkRail 통합 도구·Node 관리 | [승인 설계](../design/team-tool-expansion.md) · [이전 구현 계획](../superpowers/plans/2026-11-18-workrail.md) · [구현·검증](../implementation/2026-11-18-workrail.md). 현재 메뉴는 Q10 변경을 반영한 B 상단 탭이다. 이전 하단 도크 구현은 당시 기록이다. 통합 홈·Node 목록 A와 기존 스타일은 유지하며 설계 변경과 구현 기록을 구분 |
 | 설정 탭·개인 휴일·워킹데이 | [승인 설계](../design/settings-and-working-days.md) · [0.8.8 구현·검증](../implementation/2026-11-18-settings-working-days.md). 구현 및 최종 소스의 양 OS CI 완료. 호스트도 개인 휴일을 합산하되 전송하지 않음. 저장·IPC 경계는 [저장](../design/storage.md)·[구조](../design/architecture.md), 합산 규칙은 [도메인](../design/domain-rules.md) |
 | 휴일 기간·날짜 삼각 표시 | [승인 설계](../design/holiday-ranges-and-markers.md) · [구현 기록](../implementation/2026-11-17-holiday-ranges.md) |
 | 멤버 버전·공통 휴일·승인 요청 알림 협의 | [승인 설계](../design/member-versions-holidays-and-pairing-notices.md) · [0.8.6 구현·검증](../implementation/2026-11-17-member-holidays.md). Q1~Q11·시안 승인 후 구현, 기존 프로토콜 호환 유지 |

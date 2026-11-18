@@ -88,8 +88,8 @@ test('calendar title, navigation and weekdays stick together and navigation stil
   const p = d.page; await november(p);
   await p.setViewportSize({ width: 1280, height: 600 });
   await p.getByRole('button', { name: '달력', exact: true }).click();
-  await p.locator('main').evaluate(e => { e.scrollTop = 350; });
-  const main = (await p.locator('main').boundingBox())!;
+  await p.getByRole('main',{name:'프로젝트와 일정',exact:true}).evaluate(e => { e.scrollTop = 350; });
+  const main = (await p.getByRole('main',{name:'프로젝트와 일정',exact:true}).boundingBox())!;
   const heading = (await p.locator('.calendar .view-heading').boundingBox())!;
   const weekdays = (await p.locator('.weekdays').boundingBox())!;
   expect(heading.y).toBeGreaterThanOrEqual(main.y);

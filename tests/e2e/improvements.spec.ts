@@ -40,7 +40,7 @@ test.describe('approved improvements',()=>{
     await drag(p,bar,cell.width,'end');await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
     await expect(bar).toHaveAttribute('aria-label',/2026-12-18 — 2026-12-19/)
     await bar.click();await p.getByLabel('일정 이름',{exact:true}).fill('미저장')
-    await expect(p.locator('main')).not.toHaveAttribute('inert')
+    await expect(p.getByRole('main',{name:'프로젝트와 일정',exact:true})).not.toHaveAttribute('inert')
     await drag(p,bar,-cell.width)
     await expect(p.getByRole('alert')).toContainText('먼저 저장하거나')
     await expect(bar).toHaveAttribute('aria-label',/2026-12-18 — 2026-12-19/)
@@ -55,7 +55,7 @@ test.describe('approved improvements',()=>{
     await p.getByRole('button',{name:'달력',exact:true}).click()
     await p.setViewportSize({width:1280,height:500})
     const before=await box(p.getByRole('button',{name:'프로젝트 목록',exact:true}))
-    await p.locator('main').evaluate(el=>{el.scrollTop=500})
+    await p.getByRole('main',{name:'프로젝트와 일정',exact:true}).evaluate(el=>{el.scrollTop=500})
     expect((await box(p.getByRole('button',{name:'프로젝트 목록',exact:true}))).y).toBe(before.y)
     const weekdays=await box(p.locator('.weekdays'));expect(weekdays.y).toBeGreaterThanOrEqual(before.y)
   })
@@ -90,7 +90,7 @@ test.describe('drag navigation and failure protection',()=>{
     const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12-01')
     const bar=p.locator('[data-bar="3"]');await bar.click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
-    await expect(p.locator('main')).not.toHaveAttribute('inert')
+    await expect(p.getByRole('main',{name:'프로젝트와 일정',exact:true})).not.toHaveAttribute('inert')
     await p.getByRole('scrollbar',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     await d.app.evaluate(({ipcMain})=>{
       ipcMain.removeHandler('schedule:update')
@@ -136,7 +136,7 @@ test.describe('drag bounds and editor synchronization',()=>{
     const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p,'2026-12-01')
     const bar=p.locator('[data-bar="3"]');await bar.click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
-    await expect(p.locator('main')).not.toHaveAttribute('inert')
+    await expect(p.getByRole('main',{name:'프로젝트와 일정',exact:true})).not.toHaveAttribute('inert')
     await p.getByRole('scrollbar',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     await drag(p,bar,28,'end');await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click();
     await expect(p.getByLabel('종료일',{exact:true})).toHaveValue('2026-12-19')

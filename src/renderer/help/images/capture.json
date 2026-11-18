@@ -1,13 +1,13 @@
 {
-  "source": "7f4788d794eb7a93044e820813ff8bdb1fdc9d45",
+  "source": "215622ceb9a89262944718941dce5961cf144a39",
   "dirty": true,
   "version": "1.0.0",
   "runtimeVersion": "0.0",
   "platform": "linux",
-  "recordedAt": "2026-11-18T08:18:13.915Z",
+  "recordedAt": "2026-11-18T13:49:53.933Z",
   "command": "tests/e2e/help-assets.spec.ts",
   "synthetic": true,
-  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only. All 14 shipped images refreshed with WorkRail shell and dock; synthetic fixture data only.",
+  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only. All 14 shipped images updated for top navigation, WR identity and compact settings; screenshot-producing cases passed in the first E2E run. Other unrelated E2E cases failed and are recorded separately.",
   "files": [
     "app-overview.png",
     "calendar.png",
@@ -30,5 +30,5 @@
     "tests/e2e/help-update-assets.spec.ts",
     "tests/e2e/settings-personal.spec.ts"
   ],
-  "versionNote": "Source package 1.0.0; unpackaged isolated fixture reports runtimeVersion 0.0. Captured from the dirty implementation checkout. Not Windows transparency, UAC, or performance evidence."
+  "versionNote": "Source package 1.0.0; unpackaged isolated fixture reports runtimeVersion 0.0. Synthetic data; not Windows transparency/UAC evidence."
 }

@@ -25,7 +25,7 @@ test('approved graphite glass fills square window corners without a root border 
  expect(box.width).toBe(await p.evaluate(()=>innerWidth));
 });
 
-test('brand uses the P icon',async({desktop:{page:p}})=>{
+test('brand renders the WorkRail WR icon',async({desktop:{page:p}})=>{
  await expect(p.locator('.brand-mark img')).toBeVisible();
  await expect.poll(()=>p.locator('.brand-mark img').evaluate((el:HTMLImageElement)=>el.complete&&el.naturalWidth>0)).toBe(true);
 });

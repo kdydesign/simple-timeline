@@ -47,7 +47,7 @@ test('only the six approved header controls show aligned shadcn tooltips',async(
 });
 test('zoom percent resets to 100% and is exclusive to Gantt',async({desktop:{page:p}})=>{
  await p.setViewportSize({width:1440,height:900});
- expect(await p.locator('main').evaluate(e=>e.scrollHeight-e.clientHeight)).toBe(0);
+ expect(await p.getByRole('main',{name:'프로젝트와 일정',exact:true}).evaluate(e=>e.scrollHeight-e.clientHeight)).toBe(0);
  const footer=(await p.locator('.gantt-navigation').boundingBox())!;expect(footer.y+footer.height).toBeLessThanOrEqual(900);
  await expect(p.getByRole('button',{name:'간트 배율 100%로 초기화'})).toHaveText('100%');
  const axis=p.locator('.gantt-date-heading');const b=(await axis.boundingBox())!;

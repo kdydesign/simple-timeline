@@ -7,7 +7,7 @@ test.describe('uncertain drag recovery',()=>{
   test('refresh reconciles a clean panel and a later name save retains the committed dates',async({desktop:d})=>{
     const p=d.page;await p.setViewportSize({width:1280,height:820});await choose(p);await p.locator('[data-bar="3"]').click()
     await expect(p.getByLabel('종료일',{exact:true})).toBeVisible()
-    await expect(p.locator('main')).not.toHaveAttribute('inert')
+    await expect(p.getByRole('main',{name:'프로젝트와 일정',exact:true})).not.toHaveAttribute('inert')
     await p.getByRole('scrollbar',{name:'간트 가로 이동'}).focus();await p.getByLabel('선택 날짜',{exact:true}).fill('2026-12-12');await p.getByLabel('선택 날짜',{exact:true}).press('Enter')
     const b=await box(p.locator('[data-bar="3"] [data-resize="end"]'))
     await p.mouse.move(b.x+b.width/2,b.y+b.height/2);await p.mouse.down();await p.mouse.move(b.x+b.width/2+28,b.y+b.height/2,{steps:4});await p.mouse.up();await p.getByRole('alertdialog').getByRole('button',{name:'변경',exact:true}).click()
@@ -34,15 +34,15 @@ test.describe('visible date regions',()=>{
   })
   test('the whole weekday header stays inside the scrolling viewport',async({desktop:d})=>{
     const p=d.page;await choose(p);await p.getByRole('button',{name:'달력',exact:true}).click();await p.setViewportSize({width:1280,height:500})
-    await p.locator('main').evaluate(el=>{el.scrollTop=300})
-    await expect.poll(()=>p.locator('main').evaluate(el=>el.scrollTop)).toBeGreaterThan(100)
-    const main=await box(p.locator('main')), header=await box(p.locator('.weekdays'))
+    await p.getByRole('main',{name:'프로젝트와 일정',exact:true}).evaluate(el=>{el.scrollTop=300})
+    await expect.poll(()=>p.getByRole('main',{name:'프로젝트와 일정',exact:true}).evaluate(el=>el.scrollTop)).toBeGreaterThan(100)
+    const main=await box(p.getByRole('main',{name:'프로젝트와 일정',exact:true})), header=await box(p.locator('.weekdays'))
     expect(header.y).toBeGreaterThanOrEqual(main.y)
     expect(header.y+header.height).toBeLessThanOrEqual(main.y+main.height)
   })
   test('dropping on the toolbar over a clipped earlier calendar cell cancels',async({desktop:d})=>{
     const p=d.page;await choose(p);await p.getByRole('button',{name:'달력',exact:true}).click();await p.setViewportSize({width:1280,height:500})
-    await p.locator('main').evaluate(el=>{el.scrollTop=300})
+    await p.getByRole('main',{name:'프로젝트와 일정',exact:true}).evaluate(el=>{el.scrollTop=300})
     const bar=await box(p.locator('[data-segment="3"]'))
     await p.mouse.move(bar.x+bar.width/2,bar.y+bar.height/2);await p.mouse.down()
     await p.mouse.move(bar.x+bar.width/2,30,{steps:4});await p.mouse.up()

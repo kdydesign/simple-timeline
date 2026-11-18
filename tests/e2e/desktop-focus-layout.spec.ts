@@ -16,7 +16,7 @@ test('closing toolbar and date-cell schedule add restores focus without a ghost 
  await p.mouse.move(700,700);await p.getByRole('button',{name:'다음 달',exact:true}).focus()
  await p.keyboard.press('Tab');await expect(p.getByRole('button',{name:'오늘',exact:true})).toBeFocused();await expect(p.getByRole('tooltip')).toHaveText('오늘')
 })
-test('Gantt navigation stays at its panel bottom above the dock in tall and short windows with editor',async({desktop:{page:p}})=>{
+test('Gantt navigation stays above status footer and below top menu in tall and short windows with editor',async({desktop:{page:p}})=>{
  for(const height of [1100,500]){
   await p.setViewportSize({width:1280,height});await choose(p,'2026-12-01')
   for(const editor of [false,true]){
@@ -25,13 +25,17 @@ test('Gantt navigation stays at its panel bottom above the dock in tall and shor
     const footer=element.getBoundingClientRect()
     const panel=element.closest('main')!.getBoundingClientRect()
     const dock=document.querySelector('.workrail-dock')!.getBoundingClientRect()
-    return {footerGap:dock.top-footer.bottom,dockGap:innerHeight-dock.bottom,panelDelta:Math.abs(footer.bottom-panel.bottom)}
+    const status=document.querySelector('.planrail-status')!.getBoundingClientRect()
+    const toolbar=document.querySelector('.toolbar')!.getBoundingClientRect()
+    return {footerGap:status.top-footer.bottom,statusGap:innerHeight-status.bottom,menuGap:toolbar.top-dock.bottom,panelDelta:Math.abs(footer.bottom-panel.bottom)}
    })
-   // Both the panel gutter and the dock rim stay bounded independently.
+   // The top menu, panel gutter and bottom status bar remain separate.
    expect(geometry.footerGap).toBeGreaterThanOrEqual(0)
    expect(geometry.footerGap).toBeLessThanOrEqual(24)
-   expect(geometry.dockGap).toBeGreaterThanOrEqual(0)
-   expect(geometry.dockGap).toBeLessThanOrEqual(16)
+   expect(geometry.statusGap).toBeGreaterThanOrEqual(0)
+   expect(geometry.statusGap).toBeLessThanOrEqual(16)
+   expect(geometry.menuGap).toBeGreaterThanOrEqual(0)
+   expect(geometry.menuGap).toBeLessThanOrEqual(24)
    expect(geometry.panelDelta).toBeLessThanOrEqual(2)
    await expect(p.getByRole('scrollbar',{name:'간트 가로 이동'})).toBeVisible()
    await p.locator('.gantt-body').evaluate(el=>{el.scrollTop=el.scrollHeight})

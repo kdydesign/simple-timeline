@@ -122,7 +122,7 @@ DB 파일은 평문이며 Windows 사용자 파일 권한을 따른다. 별도 �
 
 ## 검증과 남은 범위
 
-현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1~v8을 지원한다. v5는 공유 변경 이력·수신함, v6은 전역 알림 제어, v7은 공통 휴일·멤버 버전·승인 요청 알림, v8은 개인 휴일을 추가한다. 각 저장 경계는 아래 버전별 항목을 따른다. [v5→v6 보존 및 손상 차단 회귀](../../tests/native/notification-controls.case.ts)도 유지한다.
+현재 [migrations.ts](../../src/main/db/migrations.ts)는 제품 스키마 v1~v9을 지원한다. v5는 공유 변경 이력·수신함, v6은 전역 알림 제어, v7은 공통 휴일·멤버 버전·승인 요청 알림, v8은 개인 휴일, v9는 역할별 설정과 전환 복구 기록을 추가한다. 각 저장 경계는 아래 버전별 항목을 따른다. [v5→v6 보존 및 손상 차단 회귀](../../tests/native/notification-controls.case.ts)도 유지한다.
 [알림 native 회귀](../../tests/native/reminders.case.ts)는 실제 v1→v2 데이터 보존을,
 [native lifecycle 회귀](../../tests/native/lifecycle.case.ts)는 현재 버전 이후의 시험용 추가 버전으로 성공·실패를 검사한다.
 0.1.0→검증용 0.1.1 설치는 같은 schema이므로 실제 제품 schema 업그레이드의 증거가 아니다.
@@ -214,3 +214,10 @@ Linux basic_text backend는 거부한다. 자동 테스트의 격리 AES vault�
 개인 표는 호스트·멤버·개인 전용 모두 같은 로컬 저장 경계를 사용한다. 역할 선택·연결 해제·승인 취소로 개인 표를 지우지 않는다. 호스트는 개인 표를 보관·적용하되 전송하지 않는다. 합산 결과와 워킹데이는 파생값이며 DB에 저장하지 않는다. 범위·겹침·출처별 제한은 [휴일 도메인 규칙](domain-rules.md#휴일과-워킹데이-088)을 따른다.
 
 멤버의 수신 공통 표는 일시 단절 시 유지하고, 승인 취소 확인·명시적 연결 해제 시 제거한다. 승인 취소 상태는 기존 `sharing_change_settings`의 회수 상태로도 확인하므로 오프라인 재시작·절전 복귀가 공통 토·일 기본값을 되살리지 않는다. 해당 상태를 해제하는 것은 정상 인증된 동기화이며 개인 저장 성공이 아니다. 원자성·마이그레이션·LAN 비공개 검증은 [0.8.8 구현 기록](../implementation/2026-11-18-settings-working-days.md)에 연결한다.
+
+
+## 공유 역할 전환 schema v9 (WorkRail 1.0.0 후속)
+
+[역할 저장소](../../src/main/db/sharing/roles.ts)는 `sharing_role_state` singleton에 로컬 호스트 주소·인증서 참조와 원격 멤버 주소·신뢰를 구분하고, target·phase(stopping/cleanup/failed)·generation을 보관한다. 전환 의도를 먼저 commit하여 종료·재시작 후 이전 서버를 자동 재개하지 않는다. 자격 정리나 업데이트 배포 철회 실패는 기록을 보존하고 명시적 재시도로 이어진다.
+
+호스트 원본은 복사하지 않고 기존 프로젝트·일정·공통 휴일과 승인 등록을 보존한다. 멤버인 동안 원본은 별도 조회하고 정상 snapshot·CRUD·알림 후보에서 제외한다. DB trigger도 보관 프로젝트/일정의 쓰기를 거부한다. 복귀 시 보관 중 도래한 날짜 알림을 억제하여 밀린 알림을 보내지 않는다. 수신 자료·알림·접속 자격의 정리는 기존 멤버 연결 해제 경계에 맞추며 개인 자료와 로컬 호스트 ID는 유지한다. [설계](sharing-role-switch.md)와 [실행 기록](../implementation/2026-11-18-workrail-polish-and-recovery.md)에서 원자성·재시작 검사와 Windows 인수를 구분한다.
