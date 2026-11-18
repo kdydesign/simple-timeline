@@ -17,4 +17,6 @@
 - Windows 전용 회귀는 일회성 MSI 데이터베이스를 생성해 실제 COM으로 값/없는 필드/재조회를 확인한다. Linux에서는 Windows Installer COM이 없으므로 해당 검사는 실행되지 않는다. 사용자가 제공한 PowerShell 수정 전/후 결과와 Windows 자동 검증은 별개다.
 - 읽기 전용 독립 코드 검토: 추가 수정 사항 없음.
 - 실패 로그와 화면은 `artifacts/node-guidance-review/`에 보존한다. Node 화면 캡처는 Linux Electron에 읽기 전용 Windows 상태를 주입한 UI 확인이며 실제 Windows 환경 검사·제거 성공 증거가 아니다.
-- 전체 앱 검사·하네스 결과는 실행 완료 후 기록한다. 사용자 PC의 환경 재검사와 제거/UAC는 미검증이다.
+- 전체 앱 검사: clean `b42cb4165e616811905f5ba939b17ff37f61f20a`, Linux x64 / Node 24.22.1. UTC 2026-11-18 14:48:57~15:01:43 실행. typecheck·release·3 TZ unit·UI·build·native·E2E 7단계 모두 통과했다. UI 250, native 97, E2E 113. 시간대별 unit은 383개 통과 및 Windows COM 1개 미실행이며 실제 Windows 통과로 해석하지 않는다.
+- 같은 제품 커밋의 하네스 7개 검사 통과. 이후 커밋은 완료 기록만 갱신하며 제품 소스는 동일하다.
+- 사용자 PC의 환경 재검사·제거 버튼 활성화·실제 MSI 제거/UAC는 미검증이다. 개발 앱을 최신 코드로 재시작한 뒤 환경을 다시 검사해야 한다. 원격 CI 결과도 로컬 통과와 별도로 확인한다.

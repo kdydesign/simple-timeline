@@ -17,11 +17,13 @@
 
 ## 작업
 
-- [ ] 1. Windows 일회성 MSI COM 회귀 검사를 추가하고 `standalone-windows.ts`의 출력 오염을 수정한다. 실패 안내는 확인 불가 의미로 정정한다.
-- [ ] 2. `NodeScreen.tsx`·`NodeRecovery.tsx`의 중복 설명을 요약/버튼/접힌 상세로 정리한다. `workrail.css`에서 기존 경고 색과 글래스 버튼을 사용한다. UI 회귀 검사로 버튼 상태와 상세 접근을 검증한다.
-- [ ] 3. `HolidaySettings.tsx`·`forest-crystal.css`에서 반복 영역의 버튼 그룹을 분리하고 세로 배치/날짜 세 열을 적용한다. 실제 화면에서 세 입력의 높이와 영역 경계를 확인한다.
-- [ ] 4. 전체 앱 검사와 하네스, 변경 전체 검토를 완료하고 결과를 기록한다. Windows 실행 여부와 사용자 PC 재검사 필요를 구분해 보고한다.
+- [x] 1. Windows 일회성 MSI COM 회귀 검사를 추가하고 `standalone-windows.ts`의 출력 오염을 수정한다. 실패 안내는 확인 불가 의미로 정정한다.
+- [x] 2. `NodeScreen.tsx`·`NodeRecovery.tsx`의 중복 설명을 요약/버튼/접힌 상세로 정리한다. `workrail.css`에서 기존 경고 색과 글래스 버튼을 사용한다. UI 회귀 검사로 버튼 상태와 상세 접근을 검증한다.
+- [x] 3. `HolidaySettings.tsx`·`forest-crystal.css`에서 반복 영역의 버튼 그룹을 분리하고 세로 배치/날짜 세 열을 적용한다. 실제 화면에서 세 입력의 높이와 영역 경계를 확인한다.
+- [x] 4. 전체 앱 검사와 하네스, 변경 전체 검토를 완료하고 결과를 기록한다. Windows 실행 여부와 사용자 PC 재검사 필요를 구분해 보고한다.
 
 ## 진행 기록
 
 - 사용자 Q1/Q2 선택에 따라 설계 문서를 제품 변경 전에 작성했다. 현재 작업 공간은 clean `workrail` 브랜치이며 기존 구현은 완료 상태다.
+
+- 제품 소스 `b42cb4165e616811905f5ba939b17ff37f61f20a`의 clean Linux 전체 검사 통과. UI 250, native 97, E2E 113, 시간대별 unit 383개 통과 + Windows COM 1개 미실행. 하네스 7개 통과. [최종 기록](../../implementation/2026-11-18-node-guidance-and-holidays.md)을 따른다.
