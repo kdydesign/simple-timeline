@@ -8,13 +8,20 @@ import {releaseNotes,validateReleaseNotes} from './src/shared/release-content.ts
 import {helpTopicIds} from './src/shared/help.ts'
 export default defineConfig({
   main: {
+    plugins: [{name:'static-node-maintenance', buildStart() {
+      for (const name of ['index.html','app.js','style.css']) {
+        const path=resolve('src/renderer/node-maintenance',name)
+        this.addWatchFile(path)
+        this.emitFile({type:'asset',fileName:`maintenance-ui/${name}`,source:readFileSync(path)})
+      }
+    }}],
     build: {
       outDir: 'out/main',
       rollupOptions: {
-        input: resolve('src/main/index.ts'),
+        input: {index:resolve('src/main/index.ts'),'node-maintenance':resolve('src/main/node-maintenance/main.ts')},
         // Share the pinned updater's redaction registry rather than bundling a second copy.
         external: ['builder-util-runtime/out/httpExecutor'],
-        output: { entryFileNames: 'index.cjs', format: 'cjs' },
+        output: { entryFileNames: '[name].cjs', format: 'cjs' },
       },
     },
   },
@@ -23,7 +30,7 @@ export default defineConfig({
       externalizeDeps: false,
       outDir: 'out/preload',
       rollupOptions: {
-        input: {index:resolve('src/preload/index.ts'),help:resolve('src/preload/help.ts'),'release-notes':resolve('src/preload/release-notes.ts')},
+        input: {index:resolve('src/preload/index.ts'),help:resolve('src/preload/help.ts'),'release-notes':resolve('src/preload/release-notes.ts'),'node-maintenance':resolve('src/preload/node-maintenance.ts')},
         output: {
           entryFileNames: '[name].cjs',
           format: 'cjs',

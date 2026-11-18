@@ -7,7 +7,7 @@ export default mergeConfig(
     main: {
       build: {
         outDir: resolve('artifacts/test-app/main'),
-        rollupOptions: { input: resolve('tests/e2e/main.ts') },
+        rollupOptions: { input: {index:resolve('tests/e2e/main.ts'),'node-maintenance':resolve('src/main/node-maintenance/main.ts')} },
       },
     },
     preload: { build: { outDir: resolve('artifacts/test-app/preload') } },
