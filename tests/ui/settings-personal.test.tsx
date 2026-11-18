@@ -56,3 +56,18 @@ it('consumes approval navigation once and reopens the titlebar settings on basic
  act(()=>f.emit({settingsRequestToken:'approval-twice',approvalRequestToken:'approval-twice'}));expect(screen.getByRole('tab',{name:'공유 설정'})).toHaveAttribute('aria-selected','true')
  fireEvent.click(screen.getByRole('tab',{name:'기본 설정'}));expect(within(personal).getByLabelText('휴일 이름')).toHaveValue('승인 알림 사이 보존')
 })
+it('separates repeat and dated holidays into named regions and hides member common editing',()=>{
+ const state={...personalState,role:'member' as const,personalHolidays:calendar,holidays:{calendar,status:'current' as const,lastReceivedAt:null,message:''}}
+ const {api}=sharingFixture(state)
+ render(<SharingSettings state={state} api={api} busy={false} error={null} projects={[]} run={async fn=>fn()} onClose={()=>{}} onGuard={()=>{}}/>);
+ for(const scope of ['공통','개인']){
+  const region=screen.getByRole('region',{name:`휴일 관리 (${scope})`})
+  expect(within(region).getByRole('group',{name:'반복 휴일'})).toBeInTheDocument()
+  expect(within(region).getByRole('group',{name:`날짜별 휴일 (${scope})`})).toBeInTheDocument()
+  expect(within(region).getByText('매주 반복되는 휴무 요일')).toBeInTheDocument()
+  expect(within(region).getByText('특정 날짜 또는 기간에만 적용')).toBeInTheDocument()
+ }
+ const common=screen.getByRole('region',{name:'휴일 관리 (공통)'})
+ expect(within(common).getByText('호스트 제공 · 조회 전용')).toBeInTheDocument()
+ expect(within(common).queryByRole('button')).not.toBeInTheDocument()
+})
