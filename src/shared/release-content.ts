@@ -1,6 +1,9 @@
 export const releaseTypes={Feat:'기능 추가',Fix:'오류 수정',Perf:'성능 개선',Docs:'도움말·문서'} as const
 export interface ReleaseNote {version:string;summary:string;sections:{type:keyof typeof releaseTypes;items:string[]}[];notes?:string[]}
 export const releaseNotes:ReleaseNote[]=[
+ {version:'1.0.0',summary:'WorkRail 통합 도구와 Node 버전 관리',sections:[
+  {type:'Feat',items:['앱 이름과 아이콘을 WorkRail로 바꾸고 홈·Planrail·Node 관리를 하단 도크로 연결합니다.','홈에서 오늘의 일정, 공유 연결 상태와 내 PC의 Node 환경을 확인합니다.','Planrail에서 작성하던 내용과 날짜·화면 상태는 메뉴를 바꿔도 유지됩니다.','Windows x64에서 nvm-windows와 연동해 공식 Node 버전을 조회·설치하고 사용할 버전을 전환합니다.']},
+  {type:'Docs',items:['기존 일정 관리 도움말은 Planrail 메뉴에 계속 적용됩니다. Node 설치·권한·충돌 안내를 화면에서 확인할 수 있습니다.']}],notes:['기존 일정·설정·공유 승인과 설치 식별자는 유지합니다. 내부 실행 파일과 데이터 경로에 Planrail 이름이 남을 수 있습니다.','Node 버전 전환은 이후 실행되는 Node에 적용됩니다. 실행 중인 프로그램은 교체하지 않습니다. 필요한 작업에만 Windows 권한 확인이 표시됩니다.']},
  {version:'0.8.8',summary:'설정 탭과 개인 휴일·워킹데이',sections:[
   {type:'Feat',items:['제목 표시줄에 설정 버튼을 추가하고 기본 설정·공유 설정 탭으로 나눴습니다. 업데이트 배포는 호스트의 기본 설정으로 이동했습니다.','개인 전용·호스트·멤버 모두 개인 휴일을 별도로 저장합니다. 공통 휴일과 합산해 표시하며 개인 휴일은 다른 PC에 공유하지 않습니다.','일정 편집에 총 기간과 휴일을 제외한 워킹데이를 표시합니다.','npm run dev:member로 운영 데이터와 분리된 개발 멤버를 실행할 수 있습니다. 실제 업데이트 설치는 차단합니다.']},
   {type:'Fix',items:['반복 휴일과 호스트·멤버 선택의 붉은 활성 표시를 복구했습니다.','프로젝트가 없을 때 일정 추가 안내를 경고 토스트로 표시합니다.','날짜별 휴일의 삭제 버튼을 텍스트로 통일하고 공통·개인 출처를 구분했습니다.']},

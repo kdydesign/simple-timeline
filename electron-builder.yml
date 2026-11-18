@@ -1,5 +1,5 @@
 appId: com.kdydesign.simpletimeline
-productName: Planrail
+productName: WorkRail
 directories:
   output: release
 files:

@@ -8,8 +8,8 @@ export function createAbout(icon: string): () => void {
     void (async()=>{
       try {
         await dialog.showMessageBox({
-          type:'info',title:'About Planrail',message:'Planrail',
-          detail:`버전 ${app.getVersion()}\n오프라인 프로젝트 일정 관리 프로그램\n개발자: daeyong\nCopyright © 2026 daeyong`,
+          type:'info',title:'About WorkRail',message:'WorkRail',
+          detail:`버전 ${app.getVersion()}\n일정과 개발 환경을 관리하는 팀 도구\n개발자: daeyong\nCopyright © 2026 daeyong`,
           icon:nativeImage.createFromPath(icon),buttons:['닫기'],defaultId:0,cancelId:0,noLink:true,
         })
       } catch { /* Keep the running editor intact if the OS cannot show the dialog. */ }

@@ -17,7 +17,7 @@ test('installer configuration conforms to the installed builder schema',async()=
   const {validateConfiguration}=require('app-builder-lib/out/util/config/config.js')
   await validateConfiguration(load(readFileSync('electron-builder.yml','utf8')),{add(){}})
 })
-test('the P icon provides native Windows sizes for window, tray and installer',()=>{
+test('the W rail icon provides native Windows sizes for window, tray and installer',()=>{
   const c=load(readFileSync('electron-builder.yml','utf8'))
   assert.equal(c.win.icon,'resources/icon.ico')
   assert.ok(c.files.includes('resources/icon.png'), 'package the window icon referenced by main')
@@ -37,15 +37,15 @@ test('the P icon provides native Windows sizes for window, tray and installer',(
   assert.equal(png.subarray(1,4).toString(),'PNG')
 })
 
-test('Planrail rename preserves installer identity and offers directory selection without elevation',()=>{
+test('WorkRail rename preserves installer identity and offers directory selection without elevation',()=>{
  const c=load(readFileSync('electron-builder.yml','utf8'))
  const pkg=JSON.parse(readFileSync('package.json','utf8'))
- assert.equal(c.productName,'Planrail')
+ assert.equal(c.productName,'WorkRail')
  assert.equal(c.win.executableName,'Planrail')
  assert.match(c.artifactName,/^Planrail-/)
  assert.equal(c.appId,'com.kdydesign.simpletimeline')
  assert.equal(pkg.name,'simple-timeline')
- assert.equal(pkg.version,'0.8.8')
+ assert.equal(pkg.version,'1.0.0')
  const lock=JSON.parse(readFileSync('package-lock.json','utf8'))
  assert.equal(lock.version,pkg.version)
  assert.equal(lock.packages[''].version,pkg.version)

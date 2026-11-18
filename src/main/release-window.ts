@@ -26,7 +26,7 @@ export function createReleaseWindow(o:Options){
  const prepare=()=>{
   if(disposed||(window&&!window.isDestroyed()))return
   const a=screen.getDisplayMatching(o.mainWindow.getBounds()).workArea,width=Math.min(1120,a.width),height=Math.min(800,a.height)
-  const w=new BrowserWindow({title:'Planrail 릴리즈노트',width,height,x:a.x+Math.floor((a.width-width)/2),y:a.y+Math.floor((a.height-height)/2),show:false,frame:false,backgroundColor:'#222629',icon:o.icon,webPreferences:{preload:o.preload,sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,partition:'planrail-release-notes'}})
+  const w=new BrowserWindow({title:'WorkRail 릴리즈노트',width,height,x:a.x+Math.floor((a.width-width)/2),y:a.y+Math.floor((a.height-height)/2),show:false,frame:false,backgroundColor:'#222629',icon:o.icon,webPreferences:{preload:o.preload,sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,partition:'planrail-release-notes'}})
   window=w;ready=false;w.setMenu(null)
   w.webContents.setWindowOpenHandler(()=>({action:'deny'}))
   w.webContents.on('will-navigate',e=>e.preventDefault())

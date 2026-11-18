@@ -13,7 +13,7 @@ const coreHelpArticles:HelpArticle[]=[
   "image": {"file": "app-overview.png", "alt": "역할과 도구 모음, 프로젝트 일정 간트가 보이는 실제 앱 화면", "caption": "가상 프로젝트로 촬영한 기본 화면", "points": [{"step": 1, "x": 4, "y": 2}, {"step": 2, "x": 96, "y": 8}, {"step": 3, "x": 56, "y": 8}]},
   "section": "시작하기",
   "title": "Planrail 시작하기",
-  "intro": "프로젝트 아래 일정을 모아 간트와 달력으로 관리하는 Windows 데스크톱 앱입니다. 개인 자료는 인터넷 없이 사용할 수 있습니다.",
+  "intro": "WorkRail 하단 도크에서 Planrail을 열면 프로젝트 아래 일정을 모아 간트와 달력으로 관리할 수 있습니다. 개인 자료는 인터넷 없이 사용할 수 있습니다. 홈은 오늘의 일정과 내 개발 환경을 요약하고, Node 관리는 내 PC의 Node 버전을 설치·전환합니다.",
   "steps": [
    {
     "title": "화면과 역할을 확인합니다",
@@ -296,6 +296,15 @@ const coreHelpArticles:HelpArticle[]=[
  }
 ]
 export const helpArticles:HelpArticle[]=[
+ {id:'workrail-home',section:'시작하기',title:'WorkRail 홈과 도구 전환',intro:'WorkRail은 Planrail 일정과 내 PC의 Node 개발 환경을 한곳에서 관리하는 팀 도구입니다.',steps:[
+  {title:'통합 현황을 확인합니다',text:'홈에서 오늘을 포함하는 개인·공유 일정과 공유 연결 상태, 내 PC의 Node 환경을 확인합니다. 연결이 끊기면 최신 공유 내용이 아닐 수 있으므로 상태 안내도 함께 확인하세요.'},
+  {title:'하단 도크로 도구를 전환합니다',text:'Planrail을 열면 기존 간트·달력과 일정 편집을 사용할 수 있습니다. Node 관리는 각 사용자의 PC에 적용되며 호스트·멤버 역할과 관계없습니다.'},
+  {title:'작성 중인 내용은 그대로 둡니다',text:'메뉴를 바꿔도 일정 입력과 날짜·화면 위치는 유지되고 공유와 알림도 계속 실행됩니다. 앱을 완전히 종료하기 전에는 작성 중인 내용을 저장하세요.'}],related:['app-overview','node-management']},
+ {id:'node-management',section:'기본 사용법',title:'Node 버전 설치와 전환',intro:'Windows x64에서 nvm-windows 1.x와 연동합니다. 다른 운영체제나 호환되지 않는 nvm은 상태를 안내하며 자동으로 교체하지 않습니다.',steps:[
+  {title:'현재 환경을 확인합니다',text:'Node 관리에서 사용 중인 버전과 설치된 버전을 확인합니다. nvm이 없으면 공식 설치 지원을 선택하고 설치 프로그램을 완료한 뒤 환경을 다시 확인합니다. 최초 설치로 PATH가 바뀌면 터미널을 다시 열어야 할 수 있습니다.'},
+  {title:'공식 버전을 선택해 설치합니다',text:'공식 Node 배포 목록에서 버전을 검색하거나 LTS로 좁힙니다. 설치와 사용은 별개입니다. 다운로드에는 인터넷이 필요하며 필요한 작업에만 Windows 권한 확인이 표시됩니다. 권한을 취소하거나 설치가 실패하면 안내를 확인하고 재조회하세요.'},
+  {title:'설치된 버전을 사용합니다',text:'사용을 누르면 이후 실행하는 Node가 선택한 버전을 사용합니다. 실행 중인 Node 프로세스는 교체하지 않습니다. 설치된 버전 전환은 인터넷 없이 할 수 있습니다.'},
+  {title:'환경 충돌을 해결합니다',text:'기존 standalone Node나 PATH·설정 충돌이 있으면 문제 경로와 안내를 확인하고 직접 정리한 뒤 다시 확인합니다. WorkRail은 기존 설치를 자동 제거하지 않습니다. 다른 CLI에서 동시에 nvm을 변경하지 마세요.'}],note:'설치·전환 중에는 메뉴를 이동할 수 있지만 작업이 끝날 때까지 앱의 실제 종료와 앱 업데이트 설치는 보류됩니다.',related:['workrail-home','saving-errors']},
  ...coreHelpArticles,
  {id:'settings',section:'기본 사용법',title:'기본 설정과 공유 설정',intro:'제목 표시줄은 릴리즈노트·도움말 | 설정 | 최소화·최대화·닫기 순서입니다. 톱니바퀴를 누르면 기본 설정 탭이 열립니다.',image:{file:'settings-personal.png',width:880,alt:'설정의 기본 설정·공유 설정 탭과 개인 휴일 입력',caption:'가상 개인 휴일을 등록한 실제 앱 화면',points:[{step:1,x:5,y:26},{step:2,x:5,y:46}]},steps:[
   {title:'탭으로 나누어 관리합니다',text:'기본 설정에서 휴일을 관리하고, 호스트는 업데이트 배포도 관리합니다. 공유 설정에서 호스트·멤버 연결, 주소, 공유 시작·중지, 참여자·승인, 공유 변경 알림을 관리합니다. 역할에 따라 사용할 수 있는 항목이 다릅니다.'},

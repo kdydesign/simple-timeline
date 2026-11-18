@@ -25,7 +25,7 @@ export function HelpApp({api}:{api:HelpApi}) {
  useEffect(()=>{const resize=()=>void api.command('state').then(r=>{if(r.ok)setMaximized(!!r.maximized)});window.addEventListener('resize',resize);return()=>window.removeEventListener('resize',resize)},[api])
  const results=searchHelp(reading?.query??''),querying=!!reading?.query.trim()
  return <div className="help-app">
-  <header className="help-titlebar"><strong>Planrail 도움말</strong><div className="help-window-controls"><button aria-label="최소화" onClick={()=>void control('minimize')}><Icon name="minimize"/></button><button aria-label={maximized?'이전 크기로 복원':'최대화'} onClick={()=>void control('toggle-maximize')}><Icon name={maximized?'restore':'maximize'}/></button><button className="help-icon-close" aria-label="도움말 닫기" onClick={()=>void control('close')}><Icon name="close"/></button></div></header>
+  <header className="help-titlebar"><strong>WorkRail 도움말</strong><div className="help-window-controls"><button aria-label="최소화" onClick={()=>void control('minimize')}><Icon name="minimize"/></button><button aria-label={maximized?'이전 크기로 복원':'최대화'} onClick={()=>void control('toggle-maximize')}><Icon name={maximized?'restore':'maximize'}/></button><button className="help-icon-close" aria-label="도움말 닫기" onClick={()=>void control('close')}><Icon name="close"/></button></div></header>
   {failed?<div className="help-failure"><p role="alert">도움말을 준비하지 못했습니다. 주 창은 계속 사용할 수 있습니다.</p><button onClick={load}>다시 시도</button></div>:!reading||!article?<p role="status">도움말을 준비하고 있습니다.</p>:<>
    <div className="help-toolbar"><button aria-label={toc?'목차 접기':'목차 펼치기'} aria-expanded={toc} onClick={()=>setToc(!toc)}><Icon name="gantt"/>{toc?'목차 접기':'목차 펼치기'}</button><span>인터넷 연결 없이 사용할 수 있습니다.</span></div>
    <div className={`help-layout ${toc?'':'help-toc-hidden'}`}>
@@ -41,7 +41,7 @@ export function HelpApp({api}:{api:HelpApi}) {
      {article.note&&<p className="help-note">{article.note}</p>}
      <section className="help-related"><h2>함께 보기</h2>{article.related.map(id=><button key={id} onClick={()=>select(id)}>{helpArticles.find(a=>a.id===id)!.title}</button>)}</section>
     </main>
-   </div><footer>오프라인 도움말 <span>Planrail {version}</span></footer>
+   </div><footer>오프라인 도움말 <span>WorkRail {version}</span></footer>
    {zoom&&article.image&&<ImageViewer image={article.image} src={images[`./images/${article.image.file}`]??''} onClose={()=>{setZoom(false);requestAnimationFrame(()=>imageButton.current?.focus())}}/>}
   </>}
  </div>

@@ -48,7 +48,7 @@ export function createHelpWindow(options:HelpOptions) {
   options.performance?.mark('prepare-start')
   const area=screen.getDisplayMatching(options.mainWindow.getBounds()).workArea
   const width=Math.min(1120,area.width),height=Math.min(800,area.height)
-  const w=new BrowserWindow({title:'Planrail 도움말',width,height,x:area.x+Math.floor((area.width-width)/2),y:area.y+Math.floor((area.height-height)/2),show:false,frame:false,backgroundColor:'#222629',icon:options.icon,
+  const w=new BrowserWindow({title:'WorkRail 도움말',width,height,x:area.x+Math.floor((area.width-width)/2),y:area.y+Math.floor((area.height-height)/2),show:false,frame:false,backgroundColor:'#222629',icon:options.icon,
    webPreferences:{preload:options.preload,sandbox:true,contextIsolation:true,nodeIntegration:false,webviewTag:false,partition:'planrail-help'}})
   window=w;ready=false;options.performance?.mark('window-created')
   w.setMenu(null)

@@ -8,7 +8,7 @@ it('shows real version and agreed identity without duplicate dialogs',async()=>{
  const show=createAbout('icon.png')
  show();show()
  expect(mocks.show).toHaveBeenCalledTimes(1)
- expect(mocks.show.mock.calls[0][0]).toMatchObject({title:'About Planrail',message:'Planrail',detail:expect.stringContaining('0.4.0'),icon:'icon'})
+ expect(mocks.show.mock.calls[0][0]).toMatchObject({title:'About WorkRail',message:'WorkRail',detail:expect.stringContaining('0.4.0'),icon:'icon'})
  expect(mocks.show.mock.calls[0][0].detail).toContain('daeyong')
  expect(mocks.show.mock.calls[0][0].detail).toContain('Copyright © 2026 daeyong')
  finish();await Promise.resolve();await Promise.resolve();show()

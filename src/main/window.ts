@@ -9,7 +9,7 @@ export function createWindow(preload: string, url: string, onShown?: () => void,
     show: false,
     frame: false,
     ...windowMaterial(process.platform, release()),
-    title: 'Planrail',
+    title: 'WorkRail',
     webPreferences: {
       preload,
       nodeIntegration: false,

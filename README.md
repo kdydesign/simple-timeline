@@ -1,6 +1,8 @@
-# Planrail
+# WorkRail
 
-오프라인 Windows 프로젝트 일정 관리 프로그램. Electron + React + SQLite로 프로젝트·일정을 저장하고 간트·월간 달력으로 조회한다.
+NW 웹개발팀을 위한 Windows 통합 도구. Planrail 일정 관리와 내 PC의 Node 버전 관리를 하단 도크로 전환한다. 기존 Electron + React + SQLite 기반 일정·공유·알림과 사용자 데이터를 유지한다.
+
+WorkRail 1.0.0은 현재 로컬 구현·검증 중이며 아직 게시하지 않았다. [확정 설계와 구현 기본값](docs/design/team-tool-expansion.md) · [구현 계획](docs/superpowers/plans/2026-11-18-workrail.md).
 
 스테이지 1~7은 완료됐다. 사용자는 기본 설치·실행·업데이트·제거/재설치와 데이터 보존을 확인했으며,
 상세 개선·오류 검증은 별도 후속 요청으로 분리했다. [사용자 인수 기록](docs/release/user-acceptance.md)의 범위와 한계를 따른다.
@@ -11,7 +13,7 @@ Windows 11 x64용 서명 없는 사용자별 NSIS 설치본을 비공개 GitHub 
 설치 방법은 [사용 안내](docs/release/user-guide.md), 정확한 다운로드·소스 SHA·해시는
 [Windows 검증 기록](docs/release/windows-validation.md)을 확인한다.
 `UPDATE-TEST-ONLY`는 같은 소스의 가상 다음 버전 fixture이며 일반 배포본이 아니다.
-현재 0.8.8 변경과 검증 근거는 [설정·개인 휴일·워킹데이 구현 기록](docs/implementation/2026-11-18-settings-working-days.md)을 따른다.
+이전 Planrail 0.8.8 변경과 검증 근거는 [설정·개인 휴일·워킹데이 구현 기록](docs/implementation/2026-11-18-settings-working-days.md)을 따른다.
 업데이트·제거 후에도 DB를 보존한다. 0.8.0은 승인된 LAN 멤버의 UPDATE 업데이트를 제공한다. 호스트는 수동 설치하며 수동 백업/복원 기능은 없다. [업데이트 구현·검증](docs/implementation/2026-11-11-lan-app-updates.md)을 따른다.
 
 ## 개발 시작

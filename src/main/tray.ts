@@ -33,7 +33,7 @@ export function updateSharingTray(tray:Tray,state?:SharingState) {
  const normal=state?.role==='member'?state.status==='connected':state?.role==='host'&&state.hostingEnabled&&state.status==='connected';
  const label=state?.role==='host'?`호스트 · ${sharingDescription(state)}`:state?.role==='member'?sharingDescription(state):'공유 미설정';
  rendered.set(tray,key)
- tray.setToolTip(`Planrail · ${label}`)
+ tray.setToolTip(`WorkRail · ${label}`)
  const menu=Menu.buildFromTemplate([
   {label:'연결 상태',icon:statusIcon(state?.role==='personal'||!state?'gray':normal?'green':'red'),enabled:false},
   {type:'separator'}, {label:'About',click:callback.about},
