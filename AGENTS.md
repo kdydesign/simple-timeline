@@ -2,8 +2,8 @@
 
 ## 프로젝트
 
-Planrail — 오프라인 Windows 일정 관리 프로그램. Electron + React + SQLite.
-사용자와 한국어로 소통한다. 기존 MVP 지도는 완료 상태다. 0.6.0은 승인된 사내 LAN 공유를 추가했으며 Teams·모바일은 범위 밖이다.
+Planrail — 개인·사내 LAN 공유 프로젝트를 관리하는 Windows 일정 앱. Electron + React + SQLite.
+사용자와 한국어로 소통한다. Teams·모바일은 범위 밖이며 현재 구현·인수 상태는 아래 문서에서 확인한다.
 
 ## 시작 순서
 
@@ -34,6 +34,7 @@ Planrail — 오프라인 Windows 일정 관리 프로그램. Electron + React +
 | 목적 | 명령 |
 | --- | --- |
 | 개발 실행 / 제품 빌드 | `npm run dev` / `npm run build` |
+| 별도 프로필의 개발 멤버 | `npm run dev:member` (실제 연결·승인은 별도) |
 | 타입 / 날짜 단위 검사 | `npm run typecheck` / `npm run test:unit -- tests/unit/date.test.ts --reporter=dot` |
 | 저장소 완료 검사 | `node scripts/harness/run.mjs verify` |
 | 앱 전체 검사 | `npm run verify:app` (Linux headless: `xvfb-run -a npm run verify:app`) |
@@ -41,20 +42,22 @@ Planrail — 오프라인 Windows 일정 관리 프로그램. Electron + React +
 
 `npm run dev`는 일반 사용자 DB를 사용한다. `npm run dev:member`는 지속되는 개발 멤버 프로필을 사용하므로 자동 테스트는 여전히 일회성 프로필을 쓴다. 일회성 확인은 [프로필 격리 절차](docs/harness/validation.md)를 따른다.
 Electron sandbox를 끄지 않는다. 앱 검사를 겹쳐 실행하면 artifact 정리가 충돌하므로 순차 실행한다.
-verify:app은 기본 명령별180초, native 전체360초, 순차 Electron E2E 전체600초 제한이다. native 내부 Electron 전체 실행은300초이며 개별 테스트 제한은 유지한다.
+검사 순서·시간 제한·플랫폼 준비는 [검증 안내](docs/harness/validation.md)를 따른다.
 패키지 검사는 실제 AppData·방화벽을 사용하므로 기존 프로필 없는 일회성 Windows CI VM에서만 실행한다.
 
 ## 완료 기준
 
-- 문서 변경도 하네스 verify를 통과해야 한다. 제품 변경은 verify:app도 실행한다.
+- 별도 실행 제한이 없으면 문서 변경은 로컬 하네스 verify, 제품 변경은 verify:app도 실행한다.
   실패를 숨기거나 검사를 비활성화하지 않는다. 경로·명령 수정 시 실제 대상과 실행 가능성도 확인한다.
 - [검증 안내](docs/harness/validation.md)에 따라 보고서의 SHA·dirty 상태·환경·검사 범위를 확인한다.
   실행하지 못한 검사는 미검증으로 남긴다. Windows CI와 사용자 PC 인수 결과를 구분한다.
 - 결과·근거·남은 일을 관련 기존 문서에 기록한다. 단계 종료라면 인수인계·티켓·STATUS·MAP도 함께 갱신한다.
   일반 후속 작업의 절차는 [세션 안내](docs/harness/session.md)를 따른다.
-- 요청 범위의 변경만 커밋한다. 사용자의 상시 지시에 따라 검증 후 `main`에 직접 커밋·push하고 성공 여부를 보고한다.
+- 요청 범위의 변경만 커밋한다. 별도 제한이 없으면 사용자의 상시 지시에 따라 검증 후 `main`에 직접 커밋·push하고 성공 여부를 보고한다.
   PR 생성·PR 승인 요청을 기본 절차로 사용하지 않는다. 자동 merge, 강제 push, 사용자 변경 폐기는 하지 않는다.
   원격이 앞서 있으면 최신 변경을 확인·통합하고 다시 검증한 뒤 일반 push한다.
+- 현재 두 workflow는 문서만 push해도 실행된다. 사용자가 CI 실행을 금지하면 push·workflow 수동 실행·재실행을 하지 않고 로컬 변경·커밋까지만 진행한다.
+  로컬 검사까지 금지한 요청과 구분하고, 미실행 항목과 미push 상태를 보고한다. CI를 피하려고 workflow 설정을 임의로 바꾸지 않는다.
 
 ## 문서·지침 유지
 
