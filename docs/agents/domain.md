@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| WorkRail 개선 구현 진행 | [구현 계획](../superpowers/plans/2026-11-18-workrail-polish-and-recovery.md) · [실행 기록](../implementation/2026-11-18-workrail-polish-and-recovery.md). 사용자 구현 시작 요청으로 화면·역할 전환·Node 복구를 진행. 아래 과거 설계-only 상태와 구분 |
 | WorkRail 화면 정리 설계 | [설계·수정 시안 v3](../design/workrail-screen-polish.md). 상단 메뉴·Node 표·Home 카드 높이·footer 색상/무음 심벌·설정 밀도/휴일 구분·공유 버튼·메뉴 E 모듈형·앱 F WR 모노그램 선택과 확인용 보드. 전체 화면 설계 확인 대기·제품 구현 전 |
 | 호스트·멤버 역할 전환 | [후속 설계](../design/sharing-role-switch.md). 양방향 전환·호스트 원본/등록/승인 보관·별도 조회와 현재 일정/알림 제외·수신 자료/자격 정리 후 재승인. 전체 확인 대기이며 현재 제품의 역할 고정 정책과 구분 |
 | 기존 Node 충돌·제거 지원 설계 | [확정 설계](../design/node-conflict-removal.md). 공식 MSI 제거·Windows 표준 UI·개발 실행의 독립 관리 창을 Q6에서 전체 확정. 사용자의 코드 수정 금지에 따라 제품 구현 전이며 기존 충돌 안내 동작과 구분 |
