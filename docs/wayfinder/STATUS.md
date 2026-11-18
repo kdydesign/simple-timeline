@@ -1,5 +1,7 @@
 # 진행 상태
 
+최신 설계 협의: [기존 Node 제거와 nvm 설치](../design/node-conflict-removal.md)는 Q1~Q5를 선택하고 독립 설계 검토를 마쳤다. 공식 MSI 제거를 Windows 표준 화면에서 지원하며 개발 실행은 독립 관리 창으로 이어간다. Q6 전체 설계 확인 대기이며 제품 코드는 변경하지 않았다. 기존 MVP 완료 상태는 유지한다.
+
 최신 후속: WorkRail 1.0.0 [통합 도구 설계](../design/team-tool-expansion.md)는 이름·도크 D·Node 목록 A·통합 현황 홈 B·W 아이콘 A와 구현 요청을 받았다. [구현·검증 기록](../implementation/2026-11-18-workrail.md)에 로컬 구현·독립 검토 및 clean `aa126ba`의 전체 자동 검사 통과를 기록했다. 경미한 동시 복구 조회 진단 한계는 기록을 따른다. 기존 MVP 완료 상태는 유지하며 게시·push·Windows 실기는 수행하지 않았다.
 
 이전 후속: 0.8.8 [설정 탭·개인 휴일·워킹데이](../design/settings-and-working-days.md)는 Q10 승인 후 구현·도움말 갱신·검토를 완료했다. 제품 소스 `8a11bed1dacf158bc847832d4c26aa3642b93f5f`의 Application과 Repository harness는 Windows·Linux 모두 성공했다. 로컬 전체 검사 실패와 회사 PC 미검증 범위는 [구현·검증 기록](../implementation/2026-11-18-settings-working-days.md)에 별도로 보존한다. 기존 MVP 완료 상태는 유지한다.

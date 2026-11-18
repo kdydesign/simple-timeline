@@ -99,3 +99,11 @@
 
 통합 도구의 두 번째 메뉴로, 사용자가 자기 PC의 Node 버전을 설치하고 사용할 버전을 선택하는 기능.
 일정 공유의 호스트·멤버 역할과 무관하게 각 사용자가 관리한다.
+
+## 기존 Node 설치 / Standalone Node Installation
+
+nvm-windows가 관리하는 버전과 별도로 설치된 Node. 공식 설치 프로그램, 수동 설치 등 여러 설치 방식이 있을 수 있으며, 충돌이 감지됐다는 사실만으로 제거 가능한 설치라고 단정하지 않는다.
+
+## Node 환경 관리 창 / Node Environment Maintenance Window
+
+개발용 WorkRail의 실행이 중단되어도 기존 Node 제거와 nvm·Node 설치를 이어갈 수 있도록 제공하는 별도 관리 화면. 일정 관리 화면이나 운영 데이터 복구 도구를 뜻하지 않는다.
