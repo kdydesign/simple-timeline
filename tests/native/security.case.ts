@@ -9,7 +9,7 @@ import { createWindow } from '../../src/main/window'
 import type { NativeCase } from './helpers'
 export const cases: NativeCase[] = [
   {
-    name: 'isolates the real renderer and exposes only nine named bridge methods',
+    name: 'isolates the real renderer and exposes only the named timeline, sharing and Node methods',
     async run(ctx) {
       assert.ok(
         app
@@ -41,12 +41,13 @@ export const cases: NativeCase[] = [
       })
       assert.deepEqual(await flags, { sandboxed: true, isolated: true })
       const result = await w.webContents.executeJavaScript(
-        '({node:typeof require, keys:Object.keys(window.simpleTimeline||{}), sharing:Object.keys(window.timelineSharing||{})})',
+        '({node:typeof require, keys:Object.keys(window.simpleTimeline||{}), sharing:Object.keys(window.timelineSharing||{}), nodeManagement:Object.keys(window.workrailNodeManagement||{})})',
       )
       assert.equal(result.node, 'undefined')
       assert.deepEqual(result.keys.sort(), ['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort())
       assert.equal(result.keys.includes('invoke'), false)
-      assert.deepEqual(result.sharing.sort(),['savePersonalHolidays','saveHolidays','getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','deleteDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','setChangeNotifications','retryChangeNotifications','acknowledgeChange','onChange'].sort())
+      assert.deepEqual(result.sharing.sort(),['switchRole','getDormantData','savePersonalHolidays','saveHolidays','getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','deleteDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','setChangeNotifications','retryChangeNotifications','acknowledgeChange','onChange'].sort())
+      assert.deepEqual(result.nodeManagement.sort(),['getState','refreshCatalog','installManager','install','use','removeStandalone','openMaintenance','onChange'].sort())
     },
   },
 ]
