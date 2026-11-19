@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-19 후속 개선은 설계 단계다. Windows x64 ZIP 설치 통일의 관리자별 검증 항목과 크기별 아이콘 기준은 [NodeRail·아이콘 설계](../design/windows-node-zip-all-versions.md)에, 트레이 숨김과 별도 창 닫기의 연결 유지 동작은 [TermRail 설계](../design/ssh-terminal-menu.md#전체-개선-재검토에서-확인한-세션-동작)에 기록했다. [통합 검토 기록](../harness/review.md)
+
 2026-11-19 사용자가 TermRail 네 번째 시안과 사용자 동작을 승인했다. [확정 설계](../design/ssh-terminal-menu.md)에 승인 범위와 후속 기술 검토 항목을 기록했다. 현재 단계는 설계까지다.
 
 2026-11-19 TermRail [네 번째 시안](../design/ssh-terminal-menu.md)에 서버 수정, ＋ 탭 서버 선택 메뉴, 개별 터미널 닫기와 분할 공간 재배치, 왼쪽 레이아웃 저장 버튼을 반영했다.
