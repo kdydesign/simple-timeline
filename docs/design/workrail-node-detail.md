@@ -1,6 +1,6 @@
 # NodeRail 검사·검색과 Home 작업 상태
 
-2026-11-19 질문 카드 선택 반영본. 승인된 레일 앱 아이콘은 로컬 제품 리소스에 적용했다. 아래 열 가지 화면·동작 변경은 후속 구현 범위다. 사용자는 패널 A, 검색 D, Home 시안, 달력 일수, Windows·실행 중 WSL의 버전 저장 폴더를 선택했다. [기존 환경 계약](workrail-environments-and-home.md) · [클릭 가능한 시안](mockups/workrail-node-detail.html)
+2026-11-19 질문 카드 선택 반영본. 승인된 레일 앱 아이콘은 로컬 제품 리소스에 적용했다. 사용자가 아래 화면·동작과 CI 보정의 구현을 요청했다. [구현 계획](../superpowers/plans/2026-11-19-node-detail.md)을 따른다. 사용자는 패널 A, 검색 D, Home 시안, 달력 일수, Windows·실행 중 WSL의 버전 저장 폴더를 선택했다. [기존 환경 계약](workrail-environments-and-home.md) · [클릭 가능한 시안](mockups/workrail-node-detail.html)
 
 ## NodeRail
 
