@@ -208,7 +208,25 @@ it.skipIf(!modernRunner)('installs the first ZIP on official nvm 2.0.1 and activ
   expect(userPath()).toBe(originalPath)
   expect(await service.getState('recheck')).toMatchObject({ activeVersion: null, installedVersions: [version], error: null })
   expect(run(manager.exe, ['list', 'installed'])).toContain(version)
-  expect(await service.use(version)).toMatchObject({ activeVersion: version, activeSource: 'nvm', error: null })
+  let switchOutcome = 'not invoked'
+  const change = windows.changeVersion.bind(windows)
+  windows.changeVersion = async (...args) => {
+    try {
+      const result = await change(...args)
+      switchOutcome = result.status
+      return result
+    } catch (error) { switchOutcome = describeFailure(error); throw error }
+  }
+  const switched = await service.use(version)
+  if (switched.error) {
+    throw new Error('WorkRail activation failed: ' + JSON.stringify({
+      error: switched.error.code, command: switchOutcome, manager: switched.manager.status,
+      active: switched.activeVersion, source: switched.activeSource, versions: switched.installedVersions,
+      conflicts: switched.conflicts.map(conflict => conflict.code), targets: await linkTargets(),
+      samePath: userPath() === originalPath,
+    }))
+  }
+  expect(switched).toMatchObject({ activeVersion: version, activeSource: 'nvm', error: null })
   expect(run(join(manager.symlink, 'node.exe'), ['-v'])).toBe('v' + version)
   expect(run(shell, ['/d', '/c', 'npm -v'])).toBe(npmVersion)
 }, 360_000)

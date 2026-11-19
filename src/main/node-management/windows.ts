@@ -199,10 +199,22 @@ function modernCommand(installation: Extract<NvmInstallation, { family: 'modern'
   const release = modernReleases.find(candidate => candidate.digest === installation.executableDigest && candidate.version === installation.version)
   if (!release) throw Error('Unverified modern nvm')
   // The plain installed table is local. The JSON variant queries the release catalog.
+  // Keep native stderr separate from the version rows. Windows PowerShell 5.1
+  // can promote a successful CLI's stderr warnings to terminating ErrorRecords.
   const execution = action === 'list' ? `
-  $rows = & ${psLiteral(installation.exe)} 'list' 'installed'
-  if ($LASTEXITCODE -eq 0) { $rows | ForEach-Object { [Console]::WriteLine($_) } }
-  exit $LASTEXITCODE` : `
+  $start = [Diagnostics.ProcessStartInfo]::new()
+  $start.FileName = ${psLiteral(installation.exe)}
+  $start.Arguments = 'list installed'
+  $start.WorkingDirectory = [Environment]::SystemDirectory
+  $start.UseShellExecute = $false
+  $start.CreateNoWindow = $true
+  $start.RedirectStandardOutput = $true
+  $child = [Diagnostics.Process]::Start($start)
+  try {
+    $child.StandardOutput.BaseStream.CopyTo([Console]::OpenStandardOutput())
+    $child.WaitForExit()
+    exit $child.ExitCode
+  } finally { $child.Dispose() }` : `
   $child = Start-Process -FilePath ${psLiteral(installation.exe)} -WorkingDirectory ([Environment]::SystemDirectory) -ArgumentList @('use', ${psLiteral(version!)}, '--no-install') -Wait -PassThru -WindowStyle Hidden
   if ($null -eq $child.ExitCode) { throw 'Unknown completion' }
   $failure = if ($child.ExitCode -eq 0) { 0 } else { 1 }`
@@ -213,7 +225,7 @@ $helpers = @()
 $failure = 1610
 try {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
-  $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+  $principal = [Security.Principal.WindowsPrincipal]::new($identity)
   if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'User context required' }
   ${lockHelpers(installation.home, { 'nvm.exe': release.digest, ...release.helpers }, "throw 'Unverified file'")}
   $failure = 1620
@@ -233,7 +245,7 @@ try {
 } catch { } finally {
   foreach ($stream in $helpers) { $stream.Dispose() }
 }
-[Console]::WriteLine('WORKRAIL_EXIT:' + $failure)
+${action === 'list' ? 'exit $failure' : "[Console]::WriteLine('WORKRAIL_EXIT:' + $failure)"}
 `)
 }
 
@@ -421,8 +433,15 @@ foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.Security
     const shell = await resolveSystemPowerShell()
     if (installation.family === 'classic') return verifiedClassicList(installation, shell.system)
     const args = modernCommand(installation, 'list')
-    const { stdout } = await exec(shell.powershell, args, { ...shell.options, timeout: 30_000 })
-    return parseModernList(stdout)
+    try {
+      const { stdout } = await exec(shell.powershell, args, { ...shell.options, timeout: 30_000 })
+      return parseModernList(stdout)
+    } catch (error) {
+      // Never relay native output, the encoded wrapper, or its environment to callers.
+      const code = (error as { code?: unknown }).code
+      const stage = code === 1610 ? 'user or file verification' : code === 1620 ? 'registry verification' : 'native process'
+      throw Error('nvm list failed during ' + stage + (typeof code === 'number' ? ' (exit ' + code + ')' : ''))
+    }
   }
 
   return {
