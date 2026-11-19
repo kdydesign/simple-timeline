@@ -120,3 +120,13 @@ Q1/Q2/Q4/Q7/Q8은 WSL 기본 사용자·global 전환·명시적 시작·소스 
 Release 33개, 업데이트 ZIP 가져오기 28개, 배포 설정 UI 2개, typecheck·하네스 7개가 통과했다. 생성 파일명에서 blockmap·metadata·manifest·해시 참조를 함께 검사했다. 실제 NSIS·Windows 설치 실행은 원격 CI 검증 범위다. Release 실행의 기존 `MODULE_TYPELESS_PACKAGE_JSON` 진단은 통과와 별도로 보존했다.
 
 배포 변경의 독립 검토는 명세 충족·결함 없음으로 승인했다. 전체 검사 실행 전 개별 단계의 실패 로그와 캡처를 `artifacts/workrail-environments/pre-integration` 및 작업별 증거 폴더에 보존했다.
+
+## 첫 통합 검사와 보완
+
+깨끗한 `8877914`(Linux x64, Node 24.22.1)에서 전체 검사를 실행했다. 타입·release·3개 시간대 단위 검사는 통과했다(각 시간대 474 통과, 기존 Windows 전용 3 미실행). UI는 264 통과·5 실패로 중단됐다. 변경된 footer의 안쪽 문구를 선택하던 기존 assertion이 원인이며 실제 역할·연결 상태 확인은 보존해 수정한다. 이후 단계는 전체 보고서에서 미실행 상태로 유지했다.
+
+추가 진단으로 빌드→native→Electron을 순차 실행했다. 빌드는 통과했고 native는 새 환경 API 3개의 정확한 공개 목록 assertion이 빠져 97/98, Electron은 공통 여백의 이전 기대값 때문에 115/116(4.1분)이었다. 전체 실패 보고서는 `artifacts/workrail-environments/integration-8877914-failed`, 후속 진단과 캡처는 `integration-8877914-remaining`에 보존했다. 이 결과를 전체 통과로 취급하지 않는다.
+
+최종 독립 검토에서는 IPC 거절 응답의 revision과 종료 불명 UI 잠금, 환경/Windows 검사 실패 후 Main의 종료·업데이트 예약 유지, 설치가 사라진 nodenv 기본 버전의 표시를 보완 대상으로 확인했다. 위 검사 보정과 함께 한 차례 통합 수정·재검토를 진행한다. 같은 글의 메뉴 이동 때 확대창 초기화, 도움말의 상태 위치, 인증되지 않은 원본 응답 헤더 검사, WSL 대기 문구도 함께 정리한다.
+
+`c89f15f`에서 통합 검토의 8개 항목과 native/Electron 검사 불일치를 수정했다. 명령 거절을 authoritative 상태와 구분하고 응답 순서를 보존하며, Windows 종료 미확정 예약은 별도 근거 없이 해제하지 않는다. nodenv 설정 기본값과 실제 사용 가능한 버전을 구분했다. 집중 단위 122개·UI 65개, typecheck·제품 빌드·새 빌드의 native 98개·여백 Electron 1개가 통과했다. 최종 fixture 타입 보정 후 routing 6개도 다시 통과했다. 범위를 제한한 재검토와 전체 검사는 이어서 수행한다.

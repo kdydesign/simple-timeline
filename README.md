@@ -2,7 +2,7 @@
 
 NW 웹개발팀을 위한 Windows 통합 도구. Home·PlanRail 일정 관리·NodeRail 버전 관리를 상단 메뉴로 전환한다. 기존 Electron + React + SQLite 기반 일정·공유·알림과 사용자 데이터를 유지한다.
 
-WorkRail 1.0.0의 초기 통합 도구 구현 이후 화면 정리·양방향 역할 전환·Node 충돌 복구를 반영했다. 최신 검증과 Windows 인수 범위는 [개선 구현 기록](docs/implementation/2026-11-18-workrail-polish-and-recovery.md)을 따른다. 아래는 초기 통합 도구 기록이다. [확정 설계와 구현 기본값](docs/design/team-tool-expansion.md) · [구현 계획](docs/superpowers/plans/2026-11-18-workrail.md) · [검증 기록](docs/implementation/2026-11-18-workrail.md).
+WorkRail 1.0.0에 기존 nvm의 기능별 연동, WSL2 nodenv 환경 선택, compact Home·footer와 메뉴별 도움말을 추가하는 후속 개선을 진행 중이다. 최신 구현·검증 및 실제 Windows/WSL 인수 범위는 [환경 연동·통합 화면 구현 기록](docs/implementation/2026-11-19-workrail-environments.md)을 따른다. 이전 화면·역할 전환·Node 충돌 복구는 [이전 개선 기록](docs/implementation/2026-11-18-workrail-polish-and-recovery.md)에 보존한다. 초기 통합 도구의 [확정 설계](docs/design/team-tool-expansion.md) · [구현 계획](docs/superpowers/plans/2026-11-18-workrail.md) · [검증 기록](docs/implementation/2026-11-18-workrail.md)도 별도 이력이다.
 
 스테이지 1~7은 완료됐다. 사용자는 기본 설치·실행·업데이트·제거/재설치와 데이터 보존을 확인했으며,
 상세 개선·오류 검증은 별도 후속 요청으로 분리했다. [사용자 인수 기록](docs/release/user-acceptance.md)의 범위와 한계를 따른다.
