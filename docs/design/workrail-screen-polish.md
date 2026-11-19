@@ -1,6 +1,6 @@
 # WorkRail 화면 정리 — Home · PlanRail · NodeRail
 
-후속 설계 기준(2026-11-19): [환경별 Node 연동·Home 개선](workrail-environments-and-home.md)이 compact Home 위젯, 실제 공유 배지 재사용, flat 비선택 메뉴, 메뉴별 도움말, 환경 자동 감지를 다룬다. 아래 회색 비선택 메뉴 등은 당시 제품 상태이며 후속 설계의 변경 대상이다. 제품 적용 완료와 후속 설계 최종 확인을 구분한다.
+후속 설계 기준(2026-11-19): [환경별 Node 연동·Home 개선](workrail-environments-and-home.md)이 compact Home 위젯, 실제 공유 배지 재사용, flat 비선택 메뉴, 메뉴별 도움말, 환경 자동 감지를 다룬다. 아래 회색 비선택 메뉴 등은 당시 제품 상태이며 후속 설계의 변경 대상이다. 후속 설계는 Q12에서 확정됐으며 기존 제품 적용 완료와 후속 구현 미착수를 구분한다.
 
 ## 2026-11-19 제품 적용 결정
 

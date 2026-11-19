@@ -2,7 +2,7 @@
 
 ## Node 환경 / Node Environment
 
-Node 관리 명령이 실행되는 운영체제·사용자 범위. [환경 확장 설계 초안](docs/design/workrail-environments-and-home.md)에서는 Windows 또는 WSL 배포판과 Linux 사용자 조합을 뜻한다. 관리 도구와 설치 버전 목록은 이 환경에 속하며 서로 다른 환경의 목록을 합치지 않는다. 현재 제품의 WSL 지원 완료를 뜻하지 않는다.
+Node 관리 명령이 실행되는 운영체제·사용자 범위. [환경 확장 확정 설계](docs/design/workrail-environments-and-home.md)에서는 Windows 또는 WSL 배포판과 Linux 사용자 조합을 뜻한다. 관리 도구와 설치 버전 목록은 이 환경에 속하며 서로 다른 환경의 목록을 합치지 않는다. 현재 제품의 WSL 지원 완료를 뜻하지 않는다.
 
 ## 선택한 Node 환경 / Selected Node Environment
 

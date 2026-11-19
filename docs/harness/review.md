@@ -16,7 +16,7 @@ documentation-and-adrs 검토 결과:
 - 새 기능의 의미를 반복하는 ADR 디렉터리를 추가하지 않는다. 기존 docs/design 관례 안에서 대안·선택·결과를 기록하고 과거 기록은 삭제하지 않는다.
 - 구현 인수 기준에 Windows/WSL 실기·구버전 공유/업데이트 호환을 명시했다. 문서 검사와 제품 검증을 구분한다.
 
-독립 builder check는 중요한 추가 제품 결정 질문이 없다고 판단했다. 통합 설계·시안 최종 확인은 대기 중이다. 검증: Linux x64 / Node 24.22.1, HEAD `958719b` + 이번 문서 변경(dirty)에서 하네스 7개가 PASS였다. 점검한 문서 6개의 로컬 링크 대상 누락은 0개다. 결과는 `artifacts/harness/latest.json`·`latest.log`에 남는다. 제품 앱·Windows/WSL 실기는 이번 문서 작업에서 실행하지 않았다.
+독립 builder check는 중요한 추가 제품 결정 질문이 없다고 판단했다. 이후 사용자가 Q12에서 통합 설계·수정 시안을 확정했다. 구현 시작 승인은 포함하지 않는다. 검증: Linux x64 / Node 24.22.1, HEAD `958719b` + 이번 문서 변경(dirty)에서 하네스 7개가 PASS였다. 점검한 문서 6개의 로컬 링크 대상 누락은 0개다. 결과는 `artifacts/harness/latest.json`·`latest.log`에 남는다. 제품 앱·Windows/WSL 실기는 이번 문서 작업에서 실행하지 않았다.
 
 ## 2026-11-18 — AGENTS.md 빠른 점검과 CI 실행 제한
 
