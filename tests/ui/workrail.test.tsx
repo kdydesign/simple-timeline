@@ -658,8 +658,16 @@ it('blocks only the unavailable feature and explains an unsupported release and 
       { version: '23.0.0', date: '', lts: null, ltsKnown: false, npm: null, security: false, sourceOnly: true },
     ] },
   })
+  let complete!: () => void
+  fixture.api.refreshCatalog.mockImplementationOnce(async () => {
+    await new Promise<void>(resolve => { complete = resolve })
+    return fixture.api.getState.getMockImplementation()!()
+  })
   render(<App initialTool="node" api={memoryApi().api} />)
   const table = await within(node()).findByRole('table', { name: '공식 배포 버전' })
+  await waitFor(() => expect(table).toHaveAttribute('aria-busy', 'true'))
+  await act(async () => complete())
+  expect(table).toHaveAttribute('aria-busy', 'false')
   expect(within(table).getByRole('button', { name: '25.2.0 설치' })).toBeDisabled()
   expect(within(table).getByText('이 환경의 설치 정의가 없습니다.')).toBeVisible()
   expect(within(table).getByText('LTS · Krypton')).toBeVisible()

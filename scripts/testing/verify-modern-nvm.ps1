@@ -4,6 +4,13 @@ param(
   [string]$TestNode
 )
 $ErrorActionPreference = 'Stop'
+# A check-run annotation survives even when GitHub's raw log download is unavailable.
+trap {
+  $message = $_.Exception.Message.Replace('%','%25').Replace("`r",'%0D').Replace("`n",'%0A')
+  $line = $_.InvocationInfo.ScriptLineNumber
+  [Console]::WriteLine("::error file=scripts/testing/verify-modern-nvm.ps1,line=$line,title=nvm 2.0.1 ${Mode}::${message}")
+  break
+}
 if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted') {
   throw 'A disposable GitHub-hosted Windows VM is required'
 }
@@ -28,8 +35,16 @@ if ($AsStandardUser) {
   if ((Get-FileHash $installer).Hash -ne '2ba6ab6290fdc7d1e608e76c97577ca6e1df772b2d59ab8ebc01e10788de8e57') {
     throw 'Unexpected nvm 2.0.1 installer'
   }
-  $setup = Start-Process -FilePath $installer -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/OFFICIALNODE=ignore' -Wait -PassThru
-  if ($setup.ExitCode -ne 0) { throw "nvm installer exited $($setup.ExitCode)" }
+  $setupLog = Join-Path $env:TEMP 'workrail-nvm-setup.log'
+  $setupArgs = @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/OFFICIALNODE=ignore',('/LOG="' + $setupLog + '"'))
+  $setup = Start-Process -FilePath $installer -ArgumentList $setupArgs -Wait -PassThru
+  if ($setup.ExitCode -ne 0) {
+    $detail = ''
+    if (Test-Path -LiteralPath $setupLog) {
+      $detail = (Select-String -LiteralPath $setupLog -Pattern 'exception|error|failed|aborted' | Select-Object -Last 5 -ExpandProperty Line) -join ' | '
+    }
+    throw "nvm installer exited $($setup.ExitCode). $detail"
+  }
   $env:NVM_HOME = [Environment]::GetEnvironmentVariable('NVM_HOME','User')
   $env:Path += ';' + [Environment]::GetEnvironmentVariable('Path','User')
   $nvm = Join-Path $env:NVM_HOME 'nvm.exe'
@@ -92,8 +107,12 @@ try {
     }
   } finally { $policy.Dispose() }
   Get-Content -LiteralPath $out
-  Get-Content -LiteralPath $err
-  if ($child.ExitCode -ne 0) { throw "nvm 2.0.1 $Mode acceptance failed (exit $($child.ExitCode))" }
+  $workerErrors = @(Get-Content -LiteralPath $err)
+  $workerErrors | Write-Output
+  if ($child.ExitCode -ne 0) {
+    $detail = ($workerErrors | Select-Object -First 5) -join ' '
+    throw "Standard-user acceptance exited $($child.ExitCode). $detail"
+  }
 } finally {
   try { $machineEnvironment.SetValue('Path', $previousPath, $previousKind) } finally { $machineEnvironment.Dispose() }
   Remove-LocalUser -Name $account
