@@ -127,7 +127,12 @@ if ($AsStandardUser) {
   $env:GITHUB_STEP_SUMMARY = Join-Path $env:TEMP "workrail-nvm-$Mode-summary.md"
   $env:WORKRAIL_TEST_NVM_MODERN_MODE = $Mode
   & $TestNode node_modules/vitest/vitest.mjs run --config vitest.config.mts tests/unit/node-zip-windows.test.ts
-  exit $LASTEXITCODE
+  $zipExitCode = $LASTEXITCODE
+  # Run the ACL and identity comparisons after the real installation's cold start.
+  & $TestNode node_modules/vitest/vitest.mjs run --config vitest.config.mts tests/unit/node-elevation-windows.test.ts -t 'creates the protected machine reservation'
+  $reservationExitCode = $LASTEXITCODE
+  if ($zipExitCode -ne 0) { exit $zipExitCode }
+  exit $reservationExitCode
 }
 
 if (-not $isAdmin) { throw 'The runner administrator must prepare the isolated standard account' }

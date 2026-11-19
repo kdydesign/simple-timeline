@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
+import { MACHINE_LOCK_CONTEXT_SCRIPT } from '../../src/main/node-management/standalone-windows'
 import { registryJson } from '../../src/main/node-management/registry-json'
 import { createElevationCommand, readElevatedExit } from '../../src/main/node-management/windows'
 
@@ -117,3 +118,42 @@ $data = [ordered]@{ InstallRoot = 'C:\\Node 저장소'; MirrorNode = [string[]]@
   const out = execFileSync('powershell.exe', ['-NoProfile','-NonInteractive','-EncodedCommand', Buffer.from(script,'utf16le').toString('base64')], { encoding: 'utf8', windowsHide: true, timeout: 8000 })
   expect(JSON.parse(out)).toEqual({ InstallRoot: 'C:\\Node 저장소', MirrorNode: ['a','b'], Enabled: 1, ProxyAuth: false, WriteSources: { MirrorNode: 'machine-policy' } })
 })
+
+it.skipIf(process.platform !== 'win32')('creates the protected machine reservation and retains the Windows boot and process identities with module autoload disabled', () => {
+  const temporary = mkdtempSync(join(tmpdir(), 'workrail-machine-lock-'))
+  const directory = join(temporary, 'lock')
+  const testDirectory = "'" + directory.replaceAll("'", "''") + "'"
+  // Use the production descriptor and WMI query, with a disposable directory under this account.
+  const context = MACHINE_LOCK_CONTEXT_SCRIPT
+    .replace("[IO.Path]::Combine([Environment]::GetFolderPath('CommonApplicationData'), 'WorkRail-Node-Mutation')", testDirectory)
+    .replace('__OWNER_PID__', String(process.pid))
+  const ps = (script: string) => execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(script, 'utf16le').toString('base64')], { encoding: 'utf8', timeout: 15_000, windowsHide: true }).trim()
+  try {
+    const script = "$PSModuleAutoLoadingPreference = 'None'\n" + context
+    const cold = JSON.parse(ps(script))
+    expect(JSON.parse(ps(script))).toEqual(cold)
+    const expected = ps(`
+$ErrorActionPreference = 'Stop'
+[Console]::WriteLine((Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().Ticks)
+[Console]::WriteLine((Get-Process -Id ${process.pid}).StartTime.ToUniversalTime().Ticks)
+[Console]::WriteLine([Security.Principal.WindowsIdentity]::GetCurrent().User.Value)
+`).split(/\r?\n/)
+    expect(cold).toEqual({ directory, boot: expected[0], ownerStartedAt: expected[1], userSid: expected[2] })
+    const record = join(directory, 'record.json')
+    writeFileSync(record, '{}', { flag: 'wx' })
+    writeFileSync(record, '{"phase":"complete"}', { flag: 'r+' })
+    const security = ps(`
+$ErrorActionPreference = 'Stop'
+$acl = [IO.File]::GetAccessControl([IO.Path]::Combine(${testDirectory}, 'record.json'))
+$owner = $acl.GetOwner([Security.Principal.SecurityIdentifier]).Value
+[Console]::WriteLine($owner)
+foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
+  if ($rule.AccessControlType -eq 'Allow') { [Console]::WriteLine($rule.IdentityReference.Value + '=' + [int]$rule.FileSystemRights) }
+}
+`).split(/\r?\n/)
+    // Windows may use the Administrators SID as the default owner on elevated test runners.
+    expect(security.slice(1)).toContain(security[0] + '=2032127') // FullControl
+    expect(security.slice(1).filter(rule => rule.startsWith('S-1-5-32-545='))).toEqual(['S-1-5-32-545=1179817']) // ReadAndExecute + Synchronize
+    rmSync(record)
+  } finally { rmSync(temporary, { recursive: true, force: true }) }
+}, 60_000)

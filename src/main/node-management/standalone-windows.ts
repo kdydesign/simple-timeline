@@ -1,4 +1,5 @@
 import { win32 } from 'node:path'
+import { registryJson } from './registry-json'
 import { isSafeNvmPath } from './discovery'
 import { INTERACTIVE_USER_SID_PATTERN, NODE_UPGRADE_CODE, type MsiEvidence } from './standalone'
 
@@ -34,22 +35,22 @@ try {
 export const MACHINE_LOCK_CONTEXT_SCRIPT = String.raw`
 $ErrorActionPreference = 'Stop'
 $directory = [IO.Path]::Combine([Environment]::GetFolderPath('CommonApplicationData'), 'WorkRail-Node-Mutation')
-if (!(Test-Path -LiteralPath $directory)) {
-  [void][IO.Directory]::CreateDirectory($directory)
-  $acl = New-Object Security.AccessControl.DirectorySecurity
+if (![IO.Directory]::Exists($directory)) {
+  $acl = [Security.AccessControl.DirectorySecurity]::new()
   $acl.SetAccessRuleProtection($true, $false)
-  $users = New-Object Security.Principal.SecurityIdentifier 'S-1-5-32-545'
-  $creator = New-Object Security.Principal.SecurityIdentifier 'S-1-3-0'
+  $users = [Security.Principal.SecurityIdentifier]::new('S-1-5-32-545')
+  $creator = [Security.Principal.SecurityIdentifier]::new('S-1-3-0')
   foreach ($sid in @('S-1-5-18', 'S-1-5-32-544')) {
-    $identity = New-Object Security.Principal.SecurityIdentifier $sid
-    $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($identity, 'FullControl', 'ContainerInherit, ObjectInherit', 'None', 'Allow')))
+    $identity = [Security.Principal.SecurityIdentifier]::new($sid)
+    $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($identity, 'FullControl', 'ContainerInherit, ObjectInherit', 'None', 'Allow'))
   }
-  $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($users, 'ReadAndExecute', 'ContainerInherit, ObjectInherit', 'None', 'Allow')))
-  $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($users, 'CreateFiles', 'None', 'None', 'Allow')))
-  $acl.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($creator, 'FullControl', 'ObjectInherit', 'InheritOnly', 'Allow')))
-  Set-Acl -LiteralPath $directory -AclObject $acl
+  $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($users, 'ReadAndExecute', 'ContainerInherit, ObjectInherit', 'None', 'Allow'))
+  $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($users, 'CreateFiles', 'None', 'None', 'Allow'))
+  $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new($creator, 'FullControl', 'ObjectInherit', 'InheritOnly', 'Allow'))
+  # Apply the protected DACL at creation, including when two users race to initialize the directory.
+  [void][IO.Directory]::CreateDirectory($directory, $acl)
 }
-$acl = Get-Acl -LiteralPath $directory
+$acl = [IO.Directory]::GetAccessControl($directory)
 if (!$acl.AreAccessRulesProtected) { throw 'Unrestricted mutation directory' }
 foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
   if ($rule.AccessControlType -ne 'Allow') { continue }
@@ -59,16 +60,29 @@ foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.Security
   $allowed = [Security.AccessControl.FileSystemRights]::ReadAndExecute -bor [Security.AccessControl.FileSystemRights]::CreateFiles -bor [Security.AccessControl.FileSystemRights]::Synchronize
   if ($sid -ne 'S-1-5-32-545' -or ($rule.FileSystemRights -band (-bnot $allowed))) { throw 'Unsafe mutation directory permissions' }
 }
-$item = Get-Item -LiteralPath $directory -Force
+$item = [IO.DirectoryInfo]::new($directory)
 while ($item) {
   if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Untrusted mutation directory' }
   $item = $item.Parent
 }
-$boot = (Get-CimInstance -ClassName Win32_OperatingSystem).LastBootUpTime.ToUniversalTime().Ticks.ToString([Globalization.CultureInfo]::InvariantCulture)
-$owner = Get-Process -Id __OWNER_PID__
-$ownerStartedAt = $owner.StartTime.ToUniversalTime().Ticks.ToString([Globalization.CultureInfo]::InvariantCulture)
+# Read the same Win32_OperatingSystem property used by Get-CimInstance; keep the
+# UTC tick representation so a reservation survives a WorkRail upgrade in this boot.
+$query = [wmisearcher]::new('SELECT LastBootUpTime FROM Win32_OperatingSystem')
+try {
+  $rows = $query.Get()
+  try {
+    if ($rows.Count -ne 1) { throw 'Missing Windows boot identity' }
+    foreach ($row in $rows) {
+      try { $boot = [Management.ManagementDateTimeConverter]::ToDateTime($row['LastBootUpTime']).ToUniversalTime().Ticks.ToString([Globalization.CultureInfo]::InvariantCulture) }
+      finally { $row.Dispose() }
+    }
+  } finally { $rows.Dispose() }
+} finally { $query.Dispose() }
+$owner = [Diagnostics.Process]::GetProcessById(__OWNER_PID__)
+try { $ownerStartedAt = $owner.StartTime.ToUniversalTime().Ticks.ToString([Globalization.CultureInfo]::InvariantCulture) } finally { $owner.Dispose() }
 $userSid = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-[Console]::WriteLine((@{directory=$directory;boot=$boot;ownerStartedAt=$ownerStartedAt;userSid=$userSid} | ConvertTo-Json -Compress))
+${registryJson}
+[Console]::WriteLine($serializer.Serialize(@{directory=$directory;boot=$boot;ownerStartedAt=$ownerStartedAt;userSid=$userSid}))
 `
 
 const literal = (value: string) => "'" + value.replaceAll("'", "''") + "'"
