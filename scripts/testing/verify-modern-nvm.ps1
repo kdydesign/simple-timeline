@@ -55,6 +55,11 @@ if ($AsStandardUser) {
   }
   $env:NVM_HOME = [Environment]::GetEnvironmentVariable('NVM_HOME','User')
   $nvm = Join-Path $env:NVM_HOME 'nvm.exe'
+  $nvmLog = Join-Path $env:NVM_HOME 'install.log'
+  if (Test-Path -LiteralPath $nvmLog) {
+    $choice = Select-String -LiteralPath $nvmLog -Pattern 'ApplyOfficialNodeChoice: action=(adopt|drop|ignore)' | Select-Object -Last 1
+    if ($choice) { Write-Output ('Upstream installer official Node choice: ' + $choice.Matches[0].Groups[1].Value) }
+  }
   # Keep the installer's data root (and its real shims), but give this test
   # a separate version inventory. nvm config set root does not move old versions.
   $preference = 'HKCU:\Software\Author Software\Preferences\nvm'
@@ -62,6 +67,15 @@ if ($AsStandardUser) {
   if (-not $dataRoot.StartsWith($env:USERPROFILE + '\', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'Expected nvm storage in the isolated account profile'
   }
+  $ancestor = Get-Item -LiteralPath $dataRoot -Force
+  while ($ancestor) {
+    if (-not $ancestor.PSIsContainer -or ($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+      throw 'Unexpected redirected nvm data root'
+    }
+    if ($ancestor.FullName -ieq $env:USERPROFILE) { break }
+    $ancestor = $ancestor.Parent
+  }
+  if (-not $ancestor) { throw 'Nvm data root is outside the standard user profile' }
   # Only repair the disposable account if the installer's persisted PATH lacks
   # the data root's .nodejs entry. Preserve an existing equivalent spelling.
   $nodeEntry = Join-Path $dataRoot '.nodejs'
@@ -84,6 +98,25 @@ if ($AsStandardUser) {
   & $nvm config set "root=$testRoot"
   if ($LASTEXITCODE -ne 0 -or (Get-ItemPropertyValue -LiteralPath $preference -Name InstallRoot) -ne $testRoot) {
     throw 'nvm did not select the empty test version directory'
+  }
+  # The CLI keeps activation history when changing InstallRoot. These two internal
+  # preferences describe the old store and are excluded from "nvm config reset".
+  $accountSettings = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey($preference.Substring('HKCU:\'.Length), $true)
+  try {
+    $accountSettings.DeleteValue('ActiveVersion', $false)
+    $accountSettings.DeleteValue('PreviousActiveVersion', $false)
+  } finally { $accountSettings.Dispose() }
+  # Keep any seeded target intact, including its junction, under a different name.
+  $linkDir = Get-ChildItem -LiteralPath $dataRoot -Force | Where-Object Name -eq '.link'
+  if ($linkDir) {
+    if (-not $linkDir.PSIsContainer -or ($linkDir.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+      throw 'Unexpected nvm link directory'
+    }
+    $oldLink = Get-ChildItem -LiteralPath $linkDir.FullName -Force | Where-Object Name -eq 'nodejs'
+    if ($oldLink) {
+      if (-not ($oldLink.Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw 'Unexpected non-link nvm target' }
+      [IO.Directory]::Move($oldLink.FullName, (Join-Path $linkDir.FullName 'workrail-ci-original-nodejs'))
+    }
   }
   $env:WORKRAIL_TEST_NVM_ROOT = $testRoot
 
