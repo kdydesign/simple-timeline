@@ -38,7 +38,7 @@
 
 ## 코드·시안 대조
 
-- [ToolDock.tsx](../../src/renderer/workrail/ToolDock.tsx)는 현재 홈 / Planrail / Node 관리와 Lucide `Hexagon`을 사용한다. N은 CSS에 가려진 것이 아니라 경로 자체가 없다. 기존 검토 시안 `/workspace/output/nw-tool-concepts/index.html`에는 육각형과 N 경로가 있다.
+- [ToolDock.tsx](../../src/renderer/workrail/ToolDock.tsx)는 현재 홈 / Planrail / Node 관리와 Lucide `Hexagon`을 사용한다. N은 CSS에 가려진 것이 아니라 경로 자체가 없다. 기존 검토 시안에는 육각형과 N 경로가 있다.
 - [NodeScreen.tsx](../../src/renderer/workrail/NodeScreen.tsx)의 새로고침 중 문구와 최초 로딩의 빈 상태 문구는 두 곳에 있다. 둘 다 제거 대상이다. 오류·빈 결과·설치 진행 문구는 별개다.
 - [workrail.css](../../src/renderer/workrail.css)는 표 기본 정렬을 start, 작업 열을 end로 두며 행 버전은 th다. 컬럼별 정렬 명령은 없다. 설치 패널은 `align-items: start`인 grid에서 내용 높이만 차지한다.
 - [SavingOverlay.tsx](../../src/renderer/components/SavingOverlay.tsx)는 진행 바 외에 화면 입력 차단·포커스 이동도 한다. 목록 조회에는 이 차단 동작을 복제하지 않는다. [forest-crystal.css](../../src/renderer/forest-crystal.css)의 2px 진행 선, accent 색, 1.1초 흐름과 reduced-motion 표현만 재사용한다.
