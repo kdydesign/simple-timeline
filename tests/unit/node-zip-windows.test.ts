@@ -154,12 +154,37 @@ it.skipIf(!modernRunner)('installs the first ZIP on official nvm 2.0.1 and activ
   const originalPath = userPath()
   const originalTargets = await linkTargets()
   const phases = new Set<string>()
+  const leaseFailures: string[] = []
+  function describeFailure(error: unknown) {
+    if (!(error instanceof Error)) return String(error)
+    const processError = error as Error & { code?: string; signal?: string; killed?: boolean; stderr?: string; cmd?: string }
+    if (!processError.cmd) return error.message
+    const exit = JSON.stringify({ code: processError.code, signal: processError.signal, killed: processError.killed })
+    return processError.cmd.split(' -EncodedCommand')[0] + ' ' + exit + '\n' + (processError.stderr || 'No PowerShell stderr')
+  }
+  // Preserve the first, cold call and the actual lease. The service maps exceptions
+  // to operation-unknown, so retain the original exception for a failed assertion.
+  const acquire = windows.acquireMutation!.bind(windows)
+  windows.acquireMutation = async kind => {
+    try { return await acquire(kind) }
+    catch (error) {
+      leaseFailures.push('Machine lock acquisition: ' + describeFailure(error))
+      throw error
+    }
+  }
   const service = createNodeManagementService({
     platform: 'win32', arch: 'x64', windows,
     changed: state => { if (state.busy) phases.add(state.busy.phase) },
     loadCatalog: async () => [release],
   })
-  expect(await service.install(version)).toMatchObject({ installedVersions: [version], activeVersion: null, error: null })
+  const installed = await service.install(version)
+  if (installed.error) {
+    const lock = await windows.mutationStatus!().catch(error => describeFailure(error))
+    const folder = await inspectNodeZipInstallation(manager.root, version).catch(error => describeFailure(error))
+    throw new Error(['WorkRail install failed: ' + installed.error.code, 'Observed phases: ' + [...phases].join(', '),
+      ...leaseFailures, 'Machine lock after failure: ' + lock, 'Node directory after failure: ' + folder].join('\n'))
+  }
+  expect(installed).toMatchObject({ installedVersions: [version], activeVersion: null, error: null })
   for (const phase of ['downloading', 'authenticating', 'extracting', 'verifying']) expect(phases.has(phase)).toBe(true)
   expect(await linkTargets()).toEqual(originalTargets)
   expect(userPath()).toBe(originalPath)
