@@ -71,9 +71,9 @@
 
 **Files:** `.github/workflows/app.yml`, `electron-builder.yml`, `scripts/release/{update-bundle,build-windows}.mjs`, `tests/release/{package,update-bundle,source,installer}.test.mjs`, 배포 안내 문서.
 **Interfaces:** installer/update ZIP은 WorkRail 접두어, 기존 버전/SHA/unsigned/test-only 의미 유지. appId/executableName/UPDATE_APP_ID·기존 프로필·레거시 테스트는 유지한다.
-- [ ] 새로운 파일명 및 blockmap/latest.yml/manifest/hash 참조 일치와 내부 identity 보존을 검사하는 release 테스트 실패를 확인한다.
-- [ ] artifact/EXE/업데이트 ZIP 및 파생 metadata 참조를 함께 수정하고 문서를 맞춘다. artifact 구성 파일은 임의 재배치하지 않는다.
-- [ ] `npm run test:release`를 실행하고 커밋한다. 실제 Windows 설치/업데이트 검증은 Task 6 CI에서 확인한다.
+- [x] 새로운 파일명 및 blockmap/latest.yml/manifest/hash 참조 일치와 내부 identity 보존을 검사하는 release 테스트 실패를 확인한다.
+- [x] artifact/EXE/업데이트 ZIP 및 파생 metadata 참조를 함께 수정하고 문서를 맞춘다. artifact 구성 파일은 임의 재배치하지 않는다.
+- [x] `npm run test:release`를 실행하고 커밋한다. 실제 Windows 설치/업데이트 검증은 Task 6 CI에서 확인한다.
 
 ## Task 6: 통합 검증·검토·인계
 

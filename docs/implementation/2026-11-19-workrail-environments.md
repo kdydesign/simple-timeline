@@ -21,8 +21,8 @@ Linux x64 / Node 24.22.1. 깨끗한 기준 작업 트리에서 Node 서비스·I
 | 환경 선택·WSL nodenv | 구현·독립 검토 완료 | `7100aea`, `1b89681`; 실제 Windows/WSL 인수는 별도 |
 | Home·NodeRail·footer | 구현·독립 검토 완료 | `3f0750a`, `b62466a`, `05d4dee`; runtime 버전은 공유 버전 작업에서 연결 |
 | 공유 버전·도움말 | 구현·독립 검토 완료 | `8c3b6e7`; 구버전 공유 호환·메뉴별 읽기 상태 |
-| 배포 이름 | 대기 | 외부 파일명과 설치 identity 구분 |
-| 통합 검사·인계 | 대기 | verify:app·harness·독립 검토·원격 Windows 패키지 |
+| 배포 이름 | 구현·독립 검토 완료 | `38d2c87`; 외부 파일명과 설치 identity 구분 |
+| 통합 검사·인계 | 진행 중 | verify:app·harness·독립 검토·원격 Windows 패키지 |
 
 검증 결과·수정 판단·실기 한계는 완료 시 이 문서에 갱신한다. 로그는 artifacts 아래 보존하며 반복 확인 때문에 실패 증거를 지우지 않는다.
 
@@ -87,3 +87,36 @@ UI 39개, 정렬 단위 검사 3개, sandboxed Electron 관련 검사 9개와 ty
 단위 65개, UI 50개, native 98개, 관련 sandboxed Electron 8개와 typecheck·하네스 7개가 통과했다. 임시 TLS/DB 및 두 개발 Electron 앱에서 실제 승인·동기화와 `1.0.0-dev` 수신을 확인했다. Windows 패키지의 가상 다음 버전에서 실제 설치 버전과 runtimeVersion을 비교하는 assertion을 추가했으며 Windows lifecycle 실행은 원격 CI 범위다.
 
 독립 검토는 명세 충족·중요 결함 없음으로 승인했다. 같은 글의 메뉴 전환 시 이미지 확대창, 이전 제목 표시줄 위치를 안내하는 문구, 인증되지 않은 원본 응답 헤더의 회귀 assertion은 경미한 개선으로 최종 통합 검토에 전달했다. Windows 설치 버전 assertion은 Task 6의 packaged CI에서 확인한다.
+
+## 요구별 구현·검사 연결
+
+아래는 코드와 회귀 검사의 대응이다. 전체 통과·실기 결과는 최종 검증 기록과 구분한다.
+
+| 요구 | 구현 경로 | 집중 검사 |
+| --- | --- | --- |
+| 1 기존 nvm 기능별 지원 | `main/node-management/manager-support.ts`, `modern-manager.ts`, `windows.ts` | `node-management`, `node-windows-modern`, `node-windows-launch` |
+| 2 관리자 종류·버전 표시 | `discovery.ts`, `renderer/workrail/NodeScreen.tsx` | `node-management`, `workrail`, `node-presentation` |
+| 3 알림 툴팁 | `PlanRailStatus.tsx` | `workrail` UI·Electron |
+| 4 연결 참여자·버전 | `SharingMembers.tsx`, `PlanRailStatus.tsx` | 좁은 footer·긴 버전·접속 상태 검사 |
+| 5 숫자 폰트 | `workrail.css` | 실제 NodeRail 렌더링 |
+| 6 공통 14px 외곽 | `workrail.css` | `workrail` Electron, 실제 레이아웃 측정 |
+| 7 공유 배지 | `Home.tsx`, 공통 `.sharing-badge` | 다크·라이트 Home/PlanRail 비교 |
+| 8 Home CTA | `Home.tsx`, `workrail.css` | `workrail` UI·Electron |
+| 9 메뉴별 도움말 | `shared/help*.ts`, `main/help-window.ts`, `renderer/help/HelpApp.tsx` | `help-window`, `help-content`, `help` UI·Electron |
+| 10 compact PlanRail 상태 | `SharingWidget.tsx`, `Home.tsx` | 호스트/멤버·버전 부재·참여자 제한 |
+| 11 compact Node 작업 | `NodeVersionControls.tsx`, `Home.tsx`, `useNodeManagement.ts` | 빠른 사용·기능 제한·중복·종료 불명 잠금 |
+| 12 분류 설명 | `nodePresentation.ts`, `NodeScreen.tsx` | `node-catalog-sort`, `node-presentation` |
+| 13 상태 아이콘·작업 구분 | `NodeScreen.tsx`, `NodeVersionControls.tsx` | 정렬·아이콘 접근성·헤더/행 중심·독립 스크롤 |
+| 14 배포 이름 | `electron-builder.yml`, `scripts/release`, `app.yml` | release 검사와 Windows packaged CI |
+| 15 flat 비활성 메뉴 | `ToolDock.tsx`, `workrail.css` | `workrail` UI·Electron |
+| 16 Windows/WSL2 환경 | `environments.ts`, `wsl*.ts`, `NodeEnvironment.tsx` | `node-environments`, `node-wsl`, `node-routing` |
+
+Q1/Q2/Q4/Q7/Q8은 WSL 기본 사용자·global 전환·명시적 시작·소스 빌드·수동 도구 안내로, Q3은 기능별 gate로 연결했다. Q5/Q6/Q11은 compact 위젯·조건부 환경 선택·참여자 접기로, Q9/Q10은 배포 이름·메뉴별 읽기 상태로 연결했다. Q12의 전체 계약은 해당 경로와 통합 검사에서 함께 확인한다.
+
+## 배포 파일명 검증 기록
+
+`38d2c87`에서 Actions의 Windows 설치·LAN 업데이트·검증 전용 artifact 및 실제 설치 EXE·업데이트 ZIP 접두어를 WorkRail로 통일했다. 설정의 가져오기 안내와 배포 문서도 맞췄다. `Planrail.exe`, appId, 제품 1.0.0, 프로필·자동 실행 경로는 유지하며 과거 Planrail ZIP 가져오기 검사를 보존했다.
+
+Release 33개, 업데이트 ZIP 가져오기 28개, 배포 설정 UI 2개, typecheck·하네스 7개가 통과했다. 생성 파일명에서 blockmap·metadata·manifest·해시 참조를 함께 검사했다. 실제 NSIS·Windows 설치 실행은 원격 CI 검증 범위다. Release 실행의 기존 `MODULE_TYPELESS_PACKAGE_JSON` 진단은 통과와 별도로 보존했다.
+
+배포 변경의 독립 검토는 명세 충족·결함 없음으로 승인했다. 전체 검사 실행 전 개별 단계의 실패 로그와 캡처를 `artifacts/workrail-environments/pre-integration` 및 작업별 증거 폴더에 보존했다.
