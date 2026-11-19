@@ -120,7 +120,15 @@ export function createEnvironmentCoordinator(options: {
   }
 
   async function read(method: 'getState' | 'refreshCatalog') {
-    if (writing || mutating || state.busy) return state
+    if (writing || mutating) return state
+    if (state.busy) {
+      if (active?.kind !== 'wsl2' || state.error?.code !== 'operation-unknown') return state
+      const recovered = await inspect('getState')
+      if (recovered.busy || mutating || writing) return state
+      await detect()
+      if (!backend && recovered.error && environments.status === 'ready') publish({ ...state, error: recovered.error })
+      return state
+    }
     await detect()
     return inspect(method)
   }

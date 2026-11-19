@@ -111,3 +111,18 @@ it('ignores a read that finishes after a newer command in the same environment',
   oldRead.resolve({ ...baseline, activeVersion: '18.0.0' })
   expect((await request).activeVersion).toBe('22.0.0')
 })
+
+it('routes inspection of a latched WSL job to its owner before replacing the backend on a confirmed stop', async () => {
+  const { service, guest, inspectGuest, discover } = setup([{ ...ubuntu, running: true }])
+  const baseline = await service.getState()
+  const unknown: NodeManagementState = { ...baseline, busy: { kind: 'install', phase: 'waiting', version: '22.1.0' }, error: { code: 'operation-unknown', message: 'check' } }
+  vi.spyOn(guest, 'install').mockResolvedValueOnce(unknown)
+  await service.install('22.1.0')
+  inspectGuest.mockResolvedValueOnce(unknown)
+  expect((await service.getState()).busy).toBeTruthy()
+  discover.mockResolvedValueOnce([ubuntu])
+  inspectGuest.mockResolvedValueOnce({ ...baseline, error: { code: 'verification-failed', message: 'stopped' } })
+  const result = await service.getState()
+  expect(result.busy).toBeNull()
+  expect(result.environments?.items[0].running).toBe(false)
+})

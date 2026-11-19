@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import { mkdtemp, mkdir, writeFile, chmod, rm, readFile, access } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, chmod, rm, readFile, access, symlink } from 'node:fs/promises'
 import { tmpdir, userInfo } from 'node:os'
 import { dirname, join } from 'node:path'
 import { execFile, spawn } from 'node:child_process'
@@ -54,6 +54,9 @@ async function fixture() {
   const bin = join(root, 'bin')
   const plugin = join(root, 'plugins/node-build/bin')
   await Promise.all([mkdir(bin, { recursive: true }), mkdir(plugin, { recursive: true }), mkdir(join(root, 'versions/20.1.0/bin'), { recursive: true }), mkdir(join(root, 'shims'), { recursive: true })])
+  const definitions = join(dirname(plugin), 'share/node-build')
+  await mkdir(definitions, { recursive: true })
+  await writeFile(join(definitions, '22.1.0'), '# trusted definition')
   const tool = async (path: string, script: string) => { await writeFile(path, '#!/bin/sh\n' + script, { mode: 0o755 }) }
   const manager = join(bin, 'nodenv')
   await tool(join(root, 'versions/20.1.0/bin/node'), 'echo v20.1.0')
@@ -67,8 +70,9 @@ esac`)
   await tool(join(plugin, 'node-build'), 'echo 20.1.0; echo 22.1.0; echo iojs-3.0.0')
   await writeFile(join(root, 'version'), '20.1.0\n')
   const variables = { ...process.env, HOME: home, NODENV_ROOT: root, PATH: [bin, join(root, 'shims'), '/usr/bin', '/bin'].join(':') }
-  const inspect = async () => guest.parseGuestProbe((await run('/bin/sh', ['-c', guest.probeScript, 'workrail'], { env: variables })).stdout)
-  return { home, root, manager, plugin, variables, inspect }
+  const inspect = async (credentials: { uid?: number; gid?: number } = {}) =>
+    guest.parseGuestProbe((await run('/bin/sh', ['-c', guest.probeScript, 'workrail'], { env: variables, ...credentials })).stdout)
+  return { home, root, manager, plugin, definitions, variables, inspect }
 }
 
 it.runIf(process.platform === 'linux')('executes the guest probe against a temporary Linux manager and rejects an unsafe executable before version invocation', async () => {
@@ -122,7 +126,7 @@ function setupService() {
     capabilities: capabilities(null), installedVersions: ['20.1.0'], activeVersion: '20.1.0', conflicts: [],
   }
   const loadCatalog = vi.fn(async () => ['22.1.0','20.1.0','18.0.0'].map(version => ({ version, lts: null, date: '2024-01-01', security: false, npm: null, sourceOnly: version === '18.0.0' })))
-  const runner = { defaultUser: vi.fn(async () => snapshot.user), probe: vi.fn(async () => snapshot), change: vi.fn<ReturnType<typeof host.createWslRunner>['change']>(async () => 'success') }
+  const runner = { isStopped: vi.fn(async () => false), defaultUser: vi.fn(async () => snapshot.user), probe: vi.fn(async () => snapshot), change: vi.fn<ReturnType<typeof host.createWslRunner>['change']>(async () => 'success') }
   const changed = vi.fn<(s: NodeManagementState, user?: string | null) => void>(), barrier = createMutationBarrier()
   const service = services.createWslService({ environment: env, runner, loadCatalog, changed, barrier })
   return { service, runner, loadCatalog, changed, barrier, update: (patch: Partial<guest.WslInspection>) => { snapshot = { ...snapshot, ...patch } } }
@@ -259,4 +263,168 @@ it('preserves the guest command as arguments when executing through the default 
   expect(argv.slice(0,7)).toEqual(['--distribution', env.distro, '--user', user, '--cd', '~', '--exec'])
   expect(argv.some(arg => arg.includes('getent passwd'))).toBe(true)
   expect(argv).toContain(guest.probeScript)
+})
+
+type Fixture = Awaited<ReturnType<typeof fixture>>
+const installArgs = (f: Fixture) => ['-c', guest.changeScript, 'workrail', 'install', '22.1.0', user, f.manager, f.root, join(f.plugin, 'node-build')]
+async function installFixture(f: Fixture) {
+  await writeFile(join(f.plugin, 'node-build'), `#!/bin/sh
+if [ "$1" = --definitions ]; then echo 22.1.0; exit; fi
+printf '%s' "$2" > "$HOME/selected-definition"
+mkdir -p "$3/bin"
+printf '#!/bin/sh\\necho v22.1.0\\n' > "$3/bin/node"
+chmod +x "$3/bin/node"`)
+  await writeFile(f.manager, (await readFile(f.manager, 'utf8')).replace('versions) echo 20.1.0', 'versions) echo 20.1.0; echo 22.1.0'))
+}
+
+it.runIf(process.platform === 'linux')('passes an absolute trusted definition from the first configured directory despite a same-name HOME file', async () => {
+  const f = await fixture()
+  try {
+    await installFixture(f)
+    const custom = join(f.home, 'custom definitions')
+    await mkdir(custom)
+    await writeFile(join(custom,'22.1.0'), '# first configured definition')
+    await writeFile(join(f.home,'22.1.0'), '# unrelated local file')
+    await run('/bin/sh', installArgs(f), { env: { ...f.variables, NODE_BUILD_DEFINITIONS: custom } })
+    expect(await readFile(join(f.home,'selected-definition'),'utf8')).toBe(join(custom,'22.1.0'))
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})
+
+it.runIf(process.platform === 'linux')('distinguishes an accessible empty inventory from an unreadable versions directory or version bin', async () => {
+  const f = await fixture(), versions = join(f.root, 'versions'), bin = join(versions,'20.1.0/bin')
+  // Even a root-owned CI runner must exercise the Linux user's permission checks.
+  const credentials = process.getuid?.() === 0 ? { uid: 65534, gid: 65534 } : {}
+  try {
+    if (credentials.uid !== undefined) await run('/bin/chown', ['-R', '65534:65534', f.home])
+    await chmod(bin, 0)
+    expect((await f.inspect(credentials)).capabilities.list.available).toBe(false)
+    await chmod(bin, 0o755)
+    await chmod(versions, 0)
+    expect((await f.inspect(credentials)).capabilities.list.available).toBe(false)
+    await chmod(versions, 0o755)
+    await rm(join(versions,'20.1.0'), { recursive: true })
+    await writeFile(f.manager, (await readFile(f.manager,'utf8')).replace('versions) echo 20.1.0','versions) true'))
+    expect(await f.inspect(credentials)).toMatchObject({ installedVersions: [], capabilities: { list: { available: true } } })
+  } finally {
+    await chmod(versions, 0o755); await chmod(bin, 0o755).catch(() => {})
+    await rm(f.home, { recursive: true, force: true })
+  }
+})
+
+it.runIf(process.platform === 'linux')('keeps a prefix private through a failed or cancelled rehash and publishes it after a successful retry', async () => {
+  const f = await fixture()
+  try {
+    await installFixture(f)
+    const original = await readFile(f.manager, 'utf8')
+    await writeFile(f.manager, original.replace('esac', 'rehash) exit 1;;\nesac'))
+    await expect(run('/bin/sh', installArgs(f), { env: f.variables })).rejects.toThrow()
+    expect((await f.inspect()).installedVersions).not.toContain('22.1.0')
+    await writeFile(f.manager, original.replace('esac','rehash) echo ready; sleep 30;;\nesac'))
+    const child = spawn('/usr/bin/setsid', ['--wait','/bin/sh','-c', guest.superviseScript,'workrail','/bin/sh',...installArgs(f)], { env: f.variables })
+    const done = new Promise(resolve => child.once('close', resolve))
+    try {
+      await new Promise<void>((resolve,reject) => { child.stdout.once('data', () => resolve()); child.once('exit', () => reject(Error('ended before rehash'))) })
+      child.stdin.end('cancel\n')
+      await done
+      expect((await f.inspect()).installedVersions).not.toContain('22.1.0')
+    } finally { child.stdin.end(); child.kill() }
+    await writeFile(f.manager, original)
+    await run('/bin/sh', installArgs(f), { env: f.variables })
+    expect((await f.inspect()).installedVersions).toContain('22.1.0')
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})
+
+it.runIf(process.platform === 'linux')('requires shims on the original PATH and allows a prepared shim PATH before the first binary exists', async () => {
+  const f = await fixture()
+  try {
+    await rm(join(f.root, 'shims/node'))
+    f.variables.PATH = join(f.root, 'bin')
+    const missing = await f.inspect()
+    expect(missing.capabilities.use).toMatchObject({ available: false, reason: expect.stringContaining('shims') })
+    await expect(run('/bin/sh', ['-c',guest.changeScript,'workrail','use','20.1.0',user,f.manager,f.root,''],{ env:f.variables })).rejects.toThrow()
+    f.variables.PATH += ':' + join(f.root,'shims')
+    expect((await f.inspect()).capabilities.install.available).toBe(true)
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})
+
+it('keeps a same-target catalog refresh through a concurrent focus inspection', async () => {
+  const { service, loadCatalog } = setupService()
+  const rows = await loadCatalog()
+  let finish!: (v: typeof rows) => void
+  loadCatalog.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  const refresh = service.refreshCatalog()
+  await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+  await service.getState()
+  finish(rows)
+  expect((await refresh).catalog).toMatchObject({ status: 'ready', releases: expect.anything() })
+  expect((await service.getState()).catalog.releases).toHaveLength(3)
+})
+
+it.each(['CXX(target) Release/obj.o', 'CC(target) Release/obj.o', 'make[1]: Entering directory /tmp/build', './configure --prefix=/tmp/prefix'])('publishes compiling on %s', async raw => {
+  const { service, runner, changed } = setupService()
+  await service.refreshCatalog()
+  runner.change.mockImplementationOnce(async (_env, _info, _kind, _version, _signal, line) => { line(raw); return 'failed' })
+  await service.install('22.1.0')
+  expect(changed.mock.calls.some(([s]) => s.busy?.phase === 'compiling')).toBe(true)
+})
+
+it('holds the update barrier on missing or inconclusive termination evidence and releases after a verified stop', async () => {
+  const { service, runner, barrier } = setupService()
+  await service.refreshCatalog()
+  runner.change.mockResolvedValueOnce('unknown')
+  await service.install('22.1.0')
+  const probes = runner.probe.mock.calls.length
+  runner.isStopped.mockRejectedValueOnce(Error('host read failed'))
+  expect((await service.getState()).error?.code).toBe('operation-unknown')
+  expect((await service.getState()).busy).toBeTruthy()
+  const drain = barrier.freeze()
+  runner.isStopped.mockResolvedValue(true)
+  expect((await service.getState()).busy).toBeNull()
+  expect(service.isBusy()).toBe(false)
+  await drain
+  expect(runner.probe).toHaveBeenCalledTimes(probes)
+})
+
+it('requires positive Stopped status for the exact WSL2 registration without entering the guest', async () => {
+  const discover = vi.fn(async () => [{ ...env, running: false }])
+  const call = vi.fn(async (_args: string[]) => Buffer.from('* Ubuntu Dev  Converting  2\n'))
+  const runner = host.createWslRunner(discover, call)
+  expect(await runner.isStopped(env)).toBe(false)
+  call.mockResolvedValueOnce(Buffer.from('* Ubuntu Dev  Stopped  2\n','utf16le'))
+  expect(await runner.isStopped(env)).toBe(true)
+  discover.mockResolvedValueOnce([])
+  expect(await runner.isStopped(env)).toBe(false)
+  expect(call.mock.calls.every(([args]) => args.join(' ') === '--list --verbose')).toBe(true)
+})
+
+it.runIf(process.platform === 'linux')('rejects a definition symlink ending outside the verified definition root', async () => {
+  const f = await fixture()
+  try {
+    await installFixture(f)
+    const definition = join(f.definitions, '22.1.0')
+    await rm(definition)
+    await writeFile(join(f.home,'external-definition'), '# outside verified root')
+    await symlink(join(f.home,'external-definition'), definition)
+    await expect(run('/bin/sh', installArgs(f), { env: f.variables })).rejects.toThrow()
+    await expect(access(join(f.home,'selected-definition'))).rejects.toThrow()
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})
+
+it('discards a pending catalog for a changed user or a newer mutation', async () => {
+  for (const changedUser of [true, false]) {
+    const { service, loadCatalog, update } = setupService()
+    const rows = await loadCatalog()
+    let finish!: (v: typeof rows) => void
+    loadCatalog.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+    const refresh = service.refreshCatalog()
+    await vi.waitFor(() => expect(finish).toBeTypeOf('function'))
+    if (changedUser) {
+      update({ user: 'another' })
+      await service.getState()
+    } else {
+      await service.use('20.1.0')
+    }
+    finish(rows)
+    expect((await refresh).catalog).toMatchObject({ status: 'idle', releases: [] })
+  }
 })

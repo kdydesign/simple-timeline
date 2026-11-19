@@ -75,17 +75,55 @@ valid_global_path() {
 }
 ready_builder() {
   [ -f "$builder" ] && [ -x "$builder" ] && safe_path "$builder" || return 1
-  defs_root=$(printenv NODE_BUILD_ROOT || dirname -- "$(dirname -- "$(realpath -e -- "$builder")")")
+  defs_root=$(printenv NODE_BUILD_ROOT || true)
+  [ -n "$defs_root" ] || defs_root=$(dirname -- "$(dirname -- "$(realpath -e -- "$builder")")")
   defs="$defs_root/share/node-build"
   [ ! -e "$defs" ] || safe_tree "$defs" || return 1
   oldifs=$IFS; IFS=:
   set -f
-  for path in $(printenv NODE_BUILD_DEFINITIONS || true); do
+  custom_defs=$(printenv NODE_BUILD_DEFINITIONS || true)
+  definition_dirs="$custom_defs:$defs"
+  for path in $custom_defs; do
     [ -d "$path" ] && safe_tree "$path" || return 1
   done
   set +f
   IFS=$oldifs
 }
+# node-build searches configured definition directories in order, then its
+# packaged definitions. Resolve the selected file before handing it a path.
+resolve_definition() (
+  IFS=:
+  set -f
+  for directory in $definition_dirs; do
+    [ -n "$directory" ] || continue
+    candidate="$directory/$1"
+    [ -f "$candidate" ] || continue
+    safe_path "$candidate" && [ -r "$candidate" ] || exit 1
+    origin=$(realpath -e -- "$directory") || exit 1
+    resolved=$(realpath -e -- "$candidate") || exit 1
+    case "$resolved" in "$origin"/*) printf '%s\n' "$resolved"; exit 0;; *) exit 1;; esac
+  done
+  exit 1
+)
+shims_on_path() {
+  case ":$original_path:" in *":$root/shims:"*|*":$root/shims/:"*) return 0;; *) return 1;; esac
+}
+readable_inventory() {
+  [ -r "$root" ] && [ -x "$root" ] || return 1
+  directory="$root/versions"
+  if [ ! -e "$directory" ] && [ ! -L "$directory" ]; then return 0; fi
+  [ -d "$directory" ] && [ -r "$directory" ] && [ -x "$directory" ] || return 1
+  # nodenv --bare silently skips versions whose bin cannot be searched.
+  for entry in "$directory"/*; do
+    name=$(basename -- "$entry")
+    case "$name" in ''|*[!0-9.]*) continue;; esac
+    [ -d "$entry" ] && [ -r "$entry" ] && [ -x "$entry" ] || return 1
+    if [ -e "$entry/bin" ] || [ -L "$entry/bin" ]; then
+      [ -d "$entry/bin" ] && [ -r "$entry/bin" ] && [ -x "$entry/bin" ] || return 1
+    fi
+  done
+}
+
 `
 
 export const probeScript = context + String.raw`
@@ -101,7 +139,7 @@ version=$("$manager" --version) || { field status unsafe; exit; }
 field managerVersion "$version"
 field status ready
 global=$("$manager" global) && field global "$global"
-if versions=$("$manager" versions --bare); then
+if readable_inventory && versions=$("$manager" versions --bare); then
   field listed yes
   set -f
   for v in $versions; do
@@ -111,7 +149,8 @@ if versions=$("$manager" versions --bare); then
   set +f
 fi
 if valid_global_path && [ -w "$root" ] && { [ ! -e "$root/version" ] || [ -w "$root/version" ]; }; then field writable yes; fi
-case "$node_path" in ""|"$root/shims/node") ;; *) field conflict "$node_path";; esac
+if shims_on_path; then field shims yes; fi
+case "$node_path" in ""|"$root/shims/node"|"$root/shims//node") ;; *) field conflict "$node_path";; esac
 if ready_builder && definitions=$("$builder" --definitions); then
   field builder "$builder"
   field definitions "$definitions"
@@ -123,8 +162,8 @@ export const changeScript = context + String.raw`
 kind=$1; v=$2
 [ "$user" = "$3" ] && [ "$manager" = "$4" ] && [ "$root" = "$5" ] || exit 71
 case "$v" in ''|*[!0-9.]*) exit 72;; esac
-ready_manager && valid_global_path || exit 71
-case "$node_path" in ""|"$root/shims/node") ;; *) exit 71;; esac
+ready_manager && valid_global_path && shims_on_path || exit 71
+case "$node_path" in ""|"$root/shims/node"|"$root/shims//node") ;; *) exit 71;; esac
 # Coordinate WorkRail processes using the same Linux user root.
 exec 9<"$root"
 flock -n 9 || { echo '다른 WorkRail Node 작업이 진행 중입니다.' >&2; exit 73; }
@@ -136,6 +175,7 @@ case "$kind" in
   install)
     [ "$builder" = "$6" ] && ready_builder || exit 71
     "$builder" --definitions | grep -Fx -- "$v" >/dev/null || exit 71
+    definition=$(resolve_definition "$v") || { echo '신뢰할 수 있는 설치 정의 경로를 확인하지 못했습니다.' >&2; exit 71; }
     versions="$root/versions"
     [ ! -L "$versions" ] || exit 71
     mkdir -p -- "$versions"; safe_path "$versions" || exit 71
@@ -154,11 +194,11 @@ case "$kind" in
     printf 'WorkRail %s %s\n' "$(stat -c %d:%i "$stage")" "$v" > "$stage/.workrail-installing"
     mv -nT -- "$stage" "$prefix"
     [ ! -e "$stage" ] || { rm -- "$stage/.workrail-installing"; rmdir -- "$stage"; exit 71; }
-    "$builder" -v "$v" "$prefix"
+    "$builder" -v "$definition" "$prefix"
     binary="$prefix/bin/node"
     [ -x "$binary" ] && safe_path "$binary" && [ "$("$binary" --version)" = "v$v" ] || exit 74
-    rm -- "$marker"
-    "$manager" rehash;;
+    "$manager" rehash
+    rm -- "$marker";;
   *) exit 72;;
 esac
 `
@@ -222,7 +262,7 @@ export function parseGuestProbe(output: string): WslInspection {
     : 'Linux nodenv 실행 경로·버전과 파일 소유권 및 쓰기 권한을 확인해 주세요.'
   const listed = fields.has('listed'), conflict = fields.get('conflict')
   const listReason = listed ? null : 'nodenv versions로 설치 목록을 확인하지 못했습니다.'
-  const mutationReason = listReason ?? (global === null ? 'nodenv global 기본 버전을 읽을 수 없습니다.' : conflict ? 'Linux nodenv shims 경로를 PATH에서 우선하도록 초기화해 주세요.'
+  const mutationReason = listReason ?? (global === null ? 'nodenv global 기본 버전을 읽을 수 없습니다.' : conflict || !fields.has('shims') ? 'Linux nodenv shims 경로를 PATH에서 우선하도록 초기화해 주세요.'
     : !fields.has('writable') ? '선택 사용자의 nodenv 설정 및 쓰기 권한을 확인해 주세요.' : null)
   const builder = fields.get('builder') ?? null
   return {

@@ -13,7 +13,7 @@ import type { createWslRunner } from './wsl-host'
 const error = (code: NodeManagementErrorCode, message: string): NodeManagementError => ({ code, message })
 const changedTarget = error('environment-conflict', 'WSL 기본 사용자 또는 nodenv 경로가 변경되었습니다. 새 대상의 정보를 확인해 주세요.')
 const inspectionError = error('inspection-failed', 'WSL 배포판의 실행 상태와 기본 사용자의 Linux 환경을 다시 확인해 주세요.')
-const uncertain = error('operation-unknown', 'WSL 작업의 종료 여부를 확인하지 못했습니다. 배포판에서 작업 종료를 확인해 주세요. 중복 변경을 차단했습니다.')
+const uncertain = error('operation-unknown', 'WSL 작업의 종료 여부를 확인하지 못했습니다. 배포판이 종료된 뒤 다시 확인해 주세요. 종료 상태가 확인될 때까지 중복 변경과 앱 종료를 차단합니다.')
 
 export async function openWslLog(profile: string) {
   const directory = join(profile, 'node-operation-logs')
@@ -45,7 +45,7 @@ export async function openWslLog(profile: string) {
 }
 
 function classifyLine(line: string): NodeOperation['phase'] | undefined {
-  if (/\b(?:g\+\+|clang\+\+|CXX\(target\)|CC\(target\)|make\[\d+\]|\.\/configure)\b|(?:g\+\+|clang\+\+)\s/.test(line)) return 'compiling'
+  if (/(?:^|[\s/])(?:g\+\+|clang\+\+|CXX\(target\)|CC\(target\)|make\[\d+\]|\.\/configure)(?=[\s:]|$)/.test(line)) return 'compiling'
   if (/^Downloading |^-> https?:/.test(line)) return 'downloading'
   if (/^Installing |^Extracting |^tar\s+-/.test(line)) return 'extracting'
 }
@@ -63,7 +63,7 @@ const identity = (info: WslInspection) => JSON.stringify([info.user, info.root, 
 
 export function createWslService(options: {
   environment: NodeEnvironment
-  runner: Pick<ReturnType<typeof createWslRunner>, 'defaultUser' | 'probe' | 'change'>
+  runner: Pick<ReturnType<typeof createWslRunner>, 'isStopped' | 'probe' | 'change'>
   loadCatalog(arch: string): Promise<NodeRelease[]>
   changed: EnvironmentChanged
   openLog?(): ReturnType<typeof openWslLog>
@@ -75,6 +75,15 @@ export function createWslService(options: {
   let knownIdentity: string | undefined
   let releases: NodeRelease[] | undefined
   let generation = 0
+  let readInspection: Promise<WslInspection | undefined> | undefined
+  let catalogRequest: Promise<void> | undefined
+  let catalogGeneration = 0
+  let releaseUnknown: (() => void) | undefined
+
+  function invalidateCatalog() {
+    catalogGeneration++
+    catalogRequest = undefined
+  }
   let controller: AbortController | undefined
   let pending: Promise<NodeManagementState> | undefined
 
@@ -95,7 +104,7 @@ export function createWslService(options: {
       const changed = knownIdentity !== undefined && knownIdentity !== nextIdentity
       current = info
       knownIdentity = nextIdentity
-      if (changed) releases = undefined
+      if (changed) { invalidateCatalog(); releases = undefined }
       publish({
         manager: info.manager, installedVersions: info.installedVersions, activeVersion: info.activeVersion,
         activeSource: info.activeVersion ? 'nodenv' : null, capabilities: info.capabilities, conflicts: info.conflicts,
@@ -107,6 +116,7 @@ export function createWslService(options: {
       return info
     } catch {
       if (token !== generation) return
+      invalidateCatalog()
       current = undefined
       releases = undefined
       publish({ manager: { kind: 'nodenv', status: 'error', version: null }, checkedAt: null, installedVersions: [],
@@ -115,23 +125,43 @@ export function createWslService(options: {
     }
   }
 
-  async function catalog(info: WslInspection, token: number) {
+  function catalog(info: WslInspection, token: number) {
+    if (catalogRequest) return catalogRequest
+    const requestId = ++catalogGeneration
+    const valid = () => requestId === catalogGeneration && token === generation
     publish({ catalog: { ...state.catalog, status: 'loading', error: null } })
-    try {
-      const rows = await options.loadCatalog(info.arch)
-      if (token !== generation) return
-      releases = rows
-      publish({ catalog: { releases: annotate(rows, info), checkedAt: new Date().toISOString(), status: 'ready', error: null } })
-    } catch {
-      if (token === generation) publish({ catalog: { ...state.catalog, status: 'error', error: nodeManagementError('catalog-unavailable') } })
-    }
+    const request = (async () => {
+      try {
+        const rows = await options.loadCatalog(info.arch)
+        if (!valid() || !current) return
+        releases = rows
+        publish({ catalog: { releases: annotate(rows, current), checkedAt: new Date().toISOString(), status: 'ready', error: null } })
+      } catch {
+        if (valid()) publish({ catalog: { ...state.catalog, status: 'error', error: nodeManagementError('catalog-unavailable') } })
+      }
+    })()
+    catalogRequest = request
+    return request.finally(() => { if (catalogRequest === request) catalogRequest = undefined })
   }
 
   async function read(refresh: boolean) {
-    if (state.busy) return state
-    const token = ++generation
-    const info = await inspect(token)
-    if (refresh && info && token === generation) await catalog(info, token)
+    if (state.busy) {
+      const release = releaseUnknown
+      if (release && await options.runner.isStopped(env).catch(() => false) && release === releaseUnknown) {
+        releaseUnknown = undefined
+        release()
+        current = undefined
+        releases = undefined
+        publish({ ...emptyNodeState('win32', true), operationLog: state.operationLog, operationLogPath: state.operationLogPath,
+          error: error('verification-failed', 'WSL 배포판 종료를 확인했습니다. 다음 환경 시작 후 작업 결과를 다시 확인해 주세요.') })
+      }
+      return state
+    }
+    const token = generation
+    const request = readInspection ??= inspect(token)
+    const info = await request
+    if (request === readInspection) readInspection = undefined
+    if (refresh && info && token === generation && current && identity(info) === identity(current)) await catalog(info, token)
     return state
   }
 
@@ -210,18 +240,23 @@ export function createWslService(options: {
     if (state.busy) return Promise.resolve({ ...state, error: state.error ?? nodeManagementError('busy') })
     if (options.barrier?.blocked()) return Promise.resolve({ ...state, error: nodeManagementError('shutdown') })
     const token = ++generation, abort = new AbortController()
+    readInspection = undefined
+    invalidateCatalog()
+    const wasLoading = state.catalog.status === 'loading'
     controller = abort
     let finish!: (state: NodeManagementState) => void
     const result = new Promise<NodeManagementState>(resolve => { finish = resolve })
     pending = result
-    publish({ busy: { kind, version, phase: 'checking', cancellable: false }, operationLog: [], operationLogPath: undefined, error: null })
+    publish({ busy: { kind, version, phase: 'checking', cancellable: false }, operationLog: [], operationLogPath: undefined, error: null,
+      ...(wasLoading ? { catalog: { ...state.catalog, status: releases ? 'ready' : 'idle' } } : {}) })
     const run = async () => {
       const failure = await perform(kind, version, token, abort.signal)
       controller = undefined
       pending = undefined
       const unknown = failure?.code === 'operation-unknown'
+      const termination = unknown ? new Promise<void>(resolve => { releaseUnknown = resolve }) : undefined
       finish(publish({ busy: unknown ? { kind, version, phase: 'waiting', cancellable: false } : null, error: failure }))
-      if (unknown) await new Promise<never>(() => {}) // Keep the exit/update reservation until process lifetime is known.
+      if (termination) await termination
     }
     void (options.barrier ? options.barrier.run(run) : run()).catch(() => {
       controller = undefined

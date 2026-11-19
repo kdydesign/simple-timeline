@@ -87,6 +87,16 @@ export function createWslRunner(discover: () => Promise<NodeEnvironment[]>, call
 
   return {
     defaultUser,
+    async isStopped(env: NodeEnvironment) {
+      const sameStoppedRegistration = async () => (await discover()).some(e =>
+        e.kind === 'wsl2' && e.id === env.id && e.distro === env.distro && e.running === false)
+      if (!await sameStoppedRegistration()) return false
+      // Absence from --running includes transitional states. Require an
+      // affirmative Stopped row and the same registration on both sides.
+      const rows = decodeList(await call(['--list', '--verbose']))
+      const stopped = rows.some(line => /^\s*(?:\*\s+)?(.+?)\s+Stopped\s+2\s*$/.exec(line)?.[1] === env.distro)
+      return stopped && await sameStoppedRegistration()
+    },
     async start(env: NodeEnvironment) { await call([...await target(env, true), '--exec', '/bin/true']) },
     async probe(env: NodeEnvironment, expected?: string) {
       const user = await defaultUser(env)
