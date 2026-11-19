@@ -184,7 +184,9 @@ try {
 function modernCommand(installation: Extract<NvmInstallation, { family: 'modern' }>, action: 'install' | 'use', version: string) {
   validateInstallation(installation, action, version)
   if (installation.version !== '2.0.1' || installation.executableDigest !== modernDigest) throw Error('Unverified modern nvm')
-  const args = action === 'use' ? ['use', version, '--local'] : ['install', version]
+  // --local accepts only major or major.minor. --no-install preserves the
+  // requested exact version and never installs a missing one.
+  const args = action === 'use' ? ['use', version, '--no-install'] : ['install', version]
   if (installation.existingVersion !== undefined && !isNodeVersion(installation.existingVersion)) throw Error('Invalid installed version evidence')
   // With an empty default the CLI auto-activates when ScanInstalled is empty.
   // Keep a previously verified node.exe present until the install exits.
