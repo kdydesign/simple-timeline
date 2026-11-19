@@ -25,10 +25,11 @@ function setup(items: NodeEnvironment[], saved: string | null = null) {
   })
   const win = make(changed), guest = make(changed)
   const inspectWin = vi.spyOn(win, 'getState'), inspectGuest = vi.spyOn(guest, 'getState')
+  const opener = { openPath: vi.fn(async () => ''), openExternal: vi.fn(async () => {}) }
   const service = module.createEnvironmentCoordinator({
-    platform: 'win32', arch: 'x64', discover, store, start, changed, createWindows: () => win, createWsl: () => guest,
+    platform: 'win32', arch: 'x64', discover, store, start, changed, opener, createWindows: () => win, createWsl: () => guest,
   })
-  return { service, inspectWin, inspectGuest, start, discover, store, guest, win, changed }
+  return { opener, service, inspectWin, inspectGuest, start, discover, store, guest, win, changed }
 }
 
 it('selects Windows alone and restores the saved environment among several', async () => {
@@ -232,4 +233,41 @@ it('commits the persisted selection and dispatch target together across a concur
     expect(guestUse).toHaveBeenCalledExactlyOnceWith('22.1.0')
     expect(winUse).not.toHaveBeenCalled()
   } finally { await rm(directory, { recursive: true, force: true }) }
+})
+
+it('opens only the release for the registered selection, including missing managers and stopped distros', async () => {
+  const f = setup([windows, ubuntu])
+  await f.service.getState()
+  expect(module.environmentCommandError(await f.service.openManagerRelease('windows'))).toBeTruthy()
+  await f.service.selectEnvironment('windows')
+  await f.service.openManagerRelease('windows')
+  await f.service.selectEnvironment(ubuntu.id)
+  expect(module.environmentCommandError(await f.service.openManagerRelease('windows'))).toBeTruthy()
+  await f.service.openManagerRelease(ubuntu.id)
+  expect(f.opener.openExternal.mock.calls).toEqual([
+    ['https://github.com/nvm-windows/nvm/releases/latest'], ['https://github.com/nodenv/nodenv/releases/latest'],
+  ])
+  expect(module.environmentCommandError(await f.service.openManagerFolder(ubuntu.id))).toBeTruthy()
+  f.discover.mockResolvedValueOnce([windows])
+  expect(module.environmentCommandError(await f.service.openManagerRelease(ubuntu.id))).toBeTruthy()
+  expect(f.start).not.toHaveBeenCalled()
+  expect(f.inspectGuest).not.toHaveBeenCalled()
+  expect(f.opener.openPath).not.toHaveBeenCalled()
+})
+
+it('holds the selection while opening the verified root and reports Explorer failures only on the command', async () => {
+  const f = setup([windows, ubuntu], 'windows')
+  const ready: NodeManagementState = { ...module.emptyNodeState('win32', true), manager: { status: 'ready', version: '1.2.2' }, checkedAt: new Date().toISOString() }
+  f.inspectWin.mockResolvedValue(ready)
+  await f.service.getState()
+  const root = deferred<string | null>()
+  vi.spyOn(f.win, 'verifiedManagerFolder').mockReturnValue(root.promise)
+  const opening = f.service.openManagerFolder('windows')
+  expect(module.environmentCommandError(await f.service.selectEnvironment(ubuntu.id))?.code).toBe('busy')
+  expect(module.environmentCommandError(await f.service.openManagerFolder('windows'))?.code).toBe('busy')
+  root.resolve('C:\\node versions')
+  f.opener.openPath.mockResolvedValueOnce('native error')
+  expect(module.environmentCommandError(await opening)?.code).toBe('operation-failed')
+  expect(f.opener.openPath).toHaveBeenCalledWith('C:\\node versions')
+  expect(f.service.currentState().error).toBeNull()
 })

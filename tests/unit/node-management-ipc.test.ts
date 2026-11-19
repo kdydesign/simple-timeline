@@ -43,3 +43,14 @@ it('exposes only opaque environment selection, argument-free start and cancellat
     expect(await dispatchNodeManagement(service, args, true)).toMatchObject({ ok: false, error: { code: 'invalid-request' } })
   }
 })
+
+it('accepts only an expected environment ID for folder and release actions', async () => {
+  const service = { openManagerFolder: async (id: string) => id, openManagerRelease: async (id: string) => id } as never
+  for (const command of ['openManagerFolder', 'openManagerRelease']) {
+    expect(await dispatchNodeManagement(service, [command, 'windows'], true)).toEqual({ ok: true, data: 'windows' })
+    expect(await dispatchNodeManagement(service, [command, 'windows'], false)).toMatchObject({ ok: false, error: { code: 'forbidden' } })
+    for (const args of [[], ['/home/test'], ['https://example.com'], ['windows', 'path']]) {
+      expect(await dispatchNodeManagement(service, [command, ...args], true)).toMatchObject({ ok: false, error: { code: 'invalid-request' } })
+    }
+  }
+})

@@ -4,6 +4,7 @@ import { promisify } from 'node:util'
 import { StringDecoder } from 'node:string_decoder'
 import { isEnvironmentId, isNodeVersion, type NodeEnvironment } from '../../shared/node-management'
 import { changeScript, parseGuestProbe, probeScript, superviseScript, type WslInspection } from './wsl-guest'
+import { isExplorerComponent } from './windows-probe'
 import { resolveSystemPowerShell } from './windows'
 
 const exec = promisify(execFile)
@@ -66,6 +67,12 @@ function login(script: string, ...args: string[]) {
   return ['/bin/sh', '-c', loginScript, 'workrail', script, 'workrail', ...args]
 }
 
+export function wslExplorerPath(distro: string, root: string): string | null {
+  const components = root.slice(1).split('/')
+  if (!root.startsWith('/') || !isExplorerComponent(distro) || !components.every(isExplorerComponent)) return null
+  return ['\\\\wsl.localhost', distro, ...components].join('\\')
+}
+
 export function createWslRunner(discover: () => Promise<NodeEnvironment[]>, call: WslCall, job?: WslJob) {
   async function target(env: NodeEnvironment, allowStart = false) {
     const match = (await discover()).find(e => e.id === env.id && e.kind === 'wsl2' && e.distro === env.distro)
@@ -85,6 +92,15 @@ export function createWslRunner(discover: () => Promise<NodeEnvironment[]>, call
     return [...await target(env), '--user', user, '--cd', '~', '--exec']
   }
 
+  async function probe(env: NodeEnvironment, expected?: string) {
+    const user = await defaultUser(env)
+    if (expected && user !== expected) throw Error('WSL default user changed')
+    const args = [...await target(env), '--user', user, '--cd', '~', '--exec']
+    const snapshot = parseGuestProbe((await call([...args, ...login(probeScript)])).toString('utf8'))
+    if (snapshot.user !== user) throw Error('WSL user mismatch')
+    return snapshot
+  }
+
   return {
     defaultUser,
     async isStopped(env: NodeEnvironment) {
@@ -98,13 +114,19 @@ export function createWslRunner(discover: () => Promise<NodeEnvironment[]>, call
       return stopped && await sameStoppedRegistration()
     },
     async start(env: NodeEnvironment) { await call([...await target(env, true), '--exec', '/bin/true']) },
-    async probe(env: NodeEnvironment, expected?: string) {
-      const user = await defaultUser(env)
-      if (expected && user !== expected) throw Error('WSL default user changed')
-      const args = [...await target(env), '--user', user, '--cd', '~', '--exec']
-      const snapshot = parseGuestProbe((await call([...args, ...login(probeScript)])).toString('utf8'))
-      if (snapshot.user !== user) throw Error('WSL user mismatch')
-      return snapshot
+    probe,
+    async verifiedFolder(env: NodeEnvironment, before: WslInspection) {
+      if (before.manager.status !== 'ready' || !env.distro || !before.folderRoot) return null
+      const path = wslExplorerPath(env.distro, before.folderRoot)
+      if (!path) return null
+      const after = await probe(env, before.user)
+      if (after.manager.status !== 'ready' || after.manager.path !== before.manager.path || after.root !== before.root
+        || after.folderRoot !== before.folderRoot || after.arch !== before.arch) return null
+      // Explorer can start a distro through its UNC provider. Check again after
+      // the guest probe, directly before handing the path to the coordinator.
+      if (await defaultUser(env) !== before.user) return null
+      await target(env)
+      return path
     },
     async change(env: NodeEnvironment, info: WslInspection, kind: 'install' | 'use', version: string, signal: AbortSignal, line: (value: string) => void): Promise<WslOutcome> {
       if (!job || !isNodeVersion(version)) throw Error('Invalid WSL command')

@@ -4,6 +4,7 @@ import { selectStandaloneTarget, targetFingerprint, type MsiEvidence, type MsiRe
 import type { MachineMutationLease } from './mutation-lock'
 import { isNodeVersion, type NodeManagementError, type NodeManagementErrorCode, type NodeManagementState, type NodeOperation, type NodeRelease } from '../../shared/node-management'
 import type { MutationBarrier } from '../updates/installer'
+import { samePath } from './windows-probe'
 import { capabilities } from './manager-support'
 import type { NvmInstallation, WindowsDiscovery } from './discovery'
 
@@ -14,6 +15,7 @@ export interface ElevatedResult {
 
 export interface WindowsNodeAdapter {
   discover(): Promise<WindowsDiscovery>
+  verifiedDirectory?(root: string): Promise<boolean>
   inspectStandalone?(): Promise<MsiEvidence[]>
   removeStandalone?(target: MsiEvidence): Promise<MsiRemovalResult>
   acquireMutation?(kind: NodeOperation['kind']): Promise<MachineMutationLease>
@@ -94,6 +96,7 @@ export function createNodeManagementService(options: {
     conflicts: [],
     checkedAt: null,
   }
+  let inspectedInstallation: NvmInstallation | null = null
   let confirmation: { id: string; fingerprint: string; target: MsiEvidence } | null = null
   let rebootRequired = false
   let msiExitCode: number | null = null
@@ -140,8 +143,10 @@ export function createNodeManagementService(options: {
           reason: manualRemoval && !target ? messages['removal-unavailable'] : null,
           rebootRequired, msiExitCode,
         }, ...(lockError ? { error: nodeManagementError(lockError) } : cleared ? { error: null } : {}) })
+        inspectedInstallation = installation
         return current
       } catch {
+        inspectedInstallation = null
         confirmation = null
         publish({
           removal: { status: 'manual', target: null, confirmationId: null, reason: messages['inspection-failed'], rebootRequired, msiExitCode },
@@ -299,6 +304,16 @@ export function createNodeManagementService(options: {
   }
 
   return {
+    async verifiedManagerFolder(): Promise<string | null> {
+      const before = inspectedInstallation
+      if (!before || !supported || state.busy || machineReservation) return null
+      const fresh = await inspect()
+      const after = fresh?.installation
+      if (!after || fresh.manager.status !== 'ready' || machineReservation || state.busy
+        || before.executableDigest !== after.executableDigest || !samePath(before.exe, after.exe)
+        || !samePath(before.root, after.root) || !await windows.verifiedDirectory?.(after.root)) return null
+      return after.root
+    },
     async getState() {
       if (supported && !state.busy) await inspect()
       return state

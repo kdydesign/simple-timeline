@@ -3,7 +3,7 @@ import { Archive, Circle, CircleCheck, TriangleAlert } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip'
 import type { NodeRelease } from '../../shared/node-management'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeCanChange, nodeCanRecheck, nodeInstallReason, nodeOperationMessages, nodeProgress, nodeVersionStatus } from './nodePresentation'
+import { nodeCanChange, nodeCanRecheck, nodeInstallReason, nodeMutationProgress, nodeOperationMessages, nodeProgress, nodeVersionStatus } from './nodePresentation'
 
 export function NodeTooltip({ trigger, children }: { trigger: ReactElement; children: string }) {
   return <Tooltip>
@@ -46,9 +46,10 @@ export function NodeVersionAction({ node, version, release }: { node: NodeManage
   </div>
 }
 
-export function NodeOperationStatus({ node, showLogs = false }: { node: NodeManagement; showLogs?: boolean }) {
+export function NodeOperationStatus({ node, showLogs = false, stackedProgress = false }: { node: NodeManagement; showLogs?: boolean; stackedProgress?: boolean }) {
   const { state } = node
   const progress = nodeProgress(node)
+  const stacked = stackedProgress ? nodeMutationProgress(node) : null
   const messages = nodeOperationMessages(node)
   const canCancel = !!state?.busy?.cancellable
   const log = state?.operationLog
@@ -56,7 +57,7 @@ export function NodeOperationStatus({ node, showLogs = false }: { node: NodeMana
   if (!progress && !messages.length && !(showLogs && (log?.length || logPath))) return null
   return <div className="workrail-operation">
     {progress && <div className="workrail-operation-progress">
-      <p role="status">{progress}</p>
+      <p role="status">{stacked ? <>{stacked.name}<br />{stacked.description}</> : progress}</p>
       {canCancel && <button type="button" className="workrail-control" disabled={node.cancelPending}
         onClick={() => void node.cancelOperation()}>작업 취소</button>}
     </div>}

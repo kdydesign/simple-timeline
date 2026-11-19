@@ -16,6 +16,12 @@ export interface WindowsProbe {
   isX64Node(path: string): Promise<boolean>
 }
 
+/** Windows normalizes these names even inside a local WSL UNC path. */
+export function isExplorerComponent(name: string): boolean {
+  return name.length > 0 && !/[\\/<>:"|?*\x00-\x1f\x7f\ufffd]|[. ]$/.test(name)
+    && !/^(?:AUX|CON|CONIN\$|CONOUT\$|NUL|PRN|COM[1-9¹²³]|LPT[1-9¹²³]) *(?:\.|$)/i.test(name)
+}
+
 /** Restrict paths passed to nvm 1.x, which invokes cmd internally for link operations. */
 export function isSafeNvmPath(value: unknown): value is string {
   if (typeof value !== 'string' || !/^[a-z]:\\[^\\]/i.test(value)) return false

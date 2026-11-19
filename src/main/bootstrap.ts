@@ -34,7 +34,7 @@ import {createReminderStore} from './db/reminders'
 import {createReminderEngine,type ReminderSender} from './reminders/engine'
 import {createNativeReminderSender} from './reminders/native'
 import {registerReminderIpc} from './reminders/ipc'
-import { app, dialog, net, powerMonitor } from 'electron'
+import { app, dialog, net, powerMonitor, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import windowsIcon from '../../resources/icon.ico?asset'
 import { startupRecorder, rendererStartupProbe, observeStartupRequests } from './startup'
@@ -112,7 +112,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const nodeManagement = createEnvironmentCoordinator({
     platform: process.platform, arch: process.arch, store: environmentSelectionStore(profile),
     discover: async () => [{ id: 'windows', label: 'Windows', kind: 'windows', running: true }, ...await wsl.discover()],
-    start: wsl.start,
+    start: wsl.start, opener: shell,
     createWindows: changed => createNodeManagementService({
       platform: process.platform, arch: process.arch,
       windows: createWindowsNodeAdapter(globalThis.fetch), loadCatalog: () => loadNodeCatalog(nodeFetch),

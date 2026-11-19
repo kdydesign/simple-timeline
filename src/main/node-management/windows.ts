@@ -8,6 +8,7 @@ import { isNodeVersion } from '../../shared/node-management'
 import { fetchBoundedAsset, type NodeFetch } from './catalog'
 import { discoverWindowsNode, isSafeNvmPath, type NvmInstallation } from './discovery'
 import { classicDigests, legacyHelpers, modernDigest, modernHelpers } from './manager-support'
+import { isExplorerComponent, samePath } from './windows-probe'
 import { modernRegistryRead } from './modern-manager'
 import { createMachineMutationLock } from './mutation-lock'
 import { fetchOfficialNodeDigest, fetchOfficialMsiDigest, readMsiResult, type MsiEvidence } from './standalone'
@@ -386,6 +387,10 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
   }
 
   return {
+    async verifiedDirectory(root) {
+      return isSafeNvmPath(root) && win32.normalize(root).replace(/\\$/, '').slice(3).split('\\').every(isExplorerComponent)
+        && (await lstat(root)).isDirectory() && samePath(root, await realpath(root))
+    },
     acquireMutation: async kind => (await lock()).acquire(kind),
     mutationStatus: async () => (await lock()).status(),
     async inspectStandalone() {

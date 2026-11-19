@@ -1,0 +1,139 @@
+.workrail-schedule-list {
+  container-type: inline-size;
+}
+
+.workrail-schedule-badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px 6px;
+}
+
+.workrail-tag.workrail-schedule-due {
+  color: var(--accent);
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  font-variant-numeric: tabular-nums;
+}
+
+.workrail-tag.workrail-schedule-due[data-due-today] {
+  color: var(--warning-text);
+}
+
+@container (max-width: 330px) {
+  .workrail-today .workrail-schedule-list li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workrail-schedule-badges {
+    justify-self: end;
+  }
+}
+
+.workrail-folder-target {
+  display: inline-flex;
+  border-radius: 6px;
+}
+
+.workrail-folder-target:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.workrail-home-node .workrail-folder-button {
+  min-height: 28px;
+  min-width: 28px;
+  padding: 4px;
+}
+
+.workrail-folder-button:disabled {
+  pointer-events: none;
+}
+
+.workrail-node-widget-body {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.workrail-node-widget-body .workrail-link {
+  font-size: 12px;
+}
+
+.workrail-widget-recovery {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.workrail-node-overlay {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.workrail-node-overlay-content {
+  display: grid;
+  flex: none;
+  justify-items: center;
+  width: 100%;
+  gap: 5px;
+  margin: auto;
+}
+
+.workrail-node-overlay .workrail-operation {
+  width: 100%;
+  text-align: center;
+}
+
+.workrail-node-overlay .workrail-operation-progress {
+  flex-direction: column;
+  justify-content: center;
+}
+
+.workrail-node-overlay [role="status"]::first-line {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.workrail-node-overlay .workrail-node-details {
+  text-align: start;
+  font-size: 12px;
+}
+
+.workrail-node-overlay summary {
+  margin-inline: auto;
+}
+
+.workrail-node-spinner {
+  width: 21px;
+  height: 21px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: workrail-node-spin 1s linear infinite;
+}
+
+@keyframes workrail-node-spin {
+  to { transform: rotate(1turn); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workrail-node-spinner { animation: none; }
+}
+
+@media (forced-colors: active) {
+  .workrail-node-overlay { background: Canvas; }
+  .workrail-node-spinner { border-color: GrayText; border-top-color: Highlight; }
+}

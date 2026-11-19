@@ -45,6 +45,7 @@ function nodeFixture(initial: Partial<NodeManagementState> = {}) {
     selectEnvironment: vi.fn((_id: string) => getState()), startEnvironment: vi.fn(getState), cancelOperation: vi.fn(getState),
     getState: vi.fn(getState), refreshCatalog: vi.fn(getState),
     install: vi.fn(getState), use: vi.fn(getState), installManager: vi.fn(getState), removeStandalone: vi.fn(getState), openMaintenance: vi.fn(getState),
+    openManagerFolder: vi.fn(getState), openManagerRelease: vi.fn(getState),
     onChange: (callback: (value: NodeManagementState) => void) => {
       listener = callback
       return dispose
@@ -588,6 +589,40 @@ it('shows a pending handoff and accepts recovery-window status on retry at the s
 const windows = { id: 'windows', label: 'Windows', kind: 'windows', running: true } as const
 const ubuntu = { id: 'wsl:12345678-1234-1234-1234-123456789abc', label: 'Ubuntu', distro: 'Ubuntu', kind: 'wsl2', running: false } as const
 
+it('keeps manual inspection pending across focus and releases it on failure', async () => {
+  const fixture = nodeFixture()
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const panel = within(node()).getByRole('region', { name: '현재 사용 버전' })
+  const recheck = within(panel).getByRole('button', { name: '환경 다시 검사' })
+  await waitFor(() => expect(recheck).toBeEnabled())
+  let finish!: (value: NodeManagementResult) => void
+  fixture.api.getState.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  const previousReads = fixture.api.getState.mock.calls.length
+  fireEvent.click(recheck)
+  fireEvent(window, new Event('focus'))
+  expect(panel).toHaveAttribute('aria-busy', 'true')
+  expect(recheck).toBeDisabled()
+  expect(fixture.api.getState).toHaveBeenCalledTimes(previousReads + 1)
+  await act(async () => finish({ ok: false, error: { code: 'inspection-failed', message: '환경 검사 실패' } }))
+  expect(panel).toHaveAttribute('aria-busy', 'false')
+  expect(recheck).toBeEnabled()
+})
+
+it('discards a late release opener failure after the selected environment changes', async () => {
+  const environments = { status: 'ready' as const, selectedId: windows.id, items: [windows, ubuntu], error: null }
+  const fixture = nodeFixture({ environments })
+  let finish!: (value: NodeManagementResult) => void
+  fixture.api.openManagerRelease.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const link = await within(node()).findByRole('link', { name: /최신 릴리스/ })
+  fireEvent.click(link)
+  expect(fixture.api.openManagerRelease).toHaveBeenCalledWith(windows.id)
+  act(() => fixture.emit({ environments: { ...environments, selectedId: ubuntu.id } }))
+  await act(async () => finish({ ok: false, error: { code: 'operation-failed', message: '이전 환경 열기 실패' } }))
+  expect(within(node()).queryByText('이전 환경 열기 실패')).toBeNull()
+  expect(within(node()).getByRole('link', { name: /최신 릴리스/ })).toBeEnabled()
+})
+
 it('keeps inventory-based actions unknown when the identified manager cannot list installed versions', async () => {
   const fixture = nodeFixture({
     manager: { kind: 'nvm-windows', status: 'ready', version: '1.1.11' },
@@ -859,7 +894,7 @@ it('offers Install for a configured WSL default missing from the completed inven
     'root','/home/minsu/.nodenv', 'status','ready', 'managerVersion','nodenv 1.6.2', 'global',version, 'listed','yes',
     'installed','24.11.0', 'shims','yes', 'writable','yes', 'builder','/usr/bin/node-build', 'definitions',version, ''].join('\0'))
   const target = { ...ubuntu, running: true, user: info.user }
-  const wsl = createWslService({ environment: target, runner: { probe: async () => info, change: vi.fn(), isStopped: vi.fn() },
+  const wsl = createWslService({ environment: target, runner: { probe: async () => info, verifiedFolder: vi.fn(), change: vi.fn(), isStopped: vi.fn() },
     loadCatalog: async () => nodeState.catalog.releases, changed: vi.fn() })
   const fixture = nodeFixture({ ...await wsl.refreshCatalog(), environments: { status: 'ready', items: [target], selectedId: target.id, error: null } })
   render(<App initialTool="node" api={memoryApi().api} />)

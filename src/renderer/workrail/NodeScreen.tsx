@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { RefreshCw } from 'lucide-react'
+import { RefreshCw, Search } from 'lucide-react'
 import type { NodeRelease } from '../../shared/node-management'
 import type { NodeManagement } from './useNodeManagement'
 import { nodeActiveVersionLabel, nodeCanRecheck, nodeCapabilityReason, nodeDefaultVersion, nodeEnvironmentReady, nodeInspectionStale,
@@ -69,18 +69,31 @@ export function NodeScreen({ node, onEnvironment }: { node: NodeManagement; onEn
 
   return (
     <main className="workrail-screen workrail-node" aria-label="NodeRail">
+      <span className="sr-only" role="status" aria-label="환경 검사 상태">
+        {node.recheckPending ? '환경 다시 검사 중' : ''}
+      </span>
       {unsupported && <p className="workrail-surface workrail-node-empty">{platformScope}</p>}
       {!unsupported && (
-        <section className="workrail-surface workrail-node-current" aria-labelledby="workrail-current-heading">
+        <section className="workrail-surface workrail-node-current" aria-labelledby="workrail-current-heading" aria-busy={node.recheckPending}>
+          {node.recheckPending && <div className="workrail-panel-progress" aria-hidden="true" />}
           <ToolIcon tool="node" size={25} />
           <div className="workrail-active">
-            <h3 id="workrail-current-heading">{currentLabel}</h3>
-            <EnvironmentName node={node} />
+            <div className="workrail-current-heading">
+              <h3 id="workrail-current-heading">{currentLabel}</h3>
+              <div className="workrail-current-badges">
+                <span className="workrail-tag"><EnvironmentName node={node} /></span>
+                {ready && !stale && (state?.manager.status === 'ready' || state?.manager.status === 'missing') && <ManagerBadge node={node} />}
+                {node.environment && state?.environments?.status === 'ready' && <button type="button" role="link"
+                  className="workrail-release-link" title={(node.environment.kind === 'wsl2' ? 'nodenv' : 'nvm-windows') + ' 최신 릴리스를 기본 브라우저에서 열기'}
+                  disabled={busy || node.recheckPending || !!node.openingManager}
+                  onClick={() => void node.openManagerRelease()}>최신 릴리스 <span aria-hidden="true">↗</span></button>}
+                {ready && !stale && state?.activeSource === 'standalone' && <span className="workrail-tag">기존 Node 설치</span>}
+              </div>
+            </div>
+            {node.releaseError && <p className="workrail-message" role="alert">{node.releaseError}</p>}
             <strong>{nodeActiveVersionLabel(node)}</strong>
           </div>
           <div className="workrail-current-actions">
-            {ready && !stale && state?.manager.status === 'ready' && <ManagerBadge node={node} />}
-            {ready && !stale && state?.activeSource === 'standalone' && <span className="workrail-tag">기존 Node 설치</span>}
             <EnvironmentActions node={node} onEnvironment={onEnvironment} />
             {state?.environments?.status !== 'error' && <button type="button" className="workrail-control" onClick={() => void refresh()}
               disabled={!nodeCanRecheck(node) || !state && !node.error}><RefreshCw aria-hidden="true" size={15} />환경 다시 검사</button>}
@@ -99,8 +112,11 @@ export function NodeScreen({ node, onEnvironment }: { node: NodeManagement; onEn
             <div className="workrail-catalog-toolbar">
             <h3 id="workrail-catalog-heading">공식 배포 목록</h3>
             <div className="workrail-node-tools">
-              <input className="workrail-control" type="search" aria-label="버전 검색" placeholder="버전 검색"
-                value={search} onChange={event => { setSearch(event.target.value); resetPage() }} />
+              <label className="workrail-version-search">
+                <Search size={16} aria-hidden="true" />
+                <input type="search" aria-label="버전 검색" placeholder="버전 검색" value={search}
+                  onChange={event => { setSearch(event.target.value); resetPage() }} />
+              </label>
               <div className="workrail-node-filters" role="group" aria-label="버전 필터">
                 {filters.map(item => <button type="button" className="workrail-control" key={item.id} aria-pressed={filter === item.id}
                   onClick={() => { setFilter(item.id); resetPage() }}>{item.label}</button>)}
@@ -112,7 +128,7 @@ export function NodeScreen({ node, onEnvironment }: { node: NodeManagement; onEn
             </div>
             </div>
             <div className="workrail-surface workrail-node-table" aria-busy={catalogLoading}>
-              {catalogLoading && <div className="workrail-catalog-progress" aria-hidden="true" />}
+              {catalogLoading && <div className="workrail-panel-progress" aria-hidden="true" />}
               <span className="sr-only" role="status" aria-label="목록 조회 상태">{catalogLoading ? '공식 배포 목록 조회 중' : catalog?.status === 'error' ? '공식 배포 목록 조회 실패' : catalog?.status === 'ready' ? '공식 배포 목록 조회 완료' : ''}</span>
               {catalog?.error && <div className="workrail-message">
                 <p role="alert">{catalog.error.message}</p>
@@ -151,22 +167,24 @@ export function NodeScreen({ node, onEnvironment }: { node: NodeManagement; onEn
           </section>
           <section className="workrail-surface workrail-node-installed" aria-labelledby="workrail-installed-heading">
             <h3 id="workrail-installed-heading">설치된 버전</h3>
-            {installed.length > 0 ? (
-              <>
-                {!inventoryKnown && <p className="workrail-note">{unknownInventory} 마지막으로 확인한 목록을 표시합니다.</p>}
-                <ul>{installed.map(version => (
-                  <li key={version}>
-                    <strong>{version}</strong>
-                    <NodeVersionAction node={node} version={version} />
-                  </li>
-                ))}</ul>
-              </>
-            ) : <p className="workrail-muted">{noInventory}</p>}
-            <p className="workrail-note">{node.environment?.kind === 'wsl2'
-              ? '선택한 WSL 기본 사용자의 Node 버전을 바꿉니다. 프로젝트 .node-version과 열린 셸의 환경 설정은 유지됩니다.'
-              : nodeDefaultVersion(node)
-                ? 'Windows의 사용자 기본 버전을 바꿉니다. 프로젝트에서 정한 버전은 그대로 적용될 수 있습니다.'
-                : '버전을 바꾸면 Windows PATH에서 nvm-windows 경로를 사용하는 이후 Node 실행에 적용됩니다. 설치 후 PATH가 변경되면 터미널을 다시 열어 주세요.'}</p>
+            <div className="workrail-installed-scroll">
+              {installed.length > 0 ? (
+                <>
+                  {!inventoryKnown && <p className="workrail-note">{unknownInventory} 마지막으로 확인한 목록을 표시합니다.</p>}
+                  <ul>{installed.map(version => (
+                    <li key={version}>
+                      <strong>{version}</strong>
+                      <NodeVersionAction node={node} version={version} />
+                    </li>
+                  ))}</ul>
+                </>
+              ) : <p className="workrail-muted">{noInventory}</p>}
+              <p className="workrail-note">{node.environment?.kind === 'wsl2'
+                ? '선택한 WSL 기본 사용자의 Node 버전을 바꿉니다. 프로젝트 .node-version과 열린 셸의 환경 설정은 유지됩니다.'
+                : nodeDefaultVersion(node)
+                  ? 'Windows의 사용자 기본 버전을 바꿉니다. 프로젝트에서 정한 버전은 그대로 적용될 수 있습니다.'
+                  : '버전을 바꾸면 Windows PATH에서 nvm-windows 경로를 사용하는 이후 Node 실행에 적용됩니다. 설치 후 PATH가 변경되면 터미널을 다시 열어 주세요.'}</p>
+            </div>
           </section>
         </div>
       )}

@@ -25,6 +25,8 @@ interface Connection {
   openingMaintenance: boolean
   environmentPending: EnvironmentRequest | null
   cancelPending: boolean
+  recheck: symbol | null
+  opener: symbol | null
 }
 
 function isOperationUnknown(state: NodeManagementState | null) {
@@ -47,6 +49,30 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   const [environmentPending, setEnvironmentPending] = useState<EnvironmentRequest | null>(null)
   const [cancelPending, setCancelPending] = useState(false)
   const [controlError, setControlError] = useState<NodeManagementError | null>(null)
+
+  const [operationBaseline, setOperationBaseline] = useState<NodeManagementState | null>(null)
+  const [recheckPending, setRecheckPending] = useState(false)
+  const [openingManager, setOpeningManager] = useState<'folder' | 'release' | null>(null)
+  const [folderError, setFolderError] = useState<string | null>(null)
+  const [releaseError, setReleaseError] = useState<string | null>(null)
+
+  const acceptSnapshot = useCallback((current: Connection, next: NodeManagementState) => {
+    const previous = current.snapshot
+    if (previous?.environments?.selectedId !== next.environments?.selectedId) {
+      current.recheck = null
+      current.opener = null
+      setRecheckPending(false)
+      setOpeningManager(null)
+      setFolderError(null)
+      setReleaseError(null)
+      setOperationBaseline(null)
+    } else if (next.busy && !previous?.busy && !current.mutation) {
+      setOperationBaseline(previous)
+    }
+    current.snapshot = next
+    setState(next)
+    setReadError(null)
+  }, [])
 
   const run = useCallback(async (command: () => Promise<NodeManagementResult>, kind: RequestKind = 'read') => {
     const current = connection.current
@@ -71,10 +97,8 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
         setControlError(error)
         return { ok: false as const, error }
       }
-      current.snapshot = result.data
       current.acceptedRequest = request
-      setState(result.data)
-      setReadError(null)
+      acceptSnapshot(current, result.data)
     } else if (kind === 'maintenance') {
       setMaintenanceError(result.error.message)
     } else if (kind === 'mutation' && result.error.code === 'ipc-unavailable') {
@@ -98,13 +122,22 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       })
     }
     return result
-  }, [])
+  }, [acceptSnapshot])
 
-  const refresh = useCallback(() => {
+  const refresh = useCallback(async () => {
     const current = connection.current
-    if (api && current && !current.mutation && !current.environmentPending) {
-      setControlError(null)
-      return run(() => api.getState(), 'recheck')
+    if (!api || !current || current.recheck || current.mutation || current.environmentPending) return
+    const token = Symbol()
+    current.recheck = token
+    setRecheckPending(true)
+    setControlError(null)
+    try {
+      return await run(() => api.getState(), 'recheck')
+    } finally {
+      if (connection.current === current && current.recheck === token) {
+        current.recheck = null
+        setRecheckPending(false)
+      }
     }
   }, [api, run])
   const refreshCatalog = useCallback(async () => {
@@ -124,6 +157,11 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
 
   useEffect(() => {
     setState(null)
+    setOperationBaseline(null)
+    setRecheckPending(false)
+    setOpeningManager(null)
+    setReleaseError(null)
+    setFolderError(null)
     setReadError(api ? null : unavailable)
     setMutationFailure(null)
     setMutation(null)
@@ -135,16 +173,14 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     setControlError(null)
     if (!api) return
     const current: Connection = { snapshot: null, request: 0, acceptedRequest: 0, mutation: null, catalogPending: false,
-      openingMaintenance: false, environmentPending: null, cancelPending: false }
+      openingMaintenance: false, environmentPending: null, cancelPending: false, recheck: null, opener: null }
     connection.current = current
     const off = api.onChange(next => {
       if (connection.current !== current || next.revision <= (current.snapshot?.revision ?? -1)) return
-      current.snapshot = next
-      setState(next)
-      setReadError(null)
+      acceptSnapshot(current, next)
     })
     const inspect = () => {
-      if (!current.environmentPending) void run(() => api.getState())
+      if (!current.environmentPending && !current.recheck) void run(() => api.getState())
     }
     window.addEventListener('focus', inspect)
     inspect()
@@ -153,7 +189,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       off()
       window.removeEventListener('focus', inspect)
     }
-  }, [api, run])
+  }, [api, run, acceptSnapshot])
 
   const catalogRequested = useRef<string | null>(null)
   const busy = openingMaintenance || !!environmentPending || cancelPending || !!mutation || workLocked(state)
@@ -178,6 +214,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       : operation.kind === 'install-manager' ? () => api.installManager()
       : operation.kind === 'install' ? () => api.install(operation.version)
       : () => api.use(operation.version)
+    setOperationBaseline(current.snapshot)
     current.mutation = operation
     setControlError(null)
     setMutation(operation)
@@ -246,9 +283,36 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       }
     }
   }
+  async function openManager(kind: 'folder' | 'release') {
+    const current = connection.current
+    const expectedId = state?.environments?.selectedId
+    if (!api || !current || !expectedId || current.snapshot?.environments?.selectedId !== expectedId ||
+        current.opener || current.recheck || current.environmentPending || current.mutation || busy || workLocked(current.snapshot)) return
+    const token = Symbol()
+    current.opener = token
+    setOpeningManager(kind)
+    const setError = kind === 'folder' ? setFolderError : setReleaseError
+    setError(null)
+    try {
+      const result = kind === 'folder'
+        ? await api.openManagerFolder(expectedId)
+        : await api.openManagerRelease(expectedId)
+      if (connection.current === current && current.opener === token && !result.ok) setError(result.error.message)
+    } catch {
+      if (connection.current === current && current.opener === token) setError(unavailable.message)
+    } finally {
+      if (connection.current === current && current.opener === token) {
+        current.opener = null
+        setOpeningManager(null)
+      }
+    }
+  }
+
   const error = mutationFailure?.error ?? readError
   return { state, error, controlError, openingMaintenance, maintenanceError, recoveryError: mutationFailure?.recoveryError,
     available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate, openMaintenance,
+    operationBaseline, recheckPending, openingManager, folderError, releaseError,
+    openManagerFolder: () => openManager('folder'), openManagerRelease: () => openManager('release'),
     environment, environmentPending, changeEnvironment, cancelPending, cancelOperation }
 }
 

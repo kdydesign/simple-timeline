@@ -82,7 +82,7 @@ contextBridge.exposeInMainWorld('timelineUpdates',{
 } satisfies UpdateApi)
 
 const nodeInvoke = async (
-  command: 'selectEnvironment' | 'startEnvironment' | 'cancelOperation' | 'getState' | 'refreshCatalog' | 'installManager' | 'install' | 'use' | 'removeStandalone' | 'openMaintenance',
+  command: 'selectEnvironment' | 'startEnvironment' | 'cancelOperation' | 'getState' | 'refreshCatalog' | 'installManager' | 'install' | 'use' | 'removeStandalone' | 'openMaintenance' | 'openManagerFolder' | 'openManagerRelease',
   ...args: [] | [version: string] | [confirmation:StandaloneRemovalConfirmation]
 ): Promise<NodeManagementResult> => {
   try {
@@ -101,6 +101,8 @@ contextBridge.exposeInMainWorld('workrailNodeManagement', {
   use: version => nodeInvoke('use', version),
   installManager: () => nodeInvoke('installManager'),
   removeStandalone: input => nodeInvoke('removeStandalone',input),
+  openManagerFolder: id => nodeInvoke('openManagerFolder', id),
+  openManagerRelease: id => nodeInvoke('openManagerRelease', id),
   openMaintenance: () => nodeInvoke('openMaintenance'),
   onChange: callback => {
     const listener = (_event: unknown, state: NodeManagementState) => callback(state)

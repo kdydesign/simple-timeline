@@ -56,6 +56,7 @@ export function createEnvironmentCoordinator(options: {
   createWindows(changed: EnvironmentChanged): Backend
   createWsl(environment: NodeEnvironment, changed: EnvironmentChanged): Backend
   changed: EnvironmentChanged
+  opener?: { openPath(path: string): Promise<string>; openExternal(url: string): Promise<void> }
   barrier?: MutationBarrier
 }) {
   const supported = options.platform === 'win32' && options.arch === 'x64'
@@ -66,7 +67,7 @@ export function createEnvironmentCoordinator(options: {
   let saved: string | null | undefined
   let epoch = 0, scan = 0, commandGeneration = 0, writing = false, mutating = false
   let discovery: Promise<void> | null = null
-  const windowsInspections = new Set<Promise<NodeManagementState>>()
+  const inspections = new Set<Promise<NodeManagementState>>()
   const invalid = (message: string): NodeManagementError => ({ code: 'environment-conflict', message })
   const publish = (snapshot: NodeManagementState) => {
     state = { ...snapshot, environments, revision: state.revision + 1 }
@@ -150,11 +151,11 @@ export function createEnvironmentCoordinator(options: {
     const target = backend, command = commandGeneration
     if (target && !mutating && !writing) {
       const request = target[method]()
-      if (active?.kind === 'windows') windowsInspections.add(request)
+      inspections.add(request)
       try {
         const snapshot = await request
         if (command === commandGeneration && target === backend && !mutating && !writing) publish(snapshot)
-      } finally { windowsInspections.delete(request) }
+      } finally { inspections.delete(request) }
     }
     return state
   }
@@ -173,8 +174,42 @@ export function createEnvironmentCoordinator(options: {
     } finally { mutating = false }
   }
 
+  async function openManager(expectedId: string, destination: 'folder' | 'release') {
+    if (busy() || state.busy || discovery || inspections.size) return denied(nodeManagementError('busy'))
+    const selected = active, target = backend, opener = options.opener
+    if (!selected || !targetSelected() || selected.id !== expectedId) return denied(invalid('선택한 환경이 바뀌었습니다. 환경을 다시 확인해 주세요.'))
+    if (options.barrier?.blocked()) return denied(nodeManagementError('shutdown'))
+    const failed = (message: string) => denied({ code: 'operation-failed', message })
+    const cannotVerify = () => denied(invalid('관리자 폴더를 확인하지 못했습니다. 선택한 환경을 다시 검사해 주세요.'))
+    if (destination === 'folder') {
+      if (!selected.running) return denied(invalid('환경 시작 후 열 수 있습니다.'))
+      if (!state.checkedAt || state.manager.status !== 'ready' || state.error?.code === 'inspection-failed') return cannotVerify()
+    }
+    mutating = true
+    try {
+      // Registration lookup runs on the host, including for a stopped distro.
+      const registered = (await options.discover()).find(e => e.id === expectedId && e.kind === selected.kind && e.distro === selected.distro)
+      if (!registered) return denied(invalid('선택한 환경의 등록 정보를 다시 확인해 주세요.'))
+      if (!opener) throw Error('Missing opener')
+      if (destination === 'release') {
+        const url = selected.kind === 'windows' ? 'https://github.com/nvm-windows/nvm/releases/latest' : 'https://github.com/nodenv/nodenv/releases/latest'
+        await opener.openExternal(url)
+      } else {
+        if (!registered.running) return denied(invalid('환경 시작 후 열 수 있습니다.'))
+        const root = await target?.verifiedManagerFolder()
+        if (!root || target?.isBusy()) return cannotVerify()
+        if (await opener.openPath(root)) return failed('관리자 폴더를 열지 못했습니다. 폴더 위치와 접근 권한을 확인해 주세요.')
+      }
+      return state
+    } catch {
+      return failed(destination === 'folder' ? '관리자 폴더를 열지 못했습니다. 환경과 폴더 접근 권한을 다시 확인해 주세요.' : '공식 릴리스 페이지를 열지 못했습니다. 환경과 기본 브라우저 설정을 확인해 주세요.')
+    } finally { mutating = false }
+  }
+
   return {
     currentState: () => state,
+    openManagerFolder: (expectedId: string) => openManager(expectedId, 'folder'),
+    openManagerRelease: (expectedId: string) => openManager(expectedId, 'release'),
     getState: () => read('getState'),
     refreshCatalog: () => read('refreshCatalog'),
     async selectEnvironment(id: string) {
@@ -185,8 +220,8 @@ export function createEnvironmentCoordinator(options: {
       try {
         // While writing is reserved, no new inspection can start. Finish any Windows
         // reads that could still discover a machine lock before committing another ID.
-        if (active?.kind === 'windows' && id !== active.id && windowsInspections.size) {
-          await Promise.allSettled(windowsInspections)
+        if (active?.kind === 'windows' && id !== active.id && inspections.size) {
+          await Promise.allSettled(inspections)
           if (backend?.isBusy()) return denied(nodeManagementError('busy'))
         }
         await options.store.write(id)

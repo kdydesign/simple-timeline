@@ -105,6 +105,8 @@ export interface NodeManagementApi {
   use(version: string): Promise<NodeManagementResult>
   installManager(): Promise<NodeManagementResult>
   removeStandalone(input: StandaloneRemovalConfirmation): Promise<NodeManagementResult>
+  openManagerFolder(expectedEnvironmentId: string): Promise<NodeManagementResult>
+  openManagerRelease(expectedEnvironmentId: string): Promise<NodeManagementResult>
   openMaintenance(): Promise<NodeManagementResult>
   onChange(callback: (state: NodeManagementState) => void): () => void
 }

@@ -63,7 +63,7 @@ const identity = (info: WslInspection) => JSON.stringify([info.user, info.root, 
 
 export function createWslService(options: {
   environment: NodeEnvironment
-  runner: Pick<ReturnType<typeof createWslRunner>, 'isStopped' | 'probe' | 'change'>
+  runner: Pick<ReturnType<typeof createWslRunner>, 'isStopped' | 'probe' | 'change' | 'verifiedFolder'>
   loadCatalog(arch: string): Promise<NodeRelease[]>
   changed: EnvironmentChanged
   openLog?(): ReturnType<typeof openWslLog>
@@ -269,6 +269,7 @@ export function createWslService(options: {
 
   const unsupported = async () => ({ ...state, error: nodeManagementError('invalid-request') })
   return {
+    verifiedManagerFolder: () => current && !state.busy ? options.runner.verifiedFolder(env, current) : Promise.resolve(null),
     getState: () => read(false), refreshCatalog: () => read(true),
     install: (version: string) => operate('install', version), use: (version: string) => operate('use', version),
     installManager: unsupported, removeStandalone: unsupported, isBusy: () => state.busy !== null,

@@ -1,10 +1,13 @@
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
+import { mkdir, mkdtemp, rm, symlink as createSymlink, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { fetchBoundedAsset, parseNodeCatalog } from '../../src/main/node-management/catalog'
 import { discoverWindowsNode, type WindowsDiscovery } from '../../src/main/node-management/discovery'
 import { createNodeManagementService, type WindowsNodeAdapter } from '../../src/main/node-management/service'
-import { buildNvmInvocation, createElevationCommand, mergeWindowsEnvironment, readElevatedExit } from '../../src/main/node-management/windows'
+import { buildNvmInvocation, createWindowsNodeAdapter, createElevationCommand, mergeWindowsEnvironment, readElevatedExit } from '../../src/main/node-management/windows'
 import { createMutationBarrier } from '../../src/main/updates/installer'
 import type { NodeManagementState } from '../../src/shared/node-management'
 
@@ -512,4 +515,35 @@ it('honours terminal evidence when an acquisition failure and its recovery inspe
   expect(service.isBusy()).toBe(false)
   expect((await service.installManager()).error?.code).toBe('reboot-required')
   expect(attempts).toBe(1)
+})
+
+it.each(['classic', 'modern'] as const)('rechecks the %s data root independently of the executable and refuses a changed or missing directory', async family => {
+  const install = { ...ready.installation!, root: 'D:\\versions' }
+  const verified = family === 'modern'
+    ? { ...install, family: 'modern' as const, version: '2.0.1' as const, mode: 'shim' as const }
+    : { ...install, family: 'classic' as const, version: '1.2.2' as const }
+  let current = verified
+  let exists = true
+  const { service } = makeService(adapter({ discover: async () => ({ ...ready, installation: current }), verifiedDirectory: async () => exists }))
+  await service.getState()
+  expect(await service.verifiedManagerFolder()).toBe('D:\\versions')
+  exists = false
+  expect(await service.verifiedManagerFolder()).toBeNull()
+  exists = true
+  current = { ...verified, root: 'D:\\different' }
+  expect(await service.verifiedManagerFolder()).toBeNull()
+})
+
+it.runIf(process.platform === 'win32')('accepts an existing local Windows folder and rejects files and redirected parent junctions', async () => {
+  const temp = await mkdtemp(join(tmpdir(), 'workrail-folder-'))
+  const verify = createWindowsNodeAdapter(fetch).verifiedDirectory!
+  try {
+    const root = join(temp, 'store')
+    await mkdir(join(root, 'versions'), { recursive: true })
+    await writeFile(join(temp, 'plain.txt'), '')
+    await createSymlink(root, join(temp, 'link'), 'junction')
+    expect(await verify(root)).toBe(true)
+    expect(await verify(join(temp, 'plain.txt'))).toBe(false)
+    expect(await verify(join(temp, 'link', 'versions'))).toBe(false)
+  } finally { await rm(temp, { recursive: true, force: true }) }
 })

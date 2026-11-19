@@ -26,6 +26,7 @@ async function showWindowsNode(desktop: Desktop, patch: Partial<NodeManagementSt
   }
   await publishNode(desktop, state)
   await expect(desktop.page.getByRole('region', { name: '내 개발 환경' }).getByText(state.activeVersion!, { exact: true })).toBeVisible()
+  return state
 }
 
 async function publishNode(desktop: Desktop, state: NodeManagementState) {
@@ -90,7 +91,7 @@ async function expectCenteredColumns(table: Locator, info: TestInfo, attachment:
 test('centers and sorts the Node catalog with aligned independently scrolling panels', async ({ desktop }, info) => {
   const { page } = desktop
   await page.setViewportSize({ width: 1440, height: 900 })
-  await showWindowsNode(desktop)
+  const state = await showWindowsNode(desktop)
   await page.getByRole('navigation', { name: 'WorkRail 도구' }).getByRole('button', { name: 'NodeRail', exact: true }).click()
   const main = page.getByRole('main', { name: 'NodeRail' })
   const table = main.getByRole('table', { name: '공식 배포 버전' })
@@ -122,23 +123,39 @@ test('centers and sorts the Node catalog with aligned independently scrolling pa
   const catalogScroll = main.locator('.workrail-node-table-scroll')
   const installed = main.getByRole('region', { name: '설치된 버전' })
   const installedHeading = installed.getByRole('heading', { name: '설치된 버전' })
-  await catalogScroll.evaluate(element => { element.scrollTop = 240 })
-  await expect.poll(() => catalogScroll.evaluate(element => element.scrollTop)).toBe(240)
-  await expect(table.locator('thead')).toHaveCSS('backdrop-filter', 'blur(12px)')
-  expect(await installed.evaluate(element => element.scrollTop)).toBe(0)
-  await installed.evaluate(element => { element.scrollTop = 160 })
-  await expect.poll(() => installed.evaluate(element => element.scrollTop)).toBe(160)
-  expect(await catalogScroll.evaluate(element => element.scrollTop)).toBe(240)
-  const headingText = await installedHeading.evaluate(element => {
-    const range = document.createRange(); range.selectNodeContents(element)
-    const bounds = range.getBoundingClientRect(); return { top: bounds.top, bottom: bounds.bottom }
-  })
-  const installedBounds = await box(installed)
-  expect(headingText.top).toBeGreaterThanOrEqual(installedBounds.y)
-  expect(headingText.bottom).toBeLessThanOrEqual(installedBounds.y + installedBounds.height)
-  await expectMatchingEdges(main.locator('.workrail-node-table'), installed)
+  const listScroll = installed.locator('.workrail-installed-scroll')
+  const headingBounds = await box(installedHeading)
+  const listBounds = await box(listScroll)
+  expect(listBounds.y).toBeGreaterThanOrEqual(headingBounds.y + headingBounds.height - 1)
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate(theme => { document.documentElement.dataset.theme = theme }, theme)
+    await catalogScroll.evaluate(element => { element.scrollTop = 0 })
+    await expect(table.locator('thead')).toHaveCSS('backdrop-filter', await installedHeading.evaluate(element => getComputedStyle(element).backdropFilter))
+    await expect(table.locator('thead')).toHaveCSS('background-color', await installedHeading.evaluate(element => getComputedStyle(element).backgroundColor))
+    await catalogScroll.evaluate(element => { element.scrollTop = 240 })
+    await expect(table.locator('thead')).toHaveCSS('backdrop-filter', 'blur(12px)')
+    for (const end of ['bottom', 'top']) {
+      const scrollTop = await listScroll.evaluate((element, end) => {
+        element.scrollTop = end === 'bottom' ? element.scrollHeight : 0
+        return element.scrollTop
+      }, end)
+      if (end === 'bottom') expect(scrollTop).toBeGreaterThan(160)
+      else expect(scrollTop).toBe(0)
+      expect(await box(installedHeading)).toEqual(headingBounds)
+      expect(await installed.evaluate(element => element.scrollTop)).toBe(0)
+      expect(await catalogScroll.evaluate(element => element.scrollTop)).toBe(240)
+      await expectMatchingEdges(main.locator('.workrail-node-table'), installed)
+    }
+  }
   expect(await main.evaluate(element => element.scrollTop)).toBe(0)
   await page.screenshot({ path: info.outputPath('node-independent-scroll.png') })
+  await publishNode(desktop, { ...state, revision: state.revision + 1, installedVersions: [], activeVersion: null, activeSource: null })
+  await expect(installed.getByText('설치된 버전이 없습니다.')).toBeVisible()
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate(theme => { document.documentElement.dataset.theme = theme }, theme)
+    expect(await box(installedHeading)).toEqual(headingBounds)
+    await expectMatchingEdges(main.locator('.workrail-node-table'), installed)
+  }
 })
 
 test('matches the calendar header material and menu gap while retaining keyboard sorting', async ({ desktop }) => {
@@ -181,6 +198,59 @@ test('matches the calendar header material and menu gap while retaining keyboard
   await expect(table.getByRole('columnheader', { name: 'Node 버전 정렬' })).toHaveAttribute('aria-sort', 'ascending')
 })
 
+test('keeps the current panel in place during a manual inspection and exposes keyboard search', async ({ desktop }) => {
+  const { page } = desktop
+  const windows = { id: 'windows', label: 'Windows', kind: 'windows', running: true } as const
+  const state = await showWindowsNode(desktop, {
+    environments: { status: 'ready', items: [windows], selectedId: windows.id, error: null },
+  })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await page.getByRole('navigation', { name: 'WorkRail 도구' }).getByRole('button', { name: 'NodeRail' }).click()
+  const node = page.getByRole('main', { name: 'NodeRail' })
+  const panel = node.getByRole('region', { name: '현재 사용 버전' })
+  const heading = await box(panel.getByRole('heading'))
+  const environment = await box(panel.getByText('Windows', { exact: true }))
+  const manager = await box(panel.getByText('NVM 1.2.2 설치'))
+  expect(environment.x).toBeGreaterThan(heading.x + heading.width)
+  expect(manager.x).toBeGreaterThan(environment.x + environment.width)
+  expect(Math.abs(heading.y + heading.height / 2 - environment.y - environment.height / 2)).toBeLessThanOrEqual(2)
+  expect((await box(panel.getByText('22.2.0'))).y).toBeGreaterThanOrEqual(heading.y + heading.height)
+  await expect(panel.locator(':scope > svg')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, -3)')
+  await panel.getByRole('link', { name: '최신 릴리스' }).focus()
+  await page.keyboard.press('Tab')
+  const recheck = panel.getByRole('button', { name: '환경 다시 검사' })
+  await expect(recheck).toBeFocused()
+  await page.keyboard.press('Tab')
+  const search = node.getByRole('searchbox', { name: '버전 검색' })
+  await expect(search).toBeFocused()
+  await expect(search.locator('..')).toHaveCSS('outline-style', 'solid')
+  await page.setViewportSize({ width: 380, height: 750 })
+  await panel.scrollIntoViewIfNeeded()
+  expect(await panel.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  const panelBounds = await box(panel)
+  await desktop.app.evaluate(({ ipcMain }, { channel, state }) => {
+    ipcMain.removeHandler(channel)
+    ipcMain.handle(channel, async (_event, command) => {
+      if (command === 'getState') await new Promise<void>(resolve => ipcMain.once('presentation-finish-recheck', () => resolve()))
+      return { ok: true, data: state }
+    })
+  }, { channel: nodeManagementChannel, state })
+  await recheck.click()
+  await expect(panel).toHaveAttribute('aria-busy', 'true')
+  await expect(node.getByRole('table')).toHaveAttribute('aria-busy', 'false')
+  const progress = panel.locator('.workrail-panel-progress')
+  await expect(progress).toHaveCSS('height', '2px')
+  expect(await box(panel)).toEqual(panelBounds)
+  const track = await box(progress)
+  expect(track.y - panelBounds.y).toBe(1)
+  expect(await progress.evaluate(element => getComputedStyle(element, '::before').animationDuration)).toBe('1.1s')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  expect(await progress.evaluate(element => getComputedStyle(element, '::before').animationName)).toBe('none')
+  await desktop.app.evaluate(({ ipcMain }) => { ipcMain.emit('presentation-finish-recheck') })
+  await expect(panel).toHaveAttribute('aria-busy', 'false')
+  expect(await box(panel)).toEqual(panelBounds)
+})
+
 test('matches Home card heights while keeping PlanRail status fit to its contents', async ({ desktop }, info) => {
   const { page } = desktop
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -218,6 +288,46 @@ async function publishSharing(desktop: Desktop, state: SharingState) {
       : { ok: false, error: { code: 'FORBIDDEN', message: 'Presentation fixture permits reads only.' } })
     for (const window of BrowserWindow.getAllWindows()) window.webContents.send(changed, state)
   }, { channel: sharingChannel, changed: sharingChanged, state })
+}
+
+async function expectFooterMembers(footer: Locator, info: TestInfo, visible: number, total: number, targetWidth?: number) {
+  const page = footer.page()
+  const area = footer.locator('.planrail-members')
+  const overflow = footer.getByRole('button')
+  let layout
+  try {
+    if (targetWidth !== undefined) {
+      // Resize the real viewport around the space taken by this platform's labels.
+      const inset = await area.evaluate(element => innerWidth - element.getBoundingClientRect().width)
+      await page.setViewportSize({ width: Math.round(targetWidth + inset), height: 750 })
+      expect(Math.abs((await box(area)).width - targetWidth)).toBeLessThan(40)
+    }
+    await expect(footer.getByRole('listitem')).toHaveCount(visible)
+    if (visible === total) await expect(overflow).toHaveCount(0)
+    else await expect(footer.getByRole('button', { name: `외 ${total - visible}명`, exact: true })).toBeVisible()
+    await expect(footer.getByTestId('notification-policy')).toBeVisible()
+  } finally {
+    layout = await footer.evaluate(element => {
+      const bounds = (selector: string) => {
+        const rect = element.querySelector(selector)?.getBoundingClientRect()
+        return rect ? { left: rect.left, right: rect.right, width: rect.width } : null
+      }
+      return {
+        viewport: innerWidth, area: bounds('.planrail-members'), visible: element.querySelectorAll('li').length,
+        overflow: element.querySelector('.workrail-member-more')?.textContent ?? null,
+        badge: bounds('.sharing-badge'), connection: bounds('.planrail-connection'), version: bounds('.workrail-member-version'),
+        button: bounds('.workrail-member-more'), policy: bounds('.planrail-policy'),
+      }
+    })
+    await info.attach('footer-layout-' + visible, {
+      body: JSON.stringify({ targetWidth, expectedVisible: visible, total, ...layout }), contentType: 'application/json',
+    })
+  }
+  expect(layout.badge!.right).toBeLessThanOrEqual(layout.connection!.left)
+  expect(layout.connection!.right).toBeLessThanOrEqual(layout.area!.left)
+  expect(layout.area!.right).toBeLessThanOrEqual(layout.policy!.left)
+  if (layout.button) expect(layout.button.right).toBeLessThanOrEqual(layout.policy!.left)
+  expect(layout.policy!.right).toBeLessThanOrEqual(layout.viewport)
 }
 
 test('keeps the compact dashboard and real status controls legible in dark, light, and narrow windows', async ({ desktop }, info) => {
@@ -276,13 +386,12 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
   await page.screenshot({ path: info.outputPath('compact-home-host-dark.png') })
   await other.click()
   const footer = page.getByRole('contentinfo', { name: 'PlanRail 상태' })
-  await expect(footer.getByRole('listitem')).toHaveCount(3)
+  await expectFooterMembers(footer, info, 3, 3)
   await expect(footer.getByText('민수의 이름이 긴 사무실 PC')).toBeVisible()
   await page.screenshot({ path: info.outputPath('compact-planrail-host-dark.png') })
 
-  await page.setViewportSize({ width: 500, height: 750 })
-  await expect(footer.getByRole('button', { name: '외 2명' })).toBeVisible()
-  await expect(footer.getByRole('listitem')).toHaveCount(1)
+  // One member fits between 235 and 420 CSS pixels of allocated member space.
+  await expectFooterMembers(footer, info, 1, 3, 325)
   const longVersion = '1.0.0-' + 'W'.repeat(58)
   expect(reportedVersion(longVersion)).toBe(longVersion)
   await publishSharing(desktop, { ...host, snapshotRevision: 191, deviceVersions: { '0': { version: longVersion, checkedAt: lastCheckedAt } } })
@@ -294,18 +403,18 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
   await info.attach('long-version-footer-bounds', { body: JSON.stringify({ versionBounds, expansionBounds, policyBounds }), contentType: 'application/json' })
   expect(versionBounds.x + versionBounds.width).toBeLessThanOrEqual(expansionBounds.x)
   expect(expansionBounds.x + expansionBounds.width).toBeLessThanOrEqual(policyBounds.x)
-  expect(policyBounds.x + policyBounds.width).toBeLessThanOrEqual(500)
+  expect(policyBounds.x + policyBounds.width).toBeLessThanOrEqual(await page.evaluate(() => innerWidth))
   await footerVersion.focus()
   await expect(page.getByRole('tooltip')).toHaveText('버전 ' + longVersion)
   await page.keyboard.press('Escape')
   await page.screenshot({ path: info.outputPath('long-version-footer.png') })
-  await page.setViewportSize({ width: 430, height: 750 })
-  await expect(footer.getByRole('button', { name: '외 3명' })).toBeVisible()
-  await expect(footer.getByTestId('notification-policy')).toBeVisible()
+  await expectFooterMembers(footer, info, 0, 3, 155)
   const allMembers = footer.getByRole('button', { name: '외 3명' })
-  await allMembers.click()
+  await allMembers.focus()
+  await page.keyboard.press('Enter')
   const members = page.getByRole('dialog', { name: '연결된 참여자' })
-  await expect(members.getByText('민수의 이름이 긴 사무실 PC')).toBeVisible()
+  await expect(members.getByRole('listitem')).toHaveCount(3)
+  for (const { name } of devices.slice(0, 3)) await expect(members.getByText(name, { exact: true })).toBeVisible()
   await expect(members.getByText('버전 ' + longVersion, { exact: true })).toBeVisible()
   expect(await members.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
   await page.screenshot({ path: info.outputPath('compact-footer-narrow.png') })
@@ -361,4 +470,42 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
   await expect(node.getByText('Ubuntu · 기본 사용자 확인 전 · 종료됨')).toBeVisible()
   await expect(node.getByRole('table')).toHaveCount(0)
   await page.screenshot({ path: info.outputPath('compact-node-wsl-stopped.png') })
+})
+
+test('covers the Node widget without moving its previous rows and keeps focus and scrolling outside them', async ({ desktop }) => {
+  const { page } = desktop
+  await page.setViewportSize({ width: 660, height: 720 })
+  await showWindowsNode(desktop)
+  const widget = page.getByRole('region', { name: 'Node 작업' })
+  const list = widget.locator('.workrail-widget-versions')
+  await widget.scrollIntoViewIfNeeded()
+  const [widgetBefore, listBefore] = await Promise.all([box(widget), box(list)])
+  const current = await page.evaluate(() => window.workrailNodeManagement!.getState())
+  if (!current.ok) throw Error('Missing fixture state')
+  await publishNode(desktop, { ...current.data, revision: current.data.revision + 1, installedVersions: [], activeVersion: null,
+    busy: { kind: 'install', version: '24.22.2', phase: 'compiling', cancellable: true },
+    operationLog: Array.from({ length: 40 }, (_, i) => '빌드 단계 ' + i),
+  })
+  const status = widget.getByRole('status')
+  await expect(status).toContainText('소스 컴파일 중')
+  expect(await box(widget)).toEqual(widgetBefore)
+  expect(await box(list)).toEqual(listBefore)
+  const underlayButton = list.getByText('사용', { exact: true }).first()
+  await underlayButton.evaluate(button => button.focus())
+  await expect(underlayButton).not.toBeFocused()
+  const overlay = widget.locator('.workrail-node-overlay')
+  const bounds = await box(overlay)
+  expect(Math.abs(bounds.y - widgetBefore.y)).toBeLessThanOrEqual(1)
+  expect(Math.abs(bounds.x - widgetBefore.x)).toBeLessThanOrEqual(1)
+  expect(Math.abs(bounds.height - widgetBefore.height)).toBeLessThanOrEqual(2)
+  expect(Math.abs(bounds.width - widgetBefore.width)).toBeLessThanOrEqual(2)
+  await widget.getByText('작업 로그').click()
+  await overlay.evaluate(element => { element.scrollTop = element.scrollHeight })
+  expect(await overlay.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+  expect(await box(widget)).toEqual(widgetBefore)
+  const dock = page.getByRole('navigation', { name: 'WorkRail 도구' })
+  await dock.getByRole('button', { name: 'PlanRail' }).click()
+  await dock.getByRole('button', { name: 'Home' }).click()
+  await expect(widget.getByRole('status')).toContainText('소스 컴파일 중')
+  await expect(list.locator('li')).toHaveCount(3)
 })

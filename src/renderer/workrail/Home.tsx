@@ -1,15 +1,16 @@
-import { CalendarDays } from 'lucide-react'
-import { ToolIcon } from './ToolIcon'
+import { CalendarDays, FolderOpen } from 'lucide-react'
+import { toOrdinal } from '../../domain/date'
 import { useMemo } from 'react'
 import type { ApiError, TimelineSnapshot } from '../../shared/types'
 import type { SharingState } from '../../shared/sharing'
 import type { TimelinePhase } from '../state/useTimeline'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeActiveVersionLabel, nodeCapabilityReason, nodeDefaultVersion, nodeEnvironmentLabel, nodeEnvironmentReady, nodeInspectionStale,
+import { nodeActiveVersionLabel, nodeCanRecheck, nodeCapabilityReason, nodeDefaultVersion, nodeEnvironmentLabel, nodeEnvironmentReady, nodeInspectionStale,
   nodeInstalledVersions, nodeInventoryKnown, nodeOperationMessages, nodeProgress, platformScope, unknownInventory } from './nodePresentation'
 import { EnvironmentActions, ManagerBadge, type OpenEnvironment } from './NodeEnvironment'
-import { NodeOperationStatus, NodeVersionAction } from './NodeVersionControls'
+import { NodeOperationStatus, NodeTooltip, NodeVersionAction } from './NodeVersionControls'
 import { SharingWidget } from './SharingWidget'
+import './home.css'
 
 const maxSchedules = 10
 const maxNodeVersions = 3
@@ -45,16 +46,12 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate)
       || a.name.localeCompare(b.name, 'ko') || a.id.localeCompare(b.id)), [date, projects, revoked, snapshot])
   const { state } = node
-  const progress = nodeProgress(node)
-  const operationMessages = nodeOperationMessages(node)
+  const todayOrdinal = toOrdinal(date)
   const sharingStale = sharing?.role === 'member' && sharing.status !== 'connected' && !revoked
   const scheduleStale = phase === 'stale' || phase === 'uncertain' || phase === 'blocked'
   const ready = nodeEnvironmentReady(node)
   const inventoryKnown = nodeInventoryKnown(node)
   const selected = nodeEnvironmentLabel(node)
-  const versions = inventoryKnown ? nodeInstalledVersions(node) : []
-  const listReason = nodeCapabilityReason(state, 'list')
-  const useReason = nodeCapabilityReason(state, 'use')
   const envError = state?.environments?.error
   return (
     <main className="workrail-screen workrail-home" aria-label="Home">
@@ -78,6 +75,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
             <ul className="workrail-schedule-list" aria-labelledby="workrail-today-heading">
               {today.slice(0, maxSchedules).map(schedule => {
                 const project = projects.get(schedule.projectId)
+                const daysLeft = toOrdinal(schedule.endDate) - todayOrdinal
                 return (
                   <li key={schedule.id}>
                     <div className="workrail-schedule-name">
@@ -86,7 +84,12 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
                         <time dateTime={schedule.startDate}>{schedule.startDate.slice(5).replace('-', '.')}</time>{schedule.startDate !== schedule.endDate && <> – <time dateTime={schedule.endDate}>{schedule.endDate.slice(5).replace('-', '.')}</time></>}
                       </span>
                     </div>
-                    {schedule.sharing || project?.sharing ? <span className="sharing-badge">공유</span> : <span className="workrail-tag">개인</span>}
+                    <div className="workrail-schedule-badges">
+                      {schedule.sharing || project?.sharing ? <span className="sharing-badge">공유</span> : <span className="workrail-tag">개인</span>}
+                      <span className="workrail-tag workrail-schedule-due" data-due-today={daysLeft === 0 || undefined}>
+                        {daysLeft === 0 ? '오늘 마감' : daysLeft + '일 남음'}
+                      </span>
+                    </div>
                   </li>
                 )
               })}
@@ -99,8 +102,9 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
         <section className="workrail-surface workrail-home-node" aria-labelledby="workrail-home-node-heading">
           <header className="workrail-card-heading">
             <h3 id="workrail-home-node-heading">내 개발 환경</h3>
-            <ToolIcon tool="node" size={18} />
+            <ManagerFolderButton node={node} />
           </header>
+          {node.folderError && <p className="workrail-note" role="alert">{node.folderError}</p>}
           {state?.supported === false ? <p className="workrail-muted">{platformScope}</p> : (
             <>
               <div className="workrail-active">
@@ -128,34 +132,89 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
         </section>
         <div className="workrail-home-summaries">
           <SharingWidget sharing={sharing} error={sharingError} onSettings={onSettings} version={version} />
-          <section className="workrail-surface workrail-widget workrail-node-widget" aria-labelledby="workrail-progress-heading">
-            <header className="workrail-widget-heading">
-              <h3 id="workrail-progress-heading">Node 작업</h3>
-              {state?.supported && <span className="workrail-muted">{selected}</span>}
-            </header>
-            <NodeOperationStatus node={node} />
-            {operationMessages.length > 0 && <button type="button" className="workrail-link" onClick={onNode}>NodeRail에서 자세히 보기</button>}
-            {!progress && !operationMessages.length && <>
-              {state?.supported === false ? <p className="workrail-muted">{platformScope}</p>
-                : !ready ? <p className="workrail-muted">{node.environment && !node.environment.running
-                  ? '환경을 시작하면 설치된 버전을 확인할 수 있습니다.' : '관리 환경을 확인하면 설치된 버전을 표시합니다.'}</p>
-                : !inventoryKnown ? <p className="workrail-muted">{listReason ?? (state?.checkedAt ? unknownInventory : '설치된 버전을 확인하고 있습니다…')}</p>
-                : !versions.length ? <p className="workrail-muted">설치된 버전이 없습니다.</p>
-                : <>
-                  <p className="workrail-muted">{node.environment?.kind === 'wsl2' ? '이 WSL 사용자의 설치된 버전' : '설치된 버전'}</p>
-                  <ul className="workrail-widget-versions" aria-label="설치된 버전">
-                    {versions.slice(0, maxNodeVersions).map(version => <li key={version}>
-                      <strong>{version}</strong><NodeVersionAction node={node} version={version} />
-                    </li>)}
-                  </ul>
-                  {useReason && <p className="workrail-muted">{useReason}</p>}
-                  {versions.length > maxNodeVersions && <button type="button" className="workrail-link" onClick={onNode}>전체 {versions.length}개</button>}
-                  {node.environment?.kind === 'wsl2' && <p className="workrail-widget-meta">프로젝트의 .node-version 설정은 유지됩니다.</p>}
-                </>}
-            </>}
-          </section>
+          <HomeNodeWidget node={node} onNode={onNode} />
         </div>
       </div>
     </main>
   )
+}
+
+function ManagerFolderButton({ node }: { node: NodeManagement }) {
+  const { environment, state } = node
+  const wsl = environment?.kind === 'wsl2'
+  const name = (environment ? nodeEnvironmentLabel(node) + ' ' + (wsl ? 'nodenv' : 'nvm') + ' ' : '') + 'Node 버전 저장 폴더 열기'
+  const reason = wsl && !environment.running ? '환경 시작 후 열 수 있습니다'
+    : state?.supported === false ? platformScope
+    : !environment ? '관리 환경을 먼저 선택해 주세요'
+    : node.openingManager || node.recheckPending || node.catalogPending || node.busy ? '진행 중인 작업이 끝난 후 열 수 있습니다'
+    : !nodeEnvironmentReady(node) || !state?.checkedAt || nodeInspectionStale(node) || (wsl && !environment.user)
+      ? '환경을 확인한 후 열 수 있습니다'
+    : state.manager.status !== 'ready' ? '설치된 관리자를 확인한 후 열 수 있습니다' : null
+  return <NodeTooltip trigger={
+    <span className="workrail-folder-target" role={reason ? 'group' : undefined} tabIndex={reason ? 0 : undefined}
+      aria-label={reason ? name + ' · ' + reason : undefined}>
+      <button type="button" className="workrail-control workrail-folder-button" disabled={!!reason}
+        aria-label={name} aria-description={reason ?? undefined} onClick={() => void node.openManagerFolder()}>
+        <FolderOpen aria-hidden="true" size={17} />
+      </button>
+    </span>
+  }>{reason ? name + ' · ' + reason : name}</NodeTooltip>
+}
+
+function HomeNodeWidget({ node, onNode }: { node: NodeManagement; onNode: () => void }) {
+  const { state } = node
+  const working = !!(state?.busy || node.mutation) && state?.error?.code !== 'operation-unknown'
+  const hasMessages = nodeOperationMessages(node).length > 0
+  const showStatus = !!nodeProgress(node) || hasMessages
+  const baseline = working ? node.operationBaseline : null
+  const inventory = baseline ? { ...node, state: baseline, error: null } : node
+  return <section className="workrail-surface workrail-widget workrail-node-widget" aria-label="Node 작업">
+    <div className="workrail-node-widget-body" inert={working} aria-busy={working || undefined}>
+      <header className="workrail-widget-heading">
+        <h3>Node 작업</h3>
+        {inventory.state?.supported && <span className="workrail-muted">{nodeEnvironmentLabel(inventory)}</span>}
+      </header>
+      {(working || !showStatus) && <HomeVersionList node={inventory} onNode={onNode} />}
+      {!working && showStatus && <>
+        <NodeOperationStatus node={node} showLogs />
+        {hasMessages && <div className="workrail-widget-recovery">
+          <button type="button" className="workrail-control" disabled={!nodeCanRecheck(node) || node.recheckPending}
+            onClick={() => void node.refresh()}>다시 확인</button>
+          <button type="button" className="workrail-link" onClick={onNode}>NodeRail에서 자세히 보기</button>
+        </div>}
+      </>}
+    </div>
+    {working && <div className="workrail-node-overlay">
+      <div className="workrail-node-overlay-content">
+        <span className="workrail-node-spinner" aria-hidden="true" />
+        <NodeOperationStatus node={node} stackedProgress showLogs />
+      </div>
+    </div>}
+  </section>
+}
+
+function HomeVersionList({ node, onNode }: { node: NodeManagement; onNode: () => void }) {
+  const { state } = node
+  if (!nodeEnvironmentReady(node)) {
+    return <p className="workrail-muted">{state?.supported === false ? platformScope : node.environment && !node.environment.running
+      ? '환경을 시작하면 설치된 버전을 확인할 수 있습니다.' : '관리 환경을 확인하면 설치된 버전을 표시합니다.'}</p>
+  }
+  if (!nodeInventoryKnown(node)) {
+    return <p className="workrail-muted">{nodeCapabilityReason(state, 'list') ?? (state?.checkedAt ? unknownInventory : '설치된 버전을 확인하고 있습니다…')}</p>
+  }
+  const versions = nodeInstalledVersions(node)
+  if (!versions.length) return <p className="workrail-muted">설치된 버전이 없습니다.</p>
+  const wsl = node.environment?.kind === 'wsl2'
+  const useReason = nodeCapabilityReason(state, 'use')
+  return <>
+    <p className="workrail-muted">{wsl ? '이 WSL 사용자의 설치된 버전' : '설치된 버전'}</p>
+    <ul className="workrail-widget-versions" aria-label="설치된 버전">
+      {versions.slice(0, maxNodeVersions).map(version => <li key={version}>
+        <strong>{version}</strong><NodeVersionAction node={node} version={version} />
+      </li>)}
+    </ul>
+    {useReason && <p className="workrail-muted">{useReason}</p>}
+    {versions.length > maxNodeVersions && <button type="button" className="workrail-link" onClick={onNode}>전체 {versions.length}개</button>}
+    {wsl && <p className="workrail-widget-meta">프로젝트의 .node-version 설정은 유지됩니다.</p>}
+  </>
 }

@@ -1,7 +1,9 @@
 import { isEnvironmentId, isRemovalConfirmation, isNodeVersion, type NodeManagementResult } from '../../shared/node-management'
 import { nodeManagementError, type NodeManagementService } from './service'
 
-export type NodeCommandService = NodeManagementService & Partial<{
+export type NodeCommandService = Omit<NodeManagementService, 'verifiedManagerFolder'> & Partial<{
+  openManagerFolder(expectedEnvironmentId: string): ReturnType<NodeManagementService['getState']>
+  openManagerRelease(expectedEnvironmentId: string): ReturnType<NodeManagementService['getState']>
   selectEnvironment(id: string): ReturnType<NodeManagementService['getState']>
   startEnvironment(): ReturnType<NodeManagementService['getState']>
   cancelOperation(): ReturnType<NodeManagementService['getState']>
@@ -16,8 +18,8 @@ export async function dispatchNodeManagement(
   if (!trusted) return { ok: false, error: nodeManagementError('forbidden') }
   const [command, version] = args
   try {
-    if (args.length === 2 && command === 'selectEnvironment' && isEnvironmentId(version) && service.selectEnvironment) {
-      return { ok: true, data: await service.selectEnvironment(version) }
+    if (args.length === 2 && (command === 'selectEnvironment' || command === 'openManagerFolder' || command === 'openManagerRelease') && isEnvironmentId(version) && service[command]) {
+      return { ok: true, data: await service[command](version) }
     }
     if (args.length === 1 && (command === 'startEnvironment' || command === 'cancelOperation') && service[command]) {
       return { ok: true, data: await service[command]() }

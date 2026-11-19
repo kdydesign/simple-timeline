@@ -138,6 +138,11 @@ if ! ready_manager; then field status unsafe; exit; fi
 version=$("$manager" --version) || { field status unsafe; exit; }
 field managerVersion "$version"
 field status ready
+if [ -d "$root" ] && [ "$(stat -Lc %u -- "$root")" = "$uid" ]; then
+  # Keep the real directory as private identity evidence for Explorer.
+  printf 'folderRoot\0'
+  realpath -ez -- "$root"
+fi
 global=$("$manager" global) && field global "$global"
 if readable_inventory && versions=$("$manager" versions --bare); then
   field listed yes
@@ -227,6 +232,7 @@ export interface WslInspection {
   user: string
   arch: string
   root: string
+  folderRoot?: string
   builder: string | null
   definitions: string[]
   buildTools: boolean
@@ -267,7 +273,7 @@ export function parseGuestProbe(output: string): WslInspection {
   const builder = fields.get('builder') ?? null
   return {
     user, arch: ({ x86_64: 'x64', aarch64: 'arm64', i686: 'x86' } as Record<string,string>)[arch] ?? arch,
-    root, builder, definitions: (fields.get('definitions') ?? '').split(/\s+/).filter(isNodeVersion), buildTools: fields.has('buildTools'),
+    root, folderRoot: ready ? fields.get('folderRoot') : undefined, builder, definitions: (fields.get('definitions') ?? '').split(/\s+/).filter(isNodeVersion), buildTools: fields.has('buildTools'),
     global, activeVersion: listed && isNodeVersion(global) && installed.has(global) ? global : null, installedVersions: [...installed],
     manager: { kind: 'nodenv', path, status: ready ? 'ready' : status === 'missing' ? 'missing' : 'error', version },
     conflicts: conflict ? [{ code: 'path-priority', path: conflict, message: '다른 Node가 PATH에서 nodenv보다 먼저 발견되었습니다.' }] : [],

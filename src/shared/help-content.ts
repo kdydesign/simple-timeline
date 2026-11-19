@@ -310,10 +310,11 @@ const coreHelpArticles:HelpArticle[]=[
 export const helpArticles:HelpArticle[]=[
  {id:'workrail-home',menu:'home',section:'시작하기',title:'WorkRail 홈과 도구 전환',intro:'WorkRail은 PlanRail 일정과 내 PC의 Node 개발 환경을 한곳에서 관리하는 팀 도구입니다.',steps:[
   {title:'통합 현황을 확인합니다',text:'홈에서 오늘을 포함하는 개인·공유 일정과 공유 연결 상태, 내 PC의 Node 환경을 확인합니다. 연결이 끊기면 최신 공유 내용이 아닐 수 있으므로 상태 안내도 함께 확인하세요. PlanRail 상태에 내 WorkRail 실행 버전과, 멤버라면 정상 동기화에서 받은 호스트 실행 버전이 표시됩니다. 호스트 버전 정보가 없는 구버전과도 동기화할 수 있으며 이 경우 확인 불가로 표시됩니다.'},
+  {title:'오늘의 마감과 Node 작업을 확인합니다',text:'오늘의 일정에는 종료일까지 남은 달력 일수 또는 오늘 마감이 표시됩니다. Node 작업에서 버전을 바꾸면 위젯 위에 진행 상태가 표시됩니다. 내 개발 환경의 폴더 버튼은 선택한 Windows nvm의 버전 저장 위치 또는 실행 중인 WSL 기본 사용자의 nodenv 루트를 탐색기에서 엽니다.'},
   {title:'상단 메뉴로 도구를 전환합니다',text:'PlanRail을 열면 기존 간트·달력과 일정 편집을 사용할 수 있습니다. NodeRail은 각 사용자의 PC에 적용되며 호스트·멤버 역할과 관계없습니다.'},
   {title:'작성 중인 내용은 그대로 둡니다',text:'메뉴를 바꿔도 일정 입력과 날짜·화면 위치는 유지되고 공유와 알림도 계속 실행됩니다. 앱을 완전히 종료하기 전에는 작성 중인 내용을 저장하세요.'}],related:['app-overview','node-management']},
  {id:'node-management',menu:'noderail',section:'기본 사용법',title:'Node 버전 설치와 전환',intro:'Windows x64의 기존 nvm-windows와 WSL2 배포판 기본 사용자의 nodenv를 관리합니다. 실행 파일과 설정을 검증한 뒤 조회·설치·사용에 필요한 기능을 각각 확인합니다.',steps:[
-  {title:'관리할 환경을 선택합니다',text:'환경이 하나면 자동으로 선택합니다. 여러 개면 마지막으로 사용한 환경을 복원하고, 처음에는 직접 선택합니다. Home과 NodeRail에서 같은 대상을 사용하며 환경 변경 버튼으로 바꿀 수 있습니다. 종료된 WSL 배포판은 환경 시작 버튼을 누른 뒤 내부 Node 설정을 조회합니다.'},
+  {title:'관리할 환경을 선택합니다',text:'환경이 하나면 자동으로 선택합니다. 여러 개면 마지막으로 사용한 환경을 복원하고, 처음에는 직접 선택합니다. Home과 NodeRail에서 같은 대상을 사용하며 환경 변경 버튼으로 바꿀 수 있습니다. 종료된 WSL 배포판은 환경 시작 버튼을 누른 뒤 내부 Node 설정을 조회합니다. 환경 다시 검사 중에는 버전 패널 상단에 진행선이 표시됩니다. 제목 옆의 최신 릴리스로 선택한 관리자의 공식 다운로드 페이지를 열 수 있습니다.'},
   {title:'기존 Windows nvm을 확인합니다',text:'nvm-windows 1.x는 공용 심볼릭 링크를, 2.x는 검증된 설정과 기본 버전을 사용합니다. 기존 nvm의 조회·설치·사용은 각 기능을 확인한 뒤 제공합니다. nvm 2.0.1에서 ActiveVersion과 기존 Node 설치가 모두 없는 초기 상태에서는 첫 설치가 기본 버전을 자동 설정하므로 WorkRail에서 설치 버튼을 제한합니다. Windows 터미널에서 공식 nvm으로 첫 버전을 설치한 뒤 다시 확인하세요.'},
   {title:'Windows에 nvm이 없는 경우',text:'별도의 공식 nvm-windows 1.2.2 설치 지원을 사용할 수 있습니다. 최초 설치로 PATH가 바뀌면 터미널을 다시 여세요. 다운로드가 실패하면 공식 nvm-windows 릴리스에서 수동 설치한 뒤 환경을 다시 확인하세요. 기존 Node와 충돌하는 경우 공식 MSI 대상을 확인했을 때 Windows 표준 화면에서 제거할 수 있습니다. 전역 도구·설정은 직접 백업하고, 개발 실행에서는 WorkRail Node 환경 복구 창에서 계속합니다.'},
   {title:'WSL의 nodenv와 빌드 도구를 준비합니다',text:'배포판의 기본 사용자로 공식 nodenv와 node-build 안내(github.com/nodenv/nodenv, github.com/nodenv/node-build)를 따라 설치하고 셸 초기화를 확인하세요. WorkRail은 도구를 자동 설치하지 않습니다. node-build가 없어도 지원되는 조회·전환은 사용할 수 있습니다. 필요한 경우 Node를 소스에서 빌드하며 시간과 디스크 공간, 배포판의 컴파일 도구가 필요합니다.'},

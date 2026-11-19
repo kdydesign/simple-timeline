@@ -173,7 +173,7 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 [data-theme="dark"] .gantt-bar, [data-theme="dark"] .calendar-bar { border-top-color:#dce4ed4d; background-image:linear-gradient(180deg,#171a2044,#171a2055 55%,#171a2066); }
 .gantt-bar:hover:enabled, .calendar-bar:hover:enabled { filter: brightness(1.04); }
 .calendar-top { border-radius: 0; }
-.calendar-top, .workrail-node-table thead { background: transparent; backdrop-filter: blur(var(--glass-blur)); }
+.calendar-top, .workrail-node-table thead, .workrail-node-installed h3 { background: transparent; backdrop-filter: blur(var(--glass-blur)); }
 .calendar-top .view-heading { padding: 16px 20px 12px; }
 .calendar-top h2 { font-size: 18px; font-weight: 700; }
 .weekdays { background: transparent; color: var(--text); border-top: 0; }

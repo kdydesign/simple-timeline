@@ -126,7 +126,7 @@ function setupService() {
     capabilities: capabilities(null), installedVersions: ['20.1.0'], activeVersion: '20.1.0', conflicts: [],
   }
   const loadCatalog = vi.fn(async () => ['22.1.0','20.1.0','18.0.0'].map(version => ({ version, lts: null, date: '2024-01-01', security: false, npm: null, sourceOnly: version === '18.0.0' })))
-  const runner = { isStopped: vi.fn(async () => false), defaultUser: vi.fn(async () => snapshot.user), probe: vi.fn(async () => snapshot), change: vi.fn<ReturnType<typeof host.createWslRunner>['change']>(async () => 'success') }
+  const runner = { verifiedFolder: vi.fn(async () => null), isStopped: vi.fn(async () => false), defaultUser: vi.fn(async () => snapshot.user), probe: vi.fn(async () => snapshot), change: vi.fn<ReturnType<typeof host.createWslRunner>['change']>(async () => 'success') }
   const changed = vi.fn<(s: NodeManagementState, user?: string | null) => void>(), barrier = createMutationBarrier()
   const service = services.createWslService({ environment: env, runner, loadCatalog, changed, barrier })
   return { service, runner, loadCatalog, changed, barrier, update: (patch: Partial<guest.WslInspection>) => { snapshot = { ...snapshot, ...patch } } }
@@ -436,5 +436,40 @@ it.runIf(process.platform === 'linux')('keeps a missing configured global for ve
     const info = await f.inspect()
     expect(info).toMatchObject({ global: '22.1.0', activeVersion: null, installedVersions: ['20.1.0'],
       capabilities: { list: { available: true }, install: { available: true } } })
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})
+
+it('allows only unambiguous local WSL Explorer path components', () => {
+  expect(host.wslExplorerPath('Ubuntu Dev', '/opt/team nodes')).toBe('\\\\wsl.localhost\\Ubuntu Dev\\opt\\team nodes')
+  for (const distro of ['..', 'a/b', 'a\\b', 'con', 'Ubuntu.', 'wsl:Ubuntu']) expect(host.wslExplorerPath(distro, '/root')).toBeNull()
+  for (const path of ['/', '/path/..', '/path/./files', '//remote/share', '/home/a\\b', '/path/desktop.ini:zone',
+    '/etc/trailing ', '/etc/foo.', '/dev/NUL.txt', '/dev/COM¹', '/dev/CONOUT$', '/root/\npath']) {
+    expect(host.wslExplorerPath('Ubuntu', path)).toBeNull()
+  }
+})
+
+it.runIf(process.platform === 'linux')('opens the actual guest root only while its owner, canonical directory and registration still match', async () => {
+  const f = await fixture()
+  try {
+    const before = await f.inspect()
+    expect(before.folderRoot).toBe(f.root)
+    let running = true
+    let defaultUser = before.user
+    const discover = async () => [{ ...env, running }]
+    const call = vi.fn(async (args: string[]) => {
+      if (args.includes('/usr/bin/id')) return Buffer.from(defaultUser)
+      return Buffer.from((await run('/bin/sh', ['-c', guest.probeScript], { env: f.variables })).stdout)
+    })
+    const runner = host.createWslRunner(discover, call)
+    expect(await runner.verifiedFolder(env, before)).toBe(host.wslExplorerPath(env.distro, f.root))
+    await chmod(f.root, 0o777)
+    expect(await runner.verifiedFolder(env, before)).toBeNull()
+    await chmod(f.root, 0o700)
+    defaultUser = 'different'
+    await expect(runner.verifiedFolder(env, before)).rejects.toThrow()
+    running = false
+    call.mockClear()
+    await expect(runner.verifiedFolder(env, before)).rejects.toThrow()
+    expect(call).not.toHaveBeenCalled()
   } finally { await rm(f.home, { recursive: true, force: true }) }
 })

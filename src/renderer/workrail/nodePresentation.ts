@@ -14,17 +14,23 @@ const phases: Record<NodeOperation['phase'], string> = {
   extracting: '압축 해제 및 설치 중',
   verifying: '변경 결과 검증 중',
 }
-export function nodeProgress({ state, mutation, environmentPending, environment, cancelPending }: NodeManagement) {
-  if (environmentPending === 'start') return (environment?.label ?? 'WSL') + ' 시작 중'
-  if (environmentPending === 'select') return '관리 환경 변경 중'
-  if (state?.error?.code === 'operation-unknown') return '작업 완료 여부 확인 필요'
+export function nodeMutationProgress({ state, mutation, environment, cancelPending }: NodeManagement) {
   const operation = state?.busy ?? mutation
-  if (!operation) return cancelPending ? '작업 취소 확인 중' : null
+  if (!operation) return null
   const name = operation.kind === 'remove-standalone' ? '기존 Node.js 제거' : operation.kind === 'install-manager' ? supportedManager + ' 설치'
     : operation.kind === 'install' ? operation.version + ' 설치' : operation.version + ' 사용'
   const phase = state?.busy?.phase ?? 'checking'
   const description = phase === 'waiting' && environment?.kind === 'wsl2' ? 'WSL 작업 완료 대기 중' : phases[phase]
-  return name + ' · ' + description + (cancelPending ? ' · 작업 취소 확인 중' : '')
+  return { name, description: description + (cancelPending ? ' · 작업 취소 확인 중' : '') }
+}
+
+export function nodeProgress(node: NodeManagement) {
+  const { state, environmentPending, environment, cancelPending } = node
+  if (environmentPending === 'start') return (environment?.label ?? 'WSL') + ' 시작 중'
+  if (environmentPending === 'select') return '관리 환경 변경 중'
+  if (state?.error?.code === 'operation-unknown') return '작업 완료 여부 확인 필요'
+  const progress = nodeMutationProgress(node)
+  return progress ? progress.name + ' · ' + progress.description : cancelPending ? '작업 취소 확인 중' : null
 }
 
 export function nodeEnvironmentReady({ state, environment }: NodeManagement) {
@@ -97,7 +103,7 @@ export function nodeInstallReason(state: NodeManagementState | null, release?: N
 
 export function nodeCanRecheck(node: NodeManagement) {
   // The selected WSL adapter can reconcile an unconfirmed operation on recheck.
-  return node.available && !node.environmentPending && !node.cancelPending && !node.mutation
+  return node.available && !node.recheckPending && !node.environmentPending && !node.cancelPending && !node.mutation
     && (!node.busy || node.state?.error?.code === 'operation-unknown')
 }
 
