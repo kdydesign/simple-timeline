@@ -45,12 +45,17 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
       && (!revoked || (schedule.sharing !== 'member' && projects.get(schedule.projectId)?.sharing !== 'member')))
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate)
       || a.name.localeCompare(b.name, 'ko') || a.id.localeCompare(b.id)), [date, projects, revoked, snapshot])
-  const { state } = node
+  // During a change Main may temporarily return an empty inventory. Keep the
+  // last confirmed readings visible until it has verified the outcome.
+  const working = !!(node.state?.busy || node.mutation) && node.state?.error?.code !== 'operation-unknown'
+  const previous = working ? node.operationBaseline : null
+  const inventory = previous ? { ...node, state: previous, error: null } : node
+  const { state } = inventory
   const todayOrdinal = toOrdinal(date)
   const sharingStale = sharing?.role === 'member' && sharing.status !== 'connected' && !revoked
   const scheduleStale = phase === 'stale' || phase === 'uncertain' || phase === 'blocked'
-  const ready = nodeEnvironmentReady(node)
-  const inventoryKnown = nodeInventoryKnown(node)
+  const ready = nodeEnvironmentReady(inventory)
+  const inventoryKnown = nodeInventoryKnown(inventory)
   const selected = nodeEnvironmentLabel(node)
   const envError = state?.environments?.error
   return (
@@ -108,14 +113,14 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
           {state?.supported === false ? <p className="workrail-muted">{platformScope}</p> : (
             <>
               <div className="workrail-active">
-                <span>{ready ? selected + ' · ' + (nodeDefaultVersion(node) ? '기본 Node' : '현재 사용 중인 Node')
+                <span>{ready ? selected + ' · ' + (previous ? '작업 전 확인한 Node' : nodeDefaultVersion(node) ? '기본 Node' : '현재 사용 중인 Node')
                   : node.environment && !node.environment.running ? selected + ' · 종료됨' : selected}</span>
-                <strong>{nodeActiveVersionLabel(node)}</strong>
+                <strong>{nodeActiveVersionLabel(inventory)}</strong>
               </div>
               <div className="workrail-home-environment-actions">
-                {ready && state?.manager.status !== 'checking' && state?.checkedAt && !nodeInspectionStale(node) &&
+                {ready && state?.manager.status !== 'checking' && state?.checkedAt && !nodeInspectionStale(inventory) &&
                   <div className="workrail-manager-line">
-                    <ManagerBadge node={node} />
+                    <ManagerBadge node={inventory} />
                     {state.activeSource === 'standalone' && <span className="workrail-tag">기존 Node 설치</span>}
                   </div>}
                 <EnvironmentActions node={node} onEnvironment={onEnvironment} />
@@ -132,7 +137,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
         </section>
         <div className="workrail-home-summaries">
           <SharingWidget sharing={sharing} error={sharingError} onSettings={onSettings} version={version} />
-          <HomeNodeWidget node={node} onNode={onNode} />
+          <HomeNodeWidget node={node} inventory={inventory} working={working} onNode={onNode} />
         </div>
       </div>
     </main>
@@ -161,13 +166,9 @@ function ManagerFolderButton({ node }: { node: NodeManagement }) {
   }>{reason ? name + ' · ' + reason : name}</NodeTooltip>
 }
 
-function HomeNodeWidget({ node, onNode }: { node: NodeManagement; onNode: () => void }) {
-  const { state } = node
-  const working = !!(state?.busy || node.mutation) && state?.error?.code !== 'operation-unknown'
+function HomeNodeWidget({ node, inventory, working, onNode }: { node: NodeManagement; inventory: NodeManagement; working: boolean; onNode: () => void }) {
   const hasMessages = nodeOperationMessages(node).length > 0
   const showStatus = !!nodeProgress(node) || hasMessages
-  const baseline = working ? node.operationBaseline : null
-  const inventory = baseline ? { ...node, state: baseline, error: null } : node
   return <section className="workrail-surface workrail-widget workrail-node-widget" aria-label="Node 작업">
     <div className="workrail-node-widget-body" inert={working} aria-busy={working || undefined}>
       <header className="workrail-widget-heading">
