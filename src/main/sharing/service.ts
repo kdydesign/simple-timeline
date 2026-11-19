@@ -50,6 +50,7 @@ export function createSharingService(o:Options){
   let switching=false
   let snapshotRevision=0,epoch=0,disposed=false,suspended=false,status:SharingState['status']=initial.pendingCredentialDeleteRef?'error':initial.role==='personal'?'personal':'stopped',message=initial.pendingCredentialDeleteRef?new CredentialCleanupError().message:'',lastCheckedAt:string|null=null
   let pendingPair:PendingPair|null=null,pendingAddress:SharingAddress|null=null,settingsRequestToken:string|null=null
+  let hostVersion:string|null=null
   let clientCommand:<T>(operation:(signal:AbortSignal)=>Promise<T>)=>Promise<T>
   let host:ReturnType<typeof createSharingHost>|undefined,client:ReturnType<SharingTransport['client']>|undefined,syncController:ReturnType<typeof createSyncController>|undefined
   let updateConnection:ClientConnection|undefined,updateTrustRejected=false
@@ -76,12 +77,14 @@ export function createSharingService(o:Options){
     return {roleTransition:store.getRoleTransition(),dormantAvailable:store.hasDormantData(),personalHolidays:createPersonalHolidays(o.storage.db).read(),holidays:holidayState(),deviceVersions:c.role==='host'?extras.versions():undefined,pairingNotificationError:pairing.error(),deviceVersionError:versionError,approvalRequestToken,...(memberPresence?{memberPresence,connectedMembers:Object.values(memberPresence).filter(p=>p.connected).length}:{}),changeNotifications:changes.state(),snapshotRevision,cleanupPending:c.pendingCredentialDeleteRef!==null,role:c.role,roleHistory:c.roleHistory,address:pendingAddress?.address??c.address,port:pendingAddress?.port??c.port,hostingEnabled:c.hostingEnabled,status,message,lastCheckedAt,
       pendingPair:pendingPair?{pairId:pendingPair.pairId,fingerprint:pendingPair.fingerprint,expiresAt:pendingPair.expiresAt}:null,
       pendingPairs:host?.pending()??[],devices:c.role==='host'?store.listDevices():[],projects:c.role==='host'?store.listSharedProjects():[],settingsRequestToken,
+      ...(c.role==='member'?{hostVersion}:{}),
       availableAddresses:transport.interfaces(),
     }
   }
   function changed(){if(disposed)return;try{o.updateChanged?.()}catch{};try{o.changed(getState())}catch{/* An unavailable renderer does not alter committed state. */}}
   function setStatus(value:SharingState['status'],error?:unknown){
     status=value
+    if(value==='revoked'||error instanceof SharingNetworkError&&['TLS_UNTRUSTED','UNAUTHORIZED','REVOKED','HOST_MISMATCH','DATASET_MISMATCH','PAIRING_INCOMPLETE','PROTOCOL_MISMATCH'].includes(error.code))hostVersion=null
     if(value!=='connected'&&store.getConfig().role==='host')presence.invalidate()
     if(error instanceof SharingNetworkError&&['TLS_UNTRUSTED','UNAUTHORIZED','REVOKED'].includes(error.code))updateTrustRejected=true
     if(value==='revoked')updateTrustRejected=true
@@ -91,6 +94,7 @@ export function createSharingService(o:Options){
     if(value==='connected'||value==='revoked')void changes.evaluate()
   }
   function invalidate(){
+    hostVersion=null
     presence.invalidate();epoch++;o.updateChanged?.();changes.invalidate();starting=undefined;syncController?.stop();syncController=undefined;client?.close();client=undefined;pendingPair=null;pendingAddress=null
     const previous=host;host=undefined
     // stop invalidates handlers synchronously before its first await.
@@ -117,7 +121,7 @@ export function createSharingService(o:Options){
     const generations=new WeakMap<object,number>()
     const settle=(result:object)=>{changes.confirmAccess();policy.resumeShared(generations.get(result)??-1,()=>memberReminderStore.suppress(store.readCache().schedules.flatMap(s=>dueReminders(s,(o.reminderClock??(()=>new Date()))()))))}
     syncController=createSyncController({now:clock,cursor:changes.cursor,poll:async options=>{operationSignal=options.signal;const generation=policy.state().generation;const result=await activeClient.poll(options);generations.set(result,generation);return result},apply:(result,reconnecting)=>{check(generation);const before=JSON.stringify(store.readCache());o.storage.db.transaction(()=>{if(result.changes)changes.apply(result.changes,reconnecting,generations.get(result)??-1);else{store.applyCache(result.snapshot);if(result.changesSupported===false)changes.unsupported()}settle(result)})();if(before!==JSON.stringify(store.readCache())){snapshotRevision++;changed()}},
-      outcome:result=>{check(generation);if(result.kind==='unchanged')settle(result);if(result.kind==='revoked'){extras.clearCalendar();holidayPhase='pending';holidayError='';changes.revoke();snapshotRevision++;pendingPair=null}else if(result.kind==='unchanged'&&result.changesSupported===false)changes.unsupported();else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
+      outcome:result=>{check(generation);if(result.kind==='unchanged')settle(result);if(result.kind==='snapshot'||result.kind==='unchanged')hostVersion=result.hostVersion??null;if(result.kind==='revoked'){hostVersion=null;extras.clearCalendar();holidayPhase='pending';holidayError='';changes.revoke();snapshotRevision++;pendingPair=null}else if(result.kind==='unchanged'&&result.changesSupported===false)changes.unsupported();else if(result.kind==='pending')pendingPair=result.pair;else if(result.kind==='ready')pendingPair=null;changed()},
       afterSync:async options=>{
         if(!current(generation)||options.signal.aborted)return
         try{
@@ -154,7 +158,7 @@ export function createSharingService(o:Options){
       store.setHostIdentity({certificatePin:identity.pin,certificateRef:ref,privateKeyRef:ref})
     }
     check(generation)
-    const activeHost=transport.host({identity,store,updates:o.updates,holidays:extras.hostCalendar,onPairConfirmed:p=>{if(current(generation))void pairing.observe(p)},onSyncComplete:(id,version,bindingCurrent)=>{if(current(generation)){if(bindingCurrent!==false){try{extras.recordVersion(id,version);versionError=false}catch{versionError=true}}presence.record(id)}},onChange:()=>{if(current(generation))changed()},now:clock});host=activeHost
+    const activeHost=transport.host({identity,store,appVersion:o.appVersion,updates:o.updates,holidays:extras.hostCalendar,onPairConfirmed:p=>{if(current(generation))void pairing.observe(p)},onSyncComplete:(id,version,bindingCurrent)=>{if(current(generation)){if(bindingCurrent!==false){try{extras.recordVersion(id,version);versionError=false}catch{versionError=true}}presence.record(id)}},onChange:()=>{if(current(generation))changed()},now:clock});host=activeHost
     await activeHost.start(c.address,c.port);check(generation);setStatus('connected')
   }
   async function loadMember(generation:number){

@@ -18,7 +18,7 @@ import {ConfirmDialog} from './ConfirmDialog'
 import {restoreFocus} from '../state/restoreFocus'
 type Run=<T>(operation:()=>Promise<Result<T>>)=>Promise<Result<T>>
 type Ask=(title:string,message:string,label:string,run:()=>void)=>void
-export function SharingSettings({state,api,busy,error,projects,run,onClose,onGuard,request,initialTab='basic',externalDirty=false}:{externalDirty?:boolean;request?:{token:string;approval:boolean}|null;initialTab?:'basic'|'sharing';state:SharingState;api:SharingApi;busy:boolean;error:ApiError|null;projects:Project[];run:Run;onClose:()=>void;onGuard:(dirty:boolean)=>void}) {
+export function SharingSettings({state,api,busy,error,projects,run,onClose,onHelp,onGuard,request,initialTab='basic',externalDirty=false}:{externalDirty?:boolean;request?:{token:string;approval:boolean}|null;initialTab?:'basic'|'sharing';state:SharingState;api:SharingApi;busy:boolean;error:ApiError|null;projects:Project[];run:Run;onClose:()=>void;onHelp?:()=>void;onGuard:(dirty:boolean)=>void}) {
  const updates=useUpdates()
  const [switching,setSwitching]=useState(false),[roleChoices,setRoleChoices]=useState(false),[roleNotice,setRoleNotice]=useState(''),[dormant,setDormant]=useState(false)
  const roleRequest=useRef(false),dormantButton=useRef<HTMLButtonElement>(null)
@@ -85,7 +85,7 @@ export function SharingSettings({state,api,busy,error,projects,run,onClose,onGua
   const target=original?.isConnected&&original.tabIndex>=0&&!original.closest('[inert],[hidden]')&&!original.matches(':disabled')?original:[...document.querySelectorAll<HTMLElement>('#editor-name,[aria-label="편집 닫기"],[data-focus="project-add"]')].find(el=>!el.closest('[inert],[hidden]')&&!el.matches(':disabled'));
   restoreFocus(target);
  }}>
- <div className="editor-title"><AlertDialogTitle>설정</AlertDialogTitle><IconButton icon="close" disabled={busy||switching||transitionRunning} label="설정 닫기" onClick={close}/></div>
+ <div className="editor-title"><AlertDialogTitle>설정</AlertDialogTitle><div className="settings-title-controls">{onHelp&&<IconButton icon="help" tooltip label="설정 도움말" aria-keyshortcuts="F1" onClick={onHelp}/>}<IconButton icon="close" disabled={busy||switching||transitionRunning} label="설정 닫기" onClick={close}/></div></div>
  <AlertDialogDescription className="sharing-settings-description">같은 사내망에서 프로젝트를 공유합니다. 개인 일정은 이 PC에 보관합니다.</AlertDialogDescription>
  <div className="settings-tabs" role="tablist" aria-label="설정 종류">{(['basic','sharing'] as const).map(value=><Button key={value} id={`settings-tab-${value}`} role="tab" aria-controls={`settings-panel-${value}`} aria-selected={tab===value} onClick={()=>setTab(value)}>{value==='basic'?'기본 설정':'공유 설정'}</Button>)}</div>
  <div className="sharing-settings-scroll">

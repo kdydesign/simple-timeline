@@ -1,7 +1,8 @@
-import type {HelpTopicId} from './help'
-export const helpSections=['시작하기','기본 사용법','간트·달력','알림·창','호스트 사용법','멤버 사용법','문제 해결'] as const
+import type {HelpSection,HelpTopicId} from './help'
+export const helpSectionLabels:Record<HelpSection,string>={home:'Home',planrail:'PlanRail',noderail:'NodeRail',settings:'공통 설정'}
+export const planrailHelpGroups=['시작하기','기본 사용법','간트·달력','알림·창','호스트 사용법','멤버 사용법','문제 해결'] as const
 export interface HelpArticle {
- id:HelpTopicId;section:typeof helpSections[number];title:string;intro:string
+ id:HelpTopicId;menu:HelpSection;section:typeof planrailHelpGroups[number];title:string;intro:string
  steps:{title:string;text:string}[];note?:string;related:HelpTopicId[]
  image?:{width?:number;file:string;alt:string;caption:string;points:{step:number;x:number;y:number}[]}
 }
@@ -10,6 +11,7 @@ const reminders={width:390,file:'reminders.png',alt:'일정의 며칠 전·알�
 const coreHelpArticles:HelpArticle[]=[
  {
   "id": "app-overview",
+  "menu": "planrail",
   "image": {"file": "app-overview.png", "alt": "역할과 도구 모음, 프로젝트 일정 간트가 보이는 실제 앱 화면", "caption": "가상 프로젝트로 촬영한 기본 화면", "points": [{"step": 1, "x": 4, "y": 2}, {"step": 2, "x": 96, "y": 8}, {"step": 3, "x": 56, "y": 8}]},
   "section": "시작하기",
   "title": "Planrail 시작하기",
@@ -36,6 +38,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "projects",
+  "menu": "planrail",
   "image": {"width": 390, "file": "project-editor.png", "alt": "프로젝트 이름과 색상을 입력하는 프로젝트 추가 패널", "caption": "가상 신규 제품 계획 프로젝트의 저장 전 예시", "points": [{"step": 1, "x": 5, "y": 10}]},
   "section": "기본 사용법",
   "title": "프로젝트 추가·편집·삭제",
@@ -63,6 +66,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "schedules",
+  "menu": "planrail",
   "image": {"width": 390, "file": "schedule-editor.png", "alt": "일정 이름과 소속 프로젝트, 시작일 종료일 및 알림을 입력하는 일정 추가 패널", "caption": "가상 사용성 검토 일정의 저장 전 예시", "points": [{"step": 1, "x": 5, "y": 8}, {"step": 2, "x": 5, "y": 28}, {"step": 3, "x": 94, "y": 78}]},
   "section": "기본 사용법",
   "title": "일정 추가·편집·삭제",
@@ -89,6 +93,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "gantt-navigation",
+  "menu": "planrail",
   "section": "간트·달력",
   "title": "간트 이동과 확대·축소",
   "intro": "날짜를 바꾸지 않고 보고 있는 위치와 배율만 조절합니다.",
@@ -118,6 +123,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "schedule-drag",
+  "menu": "planrail",
   "section": "간트·달력",
   "title": "일정 드래그 이동·기간 조절",
   "intro": "간트와 달력에서 일정 몸통은 이동, 양 끝 손잡이는 기간 조절에 사용합니다.",
@@ -143,6 +149,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "calendar",
+  "menu": "planrail",
   "image": {"file": "calendar.png", "alt": "월간 달력의 날짜별 일정과 이전 다음 달 버튼", "caption": "2026년11월 가상 일정의 실제 달력", "points": [{"step": 1, "x": 94, "y": 3}, {"step": 2, "x": 45, "y": 44}]},
   "section": "간트·달력",
   "title": "월간 달력 사용하기",
@@ -169,6 +176,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "personal-reminders",
+  "menu": "planrail",
   image: reminders,
   "section": "알림·창",
   "title": "일정 알림과 전체 알림 끄기",
@@ -196,6 +204,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "window-tray",
+  "menu": "settings",
   "section": "알림·창",
   "title": "창·트레이 메뉴와 자동 실행",
   "intro": "창의 X와 트레이 Exit는 다릅니다.",
@@ -221,6 +230,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "installation",
+  "menu": "settings",
   "section": "시작하기",
   "title": "설치·업데이트·데이터 보존",
   "intro": "현재 Windows 사용자에게 설치하고 선택한 위치와 일정 데이터 위치는 별개로 관리합니다.",
@@ -246,6 +256,7 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "saving-errors",
+  "menu": "planrail",
   "section": "문제 해결",
   "title": "저장·입력 오류와 폐기",
   "intro": "저장 성공 안내는 실제 저장을 확인한 뒤 표시합니다.",
@@ -271,13 +282,14 @@ const coreHelpArticles:HelpArticle[]=[
  },
  {
   "id": "help-reading",
+  "menu": "home",
   "section": "시작하기",
   "title": "도움말 검색과 화면 확대",
-  "intro": "제목 표시줄의 물음표로 도움말을, 그 왼쪽 문서 아이콘으로 버전별 릴리즈노트를 별도 창에 엽니다. 두 창은 동시에 볼 수 있으며 릴리즈노트는 0.8.0부터 Feat·Fix·Perf·Docs 항목을 제공합니다.",
+  "intro": "제목 표시줄의 물음표나 F1을 누르면 현재 메뉴의 도움말을 엽니다. 설정 창에서는 물음표나 F1로 공통 설정 도움말을 엽니다. 제목 표시줄의 문서 아이콘으로 버전별 릴리즈노트를 엽니다. 두 창은 동시에 볼 수 있으며 릴리즈노트는 0.8.0부터 Feat·Fix·Perf·Docs 항목을 제공합니다.",
   "steps": [
    {
     "title": "목차와 검색",
-    "text": "왼쪽에서 기능을 선택하거나 제목·본문을 검색합니다. Space, Ctrl, 프로젝트 추가처럼 기능 이름으로 찾을 수 있습니다. 모든 역할의 안내를 볼 수 있으며 사용자 일정은 검색하지 않습니다."
+    "text": "왼쪽 목차에서 메뉴와 기능을 선택하거나 모든 메뉴의 제목·본문을 검색합니다. 검색 결과에는 글이 속한 메뉴가 표시됩니다. Space, Ctrl, 프로젝트 추가처럼 기능 이름으로 찾을 수 있습니다. 모든 역할의 안내를 볼 수 있으며 사용자 일정은 검색하지 않습니다."
    },
    {
     "title": "이미지 확대",
@@ -285,7 +297,7 @@ const coreHelpArticles:HelpArticle[]=[
    },
    {
     "title": "창 닫기와 다시 열기",
-    "text": "도움말 X는 도움말 화면만 닫으며 다음 열기에 재사용합니다. 같은 앱 실행 중 읽던 항목·검색·스크롤을 기억합니다. 주 창을 트레이로 보내면 열려 있던 도움말도 함께 숨기고 복원합니다. 앱 Exit 때 모두 종료합니다."
+    "text": "도움말 X는 도움말 화면만 닫으며 다음 열기에 재사용합니다. 메뉴에서 처음 열면 해당 메뉴의 첫 글을 보여줍니다. 같은 앱 실행 중에는 처음 열었던 메뉴마다 마지막 글·검색어·스크롤을 기억합니다. 다른 메뉴의 글을 검색 결과나 관련 글에서 열어도 현재 진입 메뉴에 읽기 위치를 기억합니다. 주 창을 트레이로 보내면 열려 있던 도움말도 함께 숨기고 복원합니다. 앱 Exit 때 모두 종료합니다."
    }
   ],
   "related": [
@@ -296,82 +308,84 @@ const coreHelpArticles:HelpArticle[]=[
  }
 ]
 export const helpArticles:HelpArticle[]=[
- {id:'workrail-home',section:'시작하기',title:'WorkRail 홈과 도구 전환',intro:'WorkRail은 PlanRail 일정과 내 PC의 Node 개발 환경을 한곳에서 관리하는 팀 도구입니다.',steps:[
-  {title:'통합 현황을 확인합니다',text:'홈에서 오늘을 포함하는 개인·공유 일정과 공유 연결 상태, 내 PC의 Node 환경을 확인합니다. 연결이 끊기면 최신 공유 내용이 아닐 수 있으므로 상태 안내도 함께 확인하세요.'},
+ {id:'workrail-home',menu:'home',section:'시작하기',title:'WorkRail 홈과 도구 전환',intro:'WorkRail은 PlanRail 일정과 내 PC의 Node 개발 환경을 한곳에서 관리하는 팀 도구입니다.',steps:[
+  {title:'통합 현황을 확인합니다',text:'홈에서 오늘을 포함하는 개인·공유 일정과 공유 연결 상태, 내 PC의 Node 환경을 확인합니다. 연결이 끊기면 최신 공유 내용이 아닐 수 있으므로 상태 안내도 함께 확인하세요. PlanRail 상태에 내 WorkRail 실행 버전과, 멤버라면 정상 동기화에서 받은 호스트 실행 버전이 표시됩니다. 호스트 버전 정보가 없는 구버전과도 동기화할 수 있으며 이 경우 확인 불가로 표시됩니다.'},
   {title:'상단 메뉴로 도구를 전환합니다',text:'PlanRail을 열면 기존 간트·달력과 일정 편집을 사용할 수 있습니다. NodeRail은 각 사용자의 PC에 적용되며 호스트·멤버 역할과 관계없습니다.'},
   {title:'작성 중인 내용은 그대로 둡니다',text:'메뉴를 바꿔도 일정 입력과 날짜·화면 위치는 유지되고 공유와 알림도 계속 실행됩니다. 앱을 완전히 종료하기 전에는 작성 중인 내용을 저장하세요.'}],related:['app-overview','node-management']},
- {id:'node-management',section:'기본 사용법',title:'Node 버전 설치와 전환',intro:'Windows x64에서 공식 nvm-windows 1.2.2와 연동합니다. 다른 운영체제나 호환되지 않는 nvm은 상태를 안내하며 자동으로 교체하지 않습니다.',steps:[
-  {title:'현재 환경을 확인합니다',text:'NodeRail에서 사용 중인 버전과 설치된 버전을 확인합니다. nvm이 없으면 공식 설치 지원을 선택하고 설치 프로그램을 완료한 뒤 환경을 다시 확인합니다. 최초 설치로 PATH가 바뀌면 터미널을 다시 열어야 할 수 있습니다. 설치 파일 다운로드는 시스템 프록시를 자동 발견하지 않습니다. 실패하면 공식 nvm-windows 1.2.2 릴리스에서 수동 설치한 뒤 환경을 다시 확인하세요.'},
-  {title:'공식 버전을 선택해 설치합니다',text:'공식 Node 배포 목록에서 버전을 검색하거나 LTS로 좁힙니다. 설치와 사용은 별개입니다. 다운로드에는 인터넷이 필요하며 필요한 작업에만 Windows 권한 확인이 표시됩니다. 권한을 취소하거나 설치가 실패하면 안내를 확인하고 재조회하세요.'},
-  {title:'설치된 버전을 사용합니다',text:'사용을 누르면 이후 실행하는 Node가 선택한 버전을 사용합니다. 실행 중인 Node 프로세스는 교체하지 않습니다. 설치된 버전 전환은 인터넷 없이 할 수 있습니다.'},
-  {title:'환경 충돌을 해결합니다',text:'nvm이 없고 기존 Node가 충돌하면 공식 MSI 대상을 확인한 경우에만 기존 Node.js 제거를 누를 수 있습니다. 대상·영향 확인 후 Windows 표준 제거 화면으로 진행합니다. 개발 실행은 독립 관리 창에서 이어가며 시작 메뉴의 WorkRail Node 환경 복구로 다시 열 수 있습니다. 제거 후 재검사에서 충돌이 해소되면 별도 클릭으로 nvm을 설치합니다. 전역 도구·설정은 직접 백업하며 잔여 경로는 자동 삭제하지 않습니다. 불명확한 대상은 안내에 따라 수동 정리합니다. 다른 CLI에서 동시에 nvm을 변경하지 마세요.'}],note:'설치·전환 중에는 메뉴를 이동할 수 있지만 작업이 끝날 때까지 앱의 실제 종료와 앱 업데이트 설치는 보류됩니다.',related:['workrail-home','saving-errors']},
- ...coreHelpArticles,
- {id:'settings',section:'기본 사용법',title:'기본 설정과 공유 설정',intro:'제목 표시줄은 릴리즈노트·도움말 | 설정 | 최소화·최대화·닫기 순서입니다. 톱니바퀴를 누르면 기본 설정 탭이 열립니다.',image:{file:'settings-personal.png',width:880,alt:'설정의 기본 설정·공유 설정 탭과 개인 휴일 입력',caption:'가상 개인 휴일을 등록한 실제 앱 화면',points:[{step:1,x:5,y:26},{step:2,x:5,y:46}]},steps:[
+ {id:'node-management',menu:'noderail',section:'기본 사용법',title:'Node 버전 설치와 전환',intro:'Windows x64의 기존 nvm-windows와 WSL2 배포판 기본 사용자의 nodenv를 관리합니다. 실행 파일과 설정을 검증한 뒤 조회·설치·사용에 필요한 기능을 각각 확인합니다.',steps:[
+  {title:'관리할 환경을 선택합니다',text:'환경이 하나면 자동으로 선택합니다. 여러 개면 마지막으로 사용한 환경을 복원하고, 처음에는 직접 선택합니다. Home과 NodeRail에서 같은 대상을 사용하며 환경 변경 버튼으로 바꿀 수 있습니다. 종료된 WSL 배포판은 환경 시작 버튼을 누른 뒤 내부 Node 설정을 조회합니다.'},
+  {title:'기존 Windows nvm을 확인합니다',text:'nvm-windows 1.x는 공용 심볼릭 링크를, 2.x는 검증된 설정과 기본 버전을 사용합니다. 기존 nvm의 조회·설치·사용은 각 기능을 확인한 뒤 제공합니다. nvm 2.0.1에서 ActiveVersion과 기존 Node 설치가 모두 없는 초기 상태에서는 첫 설치가 기본 버전을 자동 설정하므로 WorkRail에서 설치 버튼을 제한합니다. Windows 터미널에서 공식 nvm으로 첫 버전을 설치한 뒤 다시 확인하세요.'},
+  {title:'Windows에 nvm이 없는 경우',text:'별도의 공식 nvm-windows 1.2.2 설치 지원을 사용할 수 있습니다. 최초 설치로 PATH가 바뀌면 터미널을 다시 여세요. 다운로드가 실패하면 공식 nvm-windows 릴리스에서 수동 설치한 뒤 환경을 다시 확인하세요. 기존 Node와 충돌하는 경우 공식 MSI 대상을 확인했을 때 Windows 표준 화면에서 제거할 수 있습니다. 전역 도구·설정은 직접 백업하고, 개발 실행에서는 WorkRail Node 환경 복구 창에서 계속합니다.'},
+  {title:'WSL의 nodenv와 빌드 도구를 준비합니다',text:'배포판의 기본 사용자로 공식 nodenv와 node-build 안내(github.com/nodenv/nodenv, github.com/nodenv/node-build)를 따라 설치하고 셸 초기화를 확인하세요. WorkRail은 도구를 자동 설치하지 않습니다. node-build가 없어도 지원되는 조회·전환은 사용할 수 있습니다. 필요한 경우 Node를 소스에서 빌드하며 시간과 디스크 공간, 배포판의 컴파일 도구가 필요합니다.'},
+  {title:'공식 목록에서 설치하고 사용합니다',text:'설치와 사용은 별개입니다. LTS는 장기 지원 계열로 Krypton처럼 계열 코드명이 있으며 코드명만으로 현재 지원 여부를 판단할 수 없습니다. 공식 목록에 있어도 환경의 아키텍처와 도구의 지원 여부에 따라 설치가 제한될 수 있습니다. WSL에서 사용을 누르면 기본 사용자의 nodenv 기본 버전이 바뀝니다. 프로젝트의 .node-version과 셸의 NODENV_VERSION이 기본값보다 우선합니다. 실행 중인 Node 프로세스는 그대로 유지됩니다.'},
+  {title:'작업 취소와 상태를 확인합니다',text:'작업 중에는 환경 변경, 앱 종료와 업데이트 설치를 기다립니다. WSL 작업의 종료 여부가 불명확하면 해당 배포판이 종료된 상태임을 다시 확인할 때까지 잠금이 유지됩니다. 로그를 보존하고 작업을 확인한 뒤 필요한 경우 배포판을 직접 종료하세요. WorkRail은 배포판을 자동 종료하지 않습니다. 중단된 작업 뒤 nodenv rehash에서 잠금 오류가 나오면 실제 로그와 공식 nodenv 복구 방법을 확인하세요.'}],note:'다른 터미널에서 같은 관리자 설정이나 배포판을 동시에 변경하면 확인 시점과 실행 시점의 상태가 달라질 수 있습니다. 작업 후 목록과 현재 사용 또는 기본 버전을 다시 확인하세요.',related:['workrail-home','saving-errors']},
+ {id:'settings',menu:'settings',section:'기본 사용법',title:'기본 설정과 공유 설정',intro:'제목 표시줄은 릴리즈노트·도움말 | 설정 | 최소화·최대화·닫기 순서입니다. 톱니바퀴를 누르면 기본 설정 탭이 열립니다.',image:{file:'settings-personal.png',width:880,alt:'설정의 기본 설정·공유 설정 탭과 개인 휴일 입력',caption:'가상 개인 휴일을 등록한 실제 앱 화면',points:[{step:1,x:5,y:26},{step:2,x:5,y:46}]},steps:[
   {title:'탭으로 나누어 관리합니다',text:'기본 설정에서 휴일을 관리하고, 호스트는 업데이트 배포도 관리합니다. 공유 설정에서 호스트·멤버 연결, 주소, 공유 시작·중지, 참여자·승인, 공유 변경 알림을 관리합니다. 역할에 따라 사용할 수 있는 항목이 다릅니다.'},
   {title:'초안과 저장을 구분합니다',text:'탭 이동은 작성 중인 입력을 유지합니다. 공통·개인 휴일과 다른 설정은 각 저장 버튼으로 따로 저장합니다. X·Escape로 닫으면 미저장 입력은 확인 없이 폐기합니다. 승인 알림을 누르면 공유 설정 탭의 승인 목록을 엽니다.'}],related:['personal-holidays','shared-holidays','host-start','host-updates']},
- {id:'personal-holidays',section:'기본 사용법',title:'개인 휴일과 워킹데이',intro:'개인 전용·호스트·멤버 모두 자신만의 휴일을 관리합니다. 개인 휴일은 이 PC에만 저장하며 호스트의 개인 휴일도 멤버에게 전달하지 않습니다.',steps:[
+ {id:'personal-holidays',menu:'settings',section:'기본 사용법',title:'개인 휴일과 워킹데이',intro:'개인 전용·호스트·멤버 모두 자신만의 휴일을 관리합니다. 개인 휴일은 이 PC에만 저장하며 호스트의 개인 휴일도 멤버에게 전달하지 않습니다.',steps:[
   {title:'개인 휴일을 저장합니다',text:'설정 → 기본 설정 → 휴일 관리 (개인)에서 반복 요일을 선택하고 저장합니다. 처음에는 토·일이 붉게 선택됩니다. 날짜별 휴일 (개인)에는 시작일·종료일·이름을 한 줄로 입력합니다. 삭제 버튼은 해당 기간 전체를 삭제합니다. 개인 휴일끼리 겹치면 저장할 수 없지만 공통 휴일과 겹치는 것은 허용합니다. 출처별 등록 날짜 한도는1,000일입니다.'},
   {title:'표시와 워킹데이를 확인합니다',text:'호스트·멤버는 공통 휴일과 자신의 개인 휴일을 합산합니다. 모든 보기·필터·개인/공유 일정에 동일하게 적용하며 겹친 날은 한 번만 제외합니다. 예: 11/23~29 중 토·일, 공통25일, 개인26일이면 총 기간7일·워킹데이3일입니다. 모든 날이 휴일이면 워킹데이는0일입니다. 같은 공유 일정도 PC마다 워킹데이가 다를 수 있습니다. 한 표에서 요일을 해제해도 다른 표에 남아 있으면 계속 휴일입니다.'},
   {title:'휴일 출처를 구분합니다',text:'반복 요일은 배경만, 이름을 등록한 휴일은 간트 상단 날짜와 달력의 삼각형으로 표시합니다. 마우스 오버·키보드 포커스로 공통: 창립기념일 / 개인: 연차처럼 두 이름을 확인합니다. 개인 휴일은 연결 해제·승인 취소·역할 설정 후에도 보존합니다. 호스트로 설정해도 자동으로 공통 휴일로 공개하지 않습니다.'}],note:'휴일은 일정 날짜·기간을 자동 조절하거나 알림 날짜를 이동시키지 않습니다. 휴일 변경 알림도 보내지 않습니다.',related:['settings','shared-holidays','schedules']},
- {id:'getting-started',section:'시작하기',title:'호스트와 멤버 이해하기',intro:'대표 PC 한 대가 공유 원본을 관리합니다. 다른 PC는 승인된 멤버로 연결해 자신에게 허용된 프로젝트를 받습니다. 인터넷이나 외부 서버는 필요하지 않습니다.',steps:[
+ ...coreHelpArticles,
+ {id:'getting-started',menu:'planrail',section:'시작하기',title:'호스트와 멤버 이해하기',intro:'대표 PC 한 대가 공유 원본을 관리합니다. 다른 PC는 승인된 멤버로 연결해 자신에게 허용된 프로젝트를 받습니다. 인터넷이나 외부 서버는 필요하지 않습니다.',steps:[
   {title:'PC의 역할을 정합니다',text:'대표 PC는 호스트, 공유받을 PC는 멤버로 설정합니다. 개인 전용은 공유 없이 사용합니다. 호스트·멤버 겸용, 다른 호스트로의 자동 전환과 호스트 이관은 지원하지 않습니다.'},
   {title:'공유 설정을 엽니다',text:'제목 표시줄에서 도움말 오른쪽 톱니바퀴 설정을 누르고 공유 설정 탭으로 이동합니다. 여기서 호스트로 공유 또는 멤버로 연결을 선택합니다.'},
   {title:'역할을 변경합니다',text:'설정 → 공유 설정의 역할 변경에서 호스트와 멤버를 전환합니다. 미저장 작업을 먼저 저장하세요. 호스트 원본·참여자·승인은 보관되며 멤버 상태에서는 중지된 공유 자료에서 조회만 합니다. 현재 일정·알림에는 포함하지 않습니다. 멤버에서 호스트로 바꾸면 수신 자료와 자격을 정리하고 다시 멤버가 될 때 재승인이 필요합니다. 개인 자료는 유지하며 공유·업데이트 배포는 자동 재개하지 않습니다.'},
   {title:'개인 자료와 공유 자료를 구분합니다',text:'각 PC의 개인 프로젝트는 계속 편집할 수 있습니다. 공유 프로젝트·일정의 추가·수정·삭제는 호스트만 하고, 멤버는 조회와 자신의 일정 알림 설정만 합니다.'}],note:'앱의 X는 트레이로 숨깁니다. 트레이 Exit로 완전히 종료하거나 호스트 PC가 잠들면 공유가 중단됩니다.',related:['host-start','member-connect']},
- {id:'host-start',section:'호스트 사용법',title:'공유 시작하기',intro:'호스트의 WorkRail이 실행 중이거나 트레이에 있을 때 사내 PC에 공유 자료를 제공합니다.',image:{width:560,file:'host-address.png',alt:'공유할 LAN IP와 포트, 호스트 주소 저장 및 공유 시작 버튼',caption:'192.168.0.10은 테스트용 가상 주소입니다. 실제 호스트 주소를 선택하세요.',points:[{step:1,x:4,y:15},{step:2,x:4,y:86}]},steps:[
+ {id:'host-start',menu:'planrail',section:'호스트 사용법',title:'공유 시작하기',intro:'호스트의 WorkRail이 실행 중이거나 트레이에 있을 때 사내 PC에 공유 자료를 제공합니다.',image:{width:560,file:'host-address.png',alt:'공유할 LAN IP와 포트, 호스트 주소 저장 및 공유 시작 버튼',caption:'192.168.0.10은 테스트용 가상 주소입니다. 실제 호스트 주소를 선택하세요.',points:[{step:1,x:4,y:15},{step:2,x:4,y:86}]},steps:[
   {title:'LAN 주소를 선택합니다',text:'설정 → 공유 설정에서 호스트로 공유를 선택하고 실제 공유할 LAN IPv4를 고릅니다. 예: 192.168.0.10. 포트 기본값은 47831이며 멤버도 같은 값을 사용해야 합니다. 호스트 주소 저장을 누릅니다.'},
   {title:'공유를 시작합니다',text:'공유 시작을 누릅니다. Windows의 앱 네트워크 접근 허용은 회사 정책에 따라 처리합니다. 필요한 경우 IT 담당자에게 호스트 프로그램과 TCP 포트를 알려 주세요.'},
   {title:'참여자를 등록합니다',text:'공유 시작만으로 모든 PC가 자료를 받지는 않습니다. 멤버의 이름·IP를 등록하고 연결 지문 확인·승인과 프로젝트의 공유 대상 연결을 완료해야 합니다.'}],note:'127.0.0.1은 자기 PC 전용입니다. 다른 PC 연결에는 실제 LAN 주소를 사용하세요. 공유 중지 상태는 재실행 후에도 유지됩니다.',related:['host-participants','troubleshoot-connection']},
- {id:'host-participants',section:'호스트 사용법',title:'참여자 등록과 승인',intro:'공유 설정 → 참여자 이름 · IP에서 연결할 PC를 등록합니다. IP와 최초 승인된 설치본을 함께 확인합니다.',image:participants,steps:[
+ {id:'host-participants',menu:'planrail',section:'호스트 사용법',title:'참여자 등록과 승인',intro:'공유 설정 → 참여자 이름 · IP에서 연결할 PC를 등록합니다. IP와 최초 승인된 설치본을 함께 확인합니다.',image:participants,steps:[
   {title:'이름과 실제 멤버 IP를 등록합니다',text:'새 참여자에 이름과 멤버 PC의 IPv4를 입력하고 등록을 누릅니다. 예시 192.168.0.20 대신 실제 멤버 주소를 사용하세요. 잘못된 값이나 중복 IP는 입력 아래 안내를 확인합니다.'},
   {title:'등록 상태를 확인합니다',text:'승인 대기는 아직 연결 승인이 끝나지 않은 상태입니다. 승인 배지는 접속 중이라는 뜻이 아닙니다. 목록의 연결됨/연결 끊김과 마지막 접속 확인 시각, 상단 연결 PC 수를 확인하세요. 최근10초 이내 인증된 동기화가 성공한 PC만 연결됨으로 표시합니다. 이름·IP 변경은 수정을 눌러 저장합니다. 실행 버전과 확인 시각도 표시합니다. 연결이 끊기면 마지막 확인 버전이며, 보고하지 않는 구버전은 확인 불가입니다. 오프라인 PC에 새로 설치된 버전은 알 수 없습니다.'},
   {title:'양쪽 지문을 비교하고 승인합니다',text:'멤버가 호스트 주소로 연결하면 양쪽 화면의 전체64자리 SHA-256 지문을 모두 비교합니다. 호스트는 지문 확인 · 연결 승인, 멤버는 전체 지문 일치 확인을 완료합니다. 멤버가 지문을 확인한 뒤 승인 대기 중이면 호스트에 이름·IP가 담긴 Windows 알림이 표시됩니다. 클릭하면 현재 승인 목록을 열며 자동 승인하지 않습니다. 요청별 한 번, 같은 PC는 1분 이내 반복하지 않고 전체 알림 끄기를 따릅니다. 5분이 지나면 새 연결 시도를 시작합니다.'}],note:'지문이 다르면 승인하지 말고 주소와 대상 PC를 확인하세요. 이름이 같다는 이유로 승인하거나 접근을 허용하지 않습니다.',related:['host-projects','host-access','member-connect']},
- {id:'shared-holidays',section:'호스트 사용법',title:'공통 휴일 관리와 동기화',image:{width:880,file:'holidays.png',alt:'기본 설정의 공통 반복 요일 선택과 휴일 시작일·종료일·이름 입력',caption:'가상 창립기념일과 토요일·일요일 반복 휴무를 등록한 실제 화면',points:[{step:1,x:5,y:36},{step:2,x:5,y:82}]},intro:'호스트의 설정 → 기본 설정 → 휴일 관리 (공통)에서 하나의 공통 휴일표를 관리합니다. 승인된 모든 멤버에게 프로젝트 공유 여부와 관계없이 전달됩니다.',steps:[
+ {id:'shared-holidays',menu:'planrail',section:'호스트 사용법',title:'공통 휴일 관리와 동기화',image:{width:880,file:'holidays.png',alt:'기본 설정의 공통 반복 요일 선택과 휴일 시작일·종료일·이름 입력',caption:'가상 창립기념일과 토요일·일요일 반복 휴무를 등록한 실제 화면',points:[{step:1,x:5,y:36},{step:2,x:5,y:82}]},intro:'호스트의 설정 → 기본 설정 → 휴일 관리 (공통)에서 하나의 공통 휴일표를 관리합니다. 승인된 모든 멤버에게 프로젝트 공유 여부와 관계없이 전달됩니다.',steps:[
   {title:'반복 요일을 저장합니다',text:'처음에는 토·일이 선택됩니다. 월~일 중 휴무 요일을 바꾸고 반복 요일 저장을 누릅니다. 아무 요일도 선택하지 않을 수 있으며 모든 표시 연도에 적용됩니다.'},
   {title:'날짜별 휴일을 등록합니다',text:'시작일·종료일·이름을 입력하고 휴일 추가를 누릅니다. 두 날짜의 기본값은 오늘이며 양 끝을 포함한 기간 한 항목으로 수정·삭제합니다. 등록된 다른 기간과 하루라도 겹치면 저장을 막고 기존 항목을 안내합니다. 총 등록 날짜는 1,000일까지이며 반복 요일과의 겹침은 허용합니다. 공식 공휴일 자동 수집은 제공하지 않습니다.'},
   {title:'간트와 달력에서 확인합니다',text:'전체·개인·공유 필터에 관계없이 옅은 붉은 날짜 열과 칸으로 표시합니다. 등록한 휴일은 간트 상단 날짜 눈금과 달력 날짜 칸 왼쪽 위 삼각형으로 표시합니다. 해당 날짜에 마우스를 올리거나 키보드로 이동하면 이름을 확인합니다. 반복 요일은 배경만 표시합니다. 멤버는 조회만 할 수 있습니다. 구버전 멤버에는 기간을 날짜별로 전달합니다. 날짜·일정 기간과 시작/종료 알림 계산은 그대로이며 휴일 변경 알림은 발송하지 않습니다.'},
   {title:'끊겼을 때 상태를 확인합니다',text:'일시 단절에는 마지막 수신 기준으로 유지하고 재연결하면 갱신합니다. 직접 연결 해제나 승인 취소 확인 시 받은 공통 휴일표만 삭제하고 자신의 개인 휴일은 보존합니다. 개인 휴일의 초기 반복 요일은 토·일입니다. 프로젝트 하나의 공유 종료는 휴일표를 지우지 않습니다. 구버전 호스트는 미지원 안내를 확인하세요.'}],related:['host-start','member-sync']},
- {id:'host-projects',section:'호스트 사용법',title:'프로젝트 공유하기',intro:'호스트에서 개인 프로젝트를 공유로 전환하거나 공유 프로젝트를 새로 만듭니다.',image:{width:390,file:'project-share.png',alt:'프로젝트 편집의 참여자와 공유 프로젝트로 저장, 참여자별 PC 선택',caption:'가상 프로젝트와 디자인 PC를 연결한 예시',points:[{step:1,x:4,y:42},{step:2,x:4,y:73}]},steps:[
+ {id:'host-projects',menu:'planrail',section:'호스트 사용법',title:'프로젝트 공유하기',intro:'호스트에서 개인 프로젝트를 공유로 전환하거나 공유 프로젝트를 새로 만듭니다.',image:{width:390,file:'project-share.png',alt:'프로젝트 편집의 참여자와 공유 프로젝트로 저장, 참여자별 PC 선택',caption:'가상 프로젝트와 디자인 PC를 연결한 예시',points:[{step:1,x:4,y:42},{step:2,x:4,y:73}]},steps:[
   {title:'프로젝트와 참여자를 확인합니다',text:'프로젝트 추가 또는 편집에서 이름·색상·참여자를 확인합니다. 기존 참여자 이름에는 공유할 PC를 연결하거나 공유하지 않을 이름을 명시적으로 제거해야 합니다.'},
   {title:'공유 저장과 PC 연결을 설정합니다',text:'공유 프로젝트로 저장을 켜고 각 참여자에 해당하는 등록 PC를 선택합니다. 저장과 공유 확인을 완료합니다. 실제 수신에는 멤버 설치본의 연결 승인이 필요합니다.'},
   {title:'멤버 반영을 확인합니다',text:'원본은 공유 프로젝트로 전환되며 별도 개인 복사본은 남지 않습니다. 실패하면 원본을 보존합니다. 연결된 멤버는 약2초마다 변경을 확인하며 수동 동기화도 할 수 있습니다.'}],note:'멤버는 공유 원본 이름·날짜·참여자·삭제·드래그를 수정할 수 없습니다. 참여자 등록 정보는 호스트만 관리합니다.',related:['host-participants','member-sync']},
- {id:'host-access',section:'호스트 사용법',title:'승인 취소·삭제와 공유 중지',intro:'승인 취소, 참여자 삭제, 프로젝트 삭제는 서로 다른 동작입니다.',image:{...participants,points:[{step:1,x:86,y:43},{step:2,x:97,y:43}]},steps:[
+ {id:'host-access',menu:'planrail',section:'호스트 사용법',title:'승인 취소·삭제와 공유 중지',intro:'승인 취소, 참여자 삭제, 프로젝트 삭제는 서로 다른 동작입니다.',image:{...participants,points:[{step:1,x:86,y:43},{step:2,x:97,y:43}]},steps:[
   {title:'등록을 유지하고 접근만 막습니다',text:'승인 취소는 참여자 이름·IP를 남기고 해당 설치본의 접근을 막습니다. 다시 연결하려면 새 승인 절차가 필요합니다.'},
   {title:'참여자와 공유 권한을 제거합니다',text:'참여자 행의 휴지통을 누르면 영향받는 프로젝트를 확인합니다. 삭제를 확정하면 이름·IP 등록과 모든 공유 권한을 제거하지만 프로젝트·일정 원본은 지우지 않습니다.'},
   {title:'공유를 잠시 중지합니다',text:'공유 중지는 모든 멤버의 최신 수신을 멈춥니다. 호스트를 다시 실행해도 중지 상태를 유지합니다. 공유 중에 앱을 종료한 경우 다음 실행에는 공유를 재개합니다.'}],note:'오프라인 멤버의 수신 자료를 즉시 원격 삭제할 수는 없습니다. 멤버가 권한 회수를 확인하면 수신 자료와 자기 공유 알림을 제거합니다. 프로젝트 목록의 휴지통은 프로젝트명과 하위 일정 수를 확인한 뒤 함께 삭제합니다.',related:['host-projects','member-disconnect']},
- {id:'host-updates',section:'호스트 사용법',title:'업데이트 배포하기',intro:'호스트가 사내 업데이트 배포처가 됩니다. 별도의 외부 서버 없이 승인된 멤버에게 제공합니다.',image:{file:'updates-host.png',alt:'업데이트 배포 영역의 ZIP 등록과 검사 후 배포 시작·배포 중지',caption:'현재 앱의 배포 관리 화면. 등록과 배포 시작은 별개입니다.',points:[{step:2,x:5,y:35}]},steps:[
+ {id:'host-updates',menu:'planrail',section:'호스트 사용법',title:'업데이트 배포하기',intro:'호스트가 사내 업데이트 배포처가 됩니다. 별도의 외부 서버 없이 승인된 멤버에게 제공합니다.',image:{file:'updates-host.png',alt:'업데이트 배포 영역의 ZIP 등록과 검사 후 배포 시작·배포 중지',caption:'현재 앱의 배포 관리 화면. 등록과 배포 시작은 별개입니다.',points:[{step:2,x:5,y:35}]},steps:[
   {title:'호스트를 먼저 업데이트합니다',text:'새 정식 설치본으로 호스트를 직접 업데이트합니다. 호스트와 같은 정식 버전이며 멤버 현재 버전보다 높은 업데이트만 제공합니다.'},
   {title:'ZIP을 등록하고 배포를 시작합니다',text:'GitHub Actions의 Planrail LAN_UPDATE ZIP 하나를 설정 → 기본 설정 → 업데이트 배포에서 등록합니다. 직접 압축을 풀 필요가 없습니다. 검사 완료 후 버전과 용량을 확인하고 배포 시작을 누릅니다. 등록 실패 시 기존 배포를 유지합니다.'},
   {title:'중지·교체 영향을 확인합니다',text:'배포 중지를 확인한 멤버는 아직 설치하지 않은 다운로드·설치 대기를 취소합니다. 이미 설치한 앱은 되돌리지 않습니다. 새 배포로 교체하면 멤버가 UPDATE를 다시 선택합니다.'}],note:'이미 검증 파일을 받은 오프라인 멤버는 중지·교체를 알 수 없어 설치할 수 있습니다. 호스트 자체는 UPDATE 버튼이 아닌 수동 설치로 업데이트합니다.',related:['member-updates','troubleshoot-updates']},
- {id:'member-connect',section:'멤버 사용법',title:'호스트 연결하기',intro:'먼저 호스트에게 자신의 PC 이름·IP 등록을 요청하세요. 호스트가 공유 중이어야 연결할 수 있습니다.',image:{width:560,file:'member-address.png',alt:'멤버의 호스트 IP와 포트 입력, 연결 버튼',caption:'호스트에게 받은 실제 주소와 포트를 입력합니다.',points:[{step:1,x:4,y:15}]},steps:[
+ {id:'member-connect',menu:'planrail',section:'멤버 사용법',title:'호스트 연결하기',intro:'먼저 호스트에게 자신의 PC 이름·IP 등록을 요청하세요. 호스트가 공유 중이어야 연결할 수 있습니다.',image:{width:560,file:'member-address.png',alt:'멤버의 호스트 IP와 포트 입력, 연결 버튼',caption:'호스트에게 받은 실제 주소와 포트를 입력합니다.',points:[{step:1,x:4,y:15}]},steps:[
   {title:'호스트 주소를 입력합니다',text:'설정 → 공유 설정 → 멤버로 연결에서 호스트 IP와 포트를 입력합니다. 예시 192.168.0.10:47831 대신 호스트가 알려 준 실제 값을 사용합니다.'},
   {title:'전체 지문을 대조합니다',text:'양쪽 화면의 전체64자리 지문이 같은지 확인합니다. 호스트의 연결 승인과 멤버의 전체 지문 일치 확인을 모두 마칩니다. 지문이 다르거나 만료됐다면 승인하지 않고 다시 확인합니다.'},
   {title:'허용된 자료를 확인합니다',text:'호스트가 자신을 참여자로 연결한 프로젝트만 받습니다. 프로젝트가 보이지 않으면 호스트에게 해당 프로젝트의 공유 대상 PC 설정을 확인해 달라고 하세요.'}],note:'IP가 바뀌면 호스트가 등록 IP를 수정해야 합니다. 이름만 같다고 연결되지 않습니다. PC 교체·설치본 자격 소실 시 재승인이 필요합니다.',related:['member-sync','troubleshoot-connection']},
- {id:'member-sync',section:'멤버 사용법',title:'동기화와 연결 상태',intro:'공유 자료는 자동으로 갱신되며 필요할 때 수동으로 최신 자료를 확인할 수 있습니다.',image:{file:'member-toolbar.png',alt:'제목 옆 공유 연결 상태, 간트·달력 왼쪽 수동 동기화, 전체·개인·공유 필터',caption:'가상 멤버 화면의 제목 표시줄과 도구 모음',points:[{step:1,x:9.7,y:20},{step:2,x:52.2,y:67},{step:3,x:85,y:67}]},steps:[
+ {id:'member-sync',menu:'planrail',section:'멤버 사용법',title:'동기화와 연결 상태',intro:'공유 자료는 자동으로 갱신되며 필요할 때 수동으로 최신 자료를 확인할 수 있습니다.',image:{file:'member-toolbar.png',alt:'제목 옆 공유 연결 상태, 간트·달력 왼쪽 수동 동기화, 전체·개인·공유 필터',caption:'가상 멤버 화면의 제목 표시줄과 도구 모음',points:[{step:1,x:9.7,y:20},{step:2,x:52.2,y:67},{step:3,x:85,y:67}]},steps:[
   {title:'연결 상태를 확인합니다',text:'WorkRail 제목 옆 초록은 최근 정상 확인과 저장 완료, 빨강은 미확인·연결 오류·승인 취소를 뜻합니다. 아이콘 설명에서 마지막 정상 확인 시각을 볼 수 있습니다.'},
   {title:'수동 동기화를 실행합니다',text:'간트/달력 버튼 왼쪽의 수동 동기화를 누릅니다. 성공은 자료 수신과 화면 반영을 마친 뒤 표시됩니다. 연결이 끊겨도 개인 자료는 계속 편집할 수 있습니다.'},
   {title:'보려는 자료를 고릅니다',text:'전체/개인/공유 필터는 프로젝트 목록·간트·달력에 함께 적용됩니다. 필터는 공유 권한이나 알림 설정을 바꾸지 않습니다.'}],note:'연결이 끊기면 마지막 수신본을 조회할 수 있으나 최신 정보가 아닐 수 있습니다. 공유 일정 알림은 최신 권한 확인 후 재개합니다.',related:['member-reminders','troubleshoot-connection']},
- {id:'member-reminders',section:'멤버 사용법',title:'일정 알림과 공유 변경 알림',intro:'날짜 기반 일정 알림은 각 PC가 따로 설정합니다. 호스트의 공유 원본 변경을 알리는 공유 변경 알림과는 별개입니다.',image:reminders,steps:[
+ {id:'member-reminders',menu:'planrail',section:'멤버 사용법',title:'일정 알림과 공유 변경 알림',intro:'날짜 기반 일정 알림은 각 PC가 따로 설정합니다. 호스트의 공유 원본 변경을 알리는 공유 변경 알림과는 별개입니다.',image:reminders,steps:[
   {title:'날짜 알림 시각을 정합니다',text:'일정 편집에서 0~365일 전과 PC 현지 시각 HH:mm을 정합니다. 0은 당일입니다. 시작·종료는 같은 N일 전과 시각을 사용합니다.'},
   {title:'시작일·종료일 알림을 켜고 저장합니다',text:'새 일정은 둘 다 꺼짐이며 기본 입력값은2일 전·09:00입니다. 알림이 켜진 일정 이름 옆 종을 눌러 빠른 알림 편집도 할 수 있습니다. 알림 저장도 변경 확인을 거치며 취소하면 입력을 유지합니다. 공유 일정 알림은 자신의 PC에만 적용됩니다.'},
   {title:'공유 변경 알림을 별도로 관리합니다',text:'멤버 공유 설정의 공유 변경 알림 스위치로 수신 여부를 정합니다. 기본 켜짐이며 공유 프로젝트와 일정의 주요 변경을 Windows 알림으로 받습니다. 끄더라도 동기화와 날짜 알림은 유지합니다.'}],note:'실행 중·트레이에서만 알립니다. Windows 알림 설정·방해 금지의 영향을 받습니다. 오늘 놓친 날짜 알림만 처리하며 어제 이전 것은 몰아 보내지 않습니다.',related:['troubleshoot-notifications','member-sync']},
- {id:'member-updates',section:'멤버 사용법',title:'UPDATE로 설치하기',intro:'연결·재연결 시와 연결 중5분마다 새 버전을 확인합니다. 새 버전이 있으면 제목 옆 UPDATE 버튼과 Windows 알림이 제공됩니다. 같은 호스트의 같은 버전은 한 번만 알립니다. 알림을 클릭하면 안내만 열고, UPDATE 또는 업데이트 다운로드를 눌러야 다운로드합니다.',image:{file:'updates-member.png',alt:'UPDATE 팝오버의 대상 버전과 다운로드·검증·설치 대기 안내',caption:'가상 배포를 받은 멤버의 업데이트 팝오버',points:[{step:1,x:8,y:12},{step:2,x:8,y:65}]},steps:[
+ {id:'member-updates',menu:'planrail',section:'멤버 사용법',title:'UPDATE로 설치하기',intro:'연결·재연결 시와 연결 중5분마다 새 버전을 확인합니다. 새 버전이 있으면 제목 옆 UPDATE 버튼과 Windows 알림이 제공됩니다. 같은 호스트의 같은 버전은 한 번만 알립니다. 알림을 클릭하면 안내만 열고, UPDATE 또는 업데이트 다운로드를 눌러야 다운로드합니다.',image:{file:'updates-member.png',alt:'UPDATE 팝오버의 대상 버전과 다운로드·검증·설치 대기 안내',caption:'가상 배포를 받은 멤버의 업데이트 팝오버',points:[{step:1,x:8,y:12},{step:2,x:8,y:65}]},steps:[
   {title:'UPDATE를 누릅니다',text:'버튼을 누르면 전체 업데이트 파일을 다운로드합니다. 작은 팝오버에서 대상 버전·진행률·검증 상태를 확인할 수 있고 팝오버를 닫아도 작업은 계속됩니다. 내려받는 동안 일정 편집이 가능합니다.'},
   {title:'설치 대기를 확인합니다',text:'검증이 끝나면 진행 중 저장을 안전하게 마무리하고 미저장 입력을 확인 없이 폐기한 뒤 자동 설치·재실행합니다. 다운로드 중 편집하던 내용도 사라질 수 있습니다. 앱 재실행 후 보관된 설치 파일은 설치 후 재시작을 직접 눌러 진행합니다.'},
   {title:'취소·다시 시도를 사용합니다',text:'다운로드 취소는 임시 파일을 지우며 재시도는 처음부터 받습니다. 검증된 대기 파일은 앱 재실행 후 다시 검증하고 명시적으로 설치합니다. 일반 Exit로 자동 설치하지 않습니다.'}],note:'설치가 시작된 후에는 앱에서 취소하지 않습니다. 검증 완료 파일은 오프라인에서도 설치할 수 있지만 아직 받지 않았다면 호스트 연결이 필요합니다.',related:['troubleshoot-updates','host-updates']},
- {id:'member-disconnect',section:'멤버 사용법',title:'연결 해제와 공유 종료',intro:'일시적인 네트워크 끊김과 직접 연결 해제는 다르게 처리합니다.',steps:[
+ {id:'member-disconnect',menu:'planrail',section:'멤버 사용법',title:'연결 해제와 공유 종료',intro:'일시적인 네트워크 끊김과 직접 연결 해제는 다르게 처리합니다.',steps:[
   {title:'일시적인 끊김은 연결 복구를 기다립니다',text:'네트워크 끊김 때문에 개인 자료나 마지막 수신본을 자동 삭제하지 않습니다. 호스트의 공유 상태와 주소를 먼저 확인하세요.'},
   {title:'직접 연결을 해제합니다',text:'공유 설정의 연결 해제를 누르고 확인하면 수신 자료·자기 공유 알림·접속 자격을 삭제합니다. 개인 프로젝트·일정과 개인 휴일은 유지합니다. 다시 연결할 때 호스트 승인이 필요합니다.'},
   {title:'공유 종료 안내를 확인합니다',text:'호스트가 권한을 회수하면 멤버가 이를 확인할 때 해당 자료와 자기 알림을 제거합니다. 공유 종료 알림에는 프로젝트 이름이나 일정 내용이 포함되지 않습니다.'}],related:['member-connect','host-access']},
- {id:'troubleshoot-connection',section:'문제 해결',title:'연결이 되지 않을 때',intro:'호스트와 멤버가 각각 아래 항목을 확인하세요. 설치 여부나 승인 상태만으로 정상 통신을 판단하지 않습니다.',steps:[
+ {id:'troubleshoot-connection',menu:'planrail',section:'문제 해결',title:'연결이 되지 않을 때',intro:'호스트와 멤버가 각각 아래 항목을 확인하세요. 설치 여부나 승인 상태만으로 정상 통신을 판단하지 않습니다.',steps:[
   {title:'호스트 실행과 주소를 확인합니다',text:'호스트가 공유 시작 상태이며 절전·완전 종료되지 않았는지 확인합니다. 멤버 주소의 IP·포트가 호스트와 같아야 합니다. 127.0.0.1은 다른 PC에 연결되지 않습니다.'},
   {title:'멤버 IP와 승인 상태를 확인합니다',text:'호스트 참여자 목록의 IP가 현재 멤버 PC 주소와 같은지 확인합니다. 승인 취소·삭제 또는 새 설치본이면 연결 지문 확인과 승인을 다시 완료합니다.'},
   {title:'네트워크 정책을 확인합니다',text:'Windows의 공용 및 개인 네트워크에서 앱에 액세스하도록 허용 창은 방화벽 안내입니다. 개발 실행의 Electron과 설치된 WorkRail은 별도 프로그램 경로이므로 규칙이 다를 수 있습니다. 회사 IT 담당자에게 필요한 사내 연결 범위를 요청하세요.'}],note:'방화벽 전체 해제, 보호 저장소 삭제, DB 초기화는 해결 절차가 아닙니다. 개인 자료는 보존하세요.',related:['host-start','member-connect']},
- {id:'troubleshoot-updates',section:'문제 해결',title:'업데이트가 보이지 않거나 실패할 때',intro:'배포 등록과 배포 시작, 다운로드와 설치 대기를 구분합니다.',steps:[
+ {id:'troubleshoot-updates',menu:'planrail',section:'문제 해결',title:'업데이트가 보이지 않거나 실패할 때',intro:'배포 등록과 배포 시작, 다운로드와 설치 대기를 구분합니다.',steps:[
   {title:'버전과 배포 상태를 확인합니다',text:'호스트가 ZIP 등록 후 배포 시작까지 했는지 확인합니다. 현재 멤버보다 높은 정식 버전이어야 하며 승인된 멤버만 받을 수 있습니다. 최신 확인은 연결 시·5분마다 진행합니다.'},
   {title:'연결과 다운로드를 확인합니다',text:'알려진 업데이트가 있어도 연결이 끊기면 다운로드 버튼은 비활성화됩니다. 연결 복구 뒤 다시 시도하세요. 전송 실패 시 불완전한 파일을 버리고 처음부터 받습니다.'},
   {title:'설치 준비 실패와 재시도를 확인합니다',text:'진행 중 저장의 안전한 종료나 설치 파일을 확인하지 못하면 설치를 중단합니다. 오류를 해결하고 설치 후 재시작을 누릅니다. DB·설치 오류를 무시하거나 현재 데이터를 삭제하지 마세요.'}],related:['member-updates','host-updates']},
- {id:'troubleshoot-notifications',section:'문제 해결',title:'Windows 알림이 보이지 않을 때',intro:'Windows의 배너 표시 여부와 앱의 알림 설정을 함께 확인합니다.',steps:[
+ {id:'troubleshoot-notifications',menu:'settings',section:'문제 해결',title:'Windows 알림이 보이지 않을 때',intro:'Windows의 배너 표시 여부와 앱의 알림 설정을 함께 확인합니다.',steps:[
   {title:'Windows 알림을 확인합니다',text:'Windows 설정의 알림·WorkRail 허용·방해 금지 상태를 확인합니다. 여러 알림이 전달되어도 모든 배너가 차례로 보이는 것은 보장되지 않습니다.'},
   {title:'앱 실행과 개별 설정을 확인합니다',text:'트레이의 전체 알림 끄기가 해제되어 있는지, WorkRail이 실행 중 또는 트레이인지, 해당 일정의 시작/종료 스위치와 시각이 맞는지 확인합니다. 공유 변경 알림은 공유 설정에서 따로 켭니다.'},
   {title:'공유 연결과 오류 안내를 확인합니다',text:'공유 날짜 알림은 최신 권한 확인이 필요합니다. 재연결 후 오늘 놓친 미처리 알림만 제공합니다. 저장 실패·결과 불명 안내가 있으면 그 안내의 재조회/재시도 절차를 따릅니다.'}],note:'트레이의 전체 알림 끄기를 체크하면 해당 PC의 일정·공유 변경/종료·업데이트 Windows 알림을 모두 끕니다. 재실행 후에도 유지하며 해제해도 꺼 둔 동안의 알림을 몰아 보내지 않습니다. 동기화와 UPDATE는 계속 동작하고 기존 Windows 알림은 삭제하지 않습니다.',related:['member-reminders','member-updates']},

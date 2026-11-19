@@ -35,7 +35,7 @@ function memoryStore() {
   }
   return { store, devices, credentials, snapshot }
 }
-async function fixture(options: { now?: () => number;onSyncComplete?:(id:string,version?:unknown,versionBindingCurrent?:boolean)=>void;onPairConfirmed?:(pair:import('../../src/main/sharing/host').PendingPair)=>void;holidays?:()=>unknown } = {}) {
+async function fixture(options: Partial<Pick<Parameters<typeof createSharingHost>[0], 'now' | 'onSyncComplete' | 'onPairConfirmed' | 'holidays'>> & {appVersion?:string} = {}) {
   const memory = memoryStore()
   const host = createSharingHost({ identity, store: memory.store, ...options })
   const address = await host.start('127.0.0.1', 0)
@@ -54,6 +54,30 @@ async function ready(f: Awaited<ReturnType<typeof fixture>>) {
 }
 
 describe('real loopback pinned HTTPS and pairing', () => {
+  it('carries host runtime version on authenticated snapshot 200 and 304 without changing the body', async () => {
+    const f = await fixture({appVersion:'2.7.3-dev'})
+    expect(await pinnedRequest({...f,path:'/v1/identity'})).not.toMatchObject({hostVersion:'2.7.3-dev'})
+    await expect(f.client.poll()).rejects.toMatchObject({code:'UNAUTHORIZED'})
+    await ready(f)
+    const synced = await f.client.poll()
+    expect(synced).toMatchObject({kind:'snapshot',hostVersion:'2.7.3-dev',snapshot:f.snapshot})
+    if(synced.kind!=='snapshot')throw Error('snapshot missing')
+    expect(Object.keys(synced.snapshot)).toEqual(['protocolVersion','hostId','datasetId','projects','schedules'])
+    expect(await f.client.poll({etag:synced.etag})).toMatchObject({kind:'unchanged',hostVersion:'2.7.3-dev'})
+  })
+  it.each([[undefined,null],['2.7.3-01',null],['2.7.3+build.4','2.7.3+build.4']])('normalizes optional metadata %s from a pinned response', async (version, expected) => {
+    const f = await fixture(); await ready(f)
+    const server = createServer({cert:identity.certificate,key:identity.privateKey}, (req,res) => {
+      if(req.url==='/v1/changes/sync'){res.writeHead(404);res.end(JSON.stringify({code:'NOT_FOUND'}));return}
+      if(req.headers.authorization!==`Bearer ${f.saved()!.token}`){res.writeHead(401);res.end(JSON.stringify({code:'UNAUTHORIZED'}));return}
+      if(version!==undefined)res.setHeader('x-planrail-version',version)
+      res.setHeader('etag','"'+'a'.repeat(64)+'"')
+      res.end(JSON.stringify(f.snapshot))
+    })
+    const address=await listen(server), client=new SharingClient({installationId,address,trust:f.trust,persistence:{load:async()=>f.saved(),save:async()=>{}}})
+    cleanup.push(async()=>client.close())
+    expect(await client.poll()).toMatchObject({kind:'snapshot',hostVersion:expected,snapshot:f.snapshot})
+  })
   it('does not attribute an old credential report to a newly approved installation before acknowledgement',async()=>{
     const reports:unknown[]=[];let presence=0;const f=await fixture({onSyncComplete:(_id,v,current)=>{presence++;if(current)reports.push(v)}});await ready(f)
     const oldToken=f.saved()!.token
@@ -114,14 +138,14 @@ describe('real loopback pinned HTTPS and pairing', () => {
     expect(await pre.client.pollHolidays()).toEqual({kind:'unsupported'})
   })
   it('synchronizes authenticated change envelopes even when snapshot ETag has not changed', async () => {
-    const f = await fixture(); await ready(f)
+    const f = await fixture({appVersion:'2.7.3'}); await ready(f)
     let received: unknown[] = []
     Object.assign(f.store, {getChangeSnapshot: (id:string,cursor:string|null,reconnecting:boolean) => {
       received=[id,cursor,reconnecting]
       return {version:1,snapshot:f.snapshot,cursor:'a'.repeat(64),mode:'delta',notices:[]}
     }})
     const result=await f.client.poll({cursor:null,reconnecting:true} as any)
-    expect(result).toMatchObject({kind:'snapshot',changesSupported:true,changes:{cursor:'a'.repeat(64)}})
+    expect(result).toMatchObject({kind:'snapshot',hostVersion:'2.7.3',changesSupported:true,changes:{cursor:'a'.repeat(64)}})
     expect(received).toEqual(['device-a',null,true])
     if(result.kind!=='snapshot')throw Error('snapshot missing')
     expect((await f.client.poll({etag:result.etag,cursor:'a'.repeat(64)} as any)).kind).toBe('snapshot')

@@ -4,7 +4,7 @@ import type { ApiError } from '../../shared/types'
 import { connectedMembers, SharingMembers, sharingRoles } from './SharingMembers'
 
 export function SharingWidget({ sharing, error, onSettings, version }: {
-  sharing: (SharingState & { hostVersion?: string | null }) | null
+  sharing: SharingState | null
   error: ApiError | null
   onSettings?: () => void
   version?: string

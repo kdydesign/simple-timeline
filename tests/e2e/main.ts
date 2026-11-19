@@ -21,6 +21,9 @@ if (
   !rel.startsWith("simple-timeline-")
 )
   throw Error("Isolated temporary profile required");
+// Direct file launches set appPath to the file's directory. Use Electron's
+// default-entry setter to point the isolated test bundle at its package root.
+(app as typeof app & {setAppPath(path:string):void}).setAppPath(resolve(__dirname, "../../.."));
 let changed = false,
   injected = false;
 const fault = process.env.SIMPLE_TIMELINE_TEST_FAULT;

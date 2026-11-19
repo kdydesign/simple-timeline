@@ -14,7 +14,8 @@ import {IconButton} from './components/Icon';
 import {restoreFocus} from './state/restoreFocus';
 import {normalizeReminder} from '../domain/reminder';
 import {useReminders} from './state/useReminders';
-import { useEffect, useRef, useState, useLayoutEffect } from "react";
+import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
+import type { HelpSection } from "../shared/help";
 import type { TimelineApi } from "../shared/api";
 import type { ApiError, YearMonth, Result, Id, Schedule, Project, ReminderSettings } from "../shared/types";
 import {
@@ -70,6 +71,7 @@ export function App({
   initialTool?: WorkRailTool;
 }) {
   const [tool, setTool] = useState(initialTool);
+  const [runtimeVersion, setRuntimeVersion] = useState<string>();
   const planrailActive = tool === "planrail";
   const dockButton = useRef<HTMLButtonElement>(null);
   const workDate = useLocalWorkDate(today);
@@ -147,6 +149,17 @@ export function App({
     saving = timeline.phase === "saving" || sharing.busy;
   const updates=useUpdateGuard({known:(timeline.phase==='ready'||timeline.phase==='saving')&&!sharing.writeOutcomeUnknown,dirty:editor.dirty||settingsDirty||quickDirty,saving});
   const settingsVisible=!!sharing.state&&!!sharing.api&&sharing.settingsOpen&&!quickReminder&&!confirmation&&!dayModalOpen&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
+  const helpSection: HelpSection = settingsVisible ? "settings" : tool === "node" ? "noderail" : tool;
+  const openHelp = useCallback(() => { void window.timelineWindow?.command("help", helpSection); }, [helpSection]);
+  useEffect(() => {
+    const handleHelp = (event: KeyboardEvent) => {
+      if (event.key !== "F1" || !window.timelineWindow) return;
+      event.preventDefault();
+      if (!event.repeat) openHelp();
+    };
+    window.addEventListener("keydown", handleHelp, true);
+    return () => window.removeEventListener("keydown", handleHelp, true);
+  }, [openHelp]);
   const dockBlocked = updates.frozen || saveShieldActive || timeline.phase === 'saving'
     || settingsVisible || !!quickReminder || !!confirmation || dayModalOpen;
   const selectTool = (next: WorkRailTool) => {
@@ -620,7 +633,7 @@ export function App({
   </>);
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
-      <Titlebar onSettings={sharing.state&&sharing.api?()=>sharing.openSettings():undefined} sharing={null} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
+      <Titlebar onSettings={sharing.state&&sharing.api?()=>sharing.openSettings():undefined} onHelp={openHelp} onRuntimeVersion={setRuntimeVersion} sharing={null} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
       {updates.frozen&&<div className="update-blocked update-ui" role="alert">{updates.editingBlocked?'앱을 종료한 뒤 다시 열어 주세요. 종료 준비 실패로 편집을 잠시 중지했습니다.':'업데이트 설치 준비 중입니다. 저장을 마칠 때까지 기다려 주세요.'}</div>}
       <div className="saving-content" inert={updates.frozen||saveShieldActive} onKeyDownCapture={event => {
         if (event.key !== "F6" || dockBlocked) return;
@@ -772,7 +785,7 @@ export function App({
       <div className="toast" hidden={!!warning} role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
       </div>
       {tool === "home" && <Home date={workDate} snapshot={timeline.snapshot} phase={timeline.phase} timelineError={timeline.error}
-        sharing={sharing.state} sharingError={sharing.error} node={node} onRefresh={() => void timeline.refresh()}
+        sharing={sharing.state} sharingError={sharing.error} node={node} version={runtimeVersion} onRefresh={() => void timeline.refresh()}
         onEnvironment={environmentPicker.openPicker} onSettings={sharing.state&&sharing.api?()=>sharing.openSettings('sharing'):undefined}
         onPlanrail={() => {
           selectTool("planrail");
@@ -787,7 +800,7 @@ export function App({
       </div>
       {!dockBlocked && environmentPicker.dialog}
       {planrailActive&&<PlanRailStatus sharing={sharing.error?.code==='IPC_UNAVAILABLE'?null:sharing.state} muted={reminders.muted} loading={reminders.loading}/>}
-      {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings externalDirty={editor.dirty} request={sharing.settingsRequest} initialTab={sharing.settingsTab} state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
+      {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings externalDirty={editor.dirty} request={sharing.settingsRequest} initialTab={sharing.settingsTab} state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onHelp={openHelp} onGuard={setSettingsDirty}/>}
       {quickReminder&&<QuickReminder key={quickReminder.id} schedule={timeline.snapshot?.schedules.find(s=>s.id===quickReminder.id)} caller={quickReminder.caller}
         disabled={!canEdit||saving||saveShieldActive} busy={saving||saveShieldActive} covered={!!confirmation} onRefresh={()=>void timeline.refresh()} onGuard={setQuickDirty} onClose={requestCloseQuick} onSave={saveQuickReminder}/>}
       {confirmation && (

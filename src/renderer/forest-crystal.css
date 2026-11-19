@@ -449,6 +449,7 @@ html[data-update-frozen="true"] .saving-content { opacity:.65; }
 .sharing-settings .holiday-weekdays button[aria-pressed=true]:hover:enabled,
 .sharing-settings .sharing-role button[aria-pressed=true]:hover:enabled {background-color:rgba(211,110,110,.25);}
 .settings-tabs {display:flex;gap:6px;border-bottom:1px solid var(--border);padding:8px 0 12px;flex-shrink:0;}
+.settings-title-controls {display:flex;align-items:center;gap:6px;}
 .sharing-settings .settings-tabs button[aria-selected=true] {background:var(--selected-control);border-color:var(--selected-border);}
 .sharing-settings [role=tabpanel][hidden] {display:none;}
 .sharing-settings section.holiday-settings {margin-top:18px;}

@@ -4,7 +4,7 @@ import {reminderChannel,reminderChanged,type ReminderApi} from '../shared/remind
 import {nodeManagementChannel,nodeManagementChanged,type NodeManagementApi,type NodeManagementResult,type NodeManagementState,type StandaloneRemovalConfirmation} from '../shared/node-management'
 import { contextBridge, ipcRenderer } from 'electron'
 import { channels, type TimelineApi } from '../shared/api'
-import { windowChannel, type WindowCommand, type WindowApi } from '../shared/window-api'
+import { windowChannel, type WindowApi } from '../shared/window-api'
 const api = Object.fromEntries(
   Object.entries(channels).map(([method, channel]) => [
     method,
@@ -26,8 +26,8 @@ const api = Object.fromEntries(
 contextBridge.exposeInMainWorld('simpleTimeline', api)
 
 contextBridge.exposeInMainWorld('timelineWindow', {
-  command: async (command: WindowCommand) => {
-    try { return await ipcRenderer.invoke(windowChannel, command) }
+  command: async (...args: Parameters<WindowApi['command']>) => {
+    try { return await ipcRenderer.invoke(windowChannel, ...args) }
     catch { return {ok:false} }
   },
 } satisfies WindowApi)

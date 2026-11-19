@@ -1,5 +1,5 @@
 import type { UpdateRoutes } from '../updates/transport'
-import {validateHolidayEnvelope,expandHolidayCalendar} from '../../domain/holidays'
+import {validateHolidayEnvelope,expandHolidayCalendar,reportedVersion} from '../../domain/holidays'
 import { validateChangeEnvelope } from '../../domain/change-notifications'
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer, type Server } from 'node:https'
@@ -9,7 +9,7 @@ import { normalizeIPv4, validatePort, validateSharingIdentity, validateWireSnaps
 import type { SharingStore } from '../db/sharing/store'
 import type { SharingAddress } from '../../shared/sharing'
 import { certificatePin, hostServerName, type HostIdentity } from './identity'
-import { REQUEST_LIMIT, REQUEST_TIMEOUT_MS, RESPONSE_LIMIT, SharingNetworkError } from './transport'
+import { REQUEST_LIMIT, REQUEST_TIMEOUT_MS, RESPONSE_LIMIT, SharingNetworkError, sharingVersionHeader } from './transport'
 
 type StoreMethods = Pick<SharingStore, 'getDevice' | 'listDevices' | 'getDeviceInstallationId' | 'saveDevice' | 'putCredential' | 'activateCredential' | 'revokePendingCredentials' | 'findCredential' | 'getWireSnapshot'>
 export type HostStore = { [K in keyof StoreMethods]: (...args: Parameters<StoreMethods[K]>) => ReturnType<StoreMethods[K]> } & { getConfig(): { hostId: string; datasetId: string }; getChangeSnapshot?: SharingStore['getChangeSnapshot'] }
@@ -39,14 +39,15 @@ function readBody(req: IncomingMessage): Promise<unknown> {
     req.once('end', () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8'))) } catch { reject(new SharingNetworkError('INVALID_REQUEST', 400)) } })
   })
 }
-function send(res: ServerResponse, status: number, body?: unknown, etag?: string) {
+function send(res: ServerResponse, status: number, body?: unknown, etag?: string, hostVersion?: string | null) {
   const bytes = body === undefined ? undefined : Buffer.from(JSON.stringify(body))
   if (bytes && bytes.length > RESPONSE_LIMIT) fail('RESPONSE_TOO_LARGE', 413)
-  res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', connection: 'close', ...(bytes ? { 'content-length': bytes.length } : {}), ...(etag ? { etag } : {}) })
+  res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store', connection: 'close', ...(bytes ? { 'content-length': bytes.length } : {}), ...(etag ? { etag } : {}), ...(hostVersion ? { [sharingVersionHeader]: hostVersion } : {}) })
   res.end(bytes)
 }
-export function createSharingHost(options: { identity: HostIdentity; store: HostStore; onChange?: () => void; onSyncComplete?:(deviceId:string,version?:unknown,versionBindingCurrent?:boolean)=>void; onPairConfirmed?:(pair:PendingPair)=>void; holidays?:()=>unknown; now?: () => number; updates?: UpdateRoutes }) {
+export function createSharingHost(options: { identity: HostIdentity; store: HostStore; appVersion?:string; onChange?: () => void; onSyncComplete?:(deviceId:string,version?:unknown,versionBindingCurrent?:boolean)=>void; onPairConfirmed?:(pair:PendingPair)=>void; holidays?:()=>unknown; now?: () => number; updates?: UpdateRoutes }) {
   const { identity, store } = options
+  const hostVersion = reportedVersion(options.appVersion)
   const now = options.now ?? (() => performance.now())
   const attempts = new Map<string, Attempt>()
   const rate = new Map<string, { start: number; count: number }>()
@@ -87,7 +88,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
           if(!server||requestGeneration!==generation||![200,304].includes(res.statusCode)||authenticate(req,ip).id!==deviceId)return
           const credential=store.findCredential(hashCredential(req.headers.authorization!.slice(7)))
           const versionBindingCurrent=credential?.installationId===store.getDeviceInstallationId(deviceId)
-          options.onSyncComplete?.(deviceId,versionBindingCurrent?req.headers['x-planrail-version']:undefined,versionBindingCurrent)
+          options.onSyncComplete?.(deviceId,versionBindingCurrent?req.headers[sharingVersionHeader]:undefined,versionBindingCurrent)
         }catch{/* Revoked or replaced before response completion. */}
       })
       const clock = now()
@@ -117,7 +118,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
         completedSync(device.id)
         const snapshot = validateWireSnapshot(store.getWireSnapshot(device.id))
         const etag = `"${hashCredential(JSON.stringify(snapshot))}"`
-        send(res, req.headers['if-none-match'] === etag ? 304 : 200, req.headers['if-none-match'] === etag ? undefined : snapshot, etag)
+        send(res, req.headers['if-none-match'] === etag ? 304 : 200, req.headers['if-none-match'] === etag ? undefined : snapshot, etag, hostVersion)
         return
       }
       if (req.method !== 'POST' || !['/v1/changes/sync', '/v1/pair/begin', '/v1/pair/confirm', '/v1/pair/finish', '/v1/pair/ack'].includes(req.url ?? '')) fail('NOT_FOUND', 404)
@@ -133,7 +134,7 @@ export function createSharingHost(options: { identity: HostIdentity; store: Host
         try { envelope = validateChangeEnvelope(store.getChangeSnapshot(device.id, b.cursor as string | null, b.reconnecting)) }
         catch (error) { if (error instanceof Error && error.message === 'CHANGE_CURSOR_INVALID') fail('CHANGE_CURSOR_INVALID', 409); throw error }
         completedSync(device.id)
-        send(res, 200, envelope, `"${hashCredential(JSON.stringify(envelope.snapshot))}"`)
+        send(res, 200, envelope, `"${hashCredential(JSON.stringify(envelope.snapshot))}"`, hostVersion)
         return
       }
       if (req.url === '/v1/pair/begin') {

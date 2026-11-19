@@ -272,6 +272,7 @@ test("real production package installs, works offline, updates and retains DB af
       "/D=" + installDir,
     ]);
     page = await launch(installed, update.version);
+    expect(await page.evaluate(async () => (await window.timelineWindow!.command("state")).runtimeVersion)).toBe(update.version);
     expect(await snapshot(page)).toEqual(persisted);
     expect(await canConnect()).toBe(false);
     evidence.updated = true;

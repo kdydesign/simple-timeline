@@ -21,7 +21,7 @@ export interface CredentialPersistence {
   save(connection: ClientConnection): Promise<void>
 }
 export type PairOutcome = { kind: 'pending'; pair: PendingPair } | { kind: 'ready'; connection: ClientConnection }
-export type PollOutcome = PairOutcome | { kind: 'snapshot'; snapshot: WireSnapshot; etag: string; changes?: ChangeEnvelope; changesSupported?: boolean } | { kind: 'unchanged'; changesSupported?: boolean } | { kind: 'revoked' }
+export type PollOutcome = PairOutcome | ({ kind: 'snapshot'; snapshot: WireSnapshot; etag: string; changes?: ChangeEnvelope } | { kind: 'unchanged' }) & { changesSupported?: boolean; hostVersion?: string | null } | { kind: 'revoked' }
 interface ClientAttempt { pair: PendingPair; proof: string; datasetId: string; confirmed: boolean; token?: string; acknowledged?: boolean }
 function bodyRecord(response: TransportResponse): Record<string, unknown> {
   if (!response.body || typeof response.body !== 'object' || Array.isArray(response.body)) throw new SharingNetworkError('INVALID_RESPONSE')
@@ -140,7 +140,7 @@ export class SharingClient {
           try { changes = validateChangeEnvelope(b) } catch { throw new SharingNetworkError('INVALID_RESPONSE') }
           if (response.status !== 200 || typeof response.etag !== 'string' || !/^"[a-f0-9]{64}"$/.test(response.etag)) throw new SharingNetworkError('INVALID_RESPONSE')
           this.changesSupported = true
-          return { kind: 'snapshot', snapshot: changes.snapshot, etag: response.etag, changes, changesSupported: true }
+          return { kind: 'snapshot', snapshot: changes.snapshot, etag: response.etag, changes, changesSupported: true, hostVersion: response.hostVersion ?? null }
         } catch (e) {
           if (e instanceof SharingNetworkError && e.code === 'REVOKED' && e.status === 403) return { kind: 'revoked' }
           if (!(e instanceof SharingNetworkError && e.status === 404 && this.changesSupported === null)) throw e
@@ -151,7 +151,7 @@ export class SharingClient {
       catch (e) { if (e instanceof SharingNetworkError && e.code === 'REVOKED' && e.status === 403) return { kind: 'revoked' }; throw e }
       if (response.status === 304) {
         if (!etag || response.etag !== etag) throw new SharingNetworkError('INVALID_RESPONSE')
-        return { kind: 'unchanged', changesSupported: false }
+        return { kind: 'unchanged', changesSupported: false, hostVersion: response.hostVersion ?? null }
       }
       const b = bodyRecord(response)
       const datasetId = this.checkIdentity(b)
@@ -159,7 +159,7 @@ export class SharingClient {
       let snapshot: WireSnapshot
       try { snapshot = validateWireSnapshot(b) } catch { throw new SharingNetworkError('INVALID_RESPONSE') }
       if (typeof response.etag !== 'string' || !/^"[a-f0-9]{64}"$/.test(response.etag)) throw new SharingNetworkError('INVALID_RESPONSE')
-      return { kind: 'snapshot', snapshot, etag: response.etag, changesSupported: false }
+      return { kind: 'snapshot', snapshot, etag: response.etag, changesSupported: false, hostVersion: response.hostVersion ?? null }
     })
   }
   async pollHolidays(options:{force?:boolean;signal?:AbortSignal}={}):Promise<HolidayPoll>{

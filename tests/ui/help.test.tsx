@@ -1,8 +1,32 @@
 import {expect,it,vi} from 'vitest'
-import {render,screen,waitFor,fireEvent} from '@testing-library/react'
+import {act,render,screen,waitFor,fireEvent,within} from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import {HelpApp} from '../../src/renderer/help/HelpApp'
-import type {HelpApi} from '../../src/shared/help'
+import type {HelpApi,HelpReadingState} from '../../src/shared/help'
+it('restores a section and scroll on reopen even when both menus display the same article',async()=>{
+ let opened!:()=>void
+ let openId=0
+ const home:HelpReadingState={section:'home',topicId:'node-management',query:'LTS',scrollTop:140}
+ const node:HelpReadingState={section:'noderail',topicId:'node-management',query:'환경',scrollTop:20}
+ const command=vi.fn(async(name:string)=>name==='state'
+  ? {ok:true,openId:++openId,reading:openId<3?home:node}
+  : {ok:true})
+ render(<HelpApp api={{command,onOpen:fn=>{opened=fn;return()=>{}}}}/>)
+ await screen.findByRole('heading',{name:'Node 버전 설치와 전환'})
+ expect(screen.getByRole('main').scrollTop).toBe(140)
+ expect(screen.getByRole('searchbox')).toHaveValue('LTS')
+ const result=within(screen.getByRole('navigation')).getByRole('button',{name:/Node 버전 설치와 전환/})
+ expect(result).toHaveTextContent('NodeRail')
+ const overview=within(screen.getByRole('main')).getByRole('button',{name:'WorkRail 홈과 도구 전환'})
+ await userEvent.click(overview)
+ expect(screen.getByRole('heading',{name:'WorkRail 홈과 도구 전환'})).toBeVisible()
+ expect(command).toHaveBeenCalledWith('remember',{section:'home',topicId:'workrail-home',query:'LTS',scrollTop:0})
+ await act(async()=>opened())
+ expect(screen.getByRole('main').scrollTop).toBe(140)
+ await act(async()=>opened())
+ expect(screen.getByRole('searchbox')).toHaveValue('환경')
+ expect(screen.getByRole('main').scrollTop).toBe(20)
+})
 function api(topicId='host-start'){
  const command=vi.fn(async(command:string)=>command==='state'?{ok:true,version:'0.8.1',reading:{topicId,query:'',scrollTop:0}}:{ok:true})
  return {command} as unknown as HelpApi&{command:ReturnType<typeof vi.fn>}

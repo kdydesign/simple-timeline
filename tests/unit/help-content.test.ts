@@ -1,7 +1,7 @@
 import {expect,it} from 'vitest'
 import {existsSync} from 'node:fs'
 import {helpArticles,searchHelp,validateHelpContent} from '../../src/shared/help-content'
-import {helpTopicIds,initialHelpTopic} from '../../src/shared/help'
+import {helpSectionIds,helpTopicIds,initialHelpTopic} from '../../src/shared/help'
 it('covers every stable topic with valid local image paths and related links',()=>{
  expect(validateHelpContent(helpArticles)).toEqual([])
  expect(helpArticles.map(x=>x.id).sort()).toEqual([...helpTopicIds].sort())
@@ -15,6 +15,9 @@ it('searches Korean titles/body/steps and trims query without searching user dat
  expect(searchHelp('지문').every(x=>x.excerpt.includes('지문'))).toBe(true)
  expect(searchHelp('존재하지않는항목123')).toEqual([])
  expect(initialHelpTopic('personal')).toBe('app-overview');expect(initialHelpTopic('host')).toBe('host-start');expect(initialHelpTopic('member')).toBe('member-connect')
+})
+it.each(helpSectionIds)('starts %s at the first article in its table of contents',section=>{
+ expect(initialHelpTopic('host',section)).toBe(helpArticles.find(a=>a.menu===section)?.id)
 })
 it.each(['Space','Ctrl','프로젝트 추가','일정 추가','트레이','100%'])('documents core Planrail capability %s',query=>{
  expect(searchHelp(query).length).toBeGreaterThan(0)

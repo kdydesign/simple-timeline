@@ -2,12 +2,14 @@ import { request } from 'node:https'
 import { checkServerIdentity, connect } from 'node:tls'
 import { X509Certificate } from 'node:crypto'
 import { normalizeIPv4, validatePort } from '../../domain/sharing'
+import { reportedVersion } from '../../domain/holidays'
 import type { SharingAddress } from '../../shared/sharing'
 import { certificatePin, hostServerName } from './identity'
 
 export const REQUEST_LIMIT = 1024 * 1024
 export const RESPONSE_LIMIT = 16 * 1024 * 1024
 export const REQUEST_TIMEOUT_MS = 5000
+export const sharingVersionHeader = 'x-planrail-version'
 export interface HostTrust { hostId: string; serverName: string; certificate: string; pin: string }
 export class SharingNetworkError extends Error {
   constructor(readonly code: string, readonly status?: number) { super(messageFor(code)); this.name = 'SharingNetworkError' }
@@ -68,7 +70,7 @@ export interface PinnedRequestOptions {
   body?: unknown; token?: string; proof?: string; etag?: string; signal?: AbortSignal
   timeoutMs?: number; localAddress?: string; appVersion?:string
 }
-export interface TransportResponse { status: number; body: unknown; etag?: string }
+export interface TransportResponse { status: number; body: unknown; etag?: string; hostVersion?: string | null }
 export async function pinnedRequest(options: PinnedRequestOptions): Promise<TransportResponse> {
   const target = endpoint(options.address)
   validateTrust(options.trust)
@@ -82,7 +84,7 @@ export async function pinnedRequest(options: PinnedRequestOptions): Promise<Tran
       checkServerIdentity: (name, cert) => checkServerIdentity(name, cert) ?? (certificatePin(cert.raw) === options.trust.pin ? undefined : new SharingNetworkError('TLS_UNTRUSTED')),
       path: options.path, method: options.method ?? 'GET', headers: {
         'x-planrail-protocol': '1', ...(data ? { 'content-type': 'application/json', 'content-length': data.length } : {}),
-        ...(options.appVersion?{'x-planrail-version':options.appVersion}:{}),
+        ...(options.appVersion?{[sharingVersionHeader]:options.appVersion}:{}),
         ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
         ...(options.proof ? { 'x-planrail-proof': options.proof } : {}), ...(options.etag ? { 'if-none-match': options.etag } : {}),
       },
@@ -108,7 +110,10 @@ export async function pinnedRequest(options: PinnedRequestOptions): Promise<Tran
             const code = body && typeof body === 'object' && 'code' in body && typeof body.code === 'string' ? body.code : 'INVALID_RESPONSE'
             throw new SharingNetworkError(code, status)
           }
-          finish(undefined, { status, body, etag: typeof res.headers.etag === 'string' ? res.headers.etag : undefined })
+          const sync = options.token && (status === 200 || status === 304) && (options.path === '/v1/snapshot' || options.path === '/v1/changes/sync')
+          finish(undefined, { status, body, etag: typeof res.headers.etag === 'string' ? res.headers.etag : undefined,
+            ...(sync ? {hostVersion:reportedVersion(res.headers[sharingVersionHeader])} : {}),
+          })
         } catch (e) { finish(e instanceof SharingNetworkError ? e : new SharingNetworkError('INVALID_RESPONSE')) }
       })
     })

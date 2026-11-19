@@ -32,6 +32,29 @@ it('keeps one constrained sandboxed window and restores reading state after clos
  w.close();manager.open();const next=mocks.windows[0];expect(invoke(next,'state')).toMatchObject({reading:{topicId:'member-connect',query:'승인',scrollTop:140}})
  manager.dispose();expect(next.dead).toBe(true);expect(mocks.handlers.has('help:command')).toBe(false);manager.open();expect(mocks.windows).toHaveLength(1)
 })
+it('opens each menu at its first article and restores only its own search and reading',()=>{
+ const {manager}=setup()
+ manager.open('home')
+ const w=mocks.windows[0]
+ expect(invoke(w,'state')).toMatchObject({reading:{section:'home',topicId:'workrail-home',query:'',scrollTop:0}})
+ const home={section:'home',topicId:'member-connect',query:'지문',scrollTop:140}
+ expect(invoke(w,'remember',home)).toEqual({ok:true})
+ manager.open('noderail')
+ expect(invoke(w,'state')).toMatchObject({reading:{section:'noderail',topicId:'node-management',query:'',scrollTop:0}})
+ expect(invoke(w,'remember',home)).toEqual({ok:false})
+ expect(invoke(w,'remember',{topicId:'node-management',query:'',scrollTop:1})).toEqual({ok:false})
+ const node={section:'noderail',topicId:'node-management',query:'LTS',scrollTop:54}
+ expect(invoke(w,'remember',node)).toEqual({ok:true})
+ manager.open('settings')
+ expect(invoke(w,'state')).toMatchObject({reading:{section:'settings',topicId:'settings',query:'',scrollTop:0}})
+ manager.open('planrail')
+ expect(invoke(w,'state')).toMatchObject({reading:{section:'planrail',topicId:'app-overview',query:'',scrollTop:0}})
+ manager.open('home')
+ expect(invoke(w,'state').reading).toEqual(home)
+ manager.open('noderail')
+ expect(invoke(w,'state').reading).toEqual(node)
+ expect(mocks.windows).toHaveLength(1)
+})
 it('does not reveal a loading window after tray hiding and restores only an existing help',()=>{
  const {manager}=setup();manager.restoreWithMain();expect(mocks.windows).toHaveLength(0)
  manager.open();const w=mocks.windows[0];manager.hideWithMain();w.emit('ready-to-show');expect(w.visible).toBe(false)

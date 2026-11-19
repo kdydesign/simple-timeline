@@ -3,6 +3,7 @@ import {configureTaskbarDetails} from './taskbar-details'
 import {createNotificationStore} from './db/notifications'
 import {createUpdateNotifications} from './notifications/updates'
 import {dueReminders} from '../domain/reminder'
+import {reportedVersion} from '../domain/holidays'
 import { windowsLoginStartup } from './windows-login-startup'
 import { createHelpPerformance } from './help-performance'
 import { createHelpWindow } from './help-window'
@@ -195,8 +196,8 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   let refreshUpdates=()=>{}
   const updateNotifications=notificationPolicy?createUpdateNotifications({store:notificationPolicy,send:options.changeSender??nativeReminders.send,open:()=>{if(exiting||appMutationBarrier.blocked())return;show();void updates?.requestOpen()},changed:()=>{if(updates)updatesIpc.changed(updates.getState())}}):undefined
   let sharingIpc:ReturnType<typeof registerSharingIpc>|undefined
-  let runningVersion=app.isPackaged?app.getVersion():undefined
-  if(!app.isPackaged){try{runningVersion=JSON.parse(await readFile(join(app.getAppPath(),'package.json'),'utf8')).version+'-dev'}catch{/* Unavailable development metadata must not report Electron's version. */}}
+  let runningVersion=app.isPackaged?reportedVersion(app.getVersion())??undefined:undefined
+  if(!app.isPackaged){try{runningVersion=reportedVersion(JSON.parse(await readFile(join(app.getAppPath(),'package.json'),'utf8')).version+'-dev')??undefined}catch{/* Unavailable development metadata must not report Electron's version. */}}
   const sharing=storage.state==='ready'?createSharingService({storage,profile,appVersion:runningVersion,mutationsBlocked:()=>appMutationBarrier.blocked(),roleSwitchBlocked:()=>{const state=updates?.getState();return !!(state?.host?.importing||state?.phase==='installing'||state?.editingBlocked)},beforeRoleSwitch:async()=>{
     const state=updates?.getState()
     if(state?.host?.importing||state?.phase==='installing'||state?.editingBlocked)throw new Error('공유 역할을 변경하기 전에 업데이트 작업을 마쳐 주세요.')
@@ -234,11 +235,11 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     if(uiReady)await service.confirmHealthyStartup()
   }).catch(()=>{/* Storage initialization failure is exposed by unavailable update IPC; existing app data remains usable. */})
   void sharing?.start()
-  help=createHelpWindow({performance:createHelpPerformance(profile,app.getVersion()),mainWindow:window,url:new URL('help.html',rendererUrl).href,preload:join(__dirname,'../preload/help.cjs'),role:()=>sharing?.getState().role??'personal',version:app.getVersion(),icon:desktopIcon,
+  help=createHelpWindow({performance:createHelpPerformance(profile,app.getVersion()),mainWindow:window,url:new URL('help.html',rendererUrl).href,preload:join(__dirname,'../preload/help.cjs'),role:()=>sharing?.getState().role??'personal',version:runningVersion,icon:desktopIcon,
     onError:()=>{show();dialog.showErrorBox('도움말을 열지 못했습니다','주 창은 계속 사용할 수 있습니다. 물음표 버튼을 눌러 도움말을 다시 열어 주세요.')},
   })
   const releases=createReleaseWindow({mainWindow:window,url:new URL('release-notes.html',rendererUrl).href,preload:join(__dirname,'../preload/release-notes.cjs'),version:app.getVersion(),icon:desktopIcon,onError:()=>{show();dialog.showErrorBox('릴리즈노트를 열지 못했습니다','주 창은 계속 사용할 수 있습니다. 릴리즈노트 버튼을 눌러 다시 열어 주세요.')}})
-  const unregisterWindow = registerWindowIpc(window, rendererUrl,()=>{if(!exiting&&!installPending)help?.open()},()=>{if(!exiting&&!installPending)releases.open()})
+  const unregisterWindow = registerWindowIpc(window, rendererUrl,section=>{if(!exiting&&!installPending)help?.open(section)},()=>{if(!exiting&&!installPending)releases.open()},runningVersion)
   const unregister = registerTimelineIpc(
     window,
     storage.state==='ready'&&sharing?{...storage,repository:sharing.repository}:storage,

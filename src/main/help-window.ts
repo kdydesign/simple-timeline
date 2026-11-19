@@ -1,14 +1,15 @@
 import {BrowserWindow,ipcMain,screen} from 'electron'
-import {helpChannel,helpOpened,initialHelpTopic,validHelpReading,type HelpReadingState} from '../shared/help'
+import {helpChannel,helpOpened,initialHelpTopic,validHelpReading,validLegacyHelpReading,type HelpReadingState,type HelpSection} from '../shared/help'
 import {helpTimingProbe,observeHelpRequests} from './help-diagnostics'
 import type {createHelpPerformance} from './help-performance'
 interface HelpOptions {
- mainWindow:BrowserWindow;url:string;preload:string;role:()=>string;version:string;icon?:string;onError:()=>void
+ mainWindow:BrowserWindow;url:string;preload:string;role:()=>string;version?:string;icon?:string;onError:()=>void
  performance?:ReturnType<typeof createHelpPerformance>
 }
 /** A prepared window is not an open window: only explicit opens participate in tray restoration. */
 export function createHelpWindow(options:HelpOptions) {
- let window:BrowserWindow|undefined,reading:HelpReadingState|undefined
+ let window:BrowserWindow|undefined,section:HelpSection='planrail',legacyEntry=false
+ const readings = new Map<HelpSection,HelpReadingState>()
  let disposed=false,wanted=false,restoreTogether=false,ready=false,focusWhenReady=false,opened=false,openId=0,serial=0
  const reveal=(focus:boolean)=>{
   if(!window||window.isDestroyed()||!ready||!wanted)return
@@ -26,8 +27,11 @@ export function createHelpWindow(options:HelpOptions) {
   const [command,state]=args
   if(command==='preload-timing')return {ok:args.length===2&&(options.performance?.preload(state)??false)}
   if(command==='remember'){
-   if(args.length!==2||!validHelpReading(state)||!opened)return {ok:false}
-   reading={...state};return {ok:true}
+   if(args.length!==2||!opened)return {ok:false}
+   if(validHelpReading(state)&&state.section===section)readings.set(section,{...state})
+   else if(legacyEntry&&validLegacyHelpReading(state))readings.set(section,{...state,section})
+   else return {ok:false}
+   return {ok:true}
   }
   if(command==='ready'){
    if(args.length!==2||!wanted||typeof state!=='number'||state!==openId||openId===0)return {ok:false}
@@ -35,7 +39,7 @@ export function createHelpWindow(options:HelpOptions) {
   }
   if(args.length!==1)return {ok:false}
   switch(command){
-   case 'state':return {ok:true,reading:{...(reading??{topicId:initialHelpTopic(options.role()),query:'',scrollTop:0})},openId,version:options.version,maximized:w.isMaximized()}
+   case 'state':return {ok:true,reading:{...(readings.get(section)??{section,topicId:initialHelpTopic(options.role()),query:'',scrollTop:0})},openId,version:options.version,maximized:w.isMaximized()}
    case 'minimize':w.minimize();break
    case 'toggle-maximize':w.isMaximized()?w.unmaximize():w.maximize();break
    case 'close':w.close();return {ok:true}
@@ -75,12 +79,14 @@ export function createHelpWindow(options:HelpOptions) {
  }
  return {
   prepare,
-  open(){
+  open(nextSection?:HelpSection){
    if(disposed)return
    const kind=!window||window.isDestroyed()?'cold':!opened?'prepared':wanted?'existing':'reopen'
    openId=options.performance?.open(kind)??++serial
    wanted=true;restoreTogether=false;focusWhenReady=true
-   if(!opened){reading={topicId:initialHelpTopic(options.role()),query:'',scrollTop:0};opened=true}
+   section=nextSection??'planrail';legacyEntry=nextSection===undefined
+   if(!readings.has(section))readings.set(section,{section,topicId:initialHelpTopic(options.role(),nextSection),query:'',scrollTop:0})
+   opened=true
    prepare();if(ready){notifyOpen();reveal(true)}
   },
   hideWithMain(){if(wanted&&window&&!window.isDestroyed()){restoreTogether=true;wanted=false;focusWhenReady=false;window.hide()}},

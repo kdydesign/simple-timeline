@@ -43,6 +43,7 @@ export interface SharingState {
   approvalRequestToken?:string|null
   memberPresence?:Record<string,MemberPresence>
   connectedMembers?:number
+  hostVersion?:string|null
   availableAddresses: string[]
   snapshotRevision: number
   cleanupPending: boolean

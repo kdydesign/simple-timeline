@@ -14,6 +14,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   delete window.workrailNodeManagement
+  delete window.timelineWindow
   vi.useRealTimers()
 })
 
@@ -56,6 +57,29 @@ function dock(name: 'Home' | 'PlanRail' | 'NodeRail') {
 const home = () => screen.getByRole('main', { name: 'Home' })
 const node = () => screen.getByRole('main', { name: 'NodeRail' })
 const installed = () => within(node()).getByRole('region', { name: '설치된 버전' })
+
+it('opens help in the visible tool or settings context and displays the main runtime version', async () => {
+  sharingFixture({})
+  const command = vi.fn(async () => ({ok:true, runtimeVersion:'2.7.3-dev'}))
+  window.timelineWindow = {command}
+  const user = userEvent.setup()
+  render(<App initialTool="home" api={memoryApi().api} />)
+  expect(await within(home()).findByText('내 WorkRail 2.7.3-dev')).toBeVisible()
+  await user.click(screen.getByRole('button', {name:'도움말'}))
+  expect(command).toHaveBeenLastCalledWith('help','home')
+  await user.click(dock('PlanRail'))
+  await user.keyboard('{F1}')
+  expect(command).toHaveBeenLastCalledWith('help','planrail')
+  await user.click(dock('NodeRail'))
+  await user.keyboard('{F1}')
+  expect(command).toHaveBeenLastCalledWith('help','noderail')
+  await user.click(screen.getByRole('button', {name:'설정'}))
+  const settings = await screen.findByRole('dialog', {name:'설정'})
+  await user.keyboard('{F1}')
+  expect(command).toHaveBeenLastCalledWith('help','settings')
+  await user.click(within(settings).getByRole('button', {name:'설정 도움말'}))
+  expect(command).toHaveBeenLastCalledWith('help','settings')
+})
 
 it('opens the dashboard with inclusive, ordered schedules independent of the Planrail filter', async () => {
   nodeFixture()
