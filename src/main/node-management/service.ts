@@ -224,7 +224,8 @@ export function createNodeManagementService(options: {
     setPhase('verifying')
     const updated = await inspect()
     if (outcome.status !== 'success') return exitErrors[outcome.status]
-    const verified = updated && updated.manager.status === 'ready' && (kind === 'install-manager' ? updated.conflicts.length === 0 : !operationBlocked(updated, kind)) && (
+    const preservedDefault = kind !== 'install' || (updated?.activeVersion === current.activeVersion && updated.activeSource === current.activeSource)
+    const verified = preservedDefault && updated && updated.manager.status === 'ready' && (kind === 'install-manager' ? updated.conflicts.length === 0 : !operationBlocked(updated, kind)) && (
       kind === 'install-manager' ? updated.installation !== null
         : kind === 'install' ? version !== null && updated.installedVersions.includes(version)
         : updated.activeSource === 'nvm' && updated.activeVersion === version && updated.activeX64 !== false

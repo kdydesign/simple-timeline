@@ -13,11 +13,11 @@ const digests = new Map([
   [path('utils', 'proxy.exe'), 'fb4256ea5f2f7a3cfceeed9f7bf889a031ad04e594f6e4c5a9851824f561af90'],
   [path('utils', 'sync.exe'), '26a564b61887676e55023e4f8476750988d425968c953bcc7126a14f035daf78'],
 ])
-function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim' | 'link' | 'command' | 'helper-read') {
+function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim' | 'link' | 'command' | 'helper-read' | 'empty') {
   const linkedTarget = settings.OperatingMode === 'link' ? path('installs', 'v22.9.0') : path('.shim')
   const probe: WindowsProbe = {
     readEnvironment: async () => ({ Path: home + ';' + path('.nodejs'), NVM_HOME: home }),
-    readModernSettings: async () => JSON.stringify({ InstallRoot: root, OperatingMode: 'shim', ActiveVersion: '22.9.0', ...settings }),
+    readModernSettings: async () => JSON.stringify({ WriteSources: {}, InstallRoot: root, OperatingMode: 'shim', ActiveVersion: '22.9.0', ...settings }),
     readLink: async () => settings.OperatingMode === 'link' ? path('.link', 'nodejs') : path('.shim'),
     pathKind: async p => p === path('.nodejs') ? 'symlink'
       : (broken === 'command' && p === path('.nodejs', 'node.com')) || digests.has(p) || (settings.ActiveVersion !== '' && p === path('.nodejs', 'node.exe')) || p === path('installs', 'v22.9.0', 'node.exe') ? 'file'
@@ -26,7 +26,7 @@ function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim
       if (p === path('.nodejs') && settings.ActiveVersion === '') throw Error('no active target')
       return p === path('.nodejs') ? (broken === 'link' ? 'D:\\other' : linkedTarget) : p
     },
-    listDirectories: async () => { if (broken === 'list') throw Error('unreadable'); return ['v22.9.0'] },
+    listDirectories: async () => { if (broken === 'list') throw Error('unreadable'); return broken === 'empty' ? [] : ['v22.9.0'] },
     readSettings: async () => { throw Error('2.x has no settings.txt') },
     getManagerDigest: async p => {
       if (broken === 'helper-read' && p === path('utils', 'reshim.exe')) throw Error('access denied')
@@ -60,10 +60,32 @@ describe('nvm-windows 2.0.1', () => {
       activeSource: null, capabilities: { use: { available: false } }, conflicts: [{ code: 'path-priority' }],
     })
   })
-  it('permits installing the first version in a fresh link-mode setup', async () => {
+  it('permits installation with an existing version and a cleared link-mode default', async () => {
     expect(await inspect({ OperatingMode: 'link', ActiveVersion: '' })).toMatchObject({
       activeVersion: null, activeSource: null, capabilities: { install: { available: true } },
     })
+  })
+  it.each(['disabled', '  DiSABLED  ', 'NONE', ' off', '0'])('blocks install and link use when revocation is %j', async AuthenticodeRevocation => {
+    const state = await inspect({ OperatingMode: 'link', AuthenticodeRevocation })
+    expect(state.capabilities).toMatchObject({ list: { available: true }, use: { available: false, reason: expect.stringContaining('인증서') }, install: { available: false } })
+  })
+  it.each(['cached', ' Cache-Only ', 'wholechain', 'FULL'])('retains authenticated operations for %s', async AuthenticodeRevocation => {
+    expect((await inspect({ AuthenticodeRevocation, AllowedSigners: ['OpenJS Foundation'] })).capabilities).toMatchObject({ install: { available: true }, use: { available: true } })
+  })
+  it('blocks a broadened signing policy for installation and activation', async () => {
+    expect((await inspect({ AllowedSigners: ['Other Publisher'], OperatingMode: 'link' })).capabilities).toMatchObject({ list: { available: true }, install: { available: false }, use: { available: false } })
+  })
+  it.each([
+    ['ActiveVersion', 'machine-policy'], ['PreviousActiveVersion', 'user-policy'], ['ActiveVersion', 'machine-preference'],
+  ])('prevents a partial activation when %s is controlled by %s', async (key, source) => {
+    expect((await inspect({ WriteSources: { [key]: source } })).capabilities).toMatchObject({ install: { available: true }, use: { available: false, reason: expect.stringContaining(key) } })
+    expect((await inspect({ WriteSources: { [key]: 'user-preference' } })).capabilities?.use.available).toBe(true)
+  })
+  it('blocks a first install that would select a new default version, including a policy-controlled empty default', async () => {
+    for (const WriteSources of [{}, { ActiveVersion: 'machine-policy' }]) {
+      const state = await inspect({ OperatingMode: 'link', ActiveVersion: '', WriteSources }, 'empty')
+      expect(state.capabilities?.install).toMatchObject({ available: false, reason: expect.stringContaining('기본 버전') })
+    }
   })
   it('retains a readable inventory when a helper cannot be opened', async () => {
     expect(await inspect({}, 'helper-read')).toMatchObject({ installedVersions: ['22.9.0'], capabilities: { list: { available: true }, use: { available: false } } })

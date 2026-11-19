@@ -11,7 +11,7 @@ export const NVM_EXE_DIGEST = classicDigests[NVM_VERSION]
 
 export type NvmInstallation = InstallationPaths & (
   | { family: 'classic'; version: keyof typeof classicDigests }
-  | { family: 'modern'; version: '2.0.1'; mode: 'shim' | 'link' }
+  | { family: 'modern'; existingVersion?: string; version: '2.0.1'; mode: 'shim' | 'link' }
 )
 interface InstallationPaths {
   executableDigest: string
@@ -158,19 +158,28 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
   }
 
   const badExtensions = extensions.some(extension => !/^\.[a-z0-9]{1,8}$/.test(extension))
-  const nodePaths = await Promise.all(searchPath.map(async directory => {
-    if (!directory || badExtensions) return null
-    for (const extension of extensions) {
-      const path = win32.join(directory, 'node' + extension)
-      const kind = await probe.pathKind(path)
-      if (kind === 'file' || kind === 'symlink') return path
-    }
-    return null
-  }))
+  function resolveOnPath(name: string) {
+    return Promise.all(searchPath.map(async directory => {
+      if (!directory || badExtensions) return null
+      for (const extension of extensions) {
+        const path = win32.join(directory, name + extension)
+        const kind = await probe.pathKind(path)
+        if (kind === 'file' || kind === 'symlink') return path
+      }
+      return null
+    }))
+  }
+  const [nodePaths, managerPaths] = await Promise.all([resolveOnPath('node'), resolveOnPath('nvm')])
+  const effectiveManager = managerPaths.find(path => path !== null)
+  const uncertainIndex = searchPath.indexOf(null)
+  if (home && effectiveManager && !samePath(effectiveManager, win32.join(home, 'nvm.exe'))) {
+    addConflict('path-priority', effectiveManager, 'Windows PATH에서 먼저 선택되는 nvm이 감지한 관리자 위치와 다릅니다. NVM_HOME 및 PATH 순서를 확인해 주세요.')
+  } else if (home && uncertainIndex >= 0 && (!effectiveManager || uncertainIndex < managerPaths.indexOf(effectiveManager))) {
+    addConflict('path-priority', pathEntries[uncertainIndex], 'Windows PATH에서 nvm 명령의 우선순위를 확인할 수 없습니다.')
+  }
   const nodeIndex = nodePaths.findIndex(path => path !== null)
   const link = result.installation?.symlink
   const linkIndex = link ? searchPath.findIndex(directory => directory && samePath(directory, link)) : -1
-  const uncertainIndex = searchPath.indexOf(null)
   const precedesNode = uncertainIndex >= 0 && (nodeIndex < 0 || uncertainIndex < nodeIndex)
   if (badExtensions || precedesNode || (uncertainIndex >= 0 && linkIndex > uncertainIndex)) {
     addConflict('path-priority', badExtensions ? null : pathEntries[uncertainIndex], '로컬 절대 경로와 Windows PATHEXT 설정을 확인해 주세요. 현재 PATH의 Node 우선순위를 확정할 수 없습니다.')

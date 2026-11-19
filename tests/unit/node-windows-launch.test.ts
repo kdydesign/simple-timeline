@@ -85,3 +85,17 @@ it('launches 2.0.1 in the user account, with the registry snapshot and an offlin
   expect(worker).not.toContain('-Verb RunAs')
   expect(await adapter.changeVersion({ ...modern, executableDigest: 'a'.repeat(64) }, 'install', '22.9.0')).toEqual({ status: 'integrity-failed' })
 })
+
+it('denies any subprocess read access to the classic 1.1.11 asynchronous fallback while nvm runs', async () => {
+  const adapter = createWindowsNodeAdapter(vi.fn())
+  const legacy = { ...installation, version: '1.1.11' as const, executableDigest: 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791' }
+  expect(await adapter.changeVersion(legacy, 'use', '22.9.0')).toEqual({ status: 'success' })
+  const [, args] = io.exec.mock.calls[0]
+  const launcher = args.includes('-Command') ? args.at(-1) : decode(args.at(-1))
+  const worker = decode(launcher.match(/-EncodedCommand ([A-Za-z0-9+/=]+)/)![1])
+  for (const file of ['elevate.cmd', 'elevate.vbs']) {
+    const line = worker.split('\n').find(line => line.includes(legacy.root + '\\' + file))
+    expect(line).toContain('[IO.FileShare]::None')
+    expect(worker.indexOf(line!)).toBeLessThan(worker.indexOf('& $stagedExe'))
+  }
+})

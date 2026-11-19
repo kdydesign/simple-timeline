@@ -53,8 +53,8 @@ const psArgs = (script: string): string[] => [
 const powershellPath = (system: string) => win32.join(system, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
 
 const verifiedFileFunction = `
-function Open-VerifiedFile($path, $expected) {
-  $stream = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+function Open-VerifiedFile($path, $expected, $sharing = [IO.FileShare]::Read) {
+  $stream = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, $sharing)
   try {
     $hash = [Security.Cryptography.SHA256]::Create()
     try { $digest = [BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
@@ -68,9 +68,9 @@ function Open-VerifiedFile($path, $expected) {
 }
 `
 
-function lockHelpers(root: string, files: Record<string, string>, onFailure: string) {
+function lockHelpers(root: string, files: Record<string, string>, onFailure: string, exclusive = false) {
   return Object.entries(files).map(([relative, digest]) => `
-$stream = Open-VerifiedFile ${psLiteral(win32.join(root, relative))} ${psLiteral(digest)}
+$stream = Open-VerifiedFile ${psLiteral(win32.join(root, relative))} ${psLiteral(digest)}${exclusive ? ' ([IO.FileShare]::None)' : ''}
 if ($null -eq $stream) { ${onFailure} }
 $helpers += $stream`).join('\n')
 }
@@ -101,8 +101,10 @@ foreach ($key in @('HKEY_CURRENT_USER\\Software\\Microsoft\\Command Processor', 
   $autoRun = [Microsoft.Win32.Registry]::GetValue($key, 'AutoRun', $null)
   if ($null -ne $autoRun -and !($autoRun -is [string] -and $autoRun.Length -eq 0)) { exit 1622 }
 }
+# 1.1.11 may start wscript asynchronously on a direct link failure.
+# Deny all access to both legacy helpers until the synchronous CLI exits.
 $failure = 1610
-${invocation.legacyHelperRoot ? lockHelpers(invocation.legacyHelperRoot, legacyHelpers, 'exit 1610') : ''}
+${invocation.legacyHelperRoot ? lockHelpers(invocation.legacyHelperRoot, legacyHelpers, 'exit 1610', true) : ''}
 $failure = 1623
 $stage = [IO.Path]::Combine([IO.Path]::GetTempPath(), ('workrail-nvm-run-' + [Guid]::NewGuid().ToString('N')))
 [void][IO.Directory]::CreateDirectory($stage)
@@ -183,6 +185,14 @@ function modernCommand(installation: Extract<NvmInstallation, { family: 'modern'
   validateInstallation(installation, action, version)
   if (installation.version !== '2.0.1' || installation.executableDigest !== modernDigest) throw Error('Unverified modern nvm')
   const args = action === 'use' ? ['use', version, '--local'] : ['install', version]
+  if (installation.existingVersion !== undefined && !isNodeVersion(installation.existingVersion)) throw Error('Invalid installed version evidence')
+  // With an empty default the CLI auto-activates when ScanInstalled is empty.
+  // Keep a previously verified node.exe present until the install exits.
+  const existingNode = installation.existingVersion && win32.join(installation.root, 'v' + installation.existingVersion, 'node.exe')
+  const preserveDefault = action === 'install' ? `
+  if (!$settings['ActiveVersion']) {
+    ${existingNode ? '$helpers += [IO.File]::OpenRead(' + psLiteral(existingNode) + ')' : "throw 'First install would activate Node'"}
+  }` : ''
   return psArgs(`
 $ErrorActionPreference = 'Stop'
 ${verifiedFileFunction}
@@ -198,6 +208,7 @@ try {
   $hash = [Security.Cryptography.SHA256]::Create()
   try { $actual = [BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($snapshot))).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
   if ($actual -ne ${psLiteral(installation.settingsDigest)}) { throw 'Registry preferences changed' }
+  ${preserveDefault}
   $env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData')
   $env:APPDATA = [Environment]::GetFolderPath('ApplicationData')
   $env:USERPROFILE = [Environment]::GetFolderPath('UserProfile')

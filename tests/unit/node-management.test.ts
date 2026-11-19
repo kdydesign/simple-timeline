@@ -163,6 +163,15 @@ describe('Windows Node discovery', () => {
     })
   })
 
+  it.each(['nvm.exe', 'nvm.cmd'])('blocks changes when PATH resolves an earlier competing %s', async filename => {
+    const other = 'C:\\other'
+    const state = await local({ env: { Path: [other, home, symlink].join(';'), NVM_HOME: home, NVM_SYMLINK: symlink }, changes: [[other + '\\' + filename, 'file']] })
+    expect(state.capabilities).toMatchObject({ list: { available: true }, install: { available: false }, use: { available: false } })
+    expect(state.conflicts).toContainEqual(expect.objectContaining({ code: 'path-priority', path: other + '\\' + filename }))
+    const duplicate = await local({ env: { Path: [home.toUpperCase(), home, symlink].join(';'), NVM_HOME: home, NVM_SYMLINK: symlink } })
+    expect(duplicate.capabilities?.use.available).toBe(true)
+  })
+
   it('reports the existing standalone Node ahead of the nvm link', async () => {
     const state = await local({ path: [standalone], changes: [[standalone + '\\node.exe', 'file']] })
     expect(state).toMatchObject({
@@ -379,6 +388,32 @@ describe('Node operations', () => {
     expect(await service.getState()).toMatchObject({ busy: { kind: 'install' }, error: { code: 'operation-slow' } })
     resolve({ status: 'cancelled' })
     expect(await work).toMatchObject({ busy: null, error: { code: 'cancelled' } })
+  })
+
+  it('reports verification failure if a 2.0.1 install unexpectedly switches the default', async () => {
+    let installed = false
+    const { service } = makeService(adapter({
+      discover: async () => ({
+        ...ready, manager: { status: 'ready', version: '2.0.1' },
+        installation: { ...ready.installation!, family: 'modern', version: '2.0.1', mode: 'shim' },
+        activeVersion: installed ? '24.11.0' : '22.9.0',
+        installedVersions: installed ? ['24.11.0', '22.9.0'] : ['22.9.0'],
+      }),
+      changeVersion: async () => { installed = true; return { status: 'success' } },
+    }))
+    expect(await service.install('24.11.0')).toMatchObject({ error: { code: 'verification-failed' }, activeVersion: '24.11.0' })
+  })
+
+  it('reports a failed direct 1.1.11 link when the CLI exits normally without switching', async () => {
+    const { service } = makeService(adapter({
+      discover: async () => ({
+        ...ready, manager: { status: 'ready', version: '1.1.11' },
+        installation: { ...ready.installation!, family: 'classic', version: '1.1.11', executableDigest: 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791' },
+        installedVersions: ['24.11.0', '22.9.0'],
+      }),
+      changeVersion: async () => ({ status: 'success' }),
+    }))
+    expect(await service.use('24.11.0')).toMatchObject({ busy: null, error: { code: 'verification-failed' }, activeVersion: '22.9.0' })
   })
 
   it('uses a locally installed version offline and verifies the effective version after elevation', async () => {

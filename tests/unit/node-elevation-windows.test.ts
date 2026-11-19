@@ -1,14 +1,17 @@
 import { execFileSync } from 'node:child_process'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { createElevationCommand, readElevatedExit } from '../../src/main/node-management/windows'
 
-function worker() {
+function worker(legacyHelperRoot?: string) {
   const args = createElevationCommand('C:\\Windows\\System32', {
     executable: 'C:\\nvm\\nvm.exe', executableDigest: 'a'.repeat(64),
-    args: ['install', '24.22.3', '64'], nvmHome: 'C:\\nvm', nvmSymlink: 'C:\\nodejs', settingsDigest: 'b'.repeat(64),
+    legacyHelperRoot, args: [legacyHelperRoot ? 'use' : 'install', '24.22.3', '64'], nvmHome: 'C:\\nvm', nvmSymlink: 'C:\\nodejs', settingsDigest: 'b'.repeat(64),
   })
-  const outer = Buffer.from(args.at(-1)!, 'base64').toString('utf16le')
+  const outer = args.includes('-Command') ? args.at(-1)! : Buffer.from(args.at(-1)!, 'base64').toString('utf16le')
   return Buffer.from(outer.match(/-EncodedCommand ([A-Za-z0-9+/=]+)/)![1], 'base64').toString('utf16le')
 }
 
@@ -55,4 +58,49 @@ try {
 }`
   const output = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(ps, 'utf16le').toString('base64')], { encoding: 'utf8', timeout: 15_000, windowsHide: true })
   expect(output.trim().split(/\r?\n/)).toEqual(['ok', 'ok', 'ok', 'blocked', 'blocked'])
+}, 20_000)
+
+it.skipIf(process.platform !== 'win32')('keeps a failed direct link command from starting the 1.1.11 fallback', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'workrail-nvm-lock-'))
+  const script = worker(directory)
+  const verifier = script.slice(script.indexOf('function Open-VerifiedFile'), script.indexOf('$launching = $false'))
+  const locks = script.slice(script.indexOf('$stream = Open-VerifiedFile'), script.indexOf('$failure = 1623'))
+  const batch = '@echo HELPER_READ\r\n'
+  const vbs = 'Rem nvm fallback fixture\r\n'
+  const digest = (bytes: string) => createHash('sha256').update(bytes).digest('hex')
+  // Exercise the emitted lock acquisition on disposable files with known bytes.
+  const fixture = locks.replace('792d6a485d26b3ae1c926d1d4915e5eaf9a40113afd623212d1a9591e56bb1d5', digest(batch))
+    .replace('3219b67d6c49d02b832026d13ece959c85d64690326d6b3f10923790c8a5f130', digest(vbs))
+  const command = join(directory, 'elevate.cmd').replaceAll("'", "''")
+  try {
+    writeFileSync(join(directory, 'elevate.cmd'), batch)
+    writeFileSync(join(directory, 'elevate.vbs'), vbs)
+    const check = `
+$ErrorActionPreference = 'Stop'
+${verifier}
+function Run-Fallback {
+  $start = New-Object Diagnostics.ProcessStartInfo
+  $start.FileName = [IO.Path]::Combine([Environment]::SystemDirectory, 'cmd.exe')
+  $start.Arguments = '/d /s /c ""${command}""'
+  $start.UseShellExecute = $false
+  $start.RedirectStandardOutput = $true
+  $start.RedirectStandardError = $true
+  $child = [Diagnostics.Process]::Start($start)
+  $output = $child.StandardOutput.ReadToEnd()
+  $child.WaitForExit()
+  $child.Dispose()
+  return $output.Contains('HELPER_READ')
+}
+$helpers = @()
+try {
+  ${fixture}
+  $cmd = [IO.Path]::Combine([Environment]::SystemDirectory, 'cmd.exe')
+  & $cmd /d /c exit 1
+  if ($LASTEXITCODE -ne 0) { Run-Fallback }
+} finally { foreach ($stream in $helpers) { $stream.Dispose() } }
+Run-Fallback
+`
+    const output = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(check, 'utf16le').toString('base64')], { encoding: 'utf8', timeout: 15_000, windowsHide: true })
+    expect(output.trim().split(/\r?\n/)).toEqual(['False', 'True'])
+  } finally { rmSync(directory, { recursive: true, force: true }) }
 }, 20_000)
