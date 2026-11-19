@@ -22,7 +22,7 @@ Linux x64 / Node 24.22.1. 깨끗한 기준 작업 트리에서 Node 서비스·I
 | Home·NodeRail·footer | 구현·독립 검토 완료 | `3f0750a`, `b62466a`, `05d4dee`; runtime 버전은 공유 버전 작업에서 연결 |
 | 공유 버전·도움말 | 구현·독립 검토 완료 | `8c3b6e7`; 구버전 공유 호환·메뉴별 읽기 상태 |
 | 배포 이름 | 구현·독립 검토 완료 | `38d2c87`; 외부 파일명과 설치 identity 구분 |
-| 통합 검사·인계 | 진행 중 | verify:app·harness·독립 검토·원격 Windows 패키지 |
+| 통합 검사·인계 | 로컬 전체 검사·독립 검토 완료 | clean `91df811`; 원격 Windows 패키지는 해당 배포 SHA의 CI로 별도 판정 |
 
 검증 결과·수정 판단·실기 한계는 완료 시 이 문서에 갱신한다. 로그는 artifacts 아래 보존하며 반복 확인 때문에 실패 증거를 지우지 않는다.
 
@@ -136,3 +136,13 @@ Release 33개, 업데이트 ZIP 가져오기 28개, 배포 설정 UI 2개, typec
 범위를 제한한 재검토에서는 기존 8개 지적과 진단 검사 2개가 해결됐음을 확인했다. 이어 환경 선택의 비동기 저장 도중 잠금을 관찰하면 표시 대상과 backend가 달라질 수 있는 경합, 확인된 `reboot-required` 종료 결과에도 종료 불명 예약이 남는 전이를 발견했다. 표시·저장·실행 대상의 일치 및 종료 가능 여부에 영향을 주므로 같은 승인 범위 안에서 두 전이만 추가 보정한다. 재부팅 전 Node 변경 제한과 실제 실행 수명에 따른 앱 종료 차단은 구분한다.
 
 `b57ad49`에서 선택 저장과 기존 검사를 직렬화하고 저장 중 추가 검사·명령이 이전 backend로 진행하지 않게 했다. 선택 ID와 실제 backend 일치도 변경 직전에 확인한다. 검증된 최종 `reboot-required`는 작업 수명 예약을 해제하되 Windows Node 변경 제한은 유지한다. 세 가지 실패 재현 후 관련 단위 63개와 4개 tsconfig 타입 검사가 통과했다. 저장 실패 및 지연 저장 중 조회·명령·선택·실제 guest 사용 경로를 포함했다.
+
+## 최종 로컬 검증·배포 판정
+
+추가 전이 두 건의 독립 재검토는 해결·신규 결함 없음으로 승인했다. clean `91df8119596e36b00ce65cc31c48267f494c6813`, Linux x64, Node 24.22.1에서 `verify:app` 7단계와 하네스 7개가 모두 통과했다. 시작 2026-11-19 13:38:17 KST, 완료 13:46:08 KST. Release 33개, 단위 각 482개(UTC·America/New_York·Asia/Seoul, 각 기존 Windows 전용 3 미실행), UI 272개, native 98개, Electron 116개(재시도·실패·미실행 없음)다. 후속 기록 커밋은 문서만 변경한다.
+
+근거: `artifacts/workrail-environments/aggregate-91df811`의 app/latest.json은 `state: completed`, `passed: true`, `dirty: false`이며 SHA·OS·단계별 결과를 포함한다. 초기 실패와 중간 통과 기록은 같은 상위 폴더에 따로 보존했다. 전체 분기 검토와 두 번의 제한된 수정 검토에서 남은 중요 결함은 없다. 루트 AGENTS.md 66줄과 실행 명령은 유효하며 완료 MVP 지도는 보존했다.
+
+원격 실행은 [Application](https://github.com/kdydesign/simple-timeline/actions/workflows/app.yml)과 [Repository harness](https://github.com/kdydesign/simple-timeline/actions/workflows/harness.yml)에서 **동일 배포 SHA**로 확인한다. Windows `test:packaged` 성공 및 WorkRail 설치/LAN/검증 전용 artifact 생성까지 확인해야 설치 검증 완료다. 이 문서의 로컬 기록만으로 원격 실행 성공이나 실제 Windows nvm·WSL 인수를 선언하지 않는다. 원격 결과는 실행 URL·artifact ID와 함께 별도 인계한다.
+
+실제 Windows nvm 1.1.11·1.2.2·2.0.1 설치/전환·UAC와 WSL2의 실제 다운로드·컴파일·취소·한글 OS 상태 조회는 사용자 환경 인수가 남는다. Windows 패키지 CI는 WorkRail 설치·데이터·업데이트를 검사하며 이 관리자 실기를 대신하지 않는다. nvm2.0.1 빈 환경 첫 설치 제한, WSL 외부 종료 경합, 실제 nodenv 재해시 잠금의 수동 복구 범위는 위 기록과 사용자 도움말에 명시했다.

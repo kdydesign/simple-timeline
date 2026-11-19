@@ -1,11 +1,11 @@
 # WorkRail 환경 선택·Home 개선 — 확정 설계
 
 2026-11-19. 기준 코드: `3a343d7af246ec1ef4221cf518b51eb040027d90`.
-상태: **Q12 통합 설계 확정 · 후속 요청으로 구현 진행 중**. 2026-11-19 사용자가 “이 내용으로 설계 확정”을 선택했다. 16개 요구, Q1~Q11 선택, 수정 시안과 아래 세부안을 함께 승인했다. 설계 확정 뒤 별도로 구현을 요청했으며, 현재 진행·검증 범위는 [구현 기록](../implementation/2026-11-19-workrail-environments.md)을 따른다. 아래 질문 기록은 당시 결정과 승인 범위를 보존한다.
+상태: **Q12 통합 설계 확정 · 구현 및 로컬 전체 검증 완료**. 2026-11-19 사용자가 “이 내용으로 설계 확정”을 선택했다. 16개 요구, Q1~Q11 선택, 수정 시안과 아래 세부안을 함께 승인했다. 설계 확정 뒤 별도로 구현을 요청했으며, 현재 진행·검증 범위는 [구현 기록](../implementation/2026-11-19-workrail-environments.md)을 따른다. 아래 질문 기록은 당시 결정과 승인 범위를 보존한다.
 
 ## 범위와 기록 기준
 
-Superpowers brainstorming, Wayfinder grilling/domain-modeling, 저장소의 grill-with-docs·frontend-design·agents-md·documentation-and-adrs 절차를 사용한다. 기존 글래스 재질, 다크 Steel Blue/라이트 Forest Crystal 테마와 앱 아이콘을 유지한다. 이전 [통합 도구 설계](team-tool-expansion.md)의 nvm-windows 1.2.2 고정 구현을 대체할 후속 설계이며, 구현 완료나 전체 버전 호환을 의미하지 않는다.
+Superpowers brainstorming, Wayfinder grilling/domain-modeling, 저장소의 grill-with-docs·frontend-design·agents-md·documentation-and-adrs 절차를 사용한다. 기존 글래스 재질, 다크 Steel Blue/라이트 Forest Crystal 테마와 앱 아이콘을 유지한다. 이전 [통합 도구 설계](team-tool-expansion.md)의 nvm-windows 1.2.2 고정 구현을 대체할 후속 설계이며, 설계 승인 자체가 실기 검증이나 모든 버전 호환을 의미하지는 않는다.
 
 ## 16개 요구 추적
 

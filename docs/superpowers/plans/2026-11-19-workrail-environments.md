@@ -78,8 +78,10 @@
 ## Task 6: 통합 검증·검토·인계
 
 **Files:** 위 작업에서 드러난 통합 수정, `docs/implementation/2026-11-19-workrail-environments.md`, `docs/wayfinder/STATUS.md`, `docs/agents/domain.md` 및 필요한 사용자 도움말/검증 문서.
-- [ ] 요구 1~16과 Q1~Q12의 코드·검증 대응을 재확인한다. 누락은 담당 영역으로 수정하고 회귀 검사를 수행한다.
-- [ ] `xvfb-run -a npm run verify:app`와 `node scripts/harness/run.mjs verify`를 순차 실행하고 로그·SHA·dirty·미검증 범위를 기록한다.
-- [ ] 전체 변경의 독립 코드 검토를 받고 중요한 결함을 해결한다. 제품 버전은 임의 증가하지 않는다.
+- [x] 요구 1~16과 Q1~Q12의 코드·검증 대응을 재확인한다. 누락은 담당 영역으로 수정하고 회귀 검사를 수행한다.
+- [x] `xvfb-run -a npm run verify:app`와 `node scripts/harness/run.mjs verify`를 순차 실행하고 로그·SHA·dirty·미검증 범위를 기록한다.
+- [x] 전체 변경의 독립 코드 검토를 받고 중요한 결함을 해결한다. 제품 버전은 임의 증가하지 않는다.
 - [ ] 문서를 현재 구현으로 갱신하고 검증된 범위를 커밋·main push한다. 원격 Application/Repository harness 결과와 Windows 실제 packaged 검사 및 artifact 생성까지 확인한다.
-- [ ] WSL/사용자 PC 실기를 직접 수행하지 못했다면 자동 테스트 결과와 구분하여 최종 보고한다.
+- [x] WSL/사용자 PC 실기를 직접 수행하지 못했다면 자동 테스트 결과와 구분하여 최종 보고한다.
+
+로컬 구현·검토·전체 검사 완료 기록: clean `91df811`. 위 원격 push/CI 항목은 이 기록 커밋 이후 실행 결과로 인계하며, 자동 재구현의 지시가 아니다.
