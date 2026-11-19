@@ -36,7 +36,7 @@ function nodeFixture(initial: Partial<NodeManagementState> = {}) {
   const getState = async (): Promise<NodeManagementResult> => ({ ok: true, data: state })
   const dispose = vi.fn(() => { listener = undefined })
   const api = {
-    selectEnvironment: vi.fn(getState), startEnvironment: vi.fn(getState), cancelOperation: vi.fn(getState),
+    selectEnvironment: vi.fn((_id: string) => getState()), startEnvironment: vi.fn(getState), cancelOperation: vi.fn(getState),
     getState: vi.fn(getState), refreshCatalog: vi.fn(getState),
     install: vi.fn(getState), use: vi.fn(getState), installManager: vi.fn(getState), removeStandalone: vi.fn(getState), openMaintenance: vi.fn(getState),
     onChange: (callback: (value: NodeManagementState) => void) => {
@@ -72,7 +72,7 @@ it('opens the dashboard with inclusive, ordered schedules independent of the Pla
   })
   render(<App initialTool="home" today={new Date(2026, 10, 18)} api={m.api} />)
   expect(dock('Home')).toHaveAttribute('aria-current', 'page')
-  expect(await within(home()).findByText('24.11.0')).toBeVisible()
+  expect(await within(within(home()).getByRole('region', { name: '내 개발 환경' })).findByText('24.11.0')).toBeVisible()
   const rows = within(within(home()).getByRole('list', { name: '오늘의 일정' })).getAllByRole('listitem')
   expect(rows).toHaveLength(3)
   expect(rows[0]).toHaveTextContent('종료일 일정')
@@ -112,7 +112,7 @@ it('loads Node state at startup, checks the catalog on Node entry, and installs 
   fireEvent.click(dock('NodeRail'))
   await waitFor(() => expect(fixture.api.refreshCatalog).toHaveBeenCalledTimes(1))
   fireEvent.click(within(node()).getByRole('button', { name: 'nvm-windows 설치' }))
-  expect(await within(node()).findByText('nvm-windows 사용 중')).toBeVisible()
+  expect(await within(node()).findByText('NVM 1.2.2 설치')).toBeVisible()
   expect(fixture.api.installManager).toHaveBeenCalledTimes(1)
 })
 
@@ -123,7 +123,7 @@ it('shows the Windows x64 scope before interpreting missing manager state', asyn
   expect(within(node()).queryByRole('button', { name: /설치|사용/ })).toBeNull()
 })
 
-it('shows an incompatible manager with its conflict path and official upgrade instructions', async () => {
+it('shows an incompatible manager with its conflict path and official inspection instructions', async () => {
   const path = 'C:\\nvm\\nvm.exe'
   nodeFixture({ manager: { status: 'error', version: '1.1.12' }, conflicts: [
     { code: 'manager-configuration', path, message: '호환되지 않는 nvm-windows입니다.' },
@@ -134,9 +134,9 @@ it('shows an incompatible manager with its conflict path and official upgrade in
   fireEvent.click(within(node()).getByText('자세히'))
   expect(within(node()).getByText(path)).toBeVisible()
   expect(within(node()).getByText('호환되지 않는 nvm-windows입니다.')).toBeVisible()
-  expect(within(node()).getByText(/공식 nvm-windows 1\.2\.2.*수동/)).toBeVisible()
+  expect(within(node()).getByText(/공식 nvm-windows 설치 안내/)).toBeVisible()
   expect(within(node()).queryByRole('button', { name: 'nvm-windows 설치' })).toBeNull()
-  expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeDisabled()
+  expect(within(installed()).getByRole('button', { name: '22.20.0 다시 확인' })).toBeEnabled()
 })
 
 it('summarizes a standalone conflict, keeps diagnostics folded, and enables installation only after clearance', async () => {
@@ -187,7 +187,7 @@ it('filters the real catalog and sends the selected release version to install',
   await within(list).findByRole('button', { name: '25.2.0 설치' })
   fireEvent.click(within(list).getByRole('button', { name: 'LTS' }))
   expect(within(list).queryByRole('button', { name: '25.2.0 설치' })).toBeNull()
-  expect(within(list).getByText('Krypton')).toBeVisible()
+  expect(within(list).getByText('LTS · Krypton')).toBeVisible()
   fireEvent.click(within(list).getByRole('button', { name: '설치됨' }))
   expect(within(list).getByText('22.20.0')).toBeVisible()
   fireEvent.click(within(list).getByRole('button', { name: '전체' }))
@@ -214,7 +214,7 @@ it('keeps one mutation pending across menu navigation and reflects busy and unkn
   } }))
   expect(within(home()).getByText('승격 작업의 종료를 확인해 주세요.')).toBeVisible()
   fireEvent.click(dock('NodeRail'))
-  expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeDisabled()
+  expect(within(installed()).getByRole('button', { name: '22.20.0 다시 확인' })).toBeEnabled()
   fireEvent.click(dock('PlanRail'))
   expect(screen.getByRole('button', { name: '프로젝트 추가' })).toBeEnabled()
 })
@@ -226,8 +226,9 @@ it('preserves the latest Node event when an older state response finishes and di
   const view = render(<App initialTool="home" api={memoryApi().api} />)
   act(() => fixture.emit({ activeVersion: '22.20.0' }))
   await act(async () => finish({ ok: true, data: nodeState }))
-  expect(within(home()).getByText('22.20.0')).toBeVisible()
-  expect(within(home()).queryByText('24.11.0')).toBeNull()
+  const current = within(within(home()).getByRole('region', { name: '내 개발 환경' }))
+  expect(current.getByText('22.20.0')).toBeVisible()
+  expect(current.queryByText('24.11.0')).toBeNull()
   await act(async () => fireEvent(window, new Event('focus')))
   expect(fixture.api.getState).toHaveBeenCalledTimes(2)
   view.unmount()
@@ -310,7 +311,7 @@ it.each(['catalog-first', 'rejection-first'] as const)(
     expect(within(home()).getByRole('alert')).toHaveTextContent(failure)
 
     fireEvent.click(dock('NodeRail'))
-    expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeDisabled()
+    expect(within(installed()).getByRole('button', { name: '22.20.0 다시 확인' })).toBeEnabled()
     fireEvent.click(within(node()).getByRole('button', { name: '환경 다시 검사' }))
     await waitFor(() => expect(within(node()).queryByRole('alert')).toBeNull())
     expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeEnabled()
@@ -326,7 +327,7 @@ it.each(['ipc', 'inspection'] as const)('shows the failed mutation and explicit 
   const panel = await within(node()).findByRole('region', { name: '설치된 버전' })
   const use = within(panel).getByRole('button', { name: '22.20.0 사용' })
   await act(async () => fireEvent.click(use))
-  expect(use).toBeDisabled()
+  expect(use).toHaveAccessibleName('22.20.0 다시 확인')
   fixture.api.getState.mockResolvedValueOnce(failure === 'ipc'
     ? { ok: false, error: recoveryError }
     : { ok: true, data: { ...nodeState, error: recoveryError } })
@@ -334,7 +335,7 @@ it.each(['ipc', 'inspection'] as const)('shows the failed mutation and explicit 
   await act(async () => fireEvent.click(recheck))
   expect(within(node()).getByText(mutationError.message)).toBeVisible()
   expect(within(node()).getByText(recoveryError.message, { exact: false })).toBeVisible()
-  expect(use).toBeDisabled()
+  expect(use).toHaveAccessibleName('22.20.0 다시 확인')
   await act(async () => fireEvent(window, new Event('focus')))
   fireEvent.click(dock('Home'))
   expect(within(home()).getByText(mutationError.message)).toBeVisible()
@@ -353,7 +354,7 @@ it('reports an unread inventory consistently across the catalog, Installed filte
   })
   render(<App initialTool="node" api={memoryApi().api} />)
   const list = await within(node()).findByRole('region', { name: '공식 배포 목록' })
-  expect(within(list).getAllByRole('cell', { name: '확인 필요' })).toHaveLength(2)
+  expect(within(list).getAllByRole('cell', { name: '확인 불가' })).toHaveLength(2)
   expect(within(list).queryByRole('cell', { name: '미설치' })).toBeNull()
   fireEvent.click(within(list).getByRole('button', { name: '설치됨' }))
   expect(within(list).getByText('설치된 버전을 확인할 수 없습니다.')).toBeVisible()
@@ -378,15 +379,16 @@ it('reports an unread active standalone version while showing the detected insta
   expect(within(current).queryByText('사용 중인 버전 없음')).toBeNull()
 })
 
-it('allows Use for the only installed version while nvm reports that version active', async () => {
+it('keeps the active version Use action disabled in both panels', async () => {
   const fixture = nodeFixture({ installedVersions: ['24.11.0'] })
   render(<App initialTool="node" api={memoryApi().api} />)
   const list = await within(node()).findByRole('region', { name: '공식 배포 목록' })
   expect(within(list).getByRole('row', { name: /^24\.11\.0.*사용 중/ })).toBeVisible()
-  expect(within(list).getByRole('button', { name: '24.11.0 사용' })).toBeEnabled()
-  expect(within(installed()).getByText('사용 중')).toBeVisible()
-  await act(async () => fireEvent.click(within(installed()).getByRole('button', { name: '24.11.0 사용' })))
-  expect(fixture.api.use).toHaveBeenCalledWith('24.11.0')
+  expect(within(list).getByRole('button', { name: '24.11.0 사용 중' })).toBeDisabled()
+  const active = within(installed()).getByRole('button', { name: '24.11.0 사용 중' })
+  expect(active).toBeDisabled()
+  fireEvent.click(active)
+  expect(fixture.api.use).not.toHaveBeenCalled()
 })
 
 it('reports the first empty catalog as loading until its refresh actually fails', async () => {
@@ -506,7 +508,7 @@ it('uses the Home title and live PlanRail badges while retaining the last succes
   fireEvent.click(dock('NodeRail'))
   expect(within(node()).queryByRole('heading', { name: 'Node 버전 관리' })).toBeNull()
   expect(within(node()).queryByText(/목록 출처/)).toBeNull()
-  expect(within(node()).getByText('nvm-windows 사용 중')).toBeVisible()
+  expect(within(node()).getByText('NVM 1.2.2 설치')).toBeVisible()
 })
 
 it('keeps the actual sharing failure visible when the Home connection badge becomes unknown', async () => {
@@ -546,4 +548,189 @@ it('shows a pending handoff immediately and allows retry after the recovery wind
   expect(fixture.api.openMaintenance).toHaveBeenCalledTimes(2)
   expect(fixture.api.removeStandalone).not.toHaveBeenCalled()
   expect(within(node()).queryByText(message)).toBeNull()
+})
+
+const windows = { id: 'windows', label: 'Windows', kind: 'windows', running: true } as const
+const ubuntu = { id: 'wsl:12345678-1234-1234-1234-123456789abc', label: 'Ubuntu', distro: 'Ubuntu', kind: 'wsl2', running: false } as const
+
+it('keeps inventory-based actions unknown when the identified manager cannot list installed versions', async () => {
+  const fixture = nodeFixture({
+    manager: { kind: 'nvm-windows', status: 'ready', version: '1.1.11' },
+    capabilities: {
+      list: { available: false, reason: '관리자의 설치 목록을 확인하지 못했습니다.' },
+      install: { available: true, reason: null }, use: { available: true, reason: null },
+    },
+  })
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const widget = within(home()).getByRole('region', { name: 'Node 작업' })
+  expect(await within(widget).findByText('관리자의 설치 목록을 확인하지 못했습니다.')).toBeVisible()
+  expect(within(widget).queryByRole('button', { name: /22\.20\.0 사용/ })).toBeNull()
+  fireEvent.click(dock('NodeRail'))
+  const table = await within(node()).findByRole('table', { name: '공식 배포 버전' })
+  const row = within(table).getByRole('row', { name: /^25\.2\.0/ })
+  expect(within(row).getByRole('img', { name: '확인 불가' })).toBeVisible()
+  fireEvent.click(within(row).getByRole('button', { name: '25.2.0 다시 확인' }))
+  await waitFor(() => expect(fixture.api.getState).toHaveBeenCalledTimes(2))
+  expect(fixture.api.install).not.toHaveBeenCalled()
+  expect(fixture.api.use).not.toHaveBeenCalled()
+})
+
+it('blocks only the unavailable feature and explains an unsupported release and LTS metadata', async () => {
+  const fixture = nodeFixture({
+    manager: { kind: 'nvm-windows', status: 'ready', version: '2.0.1' },
+    capabilities: {
+      list: { available: true, reason: null }, install: { available: true, reason: null },
+      use: { available: false, reason: '기본 버전의 전환 경로를 확인하지 못했습니다.' },
+    },
+    catalog: { ...nodeState.catalog, releases: [
+      { ...nodeState.catalog.releases[0], installReason: '이 환경의 설치 정의가 없습니다.' },
+      nodeState.catalog.releases[1],
+      { version: '23.0.0', date: '', lts: null, ltsKnown: false, npm: null, security: false, sourceOnly: true },
+    ] },
+  })
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const table = await within(node()).findByRole('table', { name: '공식 배포 버전' })
+  expect(within(table).getByRole('button', { name: '25.2.0 설치' })).toBeDisabled()
+  expect(within(table).getByText('이 환경의 설치 정의가 없습니다.')).toBeVisible()
+  expect(within(table).getByText('LTS · Krypton')).toBeVisible()
+  expect(within(table).getByRole('row', { name: /^23\.0\.0.*확인 불가/ })).toBeVisible()
+  expect(within(table).getByRole('button', { name: '23.0.0 설치' })).toBeEnabled()
+  expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeDisabled()
+  expect(within(node()).getByText(/기본 버전의 전환 경로를 확인하지 못했습니다/)).toBeVisible()
+  const status = within(within(table).getByRole('row', { name: /^23\.0\.0/ })).getByRole('img', { name: '미설치' })
+  await act(async () => status.focus())
+  expect(await screen.findByRole('tooltip')).toHaveTextContent('미설치')
+  expect(fixture.api.install).not.toHaveBeenCalled()
+})
+
+it('requires the first environment choice and starts a stopped WSL only on explicit request', async () => {
+  const environments = { status: 'ready' as const, items: [windows, ubuntu], selectedId: null, error: null }
+  const fixture = nodeFixture({
+    environments, manager: { status: 'checking', version: null },
+    checkedAt: null, installedVersions: [], activeSource: null, activeVersion: null,
+  })
+  fixture.api.selectEnvironment.mockImplementation(async id => {
+    fixture.emit({ environments: { ...environments, selectedId: id } })
+    const read = fixture.api.getState.getMockImplementation()!
+    return read()
+  })
+  fixture.api.startEnvironment.mockImplementation(async () => {
+    const started = { ...environments, selectedId: ubuntu.id, items: [windows, { ...ubuntu, user: 'minsu', running: true }] }
+    fixture.emit({ environments: started, manager: { kind: 'nodenv', status: 'ready', version: '1.5.0' },
+      activeSource: 'nodenv', activeVersion: '22.20.0', installedVersions: ['22.20.0'], checkedAt: nodeState.checkedAt })
+    const read = fixture.api.getState.getMockImplementation()!
+    return read()
+  })
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const picker = await screen.findByRole('dialog', { name: '관리 환경 선택' })
+  expect(fixture.api.selectEnvironment).not.toHaveBeenCalled()
+  expect(fixture.api.startEnvironment).not.toHaveBeenCalled()
+  await act(async () => fireEvent.click(within(picker).getByRole('button', { name: /Ubuntu/ })))
+  expect(fixture.api.selectEnvironment).toHaveBeenCalledExactlyOnceWith(ubuntu.id)
+  expect(fixture.api.startEnvironment).not.toHaveBeenCalled()
+  fireEvent.click(dock('NodeRail'))
+  expect(within(node()).getByText(/Ubuntu.*확인 전/)).toBeVisible()
+  expect(within(node()).queryByRole('table')).toBeNull()
+  expect(fixture.api.refreshCatalog).not.toHaveBeenCalled()
+  await act(async () => fireEvent.click(within(node()).getByRole('button', { name: '환경 시작' })))
+  expect(fixture.api.startEnvironment).toHaveBeenCalledOnce()
+  expect(await within(node()).findByText('nodenv 1.5.0 설치')).toBeVisible()
+  fireEvent.click(dock('Home'))
+  expect(within(home()).getByText('Ubuntu · minsu · 기본 Node')).toBeVisible()
+})
+
+it('keeps only the active and latest installed versions in Home and locks both screens through quick Use', async () => {
+  const environments = { status: 'ready' as const, items: [windows, ubuntu], selectedId: windows.id, error: null }
+  const fixture = nodeFixture({ environments, installedVersions: ['22.2.0', '21.0.0', '22.10.0', '20.4.0'], activeVersion: '20.4.0' })
+  let finish!: (value: NodeManagementResult) => void
+  fixture.api.use.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const widget = within(home()).getByRole('region', { name: 'Node 작업' })
+  const list = await within(widget).findByRole('list', { name: '설치된 버전' })
+  expect(within(list).getAllByRole('listitem').map(item => item.querySelector('strong')?.textContent)).toEqual(['20.4.0', '22.10.0', '22.2.0'])
+  expect(within(list).getByRole('button', { name: '20.4.0 사용 중' })).toBeDisabled()
+  expect(within(widget).getByRole('button', { name: '전체 4개' })).toBeVisible()
+  const use = within(list).getByRole('button', { name: '22.10.0 사용' })
+  act(() => { use.click(); use.click() })
+  expect(fixture.api.use).toHaveBeenCalledExactlyOnceWith('22.10.0')
+  expect(within(home()).getByRole('button', { name: '환경 변경' })).toBeDisabled()
+  fireEvent.click(dock('NodeRail'))
+  expect(within(node()).getByRole('button', { name: '환경 변경' })).toBeDisabled()
+  expect(within(installed()).getByRole('button', { name: '22.2.0 사용' })).toBeDisabled()
+  await act(async () => finish({ ok: true, data: { ...nodeState, revision: 2, environments } }))
+  expect(within(node()).getByRole('button', { name: '환경 변경' })).toBeEnabled()
+})
+
+it('shows a cancellable source build, locks repeated cancellation and exposes operation logs', async () => {
+  const fixture = nodeFixture({
+    busy: { kind: 'install', version: '24.11.0', phase: 'compiling', cancellable: true },
+    operationLog: ['컴파일러 확인', '소스 빌드 중'], operationLogPath: '/logs/node.log',
+  })
+  let finish!: (result: NodeManagementResult) => void
+  fixture.api.cancelOperation.mockImplementationOnce(() => new Promise(resolve => { finish = resolve }))
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const cancel = await within(home()).findByRole('button', { name: '작업 취소' })
+  act(() => { cancel.click(); cancel.click() })
+  expect(fixture.api.cancelOperation).toHaveBeenCalledOnce()
+  fireEvent.click(dock('NodeRail'))
+  expect(within(node()).getByText(/24\.11\.0 설치.*소스 컴파일/)).toBeVisible()
+  const log = within(node()).getByText('작업 로그')
+  fireEvent.click(log)
+  expect(within(node()).getByText('/logs/node.log')).toBeVisible()
+  await act(async () => finish({ ok: true, data: { ...nodeState, revision: 2, error: { code: 'cancelled', message: '작업을 취소했습니다.' } } }))
+  expect(within(node()).queryByRole('button', { name: '작업 취소' })).toBeNull()
+  expect(within(node()).getByRole('alert')).toHaveTextContent('작업을 취소했습니다.')
+})
+
+it('uses approved current presence for Home and footer and expands connected names and versions', async () => {
+  const displayName = '민수의 이름이 긴 사무실 PC'
+  const devices = [displayName, '지연', '서준', '오프라인', '취소', '대기'].map((name, index) => ({
+    id: String(index), name, ip: '192.168.0.' + (index + 2), approved: index !== 5, revoked: index === 4,
+  }))
+  const seen = '2026-11-18T12:00:00Z'
+  const sharing = sharingFixture({
+    role: 'host', status: 'connected', hostingEnabled: true, address: '192.168.0.10',
+    devices, connectedMembers: 5,
+    memberPresence: Object.fromEntries(devices.map(device => [device.id, { connected: device.id !== '3', lastSeenAt: seen }])),
+    deviceVersions: { '0': { checkedAt: seen, version: '1.0.0' }, '1': { checkedAt: seen, version: null } },
+  })
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const widget = within(home()).getByRole('region', { name: 'PlanRail 상태' })
+  expect(await within(widget).findByText(displayName)).toBeVisible()
+  expect(within(widget).getByText('버전 1.0.0')).toBeVisible()
+  expect(within(widget).getByText('버전 확인 불가')).toBeVisible()
+  expect(within(widget).queryByText('서준')).toBeNull()
+  fireEvent.click(within(widget).getByRole('button', { name: '외 1명' }))
+  let list = await screen.findByRole('dialog', { name: '연결된 참여자' })
+  expect(within(list).getByText('서준')).toBeVisible()
+  expect(within(list).queryByText('취소')).toBeNull()
+  await userEvent.keyboard('{Escape}')
+  expect(within(widget).getByRole('button', { name: '외 1명' })).toHaveFocus()
+  fireEvent.click(dock('PlanRail'))
+  const footer = screen.getByRole('contentinfo', { name: 'PlanRail 상태' })
+  expect(within(footer).getByText(displayName)).toBeVisible()
+  fireEvent.click(within(footer).getByRole('button', { name: '외 1명' }))
+  list = await screen.findByRole('dialog', { name: '연결된 참여자' })
+  expect(within(list).getByText('서준')).toBeVisible()
+  expect(within(list).queryByText('대기')).toBeNull()
+  act(() => sharing.emit({ memberPresence: {} }))
+  expect(within(footer).getByText('연결된 참여자 없음')).toBeVisible()
+  expect(screen.queryByRole('dialog', { name: '연결된 참여자' })).toBeNull()
+})
+
+it('keeps quick Use available when only the configured download mirror blocks installation', async () => {
+  const mirror = '설치에 사용할 배포 주소를 확인해 주세요.'
+  const fixture = nodeFixture({
+    conflicts: [{ code: 'mirror', path: null, message: mirror }],
+    capabilities: {
+      list: { available: true, reason: null }, install: { available: false, reason: mirror }, use: { available: true, reason: null },
+    },
+  })
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const use = await within(home()).findByRole('button', { name: '22.20.0 사용' })
+  expect(use).toBeEnabled()
+  await act(async () => fireEvent.click(use))
+  expect(fixture.api.use).toHaveBeenCalledExactlyOnceWith('22.20.0')
+  fireEvent.click(dock('NodeRail'))
+  expect(await within(node()).findByRole('button', { name: '25.2.0 설치' })).toBeDisabled()
 })

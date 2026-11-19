@@ -1,10 +1,12 @@
 import type { Locator } from 'playwright'
 import { test, expect, type Desktop } from './fixture'
+import { channels } from '../../src/shared/api'
+import { sharingChannel, sharingChanged, type SharingState } from '../../src/shared/sharing'
 import { nodeManagementChannel, nodeManagementChanged, type NodeManagementState } from '../../src/shared/node-management'
 
 test.use({ initialTool: 'home', seed: 'hotfix' })
 
-async function showWindowsNode(desktop: Desktop) {
+async function showWindowsNode(desktop: Desktop, patch: Partial<NodeManagementState> = {}) {
   const state: NodeManagementState = {
     revision: 1000, platform: 'win32', supported: true,
     manager: { status: 'ready', version: '1.2.2' }, activeVersion: '22.2.0', activeSource: 'nvm',
@@ -18,7 +20,13 @@ async function showWindowsNode(desktop: Desktop) {
       })),
     },
     busy: null, error: null, conflicts: [], checkedAt: '2026-11-18T10:00:00Z',
+    ...patch,
   }
+  await publishNode(desktop, state)
+  await expect(desktop.page.getByRole('region', { name: '내 개발 환경' }).getByText(state.activeVersion!, { exact: true })).toBeVisible()
+}
+
+async function publishNode(desktop: Desktop, state: NodeManagementState) {
   // Only this disposable test application's IPC handler changes. All renderer,
   // preload, layout, and accessibility behavior remain the production code.
   await desktop.app.evaluate(({ ipcMain, BrowserWindow }, { channel, changed, state }) => {
@@ -31,7 +39,6 @@ async function showWindowsNode(desktop: Desktop) {
     })
     for (const window of BrowserWindow.getAllWindows()) window.webContents.send(changed, state)
   }, { channel: nodeManagementChannel, changed: nodeManagementChanged, state })
-  await expect(desktop.page.getByRole('region', { name: '내 개발 환경' }).getByText('22.2.0', { exact: true })).toBeVisible()
 }
 
 async function box(locator: Locator) {
@@ -61,7 +68,7 @@ test('centers and sorts the Node catalog with aligned independently scrolling pa
     const headers = [...element.querySelectorAll('thead th')]
     const cells = [...element.querySelectorAll('tbody tr:first-child > *')]
     return [...headers, ...cells].map(cell => {
-      const label = cell.querySelector('.workrail-sort > span:first-child') ?? cell.querySelector('button, .workrail-tag')
+      const label = cell.querySelector('.workrail-sort > span:first-child') ?? cell.querySelector('button, .workrail-tag, .workrail-version-status')
       const range = document.createRange()
       range.selectNodeContents(cell)
       const text = label?.getBoundingClientRect() ?? range.getBoundingClientRect()
@@ -168,13 +175,13 @@ test('matches Home card heights while keeping PlanRail status fit to its content
   const status = main.getByRole('region', { name: 'PlanRail 상태' })
   await expectMatchingEdges(today, development)
   await expect(development.getByText('40개', { exact: true })).toBeVisible()
-  await expect(development.getByText('nvm-windows 사용 중', { exact: true })).toBeVisible()
+  await expect(development.getByText('NVM 1.2.2 설치', { exact: true })).toBeVisible()
   const [gridBounds, statusBounds, devBounds, buttonBounds] = await Promise.all([
     box(main.locator('.workrail-home-grid')), box(status), box(development), box(development.getByRole('button', { name: 'NodeRail 열기' })),
   ])
-  expect(statusBounds.width).toBeLessThanOrEqual(380)
+  expect(statusBounds.width).toBeLessThanOrEqual(400)
   expect(statusBounds.width).toBeLessThan(gridBounds.width / 2)
-  expect(statusBounds.height).toBeLessThan(devBounds.height / 2)
+  expect(statusBounds.height).toBeLessThan(devBounds.height)
   expect(buttonBounds.width).toBeGreaterThan(devBounds.width * .85)
   expect(Math.abs(buttonBounds.x + buttonBounds.width / 2 - devBounds.x - devBounds.width / 2)).toBeLessThanOrEqual(1)
   await page.screenshot({ path: info.outputPath('home-presentation.png') })
@@ -185,4 +192,137 @@ test('matches Home card heights while keeping PlanRail status fit to its content
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   expect(await main.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
   await page.screenshot({ path: info.outputPath('home-presentation-narrow.png') })
+})
+
+async function publishSharing(desktop: Desktop, state: SharingState) {
+  await desktop.app.evaluate(({ ipcMain, BrowserWindow }, { channel, changed, state }) => {
+    ipcMain.removeHandler(channel)
+    ipcMain.handle(channel, (_event, command: unknown) => command === 'getState'
+      ? { ok: true, data: state }
+      : { ok: false, error: { code: 'FORBIDDEN', message: 'Presentation fixture permits reads only.' } })
+    for (const window of BrowserWindow.getAllWindows()) window.webContents.send(changed, state)
+  }, { channel: sharingChannel, changed: sharingChanged, state })
+}
+
+test('keeps the compact dashboard and real status controls legible in dark, light, and narrow windows', async ({ desktop }, info) => {
+  const page = desktop.page
+  const menu = page.getByRole('navigation', { name: 'WorkRail 도구' })
+  const main = page.getByRole('main', { name: 'Home' })
+  const status = main.getByRole('region', { name: 'PlanRail 상태' })
+  const lastCheckedAt = '2026-11-18T10:00:00Z'
+  const devices = ['민수의 이름이 긴 사무실 PC', '지연', '서준', '오프라인', '연결 대기'].map((name, index) => ({
+    id: String(index), name, ip: '192.168.0.' + (index + 30), revoked: false, approved: index < 4,
+  }))
+  const host: SharingState = {
+    snapshotRevision: 190, role: 'host', roleHistory: null, address: '192.168.0.21', port: 47831,
+    hostingEnabled: true, status: 'connected', message: '', cleanupPending: false, lastCheckedAt,
+    pendingPair: null, pendingPairs: [], settingsRequestToken: null, availableAddresses: ['192.168.0.21'],
+    devices, projects: [], memberPresence: Object.fromEntries(devices.map(device => [device.id, { connected: Number(device.id) < 3, lastSeenAt: lastCheckedAt }])),
+    deviceVersions: { '0': { version: '0.8.8', checkedAt: lastCheckedAt } },
+  }
+  const windows = { id: 'windows', label: 'Windows', kind: 'windows', running: true } as const
+  const ubuntu = { id: 'wsl:12345678-1234-1234-1234-123456789abc', label: 'Ubuntu', kind: 'wsl2', running: true, user: 'daeyong' } as const
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await showWindowsNode(desktop, { environments: { status: 'ready', items: [windows, ubuntu], selectedId: windows.id, error: null },
+    manager: { kind: 'nvm-windows', version: '1.1.11', status: 'ready' }, activeVersion: '24.22.3',
+    installedVersions: ['24.22.3', '22.16.0', '20.19.0', '18.20.1'] })
+  const day = await main.locator('.workrail-page-heading time').getAttribute('datetime')
+  const snapshot = await page.evaluate(() => window.simpleTimeline.getSnapshot())
+  if (!snapshot.ok || !day) throw Error('Timeline presentation fixture unavailable')
+  const today = { ...snapshot.data,
+    projects: snapshot.data.projects.map((project, index) => index === 0 ? { ...project, sharing: 'host' as const } : project),
+    schedules: snapshot.data.schedules.map((schedule, index) => index === 0 ? { ...schedule, startDate: day, endDate: day, sharing: 'host' as const } : schedule),
+  }
+  await desktop.app.evaluate(({ ipcMain }, { channel, today }) => {
+    ipcMain.removeHandler(channel)
+    ipcMain.handle(channel, () => ({ ok: true, data: today }))
+  }, { channel: channels.getSnapshot, today })
+  await publishSharing(desktop, host)
+  await expect(main.getByRole('region', { name: '오늘의 일정' }).getByText('공유', { exact: true })).toHaveClass('sharing-badge')
+  await expect(status.getByText('공유 제공 중')).toBeVisible()
+  await expect(status.getByRole('button', { name: '외 1명' })).toBeVisible()
+  await expect(main.getByRole('region', { name: 'Node 작업' }).getByRole('listitem')).toHaveCount(3)
+  const frame = await main.evaluate(element => {
+    const css = getComputedStyle(element)
+    return [css.paddingBlockStart, css.paddingInlineEnd, css.paddingBlockEnd, css.paddingInlineStart]
+  })
+  expect(frame).toEqual(['14px', '14px', '14px', '14px'])
+  const other = menu.getByRole('button', { name: 'PlanRail' })
+  await expect(other).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(other).toHaveCSS('box-shadow', 'none')
+  const active = menu.getByRole('button', { name: 'Home' })
+  const cta = main.getByRole('button', { name: 'NodeRail 열기' })
+  await expect(cta).toHaveCSS('background-image', await active.evaluate(element => getComputedStyle(element).backgroundImage))
+  await expect(cta).toHaveCSS('border-color', await active.evaluate(element => getComputedStyle(element).borderColor))
+  const number = main.getByRole('region', { name: '내 개발 환경' }).getByText('24.22.3')
+  await expect(number).toHaveCSS('font-family', await main.evaluate(element => getComputedStyle(element).fontFamily))
+  expect((await box(main.getByRole('region', { name: 'Node 작업' }))).width).toBeLessThanOrEqual(360)
+  await page.screenshot({ path: info.outputPath('compact-home-host-dark.png') })
+  await other.click()
+  const footer = page.getByRole('contentinfo', { name: 'PlanRail 상태' })
+  await expect(footer.getByRole('listitem')).toHaveCount(3)
+  await expect(footer.getByText('민수의 이름이 긴 사무실 PC')).toBeVisible()
+  await page.screenshot({ path: info.outputPath('compact-planrail-host-dark.png') })
+
+  await page.setViewportSize({ width: 500, height: 750 })
+  await expect(footer.getByRole('button', { name: '외 2명' })).toBeVisible()
+  await expect(footer.getByRole('listitem')).toHaveCount(1)
+  await page.setViewportSize({ width: 430, height: 750 })
+  await expect(footer.getByRole('button', { name: '외 3명' })).toBeVisible()
+  await expect(footer.getByTestId('notification-policy')).toBeVisible()
+  const allMembers = footer.getByRole('button', { name: '외 3명' })
+  await allMembers.click()
+  await expect(page.getByRole('dialog', { name: '연결된 참여자' }).getByText('민수의 이름이 긴 사무실 PC')).toBeVisible()
+  await page.screenshot({ path: info.outputPath('compact-footer-narrow.png') })
+  await page.keyboard.press('Escape')
+  await expect(allMembers).toBeFocused()
+  await active.click()
+
+  // The app currently defaults to dark. Set the theme attribute in this temporary-profile renderer to check Forest Crystal tokens.
+  await page.evaluate(() => { delete document.documentElement.dataset.theme })
+  await publishSharing(desktop, { ...host, snapshotRevision: 191, role: 'member', devices: [], memberPresence: undefined, deviceVersions: undefined })
+  await showWindowsNode(desktop, { revision: 1001, environments: { status: 'ready', items: [windows, ubuntu], selectedId: ubuntu.id, error: null },
+    manager: { kind: 'nodenv', status: 'ready', version: '1.5.0' }, activeSource: 'nodenv', activeVersion: '24.22.3',
+    installedVersions: ['24.22.3', '22.16.0', '20.19.0'],
+    catalog: { status: 'ready', checkedAt: lastCheckedAt, error: null, releases: [
+      { version: '25.2.0', date: day, lts: null, npm: '11.5.0', security: false, installReason: '이 환경의 node-build 설치 정의가 없습니다.' },
+      { version: '24.22.3', date: day, lts: 'Krypton', npm: '11.4.0', security: true },
+      { version: '22.16.0', date: day, lts: 'Jod', npm: '10.9.0', security: true },
+      { version: '20.19.1', date: day, lts: null, ltsKnown: false, sourceOnly: true, npm: null, security: false },
+    ] },
+  })
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await expect(status.getByText('호스트 앱 버전')).toBeVisible()
+  await expect(status.getByText('확인 불가', { exact: true })).toBeVisible()
+  await expect(main.getByText('Ubuntu · daeyong · 기본 Node')).toBeVisible()
+  await page.screenshot({ path: info.outputPath('compact-home-member-light.png') })
+  await page.setViewportSize({ width: 500, height: 740 })
+  expect(await main.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
+  await page.screenshot({ path: info.outputPath('compact-home-member-narrow.png') })
+  await main.getByRole('region', { name: 'Node 작업' }).scrollIntoViewIfNeeded()
+  await page.screenshot({ path: info.outputPath('compact-home-member-narrow-widgets.png') })
+
+  await menu.getByRole('button', { name: 'NodeRail' }).click()
+  const node = page.getByRole('main', { name: 'NodeRail' })
+  await expect(node.getByRole('region', { name: '기본 버전' }).getByText('nodenv 1.5.0 설치')).toBeVisible()
+  await page.setViewportSize({ width: 1280, height: 900 })
+  await expect(node.getByRole('button', { name: '25.2.0 설치' })).toBeDisabled()
+  await expect(node.getByText('이 환경의 node-build 설치 정의가 없습니다.')).toBeVisible()
+  await expect(node.getByText('소스 컴파일')).toBeVisible()
+  await expectMatchingEdges(node.locator('.workrail-node-table'), node.getByRole('region', { name: '설치된 버전' }))
+  await page.screenshot({ path: info.outputPath('compact-node-wsl-light.png') })
+  await node.getByRole('button', { name: '환경 변경' }).click()
+  await expect(page.getByRole('dialog', { name: '관리 환경 선택' }).getByRole('button', { name: /Ubuntu/ })).toHaveAttribute('aria-current', 'true')
+  await page.screenshot({ path: info.outputPath('compact-node-environment-picker.png') })
+  await page.keyboard.press('Escape')
+  await publishNode(desktop, {
+    revision: 1002, platform: 'win32', supported: true,
+    environments: { status: 'ready', items: [windows, { ...ubuntu, user: undefined, running: false }], selectedId: ubuntu.id, error: null },
+    manager: { status: 'checking', version: null }, activeSource: null, activeVersion: null, installedVersions: [],
+    catalog: { status: 'idle', checkedAt: null, error: null, releases: [] }, checkedAt: null, conflicts: [], busy: null, error: null,
+  })
+  await expect(node.getByRole('button', { name: '환경 시작' })).toBeEnabled()
+  await expect(node.getByText('Ubuntu · 기본 사용자 확인 전 · 종료됨')).toBeVisible()
+  await expect(node.getByRole('table')).toHaveCount(0)
+  await page.screenshot({ path: info.outputPath('compact-node-wsl-stopped.png') })
 })

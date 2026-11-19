@@ -3,12 +3,16 @@ import { ToolIcon } from './ToolIcon'
 import { useMemo } from 'react'
 import type { ApiError, TimelineSnapshot } from '../../shared/types'
 import type { SharingState } from '../../shared/sharing'
-import { sharingDescription } from '../../shared/sharing-status'
 import type { TimelinePhase } from '../state/useTimeline'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeManagerLabel, nodeOperationMessages, nodeProgress, platformScope } from './nodePresentation'
+import { nodeActiveVersionLabel, nodeCapabilityReason, nodeDefaultVersion, nodeEnvironmentLabel, nodeEnvironmentReady, nodeInspectionStale,
+  nodeInstalledVersions, nodeInventoryKnown, nodeOperationMessages, nodeProgress, platformScope, unknownInventory } from './nodePresentation'
+import { EnvironmentActions, ManagerBadge, type OpenEnvironment } from './NodeEnvironment'
+import { NodeOperationStatus, NodeVersionAction } from './NodeVersionControls'
+import { SharingWidget } from './SharingWidget'
 
 const maxSchedules = 10
+const maxNodeVersions = 3
 const dateFormat = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
 const todayFormat = (date: string) => {
   // setFullYear preserves four-digit business dates earlier than 0100.
@@ -17,9 +21,8 @@ const todayFormat = (date: string) => {
   value.setFullYear(year, month - 1, day)
   return dateFormat.format(value)
 }
-const shareRole = { personal: '개인 전용', host: '호스트', member: '멤버' } as const
 
-export function Home({ date, snapshot, phase, timelineError, sharing, sharingError, node, onRefresh, onPlanrail, onNode }: {
+export function Home({ date, snapshot, phase, timelineError, sharing, sharingError, node, onRefresh, onPlanrail, onNode, onEnvironment, onSettings, version }: {
   date: string
   snapshot: TimelineSnapshot | null
   phase: TimelinePhase
@@ -30,6 +33,9 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
   onRefresh: () => void
   onPlanrail: () => void
   onNode: () => void
+  onEnvironment: OpenEnvironment
+  onSettings?: () => void
+  version?: string
 }) {
   const revoked = sharing?.status === 'revoked'
   const projects = useMemo(() => new Map(snapshot?.projects.map(project => [project.id, project])), [snapshot])
@@ -38,12 +44,18 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
       && (!revoked || (schedule.sharing !== 'member' && projects.get(schedule.projectId)?.sharing !== 'member')))
     .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate)
       || a.name.localeCompare(b.name, 'ko') || a.id.localeCompare(b.id)), [date, projects, revoked, snapshot])
-  const { state, error } = node
+  const { state } = node
   const progress = nodeProgress(node)
   const operationMessages = nodeOperationMessages(node)
   const sharingStale = sharing?.role === 'member' && sharing.status !== 'connected' && !revoked
   const scheduleStale = phase === 'stale' || phase === 'uncertain' || phase === 'blocked'
+  const ready = nodeEnvironmentReady(node)
   const inventoryKnown = nodeInventoryKnown(node)
+  const selected = nodeEnvironmentLabel(node)
+  const versions = inventoryKnown ? nodeInstalledVersions(node) : []
+  const listReason = nodeCapabilityReason(state, 'list')
+  const useReason = nodeCapabilityReason(state, 'use')
+  const envError = state?.environments?.error
   return (
     <main className="workrail-screen workrail-home" aria-label="Home">
       <div className="workrail-page-heading">
@@ -53,7 +65,6 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
         <section className="workrail-surface workrail-today" aria-labelledby="workrail-today-heading">
           <header className="workrail-card-heading">
             <h3 id="workrail-today-heading"><CalendarDays aria-hidden="true" size={18} />오늘의 일정</h3>
-            <button type="button" className="workrail-control" onClick={onPlanrail}>PlanRail에서 전체 일정 보기</button>
           </header>
           {phase === 'loading' && <p className="workrail-muted" aria-live="polite">일정을 조회하고 있습니다…</p>}
           {scheduleStale && (
@@ -69,12 +80,13 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
                 const project = projects.get(schedule.projectId)
                 return (
                   <li key={schedule.id}>
-                    <span className="workrail-schedule-date"><time dateTime={schedule.startDate}>{schedule.startDate}</time>{schedule.startDate !== schedule.endDate && <> – <time dateTime={schedule.endDate}>{schedule.endDate}</time></>}</span>
                     <div className="workrail-schedule-name">
                       <strong>{schedule.name}</strong>
-                      {project && <span>{project.name}</span>}
+                      <span>{project?.name}{project && ' · '}
+                        <time dateTime={schedule.startDate}>{schedule.startDate.slice(5).replace('-', '.')}</time>{schedule.startDate !== schedule.endDate && <> – <time dateTime={schedule.endDate}>{schedule.endDate.slice(5).replace('-', '.')}</time></>}
+                      </span>
                     </div>
-                    <span className="workrail-tag">{schedule.sharing || project?.sharing ? '공유' : '개인'}</span>
+                    {schedule.sharing || project?.sharing ? <span className="sharing-badge">공유</span> : <span className="workrail-tag">개인</span>}
                   </li>
                 )
               })}
@@ -82,47 +94,65 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
           )}
           {phase === 'ready' && today.length === 0 && <p className="workrail-muted">오늘의 일정이 없습니다.</p>}
           {today.length > maxSchedules && <p className="workrail-muted">오늘 일정 {today.length}개 중 처음 {maxSchedules}개를 표시합니다.</p>}
+          <button type="button" className="workrail-control workrail-primary workrail-home-plan-link" onClick={onPlanrail}>PlanRail에서 전체 일정 보기</button>
         </section>
         <section className="workrail-surface workrail-home-node" aria-labelledby="workrail-home-node-heading">
           <header className="workrail-card-heading">
             <h3 id="workrail-home-node-heading">내 개발 환경</h3>
-            <ToolIcon tool="node" size={27} />
+            <ToolIcon tool="node" size={18} />
           </header>
           {state?.supported === false ? <p className="workrail-muted">{platformScope}</p> : (
             <>
               <div className="workrail-active">
-                <span>현재 사용 중인 Node</span>
+                <span>{ready ? selected + ' · ' + (nodeDefaultVersion(node) ? '기본 Node' : '현재 사용 중인 Node')
+                  : node.environment && !node.environment.running ? selected + ' · 종료됨' : selected}</span>
                 <strong>{nodeActiveVersionLabel(node)}</strong>
-                {state?.activeSource && !nodeInspectionStale(node) && <span className="workrail-tag">{state.activeSource === 'nvm' ? 'nvm-windows 사용 중' : '기존 Node 설치'}</span>}
               </div>
-              {state && state.manager.status !== 'ready' && <p className="workrail-muted">{nodeManagerLabel(state)}</p>}
-              {state?.checkedAt && (
-                <div className="workrail-summary-line">
-                  <span>{!inventoryKnown && state.installedVersions.length > 0 ? '마지막으로 확인한 설치 버전' : '설치된 버전'}</span>
-                  <strong>{!inventoryKnown && !state.installedVersions.length ? '확인할 수 없음' : state.installedVersions.length + '개'}</strong>
-                </div>
-              )}
-              {!!state?.conflicts.length && <p className="workrail-note">Node 환경 충돌 {state.conflicts.length}건을 확인해 주세요.</p>}
+              <div className="workrail-home-environment-actions">
+                {ready && state?.manager.status !== 'checking' && state?.checkedAt && !nodeInspectionStale(node) &&
+                  <div className="workrail-manager-line">
+                    <ManagerBadge node={node} />
+                    {state.activeSource === 'standalone' && <span className="workrail-tag">기존 Node 설치</span>}
+                  </div>}
+                <EnvironmentActions node={node} onEnvironment={onEnvironment} />
+              </div>
+              {envError && <p className="workrail-note">{envError.message}</p>}
+              {ready && state?.checkedAt && <div className="workrail-summary-line">
+                <span>설치된 버전</span>
+                <strong>{inventoryKnown ? state.installedVersions.length + '개' : '확인할 수 없음'}</strong>
+              </div>}
+              {ready && !!state?.conflicts.length && <p className="workrail-note">Node 환경 충돌 {state.conflicts.length}건을 확인해 주세요.</p>}
             </>
           )}
-          <button type="button" className="workrail-control workrail-home-node-link" onClick={onNode}>NodeRail 열기</button>
+          <button type="button" className="workrail-control workrail-primary workrail-home-node-link" onClick={onNode}>NodeRail 열기</button>
         </section>
         <div className="workrail-home-summaries">
-          <section className="workrail-surface" aria-labelledby="workrail-sharing-heading">
-            <h3 id="workrail-sharing-heading">PlanRail 상태</h3>
-            <div className="workrail-sharing-badges">
-              {sharing && <span className="workrail-tag">{shareRole[sharing.role]}</span>}
-              <span className="workrail-tag workrail-connection" data-connected={!!sharing && !sharingError && sharing.status === 'connected' && sharing.role !== 'personal'}>
-                {sharing && !sharingError ? sharingDescription(sharing) : '공유 상태 확인 불가'}
-              </span>
-            </div>
-            {sharing?.lastCheckedAt && <p className="workrail-muted">마지막 정상 확인 <time dateTime={sharing.lastCheckedAt}>{new Date(sharing.lastCheckedAt).toLocaleString('ko-KR')}</time></p>}
-            {sharingError && <p role="alert">{sharingError.message}</p>}
-          </section>
-          <section className="workrail-surface" aria-labelledby="workrail-progress-heading">
-            <h3 id="workrail-progress-heading">Node 작업</h3>
-            <p aria-live="polite">{progress ?? (state && !error ? '진행 중인 Node 작업이 없습니다.' : 'Node 작업 상태를 확인할 수 없습니다.')}</p>
-            {operationMessages.map(message => <p key={message} role="alert">{message}</p>)}
+          <SharingWidget sharing={sharing} error={sharingError} onSettings={onSettings} version={version} />
+          <section className="workrail-surface workrail-widget workrail-node-widget" aria-labelledby="workrail-progress-heading">
+            <header className="workrail-widget-heading">
+              <h3 id="workrail-progress-heading">Node 작업</h3>
+              {state?.supported && <span className="workrail-muted">{selected}</span>}
+            </header>
+            <NodeOperationStatus node={node} />
+            {operationMessages.length > 0 && <button type="button" className="workrail-link" onClick={onNode}>NodeRail에서 자세히 보기</button>}
+            {!progress && !operationMessages.length && <>
+              {state?.supported === false ? <p className="workrail-muted">{platformScope}</p>
+                : !ready ? <p className="workrail-muted">{node.environment && !node.environment.running
+                  ? '환경을 시작하면 설치된 버전을 확인할 수 있습니다.' : '관리 환경을 확인하면 설치된 버전을 표시합니다.'}</p>
+                : !inventoryKnown ? <p className="workrail-muted">{listReason ?? (state?.checkedAt ? unknownInventory : '설치된 버전을 확인하고 있습니다…')}</p>
+                : !versions.length ? <p className="workrail-muted">설치된 버전이 없습니다.</p>
+                : <>
+                  <p className="workrail-muted">{node.environment?.kind === 'wsl2' ? '이 WSL 사용자의 설치된 버전' : '설치된 버전'}</p>
+                  <ul className="workrail-widget-versions" aria-label="설치된 버전">
+                    {versions.slice(0, maxNodeVersions).map(version => <li key={version}>
+                      <strong>{version}</strong><NodeVersionAction node={node} version={version} />
+                    </li>)}
+                  </ul>
+                  {useReason && <p className="workrail-muted">{useReason}</p>}
+                  {versions.length > maxNodeVersions && <button type="button" className="workrail-link" onClick={onNode}>전체 {versions.length}개</button>}
+                  {node.environment?.kind === 'wsl2' && <p className="workrail-widget-meta">프로젝트의 .node-version 설정은 유지됩니다.</p>}
+                </>}
+            </>}
           </section>
         </div>
       </div>

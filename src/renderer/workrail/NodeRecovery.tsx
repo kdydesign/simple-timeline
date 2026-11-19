@@ -2,7 +2,6 @@ import {useState} from 'react'
 import {TriangleAlert} from 'lucide-react'
 import type {NodeManagement} from './useNodeManagement'
 import {ConfirmDialog} from '../components/ConfirmDialog'
-import {supportedManager} from './nodePresentation'
 
 export function NodeGuidance({node}:{node:NodeManagement}){
  const {state}=node
@@ -10,6 +9,15 @@ export function NodeGuidance({node}:{node:NodeManagement}){
  const conflict=state.conflicts.length>0,missing=state.manager.status==='missing',manual=state.manager.status==='error'
  const maintenance=!!state.maintenance?.active
  if(!conflict&&!missing&&!manual&&!maintenance&&!state.removal?.rebootRequired)return null
+ if(node.environment?.kind==='wsl2')return <section className="workrail-surface workrail-node-guidance" aria-labelledby="workrail-node-guidance-heading">
+  <h3 id="workrail-node-guidance-heading"><TriangleAlert size={16} aria-hidden="true"/>{missing?'nodenv 설치 필요':'nodenv 상태 확인'}</h3>
+  <p>선택한 WSL 기본 사용자로 nodenv와 초기화 설정을 확인해 주세요. Node 설치에는 node-build가 필요합니다.</p>
+  <details className="workrail-node-details"><summary>공식 안내</summary>
+   {state.conflicts.length>0&&<ul>{state.conflicts.map((item,index)=><li key={item.code+index}>{item.message}{item.path&&<code>{item.path}</code>}</li>)}</ul>}
+   <code>https://github.com/nodenv/nodenv#installation</code>
+   <code>https://github.com/nodenv/node-build#installation</code>
+  </details>
+ </section>
  const title=maintenance&&state.maintenance?.error?'관리 창 확인 필요':maintenance?'Node 환경 설정 중':conflict?'Node 환경 충돌':missing?'nvm-windows 설치 필요':'nvm-windows 상태 확인'
  const summary=maintenance?null:conflict
   ?missing?'기존 Node.js를 제거한 뒤 nvm-windows를 설치해 주세요.':'Node 설치 경로와 nvm-windows 설정을 확인해 주세요.'
@@ -23,8 +31,8 @@ export function NodeGuidance({node}:{node:NodeManagement}){
   {details&&<details className="workrail-node-details"><summary>자세히</summary>
    {conflict&&<ul>{state.conflicts.map((item,index)=><li key={item.code+index}>{item.message}{item.path&&<code>{item.path}</code>}</li>)}</ul>}
    {state.removal?.reason&&<p>{state.removal.reason}</p>}
-   {manualLink&&<p>공식 {supportedManager} 릴리스에서 수동 설치 또는 업그레이드를 진행한 뒤 환경을 다시 검사해 주세요.
-    <code>https://github.com/coreybutler/nvm-windows/releases/tag/1.2.2</code></p>}
+   {manualLink&&<p>공식 nvm-windows 설치 안내에서 설치와 설정을 확인한 뒤 환경을 다시 검사해 주세요.
+    <code>https://github.com/coreybutler/nvm-windows/releases</code></p>}
   </details>}
  </section>
 }
@@ -32,7 +40,7 @@ export function NodeGuidance({node}:{node:NodeManagement}){
 export function NodeRecovery({node}:{node:NodeManagement}){
  const [confirmation,setConfirmation]=useState<{id:string;description:string}|null>(null)
  const {state,busy,mutate}=node
- if(!state?.supported)return null
+ if(!state?.supported||node.environment?.kind==='wsl2')return null
  const maintenance = state.maintenance
  if (node.openingMaintenance || maintenance?.status === 'preparing') {
   return <p role="status">{maintenance?.status === 'ready' ? '관리 창을 열고 있습니다.' : '독립 관리 창을 준비하고 있습니다.'}</p>

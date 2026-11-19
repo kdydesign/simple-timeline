@@ -1,6 +1,6 @@
 .saving-content {
   --workrail-dock-space: 0px;
-  --workrail-content-top-gap: 6px;
+  --workrail-frame: 14px;
 }
 
 .workrail-tools {
@@ -37,7 +37,7 @@
 
 .workrail-dock-seat {
   flex: none;
-  padding: 7px 22px;
+  padding: 7px var(--workrail-frame);
   border-bottom: 1px solid var(--rim);
 }
 
@@ -104,15 +104,23 @@
 }
 
 .workrail-dock .workrail-control {
-  min-width: 76px;
+  min-width: 105px;
   min-height: 36px;
   padding-inline: 11px;
-  border-radius: 10px;
+  border-radius: 8px;
 }
+
+.workrail-dock .workrail-control:not([aria-current]) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+.workrail-dock .workrail-control svg { color: var(--accent); }
+.workrail-primary:hover:enabled { background-color: var(--selected-control); }
 
 .workrail-screen {
   overflow: auto;
-  padding: 16px 22px 10px;
+  padding: var(--workrail-frame);
   background: transparent;
 }
 
@@ -122,7 +130,7 @@
 .workrail-screen p + p { margin-top: 5px; }
 .workrail-page-heading {
   display: block;
-  margin-bottom: 17px;
+  margin-bottom: 12px;
   padding: 0;
   background: transparent;
   border: 0;
@@ -135,12 +143,12 @@
 
 .workrail-home-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 8fr) minmax(245px, 5fr);
   align-items: stretch;
   gap: 14px;
 }
 
-.workrail-home-grid .workrail-surface,
+.workrail-home-grid > .workrail-surface,
 .workrail-node-current, .workrail-node-installed, .workrail-node-empty {
   padding: 15px 17px;
 }
@@ -177,19 +185,15 @@
 .workrail-schedule-list li {
   display: grid;
   align-items: center;
-  grid-template-columns: minmax(0, 178px) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   padding: 10px 0;
   gap: 8px 13px;
   border-top: 1px solid var(--border);
 }
 
-.workrail-schedule-date, .workrail-schedule-name > span, .workrail-muted {
+.workrail-schedule-name > span, .workrail-muted {
   color: var(--muted);
   font-size: 12px;
-}
-
-.workrail-schedule-date {
-  font-variant-numeric: tabular-nums;
 }
 
 .workrail-schedule-name {
@@ -252,10 +256,14 @@
   border-top: 1px solid var(--border);
 }
 
-.workrail-home-node-link {
+.workrail-home-node-link { align-self: stretch; }
+.workrail-home-plan-link {
   margin-top: auto;
-  align-self: stretch;
+  align-self: end;
+  white-space: normal;
+  text-align: center;
 }
+.workrail-today > :nth-last-child(2) { margin-bottom: 12px; }
 
 .workrail-home-summaries {
   grid-column: 1 / -1;
@@ -265,7 +273,7 @@
   gap: inherit;
 }
 
-.workrail-home-summaries h3, .workrail-node-installed h3 {
+.workrail-node-installed h3 {
   margin-bottom: 8px;
 }
 
@@ -289,7 +297,7 @@
 }
 
 .workrail-message button { margin-top: 6px; }
-.workrail-today > :is(.workrail-message, .workrail-note, ul) + * { margin-top: 9px; }
+.workrail-today > :is(.workrail-message, .workrail-note, ul) + :not(button) { margin-top: 9px; }
 
 .workrail-node-current {
   display: flex;
@@ -298,13 +306,7 @@
   gap: 12px;
 }
 
-.workrail-screen .workrail-manager {
-  margin-inline-start: auto;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.workrail-node > :is(.workrail-note, .workrail-message, .workrail-node-guidance, .workrail-node-grid) {
+.workrail-node > :is(.workrail-note, .workrail-message, .workrail-node-guidance, .workrail-node-grid, .workrail-operation, .workrail-capability-notes) {
   margin-top: 14px;
 }
 
@@ -421,7 +423,6 @@
 
 .workrail-node-table tbody tr { border-top: 1px solid var(--border); }
 .workrail-node-table tr[data-current] { background: var(--today); }
-.workrail-node-table td:last-child { white-space: nowrap; }
 .workrail-node-table .workrail-more { display: flex; margin: 9px auto; }
 .workrail-node-empty { color: var(--muted); }
 
@@ -439,47 +440,190 @@
 .workrail-dock::before { display: none; }
 .workrail-node-seat { grid-area: 1 / 1; min-height: 0; display: flex; }
 .workrail-node-seat > .workrail-node { flex: 1; }
-.workrail-node { display: flex; flex-direction: column; padding-top: var(--workrail-content-top-gap); }
+.workrail-node { display: flex; flex-direction: column;  }
 .workrail-node > :not(.workrail-node-grid) { flex: none; }
 .workrail-current-actions { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 12px; margin-inline-start: auto; }
 .workrail-node-installed { grid-column: 2; grid-row: 2; min-height: 0; overflow: auto; }
 .workrail-node-installed h3 { position: sticky; top: -15px; background: var(--popup-glass); padding-block: 8px; z-index: 1; }
-.workrail-active strong, .workrail-node-table tbody th, .workrail-node-installed strong { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; }
-.workrail-home-grid > .workrail-surface { min-height: 337px; }
+.workrail-home-grid > .workrail-surface { min-height: 286px; }
 .workrail-today { display: flex; flex-direction: column; }
 .workrail-schedule-list { min-height: 0; overflow: auto; max-height: 240px; }
 .workrail-home-node .workrail-active { margin-top: 13px; margin-bottom: 7px; }
-.workrail-home-node .workrail-active strong { font-size: 38px; font-weight: 500; }
-.workrail-home-node .workrail-active .workrail-tag { justify-self: start; font-size: 11px; margin-top: 12px; }
+.workrail-home-node .workrail-active strong { font-size: 36px; font-weight: 700; }
 .workrail-home-node .workrail-summary-line { margin-top: auto; }
-.workrail-home-node .workrail-home-node-link { margin-top: 7px; }
-.workrail-home-summaries > .workrail-surface { flex: 0 1 auto; width: fit-content; max-width: 380px; overflow-wrap: anywhere; }
-.workrail-sharing-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 7px; }
-.workrail-connection { white-space: normal; text-align: start; justify-content: flex-start; }
-.workrail-connection::before { content: ''; width: 6px; height: 6px; flex: none; border-radius: 50%; background: var(--danger); margin-inline-end: 5px; }
-.workrail-connection[data-connected="true"]::before { background: #78c79a; }
+.workrail-home-node .workrail-home-node-link { margin-top: auto; }
+.workrail-home-node:has(.workrail-summary-line) .workrail-home-node-link { margin-top: 7px; }
+.workrail-widget {
+  display: grid;
+  gap: 5px;
+  padding: 13px 14px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border-radius: 10px;
+}
+.workrail-sharing-widget { flex: 0 1 400px; }
+.workrail-node-widget { flex: 0 1 360px; }
+.workrail-widget-heading {
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 3px 8px;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  color: var(--text);
+}
+.workrail-widget-heading h3 { font-size: 14px; }
+.workrail-widget-heading .workrail-muted { font-weight: 650; }
+.workrail-widget-role {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding-inline: 5px;
+  font-size: 11px;
+  font-weight: 650;
+}
+.workrail-sharing-summary { display: flex; gap: 5px 12px; flex-wrap: wrap; font-size: 12px; align-items: baseline; }
+.workrail-sharing-summary strong { margin-inline-start: 6px; color: var(--text); }
+.workrail-connection { display: inline-flex; align-items: baseline; gap: 4px; }
+.workrail-connection::before { content: ''; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--muted); }
+.workrail-connection[data-connected="true"]::before { background: var(--workrail-status-green); }
+.workrail-widget-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 11px;
+}
+.workrail-link {
+  width: fit-content;
+  justify-self: end;
+  margin: 0;
+  padding: 0 1px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: inherit;
+  text-align: start;
+}
+.workrail-link:hover:enabled { background: transparent; color: var(--text); text-decoration: underline; }
+.workrail-widget > .workrail-link { font-size: 12px; }
+.workrail-widget-data, .workrail-widget-data dd, .workrail-widget ul { margin: 0; padding: 0; }
+.workrail-widget-data { font-size: 12px; }
+.workrail-widget-data > div { display: flex; justify-content: space-between; gap: 7px; padding: 5px 0; border-top: 1px solid var(--border); }
+.workrail-widget-data dd { font-weight: 650; text-align: end; }
+.workrail-widget-versions, .workrail-widget-members ul { list-style: none; }
+.workrail-widget-versions li, .workrail-widget-members li {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+}
+.workrail-widget-versions li { justify-content: space-between; }
+.workrail-widget-versions .workrail-control, .workrail-member-more { min-height: 24px; padding: 2px 8px; font-size: 12px; }
+.workrail-widget-members { display: grid; gap: 4px; }
+.workrail-widget-members .workrail-member-more { justify-self: end; }
+.workrail-member-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
+.workrail-member-name:focus-visible, .workrail-version-status:focus-visible, .planrail-policy:focus-visible, .planrail-connection:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+.workrail-member-version { margin-inline-start: auto; flex: none; }
+.workrail-member-connected { flex: none; color: var(--workrail-status-green); }
+
+.workrail-manager-line, .workrail-environment-actions, .workrail-home-environment-actions, .workrail-operation-progress {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.workrail-home-environment-actions:empty { display: none; }
+.workrail-home-environment-actions { justify-content: space-between; }
+.workrail-home-environment-actions > .workrail-environment-actions { margin-inline-start: auto; }
+.workrail-environment-actions .workrail-control { min-height: 28px; padding: 3px 8px; font-size: 12px; }
+.workrail-manager-badge[data-ready="true"], .workrail-control[data-active-version] {
+  --badge-border: color-mix(in srgb, var(--workrail-status-green), transparent 63%);
+  border-color: var(--badge-border);
+  background: color-mix(in srgb, var(--workrail-status-green), transparent 91%);
+  box-shadow: none;
+  opacity: 1;
+  color: var(--workrail-status-green);
+}
+.workrail-version-status { display: inline-flex; align-items: center; color: var(--muted); }
+.workrail-version-status[data-state="active"] { color: var(--workrail-status-green); }
+.workrail-version-status[data-state="unknown"] { color: var(--warning-text); }
+.workrail-version-action { display: grid; justify-items: center; gap: 3px; }
+.workrail-action-reason { max-width: 220px; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+.workrail-operation { display: grid; gap: 6px; min-width: 0; }
+.workrail-operation-progress { justify-content: space-between; color: var(--muted); font-size: 12px; }
+.workrail-operation .workrail-control { min-height: 28px; }
+.workrail-operation pre { margin: 6px 0 0; max-height: 160px; overflow: auto; white-space: pre-wrap; }
+.workrail-capability-notes { display: grid; gap: 4px; margin: 0; padding: 6px 10px; border-inline-start: 2px solid var(--accent); list-style: none; color: var(--muted); font-size: 12px; }
+.workrail-capability-notes strong { color: var(--text); }
+
+.workrail-dialog-overlay { position: fixed; z-index: 70; inset: 0; background: #20222570; }
+.workrail-dialog, .workrail-member-popover {
+  z-index: 71;
+  padding: 16px;
+  border: 1px solid var(--rim);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--popup-shadow);
+}
+.workrail-dialog {
+  position: fixed;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+}
+.workrail-dialog h2 { margin: 0; font-size: 17px; }
+.workrail-dialog p { margin: 7px 0; color: var(--muted); font-size: 13px; }
+.workrail-dialog p[role="alert"] { color: var(--danger); }
+.workrail-environment-list, .workrail-member-popover ul { display: grid; gap: 5px; margin: 10px 0; padding: 0; list-style: none; }
+.workrail-environment-list .workrail-control {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  text-align: start;
+  white-space: normal;
+}
+.workrail-environment-list .workrail-control[aria-current] { border-color: var(--selected-border); }
+.workrail-environment-list .workrail-control span { color: var(--muted); font-size: 12px; text-align: end; }
+.workrail-member-popover { min-width: 224px; max-width: min(420px, calc(100vw - 28px)); }
+.workrail-member-popover ul { max-height: 50vh; overflow: auto; }
+.workrail-member-popover li { display: grid; grid-template-columns: minmax(90px, 1fr) auto auto; gap: 8px; font-size: 12px; overflow-wrap: anywhere; }
+
 @media (prefers-reduced-motion: reduce) {
   .workrail-catalog-progress::before { animation: none; width: 100%; opacity: .6; }
 }
 
 @media (max-width: 820px) {
-  .workrail-screen { padding-inline: 14px; }
   .workrail-home-grid { grid-template-columns: minmax(0, 3fr) minmax(215px, 2fr); }
-  .workrail-schedule-list li { grid-template-columns: minmax(0, 1fr) auto; }
-  .workrail-schedule-date { grid-column: 1 / -1; }
   .workrail-node-grid { grid-template-columns: minmax(0, 1fr) minmax(165px, 24%); }
 }
 
 @media (max-width: 620px) {
   .workrail-home-grid { grid-template-columns: minmax(0, 1fr); }
   .workrail-home-grid > .workrail-surface { min-height: 0; }
-  .workrail-home-summaries > .workrail-surface { max-width: 100%; }
+  .workrail-home-summaries { flex-direction: column; }
+  .workrail-widget { flex: none; }
+  .workrail-sharing-widget { width: min(100%, 400px); }
+  .workrail-node-widget { width: min(100%, 360px); }
+  .workrail-node-table :is(th, td) { padding-inline: 5px; }
   .workrail-node-grid { display: flex; flex-direction: column; flex: none; gap: 14px; }
   .workrail-node-catalog { display: block; }
   .workrail-node-table { height: 400px; }
   .workrail-node-installed { height: 260px; }
   .workrail-current-actions { width: 100%; margin-inline-start: 0; justify-content: space-between; }
-  .workrail-dock-seat { padding-inline: 14px; }
   .workrail-dock .workrail-control { min-width: 0; padding-inline: 9px; }
 }
 
@@ -487,7 +631,7 @@
   .workrail-dock, .workrail-surface { border-color: CanvasText; background: Canvas; }
   .workrail-dock::before, .workrail-surface::before { display: none; }
   .workrail-catalog-progress::before { background: Highlight; }
-  .workrail-dock .workrail-control[aria-current="page"], .workrail-control[aria-pressed="true"] {
+  .workrail-dock .workrail-control[aria-current="page"], .workrail-control[aria-pressed="true"], .workrail-primary:enabled {
     border-color: Highlight;
     color: Highlight;
   }

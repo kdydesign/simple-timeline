@@ -29,6 +29,9 @@
   --panel-shadow: 0 5px 12px #174b3820, inset 0 1px 0 #ffffffc9, inset 0 -1px 0 #237a5b24;
   --control-shadow: 0 3px 5px #1a55432b, inset 0 1px 1px #ffffffe0, inset 0 -1px 1px #237a5b33;
   --popup-shadow: 0 12px 30px #153e3438, inset 0 1px 0 #ffffffb3;
+  --sharing-badge-text: #844736;
+  --workrail-status-green: #276b45;
+  --workrail-status-error: #a42d3b;
   --danger: #a42d3b;
   --danger-surface: #f8dfe2d9;
   --danger-border: #c86d78;
@@ -62,6 +65,9 @@
   --panel-shadow: 0 4px 12px #0002, inset 0 1px 0 #ffffff12;
   --control-shadow: 0 1px 2px #0003, inset 0 1px 0 #ffffff20;
   --popup-shadow: 0 12px 30px #0006, inset 0 1px 0 #ffffff20;
+  --sharing-badge-text: #f4d4c2;
+  --workrail-status-green: #9bd8ac;
+  --workrail-status-error: #ee8b92;
   --danger: #ffe3e7;
   --danger-surface: #86454ddd;
   --danger-border: #dc929b;
@@ -82,7 +88,7 @@ html, body { background: transparent; }
 .titlebar .brand-mark img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .window-controls { gap: 4px; }
 .window-controls .icon-button { width: 40px; height: 34px; align-self: center; border-radius: 9px; }
-.app-shell { margin: var(--workrail-content-top-gap) 14px 0; }
+.app-shell { margin: var(--workrail-frame) var(--workrail-frame) 0; }
 .toolbar, .workspace > main, .editor {
   position: relative;
   isolation: isolate;
@@ -142,7 +148,7 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 }
 .month-input .date-input input { width: 132px; }
 .editor input[aria-invalid="true"] { border-color: var(--danger-border); }
-.workspace { gap: 18px; padding: 14px 14px 14px; }
+.workspace { gap: 18px; padding: var(--workrail-frame); }
 .workspace > main { --workspace-padding: 0px; padding: 0; }
 .gantt, .calendar { background: transparent; border: 0; border-radius: 0; }
 .gantt > .view-heading { padding: 12px 18px; min-height: 42px; border-bottom: 1px solid var(--border); }
@@ -224,8 +230,6 @@ button:disabled { box-shadow: none; }
   .workspace { gap: 12px; }
 }
 @media (max-width: 850px) {
-  .app-shell { margin-inline: 14px; }
-  .workspace { padding: 14px; }
   .toolbar .mode-switch { gap: 3px; }
   .toolbar .mode-switch .icon-button { width: 30px; }
   .toolbar .month-controls { gap: 2px; }
@@ -388,7 +392,7 @@ button:disabled { box-shadow: none; }
 .ui-switch [data-slot="switch-thumb"] { transform: translateX(0); transition: transform 160ms ease, background-color 160ms ease; }
 .gantt-name-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .gantt-name-line > .text-button { min-width: 0; flex: 0 1 auto; }
-.sharing-badge { flex: 0 0 auto; background: #ab75632b; border: 1px solid #dc9b7d8c; border-radius: 4px; color: #f4d4c2; padding: 0 4px; font-size: 10px; line-height: 16px; }
+.sharing-badge { flex: 0 0 auto; background: #ab75632b; border: 1px solid #dc9b7d8c; border-radius: 4px; color: var(--sharing-badge-text); padding: 0 4px; font-size: 10px; line-height: 16px; }
 .gantt-name-line .reminder-shortcut { flex: 0 0 auto; width: 20px; height: 20px; padding: 2px; background: transparent; border: 0; box-shadow: none; color: var(--accent); }
 .reminder-shortcut .icon { width: 15px; height: 15px; }
 .quick-reminder-backdrop { position: fixed; inset: 48px 0 0; z-index: 80; background: transparent; }

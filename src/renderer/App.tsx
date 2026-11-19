@@ -42,6 +42,7 @@ import {PlanRailStatus} from "./workrail/PlanRailStatus";
 import "./workrail/status.css";
 import { Home } from "./workrail/Home";
 import { NodeScreen } from "./workrail/NodeScreen";
+import { useEnvironmentPicker } from "./workrail/NodeEnvironment";
 import { ToolDock, type WorkRailTool } from "./workrail/ToolDock";
 import { useLocalWorkDate } from "./workrail/useLocalWorkDate";
 import { useNodeManagement } from "./workrail/useNodeManagement";
@@ -73,6 +74,7 @@ export function App({
   const dockButton = useRef<HTMLButtonElement>(null);
   const workDate = useLocalWorkDate(today);
   const node = useNodeManagement(tool === "node");
+  const environmentPicker = useEnvironmentPicker(node);
   const reminders = useReminders();
   const handledReminder = useRef<number|null>(null);
   const timeline = useTimeline(api),
@@ -771,6 +773,7 @@ export function App({
       </div>
       {tool === "home" && <Home date={workDate} snapshot={timeline.snapshot} phase={timeline.phase} timelineError={timeline.error}
         sharing={sharing.state} sharingError={sharing.error} node={node} onRefresh={() => void timeline.refresh()}
+        onEnvironment={environmentPicker.openPicker} onSettings={sharing.state&&sharing.api?()=>sharing.openSettings('sharing'):undefined}
         onPlanrail={() => {
           selectTool("planrail");
           setFilter("all");
@@ -780,8 +783,9 @@ export function App({
           selectTool("node");
           requestAnimationFrame(() => dockButton.current?.focus());
         }}/>}
-      <div className="workrail-node-seat" aria-hidden={tool!=="node"||undefined} inert={tool!=="node"}><NodeScreen node={node}/></div>
+      <div className="workrail-node-seat" aria-hidden={tool!=="node"||undefined} inert={tool!=="node"}><NodeScreen node={node} onEnvironment={environmentPicker.openPicker}/></div>
       </div>
+      {!dockBlocked && environmentPicker.dialog}
       {planrailActive&&<PlanRailStatus sharing={sharing.error?.code==='IPC_UNAVAILABLE'?null:sharing.state} muted={reminders.muted} loading={reminders.loading}/>}
       {settingsVisible&&sharing.state&&sharing.api&&<SharingSettings externalDirty={editor.dirty} request={sharing.settingsRequest} initialTab={sharing.settingsTab} state={sharing.state} api={sharing.api} busy={sharing.busy} error={sharing.error} projects={timeline.snapshot?.projects??[]} run={sharing.run} onClose={()=>sharing.setSettingsOpen(false)} onGuard={setSettingsDirty}/>}
       {quickReminder&&<QuickReminder key={quickReminder.id} schedule={timeline.snapshot?.schedules.find(s=>s.id===quickReminder.id)} caller={quickReminder.caller}

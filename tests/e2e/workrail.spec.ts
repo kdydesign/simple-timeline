@@ -48,7 +48,7 @@ test('retains narrow drafts, date selection, and both Gantt scroll positions', a
   const body = page.locator('.gantt-body')
   await body.evaluate(element => { element.scrollTop = 680 })
   await expect.poll(() => body.evaluate(element => element.scrollTop)).toBe(680)
-  await page.getByRole('button', { name: '일정 추가', exact: true }).click()
+  await page.getByRole('banner').getByRole('button', { name: '일정 추가', exact: true }).click()
   const name = page.getByRole('textbox', { name: '일정 이름' })
   await name.fill('메뉴 전환 후 이어 쓸 일정')
   const start = page.getByRole('textbox', { name: '시작일' })

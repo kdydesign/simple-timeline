@@ -75,5 +75,5 @@ export function useSharing(reconcile:()=>Promise<boolean>,ready:boolean,api:Shar
    return result.ok&&latest.current?.status==='connected'
   }finally{manual.current=false}
  }
- return{state,api,error,busy,writeOutcomeUnknown,settingsOpen,setSettingsOpen,settingsTab,settingsRequest,openSettings:()=>{setSettingsRequest(null);setSettingsTab('basic');setSettingsOpen(true)},run,sync}
+ return{state,api,error,busy,writeOutcomeUnknown,settingsOpen,setSettingsOpen,settingsTab,settingsRequest,openSettings:(tab:'basic'|'sharing'='basic')=>{setSettingsRequest(null);setSettingsTab(tab);setSettingsOpen(true)},run,sync}
 }

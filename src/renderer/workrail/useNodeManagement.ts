@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { NodeManagementApi, NodeManagementError, NodeManagementResult, NodeManagementState } from '../../shared/node-management'
 
 export type NodeMutation = { kind: 'install' | 'use'; version: string } | { kind: 'install-manager'; version: null } | {kind:'remove-standalone';version:null;confirmationId:string}
-type RequestKind = 'read' | 'recheck' | 'mutation' | 'maintenance'
+type RequestKind = 'read' | 'recheck' | 'mutation' | 'maintenance' | 'control'
+type EnvironmentRequest = 'select' | 'start'
 
 const unavailable: NodeManagementError = {
   code: 'ipc-unavailable',
@@ -22,6 +23,8 @@ interface Connection {
   mutation: NodeMutation | null
   catalogPending: boolean
   openingMaintenance: boolean
+  environmentPending: EnvironmentRequest | null
+  cancelPending: boolean
 }
 
 export function useNodeManagement(active: boolean, api: NodeManagementApi | undefined = window.workrailNodeManagement) {
@@ -33,6 +36,9 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   const [maintenanceError, setMaintenanceError] = useState<string | null>(null)
   const [mutation, setMutation] = useState<NodeMutation | null>(null)
   const [catalogPending, setCatalogPending] = useState(false)
+  const [environmentPending, setEnvironmentPending] = useState<EnvironmentRequest | null>(null)
+  const [cancelPending, setCancelPending] = useState(false)
+  const [controlError, setControlError] = useState<NodeManagementError | null>(null)
 
   const run = useCallback(async (command: () => Promise<NodeManagementResult>, kind: RequestKind = 'read') => {
     const current = connection.current
@@ -58,6 +64,8 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     } else if (kind === 'mutation') {
       // An unrelated snapshot cannot confirm a command that never returned a state.
       setMutationFailure({ request, error: result.error })
+    } else if (kind === 'control') {
+      setControlError(result.error)
     } else if (startRevision === current.revision && request === current.request) {
       setReadError(result.error)
     } else {
@@ -73,14 +81,19 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
         return recovered ? null : { ...failure, recoveryError: recoveryError ?? undefined }
       })
     }
+    return result
   }, [])
 
   const refresh = useCallback(() => {
-    if (api && !connection.current?.mutation) return run(() => api.getState(), 'recheck')
+    const current = connection.current
+    if (api && current && !current.mutation && !current.environmentPending) {
+      setControlError(null)
+      return run(() => api.getState(), 'recheck')
+    }
   }, [api, run])
   const refreshCatalog = useCallback(async () => {
     const current = connection.current
-    if (!api || !current || current.catalogPending || current.mutation) return
+    if (!api || !current || current.catalogPending || current.mutation || current.environmentPending) return
     current.catalogPending = true
     setCatalogPending(true)
     try {
@@ -101,8 +114,12 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     setOpeningMaintenance(false)
     setMaintenanceError(null)
     setCatalogPending(false)
+    setEnvironmentPending(null)
+    setCancelPending(false)
+    setControlError(null)
     if (!api) return
-    const current: Connection = { revision: -1, request: 0, acceptedRequest: 0, mutation: null, catalogPending: false, openingMaintenance: false }
+    const current: Connection = { revision: -1, request: 0, acceptedRequest: 0, mutation: null, catalogPending: false,
+      openingMaintenance: false, environmentPending: null, cancelPending: false }
     connection.current = current
     const off = api.onChange(next => {
       if (connection.current !== current || next.revision <= current.revision) return
@@ -110,7 +127,9 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       setState(next)
       setReadError(null)
     })
-    const inspect = () => { void run(() => api.getState()) }
+    const inspect = () => {
+      if (!current.environmentPending) void run(() => api.getState())
+    }
     window.addEventListener('focus', inspect)
     inspect()
     return () => {
@@ -120,23 +139,30 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     }
   }, [api, run])
 
-  const catalogRequested = useRef(false)
-  const busy = openingMaintenance || !!mutation || !!state?.busy || !!state?.maintenance?.active
+  const catalogRequested = useRef<string | null>(null)
+  const busy = openingMaintenance || !!environmentPending || cancelPending || !!mutation || !!state?.busy || !!state?.maintenance?.active
+  const environment = state?.environments?.items.find(item => item.id === state.environments?.selectedId)
+  const catalogTarget = !state?.supported ? null : !state.environments ? 'windows'
+    : state.environments.status === 'ready' && environment?.running ? environment.id : null
   useEffect(() => {
-    if (!active) catalogRequested.current = false
-    if (!active || !state?.supported || catalogRequested.current || busy) return
-    catalogRequested.current = true
+    if (!active || !catalogTarget) {
+      catalogRequested.current = null
+      return
+    }
+    if (catalogRequested.current === catalogTarget || busy || catalogPending) return
+    catalogRequested.current = catalogTarget
     void refreshCatalog()
-  }, [active, state?.supported, busy, refreshCatalog])
+  }, [active, catalogTarget, busy, catalogPending, refreshCatalog])
 
   async function mutate(operation: NodeMutation) {
     const current = connection.current
-    if (!api || !current || !state?.supported || state.busy || current.mutation) return
+    if (!api || !current || !state?.supported || busy || current.mutation || current.environmentPending || current.openingMaintenance) return
     const command = operation.kind === 'remove-standalone' ? () => api.removeStandalone({confirmed:true,confirmationId:operation.confirmationId})
       : operation.kind === 'install-manager' ? () => api.installManager()
       : operation.kind === 'install' ? () => api.install(operation.version)
       : () => api.use(operation.version)
     current.mutation = operation
+    setControlError(null)
     setMutation(operation)
     try {
       await run(command, 'mutation')
@@ -148,9 +174,47 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     }
   }
 
+  async function changeEnvironment(request: { kind: 'select'; id: string } | { kind: 'start' }) {
+    const current = connection.current
+    if (!api || !current || busy || current.mutation || current.environmentPending || current.openingMaintenance || current.catalogPending) return false
+    if (state?.environments?.status !== 'ready') return false
+    current.environmentPending = request.kind
+    setEnvironmentPending(request.kind)
+    setControlError(null)
+    try {
+      const result = await run(() => request.kind === 'start' ? api.startEnvironment() : api.selectEnvironment(request.id), 'control')
+      if (request.kind === 'select' && result?.ok && result.data.environments?.selectedId === request.id) {
+        setMutationFailure(null)
+        return true
+      }
+      return false
+    } finally {
+      if (connection.current === current) {
+        current.environmentPending = null
+        setEnvironmentPending(null)
+      }
+    }
+  }
+
+  async function cancelOperation() {
+    const current = connection.current
+    if (!api || !current || current.cancelPending || !state?.busy?.cancellable) return
+    current.cancelPending = true
+    setCancelPending(true)
+    setControlError(null)
+    try {
+      await run(() => api.cancelOperation(), 'control')
+    } finally {
+      if (connection.current === current) {
+        current.cancelPending = false
+        setCancelPending(false)
+      }
+    }
+  }
+
   async function openMaintenance() {
     const current = connection.current
-    if (!api || !current || current.openingMaintenance) return
+    if (!api || !current || current.openingMaintenance || current.environmentPending || current.mutation) return
     current.openingMaintenance = true
     setOpeningMaintenance(true)
     setMaintenanceError(null)
@@ -164,7 +228,9 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     }
   }
   const error = mutationFailure?.error ?? readError
-  return { state, error, openingMaintenance, maintenanceError, recoveryError: mutationFailure?.recoveryError, available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate, openMaintenance }
+  return { state, error, controlError, openingMaintenance, maintenanceError, recoveryError: mutationFailure?.recoveryError,
+    available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate, openMaintenance,
+    environment, environmentPending, changeEnvironment, cancelPending, cancelOperation }
 }
 
 export type NodeManagement = ReturnType<typeof useNodeManagement>

@@ -2,7 +2,10 @@ import { useRef, useState } from 'react'
 import { RefreshCw } from 'lucide-react'
 import type { NodeRelease } from '../../shared/node-management'
 import type { NodeManagement } from './useNodeManagement'
-import { nodeActiveVersionLabel, nodeInspectionStale, nodeInventoryKnown, nodeOperationMessages, nodeProgress, platformScope } from './nodePresentation'
+import { nodeActiveVersionLabel, nodeCanRecheck, nodeCapabilityReason, nodeDefaultVersion, nodeEnvironmentReady, nodeInspectionStale,
+  nodeInstalledVersions, nodeInventoryKnown, nodeVersionStatus, platformScope, unknownInventory } from './nodePresentation'
+import { EnvironmentActions, EnvironmentName, ManagerBadge, type OpenEnvironment } from './NodeEnvironment'
+import { NodeOperationStatus, NodeTooltip, NodeVersionAction, NodeVersionStatus } from './NodeVersionControls'
 
 import {NodeGuidance} from './NodeRecovery'
 import { ToolIcon } from './ToolIcon'
@@ -19,7 +22,7 @@ const filters = [
 ] as const
 const pageSize = 30
 
-export function NodeScreen({ node }: { node: NodeManagement }) {
+export function NodeScreen({ node, onEnvironment }: { node: NodeManagement; onEnvironment: OpenEnvironment }) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<typeof filters[number]['id']>('all')
   const [limit, setLimit] = useState(pageSize)
@@ -35,23 +38,20 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
       : column === 'version' || column === 'npm' ? 'descending' : 'ascending' }))
     resetPage()
   }
-  const { state, error, busy, catalogPending, refresh, refreshCatalog, mutate } = node
+  const { state, busy, catalogPending, refresh, refreshCatalog } = node
   const unsupported = state?.supported === false
+  const ready = nodeEnvironmentReady(node)
   const stale = nodeInspectionStale(node)
   const inventoryKnown = nodeInventoryKnown(node)
-  const progress = nodeProgress(node)
-  const operationMessages = nodeOperationMessages(node)
-  const installed = state?.installedVersions ?? []
+  const installed = nodeInstalledVersions(node)
   const catalog = state?.catalog
-  const checking = !state && !error
   const catalogLoading = catalogPending || catalog?.status === 'loading'
-  const canChange = !state?.maintenance?.active && !state?.removal?.rebootRequired && !!state?.supported && !!state.checkedAt && !busy && !stale && !state.conflicts.length
-    && state.error?.code !== 'operation-unknown' && state.error?.code !== 'shutdown'
-  const managerReady = state?.manager.status === 'ready'
-  const canUse = canChange && managerReady
-  const canInstall = canUse && catalog?.status === 'ready' && !catalogLoading
-  const activeVersion = state?.activeVersion
-  const activeManaged = state?.activeSource === 'nvm' && !stale
+  const groupReasons = [
+    ['목록 조회', nodeCapabilityReason(state, 'list')],
+    ['설치', nodeCapabilityReason(state, 'install')],
+    ['버전 전환', nodeCapabilityReason(state, 'use')],
+  ].filter(([, reason]) => reason)
+  const currentLabel = nodeDefaultVersion(node) ? '기본 버전' : '현재 사용 버전'
   const releaseMap = new Map(catalog?.releases.map(release => [release.version, release]))
   const query = search.trim().toLowerCase().replace(/^v(?=\d)/, '')
   const matches = (version: string, release?: NodeRelease) =>
@@ -59,23 +59,13 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
   const filteredVersions = filter === 'installed'
     ? installed.filter(version => matches(version, releaseMap.get(version)))
     : (catalog?.releases ?? []).filter(release =>
-      (filter !== 'lts' || !!release.lts) && matches(release.version, release)).map(release => release.version)
+      (filter !== 'lts' || (release.ltsKnown !== false && !!release.lts)) && matches(release.version, release)).map(release => release.version)
   const rows = sortNodeCatalog(filteredVersions.map(version => {
     const release = releaseMap.get(version)
-    const status: NodeCatalogRow['status'] = activeManaged && activeVersion === version ? 'active'
-      : !inventoryKnown ? null : installed.includes(version) ? 'installed' : 'missing'
-    return { version, npm: release?.npm ?? null, lts: release?.lts, status }
+    return { version, npm: release?.npm ?? null, lts: release?.ltsKnown === false ? undefined : release?.lts,
+      status: nodeVersionStatus(node, version) } satisfies NodeCatalogRow
   }), sort)
-  const noInventory = inventoryKnown ? '설치된 버전이 없습니다.' : '설치된 버전을 확인할 수 없습니다.'
-
-  function versionAction(version: string, isInstalled: boolean) {
-    const action = isInstalled ? '사용' : '설치'
-    return (
-      <button type="button" className="workrail-control"
-        aria-label={version + ' ' + action} disabled={isInstalled ? !canUse : !canInstall}
-        onClick={() => void mutate({ kind: isInstalled ? 'use' : 'install', version })}>{action}</button>
-    )
-  }
+  const noInventory = inventoryKnown ? '설치된 버전이 없습니다.' : unknownInventory
 
   return (
     <main className="workrail-screen workrail-node" aria-label="NodeRail">
@@ -84,20 +74,26 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
         <section className="workrail-surface workrail-node-current" aria-labelledby="workrail-current-heading">
           <ToolIcon tool="node" size={25} />
           <div className="workrail-active">
-            <h3 id="workrail-current-heading">현재 사용 버전</h3>
+            <h3 id="workrail-current-heading">{currentLabel}</h3>
+            <EnvironmentName node={node} />
             <strong>{nodeActiveVersionLabel(node)}</strong>
           </div>
           <div className="workrail-current-actions">
-          {state?.activeSource && !stale && <span className="workrail-tag">{activeManaged ? 'nvm-windows 사용 중' : '기존 Node 설치'}</span>}
-          <button type="button" className="workrail-control" onClick={() => void refresh()}
-            disabled={!node.available || busy || checking}><RefreshCw aria-hidden="true" size={15} />환경 다시 검사</button>
+            {ready && !stale && state?.manager.status === 'ready' && <ManagerBadge node={node} />}
+            {ready && !stale && state?.activeSource === 'standalone' && <span className="workrail-tag">기존 Node 설치</span>}
+            <EnvironmentActions node={node} onEnvironment={onEnvironment} />
+            {state?.environments?.status !== 'error' && <button type="button" className="workrail-control" onClick={() => void refresh()}
+              disabled={!nodeCanRecheck(node) || !state && !node.error}><RefreshCw aria-hidden="true" size={15} />환경 다시 검사</button>}
           </div>
         </section>
       )}
-      {progress && <p className="workrail-note" aria-live="polite">{progress}</p>}
-      {operationMessages.map(message => <p key={message} className="workrail-message" role="alert">{message}</p>)}
-      <NodeGuidance node={node}/>
-      {state?.supported && (
+      {state?.environments?.error && <p className="workrail-message" role="alert">{state.environments.error.message}</p>}
+      <NodeOperationStatus node={node} showLogs />
+      {ready && <NodeGuidance node={node} />}
+      {ready && groupReasons.length > 0 && <ul className="workrail-capability-notes">
+        {groupReasons.map(([label, reason]) => <li key={label}><strong>{label}</strong> {reason}</li>)}
+      </ul>}
+      {ready && (
         <div className="workrail-node-grid">
           <section className="workrail-node-catalog" aria-labelledby="workrail-catalog-heading">
             <div className="workrail-catalog-toolbar">
@@ -124,23 +120,23 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
               </div>}
               <div className="workrail-node-table-scroll" ref={tableScroll}>
                 <table aria-label="공식 배포 버전" aria-busy={catalogLoading}>
-                  <thead><tr>{sortColumns.map(column => <th key={column.id} scope="col" aria-sort={sort.column === column.id ? sort.direction : undefined}>
-                    <button type="button" className="workrail-sort" aria-label={column.label + ' 정렬'} onClick={() => changeSort(column.id)}>
+                  <thead><tr>{sortColumns.map(column => {
+                    const sortButton = <button type="button" className="workrail-sort" aria-label={column.label + ' 정렬'} onClick={() => changeSort(column.id)}>
                       <span>{column.label}</span><span aria-hidden="true" className="workrail-sort-direction">{sort.column === column.id ? sort.direction === 'ascending' ? '▲' : '▼' : '↕'}</span>
                     </button>
-                  </th>)}<th scope="col">작업</th></tr></thead>
-                  <tbody>{rows.slice(0, limit).map(row => {
-                    const isInstalled = installed.includes(row.version)
-                    return (
-                      <tr key={row.version} data-current={row.status === 'active' || undefined}>
-                        <th scope="row">{row.version}</th>
-                        <td>{row.lts === undefined ? '—' : row.lts ? <span className="workrail-tag">{row.lts}</span> : '일반'}</td>
-                        <td>{row.npm ?? '—'}</td>
-                        <td>{row.status === 'active' ? '사용 중' : row.status === null ? '확인 필요' : row.status === 'installed' ? '설치됨' : '미설치'}</td>
-                        <td>{versionAction(row.version, isInstalled)}</td>
-                      </tr>
-                    )
-                  })}</tbody>
+                    return <th key={column.id} scope="col" aria-sort={sort.column === column.id ? sort.direction : undefined}>
+                      {column.id === 'category' ? <NodeTooltip trigger={sortButton}>{'LTS는 장기 지원 계열이며 Krypton은 코드명입니다. 분류만으로 현재 보안 지원 여부를 알 수 없습니다.'}</NodeTooltip> : sortButton}
+                    </th>
+                  })}<th scope="col">작업</th></tr></thead>
+                  <tbody>{rows.slice(0, limit).map(row => (
+                    <tr key={row.version} data-current={row.status === 'active' || undefined}>
+                      <th scope="row">{row.version}</th>
+                      <td>{row.lts === undefined ? '확인 불가' : row.lts ? <span className="workrail-tag">LTS · {row.lts}</span> : '비 LTS'}</td>
+                      <td>{row.npm ?? '—'}</td>
+                      <td><NodeVersionStatus node={node} version={row.version} /></td>
+                      <td><NodeVersionAction node={node} version={row.version} release={releaseMap.get(row.version)} /></td>
+                    </tr>
+                  ))}</tbody>
                 </table>
                 {rows.length > limit && <button type="button" className="workrail-control workrail-more"
                   onClick={() => setLimit(value => value + pageSize)}>버전 더 보기</button>}
@@ -157,19 +153,20 @@ export function NodeScreen({ node }: { node: NodeManagement }) {
             <h3 id="workrail-installed-heading">설치된 버전</h3>
             {installed.length > 0 ? (
               <>
-                {!inventoryKnown && <p className="workrail-note">마지막으로 확인한 버전을 표시합니다.</p>}
+                {!inventoryKnown && <p className="workrail-note">{unknownInventory} 마지막으로 확인한 목록을 표시합니다.</p>}
                 <ul>{installed.map(version => (
                   <li key={version}>
-                    <div>
-                      <strong>{version}</strong>
-                      {activeManaged && activeVersion === version && <p className="workrail-muted">사용 중</p>}
-                    </div>
-                    {versionAction(version, true)}
+                    <strong>{version}</strong>
+                    <NodeVersionAction node={node} version={version} />
                   </li>
                 ))}</ul>
               </>
             ) : <p className="workrail-muted">{noInventory}</p>}
-            <p className="workrail-note">버전을 바꾸면 Windows PATH에서 nvm-windows 경로를 사용하는 이후 Node 실행에 적용됩니다. 설치 후 PATH가 변경되면 터미널을 다시 열어 주세요.</p>
+            <p className="workrail-note">{node.environment?.kind === 'wsl2'
+              ? '선택한 WSL 기본 사용자의 Node 버전을 바꿉니다. 프로젝트 .node-version과 열린 셸의 환경 설정은 유지됩니다.'
+              : nodeDefaultVersion(node)
+                ? 'Windows의 사용자 기본 버전을 바꿉니다. 프로젝트에서 정한 버전은 그대로 적용될 수 있습니다.'
+                : '버전을 바꾸면 Windows PATH에서 nvm-windows 경로를 사용하는 이후 Node 실행에 적용됩니다. 설치 후 PATH가 변경되면 터미널을 다시 열어 주세요.'}</p>
           </section>
         </div>
       )}

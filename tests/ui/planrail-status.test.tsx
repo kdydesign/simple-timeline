@@ -27,3 +27,14 @@ describe('PlanRail notification policy',()=>{
   await waitFor(()=>expect(result.current.muted).toBeNull())
  })
 })
+
+it.each([
+ ['false', false, false, '앱에서 일정 알림을 허용하고 있습니다.'],
+ ['muted', true, false, '앱의 모든 일정 알림을 끈 상태입니다.'],
+ ['unknown', null, false, '알림 설정을 확인하지 못했습니다.'],
+ ['loading', null, true, '알림 설정을 확인하고 있습니다.'],
+] as const)('describes the %s notification policy on keyboard focus', async (_policy, muted, loading, message) => {
+ render(<PlanRailStatus sharing={null} muted={muted} loading={loading}/>)
+ await act(async () => screen.getByTestId('notification-policy').focus())
+ expect(await screen.findByRole('tooltip')).toHaveTextContent(message)
+})

@@ -9,7 +9,7 @@ export type NodeCatalogRow = {
 }
 
 const statusRank = { active: 0, installed: 1, missing: 2 }
-function compareVersion(left: string, right: string) {
+export function compareVersion(left: string, right: string) {
   const a = left.split('.').map(Number)
   const b = right.split('.').map(Number)
   for (let index = 0; index < Math.max(a.length, b.length); index++) {
