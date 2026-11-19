@@ -19,22 +19,40 @@ root=$(printenv NODENV_ROOT || true)
 [ -n "$root" ] || root="$HOME/.nodenv"
 [ -n "$manager" ] || manager="$root/bin/nodenv"
 [ -n "$builder" ] || builder="$root/plugins/node-build/bin/node-build"
+check_path_chain() (
+  path=$1
+  case "$path" in ''|/mnt/[a-zA-Z]/*|*.exe) return 1;; esac
+  filesystem=$(stat -f -L -c %T -- "$path") || return 1
+  case "$filesystem" in 9p|drvfs|fuseblk) return 1;; esac
+  # Pass each ancestor as a separate argument, including names with spaces
+  # or newlines. Only numeric owner and mode records are parsed from stdout.
+  IFS=/
+  set -f
+  prefix=
+  set --
+  for component in $path; do
+    [ -n "$component" ] || continue
+    prefix="$prefix/$component"
+    set -- "$@" "$prefix"
+  done
+  [ "$#" -gt 0 ] || return 0
+  attributes=$(stat -Lc '%u %a' -- "$@") || return 1
+  for ancestor do
+    IFS=' ' read -r owner mode || return 1
+    [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
+    if [ "$((0$mode & 022))" -ne 0 ]; then
+      [ "$ancestor" = /tmp ] && [ "$owner" = 0 ] && [ "$((0$mode & 01000))" -ne 0 ] || return 1
+    fi
+  done <<WORKRAIL_PATH_ATTRIBUTES
+$attributes
+WORKRAIL_PATH_ATTRIBUTES
+)
 safe_path() {
   case "$1" in /*) ;; *) return 1;; esac
   case "$1" in *:*|*/../*|*/./*|*/..|*/.) return 1;; esac
-  for p in "$1" "$(realpath -e -- "$1")"; do
-    case "$p" in ''|/mnt/[a-zA-Z]/*|*.exe) return 1;; esac
-    case "$(stat -f -L -c %T -- "$p")" in 9p|drvfs|fuseblk) return 1;; esac
-    while [ "$p" != / ]; do
-      owner=$(stat -Lc %u -- "$p") || return 1
-      [ "$owner" = 0 ] || [ "$owner" = "$uid" ] || return 1
-      mode=$(stat -Lc %a -- "$p") || return 1
-      if [ "$((0$mode & 022))" -ne 0 ]; then
-        [ "$p" = /tmp ] && [ "$owner" = 0 ] && [ -k "$p" ] || return 1
-      fi
-      p=$(dirname -- "$p")
-    done
-  done
+  canonical=$(realpath -e -- "$1") || return 1
+  check_path_chain "$1" || return 1
+  [ "$1" = "$canonical" ] || check_path_chain "$canonical"
 }
 safe_tree() {
   safe_path "$1" || return 1

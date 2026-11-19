@@ -21,10 +21,14 @@ $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
 
 if ($AsStandardUser) {
   if ($isAdmin -or $identity.Name -ne "$env:COMPUTERNAME\WorkRailZipCI") { throw 'Expected the isolated standard account' }
-  $env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData')
-  $env:APPDATA = [Environment]::GetFolderPath('ApplicationData')
-  $env:USERPROFILE = [Environment]::GetFolderPath('UserProfile')
+  # A first, non-interactive logon may not have created the known AppData folders.
+  # Use Windows' registered profile for this token, before resolving any shell paths.
+  $profileKey = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $identity.User.Value
+  $env:USERPROFILE = Get-ItemPropertyValue -LiteralPath $profileKey -Name ProfileImagePath
+  $env:LOCALAPPDATA = Join-Path $env:USERPROFILE 'AppData\Local'
+  $env:APPDATA = Join-Path $env:USERPROFILE 'AppData\Roaming'
   $env:TEMP = Join-Path $env:LOCALAPPDATA 'Temp'
+  [IO.Directory]::CreateDirectory($env:APPDATA) | Out-Null
   [IO.Directory]::CreateDirectory($env:TEMP) | Out-Null
   $env:TMP = $env:TEMP
   $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine')

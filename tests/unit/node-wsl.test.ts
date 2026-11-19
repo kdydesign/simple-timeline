@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest'
-import { mkdtemp, mkdir, writeFile, chmod, rm, readFile, access, symlink } from 'node:fs/promises'
+import { mkdtemp, mkdir, writeFile, chmod, rm, readFile, access, rename, symlink } from 'node:fs/promises'
 import { tmpdir, userInfo } from 'node:os'
 import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -90,6 +90,23 @@ it.runIf(process.platform === 'linux')('executes the guest probe against a tempo
     await chmod(f.manager, 0o777)
     expect((await f.inspect()).manager.status).toBe('error')
     await expect(access(join(f.home, 'executed'))).rejects.toThrow()
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})
+
+it.runIf(process.platform === 'linux')('checks ancestors of both the configured and resolved manager path', async () => {
+  const f = await fixture()
+  try {
+    const directory = join(f.home, '다른 경로\n[bin]')
+    const target = join(directory, 'nodenv')
+    await mkdir(directory)
+    await rename(f.manager, target)
+    await symlink(target, f.manager)
+    expect((await f.inspect()).manager.status).toBe('ready')
+    await chmod(directory, 0o777)
+    expect((await f.inspect()).manager.status).toBe('error')
+    await chmod(directory, 0o755)
+    await chmod(dirname(f.manager), 0o777)
+    expect((await f.inspect()).manager.status).toBe('error')
   } finally { await rm(f.home, { recursive: true, force: true }) }
 })
 
