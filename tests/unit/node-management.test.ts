@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
-import { mkdir, mkdtemp, rm, symlink as createSymlink, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, realpath, rm, symlink as createSymlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -535,14 +535,16 @@ it.each(['classic', 'modern'] as const)('rechecks the %s data root independently
 })
 
 it.runIf(process.platform === 'win32')('accepts an existing local Windows folder and rejects files and redirected parent junctions', async () => {
-  const temp = await mkdtemp(join(tmpdir(), 'workrail-folder-'))
+  // Windows TEMP may use an 8.3 alias or a redirected parent. The positive
+  // case represents a canonical root already identified by manager discovery.
+  const temp = await mkdtemp(join(await realpath(tmpdir()), 'workrail-folder-'))
   const verify = createWindowsNodeAdapter(fetch).verifiedDirectory!
   try {
     const root = join(temp, 'store')
     await mkdir(join(root, 'versions'), { recursive: true })
     await writeFile(join(temp, 'plain.txt'), '')
     await createSymlink(root, join(temp, 'link'), 'junction')
-    expect(await verify(root)).toBe(true)
+    expect(await verify(root), 'Expected canonical directory ' + root + ' (real path ' + await realpath(root) + ')').toBe(true)
     expect(await verify(join(temp, 'plain.txt'))).toBe(false)
     expect(await verify(join(temp, 'link', 'versions'))).toBe(false)
   } finally { await rm(temp, { recursive: true, force: true }) }
