@@ -1,5 +1,13 @@
 # 용어 사전
 
+## Node 환경 / Node Environment
+
+Node 관리 명령이 실행되는 운영체제·사용자 범위. [환경 확장 설계 초안](docs/design/workrail-environments-and-home.md)에서는 Windows 또는 WSL 배포판과 Linux 사용자 조합을 뜻한다. 관리 도구와 설치 버전 목록은 이 환경에 속하며 서로 다른 환경의 목록을 합치지 않는다. 현재 제품의 WSL 지원 완료를 뜻하지 않는다.
+
+## 기본 Node 버전 / Default Node Version
+
+선택한 관리 도구가 사용자 기본값으로 지정한 Node 버전. 프로젝트 파일이나 셸 설정이 우선하면 실제 프로젝트에서 실행되는 버전과 다를 수 있다. nodenv의 global 변경과 프로젝트 .node-version 변경은 별도 작업이다.
+
 ## 중지된 공유 자료 / Dormant Hosted Data
 
 이 PC가 호스트로 제공하다가 멤버로 역할을 바꾼 뒤 보관하는 공유 프로젝트와 일정 원본.
