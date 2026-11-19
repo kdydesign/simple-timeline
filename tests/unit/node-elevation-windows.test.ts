@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, it } from 'vitest'
+import { registryJson } from '../../src/main/node-management/registry-json'
 import { createElevationCommand, readElevatedExit } from '../../src/main/node-management/windows'
 
 function worker(legacyHelperRoot?: string) {
@@ -104,3 +105,15 @@ Run-Fallback
     expect(output.trim().split(/\r?\n/)).toEqual(['False', 'True'])
   } finally { rmSync(directory, { recursive: true, force: true }) }
 }, 20_000)
+
+it.skipIf(process.platform !== 'win32')('round-trips Windows registry strings, source maps and typed multistring values with module autoload disabled', () => {
+  const script = `
+$ErrorActionPreference = 'Stop'
+$PSModuleAutoLoadingPreference = 'None'
+${registryJson}
+$data = [ordered]@{ InstallRoot = 'C:\\Node 저장소'; MirrorNode = [string[]]@('a','b'); Enabled = [int]1; ProxyAuth = $false; WriteSources = [ordered]@{ MirrorNode = 'machine-policy' } }
+[Console]::WriteLine($serializer.Serialize($data))
+`
+  const out = execFileSync('powershell.exe', ['-NoProfile','-NonInteractive','-EncodedCommand', Buffer.from(script,'utf16le').toString('base64')], { encoding: 'utf8', windowsHide: true, timeout: 8000 })
+  expect(JSON.parse(out)).toEqual({ InstallRoot: 'C:\\Node 저장소', MirrorNode: ['a','b'], Enabled: 1, ProxyAuth: false, WriteSources: { MirrorNode: 'machine-policy' } })
+})

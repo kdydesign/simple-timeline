@@ -1,4 +1,4 @@
-import { execFile } from 'node:child_process'
+import { execFile, type ExecFileOptions } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { lstat, mkdtemp, open, readdir, readlink, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -14,6 +14,7 @@ import { downloadNodeZip, NodeZipDownloadError } from './zip-download'
 import { IncompleteNodeInstallationError, installVerifiedNodeZip, inspectNodeZipInstallation, prepareNodeZipRoot } from './zip-install'
 import { knownClassicVersion, legacyHelpers, modernReleases } from './manager-support'
 import { isExplorerComponent, samePath } from './windows-probe'
+import { registryJson } from './registry-json'
 import { modernRegistryRead } from './modern-manager'
 import { createMachineMutationLock } from './mutation-lock'
 import { fetchOfficialNodeDigest, fetchOfficialMsiDigest, readMsiResult, type MsiEvidence } from './standalone'
@@ -24,7 +25,14 @@ export const NVM_INSTALLER_URL = 'https://github.com/nvm-windows/nvm/releases/do
 const NVM_INSTALLER_SHA256 = '2d5ad523aa6182205da77c0eb8210638aaa8792f4e6a4bc12e1ac854c5455a68'
 const MAX_INSTALLER_BYTES = 12 * 1024 * 1024
 const GITHUB_ASSET_ORIGINS = new Set(['https://release-assets.githubusercontent.com', 'https://objects.githubusercontent.com'])
-const exec = promisify(execFile)
+const executeFile = promisify(execFile)
+function exec(executable: string, args: string[], options: ExecFileOptions) {
+  const run = executeFile(executable, args, { ...options, encoding: 'utf8' })
+  // Every invocation supplies its complete command line and accepts no host input.
+  // Signal EOF rather than leave an open pipe for the noninteractive console host.
+  run.child.stdin?.end()
+  return run
+}
 
 type ElevationInvocation = { executable: string; executableDigest: string } & (
   | { args: ['use', string, '64']; legacyHelperRoot?: string; nvmHome: string; nvmSymlink: string; settingsDigest: string }
@@ -249,7 +257,7 @@ export function readElevatedExit(stdout: string, wrapperExit: number, installer 
 
 const registryEnvironmentScript = `
 $ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = New-Object Text.UTF8Encoding $false
+${registryJson}
 function Read-WorkRailEnvironment($key) {
   $values = @{}
   if ($null -ne $key) {
@@ -263,7 +271,7 @@ function Read-WorkRailEnvironment($key) {
 }
 $machine = Read-WorkRailEnvironment ([Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Environment'))
 $user = Read-WorkRailEnvironment ([Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment'))
-[Console]::WriteLine((@{ machine = $machine; user = $user } | ConvertTo-Json -Compress))
+[Console]::WriteLine($serializer.Serialize(@{ machine = $machine; user = $user }))
 `
 
 export function mergeWindowsEnvironment(machine: Record<string, string>, user: Record<string, string>, inherited: NodeJS.ProcessEnv) {
@@ -478,7 +486,6 @@ foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.Security
     discover: () => discoverWindowsNode({
       readModernSettings: () => runPowerShell(`
 $ErrorActionPreference = 'Stop'
-[Console]::OutputEncoding = New-Object Text.UTF8Encoding $false
 ${modernRegistryRead}
 [Console]::WriteLine($snapshot)`),
       async readEnvironment() {

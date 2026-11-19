@@ -7,10 +7,10 @@ import { setDownloadProxy, type NvmInstallation } from '../../src/main/node-mana
 import { nodeSigningPolicy, allowedNodeSigner } from '../../src/main/node-management/node-signing'
 import { createWindowsNodeAdapter } from '../../src/main/node-management/windows'
 
-const io = vi.hoisted(() => ({ exec: vi.fn(), download: vi.fn(), stage: vi.fn(), prepare: vi.fn() }))
+const io = vi.hoisted(() => ({ exec: vi.fn(), endInput: vi.fn(), download: vi.fn(), stage: vi.fn(), prepare: vi.fn() }))
 vi.mock('node:child_process', async () => {
   const { promisify } = await import('node:util')
-  return { execFile: Object.assign(vi.fn(), { [promisify.custom]: io.exec }) }
+  return { execFile: Object.assign(vi.fn(), { [promisify.custom]: (...args: unknown[]) => Object.assign(io.exec(...args), { child: { stdin: { end: io.endInput } } }) }) }
 })
 vi.mock('node:fs/promises', async importOriginal => ({
   ...await importOriginal<typeof import('node:fs/promises')>(),

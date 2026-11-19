@@ -3,12 +3,14 @@ import { win32 } from 'node:path'
 import { isNodeVersion } from '../../shared/node-management'
 import { contains, isSafeNvmPath, readInstalled, samePath, verifiedFiles, type WindowsProbe } from './windows-probe'
 import { setDownloadProxy, type WindowsDiscovery } from './discovery'
+import { registryJson } from './registry-json'
 import { nodeSigningPolicy } from './node-signing'
 import { availability, capabilities, type ModernRelease, proxyConflict } from './manager-support'
 
 // Match the community CLI's preferences.ROOTS precedence. Read only settings
 // relevant to the operation, without expanding strings from the registry.
 export const modernRegistryRead = String.raw`
+${registryJson}
 $settings = [ordered]@{}
 $sources = [ordered]@{}
 $names = @('PreviousActiveVersion','InstallRoot','OperatingMode','ActiveVersion','Enabled','MirrorNode','MirrorNpm','Proxy','ProxyAuth','ProxyAuthType','AllowInsecureDownloads','AutoInstallModuleList','LocalInstallDir','LocalInstallOnly','Aliases','AllowedSigners','AllowedThumbprints','AirGapped','AuthenticodeRevocation')
@@ -24,14 +26,18 @@ foreach ($spec in @(
     $key = $base.OpenSubKey($spec[1])
     if ($null -ne $key) {
       try {
+        $registered = $key.GetValueNames()
         foreach ($name in $names) {
-          if (!$settings.Contains($name) -and $key.GetValueNames() -contains $name) {
-            if ($key.GetValueNames() -cnotcontains $name) { throw 'Ambiguous nvm registry value name' }
+          if (!$settings.Contains($name) -and $registered -contains $name) {
+            if ($registered -cnotcontains $name) { throw 'Ambiguous nvm registry value name' }
             $sources[$name] = $spec[2]
             $value = $key.GetValue($name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
             if ($name -in @('ProxyAuth','ProxyAuthType')) {
               # Only the presence of separate proxy credentials matters for installation.
-              $settings[$name] = (@($value | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0)
+              $settings[$name] = $false
+              foreach ($part in @($value)) {
+                if (-not [string]::IsNullOrWhiteSpace([string]$part)) { $settings[$name] = $true; break }
+              }
             } else { $settings[$name] = $value }
           }
         }
@@ -53,7 +59,7 @@ if ($root -is [string]) {
 }
 $settings['ResolvedInstallRoot'] = $root
 $settings['WriteSources'] = $sources
-$snapshot = ConvertTo-Json -InputObject $settings -Depth 3 -Compress
+$snapshot = $serializer.Serialize($settings)
 `
 
 const empty = (v: unknown) => v === undefined || v === '' || (Array.isArray(v) && v.every(item => item === ''))

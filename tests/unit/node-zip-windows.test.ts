@@ -1,9 +1,9 @@
-import { execFileSync } from 'node:child_process'
+import { execFile, execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { lstat, mkdir, readFile, readlink, realpath, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { expect, it } from 'vitest'
-import { createWindowsNodeAdapter } from '../../src/main/node-management/windows'
+import { createWindowsNodeAdapter, resolveSystemPowerShell } from '../../src/main/node-management/windows'
 import { createNodeManagementService } from '../../src/main/node-management/service'
 import { inspectNodeZipInstallation } from '../../src/main/node-management/zip-install'
 import { capabilities, classicDigests } from '../../src/main/node-management/manager-support'
@@ -58,14 +58,77 @@ it.skipIf(!runner)('installs the signed Windows ZIP and switches using official 
 const modernMode = process.env.WORKRAIL_TEST_NVM_MODERN_MODE
 const modernRunner = hostedWindows && (modernMode === 'shim' || modernMode === 'link')
 
+// Report stage timings only. The reader and serializer exercise the original probe
+// without writing registry values to either stream.
+const diagnosticScript = String.raw`
+$ErrorActionPreference = 'Stop'
+[Console]::WriteLine('started')
+$phase = 'registry'
+try {
+  $result = @{}
+  foreach ($key in @(
+    [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment')
+    [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment')
+  )) {
+    if ($null -eq $key) { continue }
+    try {
+      $values = @{}
+      foreach ($name in $key.GetValueNames()) {
+        $value = $key.GetValue($name, '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+        if ($value -is [string]) { $values[$name] = $value }
+      }
+      $result[$key.Name] = $values
+    } finally { $key.Dispose() }
+  }
+  [Console]::WriteLine('read')
+  $phase = 'serialization'
+  $null = $result | ConvertTo-Json -Compress
+  [Console]::WriteLine('serialized')
+} catch {
+  [Console]::WriteLine("failed-$phase")
+  exit 1
+}
+`
+
+async function diagnoseDiscoveryTiming() {
+  const { powershell, options } = await resolveSystemPowerShell()
+  const encoded = Buffer.from(diagnosticScript, 'utf16le').toString('base64')
+  function measure(env: NodeJS.ProcessEnv): Promise<string> {
+    const startedAt = Date.now()
+    const markers: string[] = []
+    return new Promise(resolve => {
+      const child = execFile(powershell, ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded],
+        { ...options, env, timeout: 30_000 }, error => {
+          const outcome = error ? JSON.stringify({ code: error.code, signal: error.signal, killed: error.killed }) : 'exit 0'
+          resolve([...markers, outcome + ' after ' + (Date.now() - startedAt) + 'ms'].join(', '))
+        })
+      child.stdin?.end()
+      let pending = ''
+      child.stdout?.on('data', chunk => {
+        const lines = (pending + chunk.toString()).split(/\r?\n/)
+        pending = lines.pop() ?? ''
+        for (const line of lines) {
+          if (/^(started|read|serialized|failed-registry|failed-serialization)$/.test(line)) markers.push(line + ' ' + (Date.now() - startedAt) + 'ms')
+        }
+      })
+    })
+  }
+  const system = await measure(options.env)
+  const env = { ...options.env } as NodeJS.ProcessEnv
+  for (const key of ['USERPROFILE', 'APPDATA', 'LOCALAPPDATA', 'TEMP', 'TMP']) env[key] = process.env[key]
+  const profile = await measure(env)
+  return 'Closed stdin, system environment: ' + system + '\nClosed stdin, with profile paths: ' + profile
+}
+
 it.skipIf(!modernRunner)('installs the first ZIP on official nvm 2.0.1 and activates it on request', async () => {
   const windows = createWindowsNodeAdapter(fetch, async () => fetch)
-  const initial = await windows.discover().catch(error => {
+  const initial = await windows.discover().catch(async error => {
     // execFile's normal message starts with the entire UTF-16 EncodedCommand.
     // Surface the exit evidence first so CI can distinguish a timeout from a registry or module error.
     if (!error || typeof error !== 'object' || !('cmd' in error)) throw error
     const exit = JSON.stringify({ code: error.code, signal: error.signal, killed: error.killed })
-    throw new Error('Windows environment discovery failed ' + exit + '\n' + String(error.stderr || 'No PowerShell stderr'))
+    const timing = await diagnoseDiscoveryTiming().catch(() => 'Diagnostic unavailable')
+    throw new Error('Windows environment discovery failed ' + exit + '\n' + timing + '\n' + String(error.stderr || 'No PowerShell stderr'))
   })
   expect(initial).toMatchObject({
     manager: { status: 'ready', version: '2.0.1' },

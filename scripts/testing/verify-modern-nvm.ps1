@@ -60,6 +60,7 @@ if ($AsStandardUser) {
     & $nvm use link
     if ($LASTEXITCODE -ne 0) { throw 'nvm could not enter link mode' }
   }
+  $env:GITHUB_STEP_SUMMARY = Join-Path $env:TEMP "workrail-nvm-$Mode-summary.md"
   $env:WORKRAIL_TEST_NVM_MODERN_MODE = $Mode
   & $TestNode node_modules/vitest/vitest.mjs run --config vitest.config.mts tests/unit/node-zip-windows.test.ts
   exit $LASTEXITCODE

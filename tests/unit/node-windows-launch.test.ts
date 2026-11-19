@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { createWindowsNodeAdapter } from '../../src/main/node-management/windows'
 
-const io = vi.hoisted(() => ({ exec: vi.fn(), realpath: vi.fn(), stat: vi.fn() }))
+const io = vi.hoisted(() => ({ exec: vi.fn(), endInput: vi.fn(), realpath: vi.fn(), stat: vi.fn() }))
 vi.mock('node:child_process', async () => {
   const { promisify } = await import('node:util')
-  return { execFile: Object.assign(vi.fn(), { [promisify.custom]: io.exec }) }
+  return { execFile: Object.assign(vi.fn(), { [promisify.custom]: (...args: unknown[]) => Object.assign(io.exec(...args), { child: { stdin: { end: io.endInput } } }) }) }
 })
 vi.mock('node:fs/promises', async importOriginal => ({
   ...await importOriginal<typeof import('node:fs/promises')>(), realpath: io.realpath, stat: io.stat,
@@ -40,6 +40,7 @@ it('uses the OS system directory for both PowerShell processes, command lookup a
   const adapter = createWindowsNodeAdapter(vi.fn())
   expect(await adapter.changeVersion(installation, 'use', '22.9.0')).toEqual({ status: 'success' })
   expect(io.exec).toHaveBeenCalledTimes(1)
+  expect(io.endInput).toHaveBeenCalledOnce()
   const [launcher, args, options] = io.exec.mock.calls[0]
   expect(launcher).toBe(powershell)
   expect(options.cwd).toBe(system)
@@ -106,4 +107,17 @@ it('denies any subprocess read access to the classic 1.1.11 asynchronous fallbac
     expect(line).toContain('[IO.FileShare]::None')
     expect(worker.indexOf(line!)).toBeLessThan(worker.indexOf('& $stagedExe'))
   }
+})
+
+it('reads both registry hives without discovering PowerShell modules or waiting on host input', async () => {
+  const adapter = createWindowsNodeAdapter(vi.fn())
+  io.exec.mockResolvedValueOnce({ stdout: '{"machine":{"Path":""},"user":{}}', stderr: '' })
+  const state = await adapter.discover()
+  expect(state.manager.status).toBe('missing')
+  expect(io.endInput).toHaveBeenCalledOnce()
+  const script = decode(io.exec.mock.calls[0][1].at(-1))
+  expect(script).toContain('LocalMachine.OpenSubKey')
+  expect(script).toContain('CurrentUser.OpenSubKey')
+  expect(script).toContain('DoNotExpandEnvironmentNames')
+  expect(script).not.toMatch(/New-Object|ConvertTo-Json/)
 })
