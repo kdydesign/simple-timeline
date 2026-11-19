@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="ko" data-theme="dark">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TermRail · 터미널 배치 시안</title>
+<link rel="stylesheet" href="../../../src/renderer/workrail.css">
+<style>
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{display:flex;flex-direction:column;background:#22262b;color:#edf1f4;font:13px "Segoe UI","Malgun Gothic",sans-serif}button,input{font:inherit;color:inherit}button{cursor:pointer;background:transparent;border:0;text-align:left}button:focus-visible,input:focus-visible{outline:2px solid #8bc1eb;outline-offset:-2px}
+header{display:flex;align-items:center;padding:0 14px;background:#28333d;height:31px;gap:8px;font-weight:650}header img{height:20px}.workrail-dock-seat{--workrail-frame:14px;--text:#f1f2f3;--rim:#ffffff24;--accent:#8bc1eb;--accent-foreground:#f1f6fc;--selected-border:#8bc1eb;--selected-control:#477fae4d;--selected-sheen:linear-gradient(155deg,#5796cd55,#24507840 65%);background:linear-gradient(120deg,#283946,#2e3036)}
+
+main{flex:1;min-height:0;display:grid;grid-template-columns:clamp(88px,10vw,128px) minmax(0,1fr);gap:6px;padding:14px}aside,.work{min-width:0;min-height:0;border:1px solid #3d464f;border-radius:4px;overflow:hidden}aside{display:flex;flex-direction:column;background:#272d33}.side-head,.saved-head{margin:0;padding:5px 7px;font-size:11px;font-weight:600;color:#c1ccd4}.side-head{display:flex;justify-content:space-between;align-items:center}.side-head button{font-size:15px;padding:0 4px}.servers{flex:1;overflow:auto}.servers button,#saved button{display:block;width:100%;font-size:12px;line-height:20px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;padding:0 8px}.servers button:hover,#saved button:hover,.servers button:focus{background:#334451}.saved-head{border-top:1px solid #434b53}#saved{max-height:28%;overflow:auto}
+.work{display:flex;flex-direction:column;background:#191e23}#tabs{display:flex;overflow:auto;height:23px;flex:none;background:#272e34;border-bottom:1px solid #47535d}#tabs button{flex:none;padding:0 9px;font-size:11px;color:#adc0ca;border-right:1px solid #404950}#tabs .active{background:#3b4d5b;color:white;box-shadow:inset 0 2px #8bc1eb}#tabs .add{width:23px;padding:0;text-align:center;font-size:14px}
+#stage,.split,.pane{flex:1;min-width:0;min-height:0;display:flex}#stage{position:relative}.split{gap:3px;background:#404951}.column,.pane{flex-direction:column}.pane{position:relative;background:#171d22;overflow:hidden}.caption{height:19px;flex:none;padding:1px 7px;background:#283139;color:#bfccd4;font-size:10.5px;line-height:17px;display:flex;align-items:center;gap:6px}.caption::before{content:'';width:5px;height:5px;border-radius:50%;background:#89bca3}.pending .caption::before{background:#d8b578}.pane pre{margin:0;padding:10px 12px;overflow:auto;color:#cbd5db;font:13px/1.5 Consolas,"Liberation Mono",monospace;white-space:pre-wrap}.prompt{color:#9cc5b2}.muted{color:#95a3ae}.cursor{display:inline-block;background:#bdd9ea;width:7px;height:14px;vertical-align:middle}.empty{margin:auto;font-size:12px;color:#a4b4c1}.hint{pointer-events:none;position:absolute;background:#5685ae5c;border:1px solid #92c3e8;inset:0}.hint.left{right:50%}.hint.right{left:50%}.hint.top{bottom:50%}.hint.bottom{top:50%}
+#menu,dialog{background:#29343d;color:#edf1f4;border:1px solid #677986;border-radius:5px;box-shadow:0 5px 16px #0007}#menu{position:fixed;z-index:5;padding:3px;min-width:125px}#menu button{display:block;width:100%;padding:4px 7px;font-size:12px}#menu button:hover{background:#3b5265}dialog{width:270px;padding:14px}label{display:grid;gap:5px;font-size:12px}input{background:#20272c;border:1px solid #617582;border-radius:3px;padding:4px}dialog footer{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}dialog footer button{border:1px solid #586b78;border-radius:3px;padding:3px 8px}
+.side-head button{font-size:11px;color:#b4d5ed}.split{gap:0}.divider{position:relative;flex:0 0 5px;background:#38424b;cursor:col-resize;touch-action:none}.column>.divider{cursor:row-resize}.divider:hover,.divider:focus-visible,.divider:active{background:#8bc1eb}.divider::after{content:"";position:absolute;inset:0 -2px;z-index:1}.column>.divider::after{inset:-2px 0}dialog label+label{margin-top:8px}
+.saved-head{display:flex;align-items:center;justify-content:space-between}.saved-head button{font-size:11px;color:#b4d5ed;padding:0 4px}.caption button{margin-left:auto;font:14px/16px "Segoe UI",sans-serif;color:#abb8c2;padding:0 4px}.caption button:hover{color:white;background:#444e59}#menu{max-height:50vh;overflow:auto}
+</style>
+<header><img src="../../../resources/icon.png" alt="">WorkRail</header>
+<div class="workrail-dock-seat"><nav class="workrail-dock" aria-label="WorkRail 도구"><button class="workrail-control"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5v10H15v-6h-6v6H3z"/></svg>Home</button><button class="workrail-control"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 3.5v17M7 6h8M10 12h8M13 18h8"/></svg>PlanRail</button><button class="workrail-control"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 8.7 5v10L12 22l-8.7-5V7z M9 15.5v-7l6 7v-7"/></svg>NodeRail</button><button class="workrail-control" aria-current="page"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 4h18v16H3z M6 8l3 3-3 3 M12 15h5"/></svg>TermRail</button></nav></div>
+<main><aside><div class="side-head">서버<button id="addServer" title="서버 추가" aria-label="서버 추가">＋ 추가</button></div><div class="servers"></div><div class="saved-head">레이아웃<button id="saveLayout" aria-label="레이아웃 저장">저장</button></div><div id="saved"></div></aside>
+<section class="work"><div id="tabs"></div><div id="stage"></div></section></main>
+<div id="menu" role="menu" hidden></div>
+<dialog><form><label>레이아웃 이름<input required maxlength="40" id="layoutName"></label><footer><button type="button" id="cancel">취소</button><button>저장</button></footer></form></dialog>
+<dialog id="serverDialog"><form id="serverForm"><h3 id="serverTitle"></h3><label>서버 이름<input id="profileName" required maxlength="60"></label><label>호스트<input id="host" required></label><label>포트<input id="port" required type="number" min="1" max="65535" value="22"></label><footer><button type="button" id="cancelServer">취소</button><button>저장</button></footer></form></dialog>
+<script>
+const $ = s => document.querySelector(s);
+const stored = JSON.parse(localStorage.getItem('termrail-preview-v4') || '{}');
+const seeds = ['dev-api','dev-web','dev-db','staging-api','staging-web'];
+const profiles = new Map(stored.profiles || seeds.map((name,i)=>[name,{name,host:'192.0.2.'+(10+i),port:22}]));
+const profileName = id => profiles.get(id).name;
+const examples = {
+  'dev-api':'$ systemctl status api\n● api.service — Application API\n   Active: active (running)\n\n$ tail -f /var/log/api.log\n09:15:01 INFO  Listening on port 3000\n09:15:04 INFO  GET /health 200 2ms\n09:15:09 INFO  GET /projects 200 18ms',
+  'dev-web':'$ df -h /srv\nFilesystem      Size  Used Avail Use%\n/dev/sdb1        80G   24G   56G  30%',
+};
+const leaf = (id,online=false) => ({id,online,...profiles.get(id)});
+const group = (vertical,a,b,ratio=.5) => ({vertical,ratio,children:[a,b]});
+let tabs = [{name:'개발 점검',tree:group(false,leaf('dev-api',true),group(true,leaf('dev-web',true),leaf('staging-api')))}, {name:'서버 점검',tree:leaf('dev-db')}];
+let active=tabs[0];
+const layouts=new Map(stored.layouts || []);
+const floating=new Map();
+function persist(){localStorage.setItem("termrail-preview-v4",JSON.stringify({profiles:[...profiles],layouts:[...layouts]}))}
+const cloneForLogin = n => n?.children ? group(n.vertical,...n.children.map(cloneForLogin),n.ratio) : n ? leaf(n.id) : null;
+function addTab(name,tree,profileId){active={name,tree,profileId};tabs.push(active);render()}
+const tabTitle=tab=>tab.profileId ? profileName(tab.profileId) : tab.name;
+const connect=id=>addTab(profileName(id),leaf(id),id);
+function button(name, action){const b=document.createElement('button');b.textContent=name;b.onclick=action;return b}
+let editingId=null;
+function editServer(id){
+  editingId=id;
+  const profile=profiles.get(id);
+  $('#serverTitle').textContent=profile?'서버 수정':'서버 추가';
+  $('#profileName').value=profile?.name||'';
+  $('#host').value=profile?.host||'';
+  $('#port').value=profile?.port||22;
+  $('#profileName').setCustomValidity('');
+  $('#serverDialog').showModal();
+}
+function paintServers(){
+  $('.servers').replaceChildren();
+  for(const [id,profile] of profiles){
+    const b=button(profile.name,()=>b.focus());
+    b.draggable=true;b.title=profile.name;b.ondblclick=()=>connect(id);
+    b.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();connect(id)}};
+    context(b,()=>[['서버 수정…',()=>editServer(id)]]);
+    b.ondragstart=e=>{e.dataTransfer.setData('application/x-termrail-server',id);e.dataTransfer.effectAllowed='copy'};
+    $('.servers').append(b);
+  }
+}
+$('#addServer').onclick=()=>editServer(null);
+$('#cancelServer').onclick=()=>$('#serverDialog').close();
+$('#profileName').oninput=e=>e.target.setCustomValidity('');
+$('#serverForm').onsubmit=e=>{
+  e.preventDefault();const name=$('#profileName').value.trim(),host=$('#host').value.trim();
+  if(!name||[...profiles].some(([id,p])=>id!==editingId&&p.name===name)){
+    $('#profileName').setCustomValidity('사용할 새 이름을 입력해 주세요.');$('#profileName').reportValidity();return
+  }
+  if(!host){$('#host').focus();return}
+  profiles.set(editingId||crypto.randomUUID(),{name,host,port:Number($('#port').value)});
+  persist();paintServers();render();
+  for(const [w,tab] of floating){w.document.title='TermRail · '+tabTitle(tab);w.refreshPreview()}
+  $('#serverDialog').close();
+};
+function side(e,box){
+  const r=box.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+  const positions=[['left',x],['right',1-x],['top',y],['bottom',1-y]];
+  return positions.sort((a,b)=>a[1]-b[1])[0][0];
+}
+function subtree(node,replace,refresh){
+  const el=document.createElement('div');
+  if(node?.children){
+    el.className='split'+(node.vertical?' column':'');
+    const parts=node.children.map((child,i)=>subtree(child,n=>{if(n)node.children[i]=n;else replace(node.children[1-i])},refresh));
+    const handle=document.createElement('div');
+    handle.className='divider';handle.tabIndex=0;handle.setAttribute('role','separator');
+    handle.setAttribute('aria-orientation',node.vertical?'horizontal':'vertical');handle.setAttribute('aria-label','터미널 크기 조절');
+    function resize(ratio){
+      node.ratio=Math.min(.95,Math.max(.05,ratio));
+      parts[0].style.flex=node.ratio+' 1 0px';parts[1].style.flex=(1-node.ratio)+' 1 0px';
+      handle.setAttribute('aria-valuenow',Math.round(node.ratio*100));
+    }
+    handle.onpointerdown=e=>{if(e.button===0){e.preventDefault();handle.setPointerCapture(e.pointerId)}};
+    handle.onpointermove=e=>{
+      if(!handle.hasPointerCapture(e.pointerId))return;
+      const r=el.getBoundingClientRect(), thickness=node.vertical?handle.offsetHeight:handle.offsetWidth;
+      resize(((node.vertical?e.clientY-r.top:e.clientX-r.left)-thickness/2)/((node.vertical?r.height:r.width)-thickness));
+    };
+    handle.onkeydown=e=>{
+      const keys=node.vertical?['ArrowUp','ArrowDown']:['ArrowLeft','ArrowRight'];
+      if(keys.includes(e.key)){e.preventDefault();resize(node.ratio+(e.key===keys[0]?-.02:.02))}
+    };
+    resize(node.ratio);el.append(parts[0],handle,parts[1]);
+    return el;
+  }
+  el.className='pane'+(node?.online?'':' pending');
+  if(node){
+    const cap=document.createElement('div');cap.className='caption';cap.textContent=profileName(node.id);
+    const close=button('×',()=>{replace(null);refresh()});
+    close.title=profileName(node.id)+' 터미널 닫기';close.ariaLabel=close.title;
+    cap.append(close);cap.title=node.host+':'+node.port;
+    const pre=document.createElement('pre');
+    if(node.online){const p=document.createElement('span');p.className='prompt';p.textContent='developer@'+node.name+' ~\n';pre.append(p,examples[node.name]||'$ ')}
+    else pre.append('login as: ');
+    const cursor=document.createElement('span');cursor.className='cursor';pre.append(cursor);el.append(cap,pre);
+  }else{const msg=document.createElement('span');msg.className='empty';msg.textContent='서버를 여기에 놓으세요';el.append(msg)}
+  function clear(){el.querySelector('.hint')?.remove()}
+  el.ondragover=e=>{if(!e.dataTransfer.types.includes('application/x-termrail-server'))return;e.preventDefault();e.dataTransfer.dropEffect='copy';let hint=el.querySelector('.hint');if(!hint){hint=document.createElement('div');el.append(hint)}hint.className='hint '+(node?side(e,el):'')};
+  el.ondragleave=e=>{if(!el.contains(e.relatedTarget))clear()};
+  el.ondrop=e=>{e.preventDefault();clear();const name=e.dataTransfer.getData('application/x-termrail-server');if(!profiles.has(name))return;const dir=side(e,el),fresh=leaf(name);replace(node?group(['top','bottom'].includes(dir),...(['top','left'].includes(dir)?[fresh,node]:[node,fresh])):fresh);refresh()};
+  return el;
+}
+function popup(items,x,y){
+  const m=$('#menu');m.replaceChildren();
+  for(const [name,action] of items){
+    const b=button(name,()=>{m.hidden=true;action()});b.setAttribute('role','menuitem');m.append(b);
+  }
+  m.hidden=false;m.style.left=Math.max(0,Math.min(x,innerWidth-m.offsetWidth))+'px';
+  m.style.top=Math.max(0,Math.min(y,innerHeight-m.offsetHeight))+'px';m.firstChild?.focus();
+}
+function context(b,items){
+  b.oncontextmenu=e=>{e.preventDefault();popup(items(),e.clientX,e.clientY)};
+  b.addEventListener('keydown',e=>{
+    if(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10')){
+      e.preventDefault();const r=b.getBoundingClientRect();popup(items(),r.left,r.bottom);
+    }
+  });
+}
+function saveLayout(name){
+  $('#layoutName').value=name||'';$('dialog').showModal();$('#layoutName').select();
+}
+function closeTab(tab){
+  const index=tabs.indexOf(tab);tabs.splice(index,1);
+  if(active===tab)active=tabs[index]||tabs[index-1];
+}
+function render(){
+  $('#tabs').replaceChildren();for(const tab of tabs){
+    const b=button(tabTitle(tab),()=>{active=tab;render()});b.classList.toggle('active',active===tab);
+    context(b,()=>[['별도 창으로 열기',()=>detach(tab)],['레이아웃 저장…',()=>saveLayout(tabTitle(tab))]]);
+    $('#tabs').append(b);
+  }
+  const add=button('＋',()=>{
+    const r=add.getBoundingClientRect();
+    popup([...profiles].map(([id,p])=>[p.name,()=>connect(id)]),r.left,r.bottom);
+  });
+  add.className='add';add.ariaLabel='서버 선택';add.setAttribute('aria-haspopup','menu');$('#tabs').append(add);
+  $('#stage').replaceChildren(subtree(active?.tree,n=>{
+    if(active&&n)active.tree=n;
+    else if(active)closeTab(active);
+    else if(n)addTab(profileName(n.id),n,n.id);
+  },render));
+}
+function snapshotTab(tab){return {name:tabTitle(tab),profileId:tab.profileId,tree:cloneForLogin(tab.tree)}}
+function snapshot(){
+  return {tabs:tabs.map(snapshotTab),selected:tabs.indexOf(active),windows:[...floating].map(([win,tab])=>({
+    tab:snapshotTab(tab),x:win.screenX,y:win.screenY,width:win.outerWidth,height:win.outerHeight
+  }))};
+}
+function openLayout(layout){
+  for(const win of [...floating.keys()]){floating.delete(win);win.close()}
+  tabs=layout.tabs.map(snapshotTab);active=tabs[layout.selected]||tabs[0];render();
+  for(const entry of layout.windows){
+    const tab=snapshotTab(entry.tab);
+    if(!openWindow(tab,entry)){tabs.push(tab);active??=tab;render()}
+  }
+}
+function paintSaved(){ $('#saved').replaceChildren();for(const [name,layout] of layouts)$('#saved').append(button(name,()=>openLayout(layout))) }
+if(!layouts.size)layouts.set(active.name,snapshot());paintSaved();paintServers();render();
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#menu'))$('#menu').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#menu').hidden=true});
+$('#saveLayout').onclick=()=>saveLayout(active?tabTitle(active):'');
+$('#cancel').onclick=()=>$('dialog').close();
+$('form').onsubmit=e=>{e.preventDefault();const name=$('#layoutName').value.trim();if(!name)return;layouts.set(name,snapshot());persist();paintSaved();$('dialog').close()};
+function openWindow(tab,bounds){
+  const size=bounds?'width='+bounds.width+',height='+bounds.height+',left='+bounds.x+',top='+bounds.y:'width=850,height=580';
+  const w=window.open('','_blank','popup,'+size);if(!w)return false;
+  floating.set(w,tab);w.document.title='TermRail · '+tabTitle(tab);w.document.head.append(document.querySelector('style').cloneNode(true));
+  function redraw(){
+    if(!tab.tree){floating.delete(w);w.close();return}
+    w.document.body.replaceChildren(subtree(tab.tree,n=>tab.tree=n,redraw))
+  }
+  w.refreshPreview=redraw;
+  redraw();w.addEventListener('pagehide',()=>{if(floating.delete(w)&&!window.closed){tabs.push(tab);active=tab;render()}},{once:true});
+  return true;
+}
+function detach(tab){
+  if(!openWindow(tab))return;
+  tabs=tabs.filter(t=>t!==tab);if(active===tab)active=tabs[0];render();
+};
+</script>
+</html>
