@@ -3,6 +3,11 @@ import {expect,it,vi} from 'vitest'
 import {UpdateDistribution} from '../../src/renderer/components/UpdateDistribution'
 import type {UpdatesView} from '../../src/renderer/state/useUpdates'
 const state={revision:1,role:'host',phase:'idle',version:null,totalBytes:0,receivedBytes:0,connected:false,editingBlocked:false,requiresExplicitInstall:false,canDownload:false,canCancel:false,canRetry:false,canInstall:false,error:null,host:{importing:false,currentVersion:'1.0.0',candidateVersion:'1.0.1',candidateBytes:1024,publishing:false,canPublish:true}} as const
+it('identifies the WorkRail LAN artifact as the ZIP to import',()=>{
+ const updates:UpdatesView={state,error:null,busy:false,run:vi.fn(),acknowledgeOpen:vi.fn()}
+ render(<UpdateDistribution updates={updates}/>)
+ expect(screen.getByText(/WorkRail-LAN-UPDATE ZIP/)).toBeInTheDocument()
+})
 it('summarizes active, retained and candidate releases without hiding errors or enabling offline publication',()=>{
  const updates:UpdatesView={state,error:null,busy:false,run:vi.fn(),acknowledgeOpen:vi.fn()}
  const {rerender}=render(<UpdateDistribution updates={updates}/>)

@@ -51,7 +51,9 @@ X/Alt+F4는0.5.0부터 숨김/완전 종료/취소를 선택하며, 설치/제�
 
 [승인된 업데이트 설계](../design/lan-app-updates.md)의 Q1~Q20에 따라 호스트가 ZIP을 등록·공개하고 승인된 멤버의 UPDATE 클릭으로 전체 파일을 내려받는다. 검증 후 모든 입력이 깨끗하고 저장이 끝나면 안전한 종료·현재 사용자 설치·재실행으로 인계한다. 미저장 입력으로 대기했거나 재실행한 대기 파일은 명시적 ‘설치 후 재시작’이 필요하다. 일반 Exit는 설치하지 않는다. 종료 실패 시 강제 종료하지 않고 편집을 차단한 채 재실행을 안내한다.
 
-최초 도입은 호스트와 멤버 모두0.8.0 이상을 한 번 수동 설치한다. 호스트는 계속 수동 설치하고, 같은 정식 버전·소스의 `Planrail-LAN-UPDATE-<SHA>` Actions artifact ZIP을 공유 설정에서 그대로 가져온다. artifact는 EXE·blockmap·latest.yml·manifest·체크섬·안내 파일을 루트에 담으며 중첩 ZIP이 없다. 등록과 ‘배포 시작’은 분리한다. UPDATE-TEST-ONLY는 실제 배포 등록에서 거부한다.
+최초 도입은 호스트와 멤버 모두0.8.0 이상을 한 번 수동 설치한다. 호스트는 계속 수동 설치하고, 같은 정식 버전·소스의 `WorkRail-LAN-UPDATE-<SHA>` Actions artifact ZIP을 공유 설정에서 그대로 가져온다. GitHub가 제공하는 이 ZIP은 EXE·blockmap·`latest.yml`·manifest·체크섬·안내 파일을 루트에 담는다. 등록과 ‘배포 시작’은 분리한다. `WorkRail-UPDATE-TEST-ONLY-<SHA>`에 담긴 가상 다음 버전은 실제 배포 등록에서 거부한다.
+
+수동 설치용 `WorkRail-Windows11-x64-unsigned-<SHA>` Actions artifact는 `WorkRail-<버전>-win-x64-<SHA>.exe`와 빌드에서 생성한 `WorkRail-<버전>-win-x64-<SHA>-update.zip`을 포함한다.
 
 기존 프로필·appId·설치 위치·알림·연결 자격과 자료 보존 정책은 유지한다. updater는 승격·강제 종료를 사용하지 않는다. host 저장 위치는 `%LOCALAPPDATA%\Planrail\updates`이며 앱 종료 후에는 확인·다운로드하지 않는다. 실제 Windows11 NSIS 인계·자동 재실행·파일 잠금·권한·사내망 검증은 [구현 기록](../implementation/2026-11-11-lan-app-updates.md)의 미검증 항목으로 남아 있다.
 

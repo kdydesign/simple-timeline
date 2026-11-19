@@ -13,8 +13,8 @@ afterEach(async () => { await Promise.all(roots.splice(0).map(p => rm(p, { recur
 async function root() { const p = await mkdtemp(join(tmpdir(), 'planrail-update-')); roots.push(p); return p }
 const sha = 'a'.repeat(40)
 function digest(b: Buffer, algorithm: string, encoding: 'hex' | 'base64') { return createHash(algorithm).update(b).digest(encoding) }
-async function bundle(dir: string, options: { version?: string; content?: string; mutate?: (files: Map<string, Buffer>, manifest: any) => void; extra?: [string, Buffer][] } = {}) {
-  const version = options.version ?? '0.8.0', name = `Planrail-${version}.exe`, exe = Buffer.from(options.content ?? 'MZ test installer'), block = Buffer.from('blockmap')
+async function bundle(dir: string, options: { version?: string; installer?: string; content?: string; mutate?: (files: Map<string, Buffer>, manifest: any) => void; extra?: [string, Buffer][] } = {}) {
+  const version = options.version ?? '0.8.0', name = options.installer ?? `Planrail-${version}.exe`, exe = Buffer.from(options.content ?? 'MZ test installer'), block = Buffer.from('blockmap')
   const metadata = Buffer.from(`version: ${version}\nfiles:\n  - url: ${name}\n    sha512: ${digest(exe, 'sha512', 'base64')}\n    size: ${exe.length}\npath: ${name}\nsha512: ${digest(exe, 'sha512', 'base64')}\nreleaseDate: '2026-11-11T00:00:00.000Z'\n`)
   const files = new Map<string, Buffer>([[name, exe], [name + '.blockmap', block], ['latest.yml', metadata]])
   const manifest = { schemaVersion: 1, appId: 'com.kdydesign.simpletimeline', version, platform: 'win32', arch: 'x64', installerType: 'nsis', installScope: 'per-user', sourceSha: sha, signed: false, validationUpdateOnly: false, files: [...files].map(([name, bytes], i) => ({ id: ['installer', 'blockmap', 'metadata'][i], name, size: bytes.length, sha256: digest(bytes, 'sha256', 'hex'), sha512: digest(bytes, 'sha512', 'base64') })) }
@@ -125,13 +125,14 @@ describe('immutable update bundles', () => {
     await expect(catalog.importBundle(metadata)).rejects.toThrow(/expansion/i)
     expect(catalog.status().candidate).toBeNull()
   })
-  it('accepts the actual CI ZIP writer output through the production importer', async () => {
-    const { dir, catalog } = await setup(); await catalog.importBundle(await bundle(dir))
+  it.each(['Planrail-0.8.0.exe', `WorkRail-0.8.0-win-x64-${sha}.exe`])('imports actual CI ZIP writer output containing %s', async installer => {
+    const { dir, catalog } = await setup(); await catalog.importBundle(await bundle(dir, { installer }))
     const { createUpdateBundle } = await import('../../scripts/release/update-bundle.mjs')
     const output = join(dir, 'updates', '0.8.0')
-    const { zipPath } = await createUpdateBundle({ directory: output, manifest: { version: '0.8.0', arch: 'x64', installer: 'Planrail-0.8.0.exe', sourceSha: sha, signed: false, validationUpdateOnly: false } })
+    const { zipPath } = await createUpdateBundle({ directory: output, manifest: { version: '0.8.0', arch: 'x64', installer, sourceSha: sha, signed: false, validationUpdateOnly: false } })
     const consumer = await UpdateCatalog.open({ root: join(dir, 'consumer'), hostId: 'host-1', hostVersion: '0.8.0', hostSourceSha: sha })
-    await consumer.importBundle(zipPath); expect((await consumer.publish()).manifest.version).toBe('0.8.0')
+    await consumer.importBundle(zipPath)
+    expect((await consumer.publish()).manifest).toMatchObject({ version: '0.8.0', appId: 'com.kdydesign.simpletimeline', files: expect.arrayContaining([expect.objectContaining({ id: 'installer', name: installer })]) })
   })
   it('removes completed but unregistered files when the catalog commit fails', async () => {
     const { dir, catalog } = await setup(); await catalog.importBundle(await bundle(dir)); const publication = await catalog.publish()

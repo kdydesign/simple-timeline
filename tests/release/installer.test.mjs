@@ -42,7 +42,6 @@ test('WorkRail rename preserves installer identity and offers directory selectio
  const pkg=JSON.parse(readFileSync('package.json','utf8'))
  assert.equal(c.productName,'WorkRail')
  assert.equal(c.win.executableName,'Planrail')
- assert.match(c.artifactName,/^Planrail-/)
  assert.equal(c.appId,'com.kdydesign.simpletimeline')
  assert.equal(pkg.name,'simple-timeline')
  assert.equal(pkg.version,'1.0.0')

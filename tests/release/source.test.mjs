@@ -1,9 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, mkdir, rm } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
+import { load } from "js-yaml";
 import { releaseIdentity } from "../../scripts/release/source-identity.mjs";
 async function fixture(t) {
   const dir = await mkdtemp(join(tmpdir(), "simple-timeline-source-"));
@@ -49,4 +50,18 @@ test("refuses to mix existing installer outputs into a new release", async (t) =
     () => releaseIdentity({ directory: dir, output: "release" }),
     /empty|previous|output/i,
   );
+});
+test("Actions names each distribution artifact for the exact build source", async () => {
+  const workflow = load(await readFile(".github/workflows/app.yml", "utf8"));
+  const uploads = workflow.jobs.app.steps.filter(step => step.uses === "actions/upload-artifact@v4");
+  const artifactFor = path => uploads.find(step => step.with.path.split("\n").includes(path))?.with.name;
+  assert.deepEqual([
+    artifactFor("release/*-update.zip"),
+    artifactFor("release/latest.yml"),
+    artifactFor("artifacts/windows-update/*.exe"),
+  ], [
+    "WorkRail-Windows11-x64-unsigned-${{ github.sha }}",
+    "WorkRail-LAN-UPDATE-${{ github.sha }}",
+    "WorkRail-UPDATE-TEST-ONLY-${{ github.sha }}",
+  ]);
 });

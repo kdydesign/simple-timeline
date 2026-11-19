@@ -4,7 +4,7 @@ import {updateBytes,updateErrors} from './UpdatePopover'
 export function UpdateDistribution({updates,disabled=false}:{updates:UpdatesView;disabled?:boolean}){
  const s=updates.state,h=s?.host,locked=disabled||updates.busy||!!h?.importing
  return <section className="update-distribution"><h3>업데이트 배포</h3>
- <p className="help">호스트와 같은 버전의 Planrail-LAN-UPDATE ZIP을 가져온 뒤 배포를 시작하세요.</p>
+ <p className="help">호스트와 같은 버전의 WorkRail-LAN-UPDATE ZIP을 가져온 뒤 배포를 시작하세요.</p>
  {updates.error&&<p role="alert">{updates.error}</p>}{s?.error&&<p role="alert">{updateErrors[s.error]}</p>}
  {!s&&!updates.error&&<p role="status">업데이트 상태 확인 중</p>}
  {h&&<><dl className="update-distribution-summary" aria-label="업데이트 배포 현황">

@@ -15,7 +15,7 @@ Home과 NodeRail은 같은 관리 대상을 표시한다. 환경이 하나면 �
 
 Windows에 nvm이 없으면 공식 1.2.2 설치 지원을 선택하고 Windows 설치 창을 완료한 뒤 다시 확인한다. 최초 PATH 설정 후에는 터미널을 다시 열어야 할 수 있다. 설치 파일 다운로드는 시스템 프록시를 자동 발견하지 않는다. 실패하면 공식 릴리스에서 수동 설치한 뒤 환경을 확인한다. [공식 nvm-windows 1.2.2 릴리스](https://github.com/nvm-windows/nvm/releases/tag/1.2.2)
 
-기존 설치·데이터와의 호환성을 위해 앱 ID, 실행 파일 `Planrail.exe`, 일부 다운로드 파일·내부 경로·Windows 자동 실행 등록 이름은 유지한다. 아래 일정 관리 안내는 Planrail 메뉴에 해당한다. WorkRail1.0.0 후속 개선의 실제 검증 범위는 [구현 기록](../implementation/2026-11-18-workrail-polish-and-recovery.md)을 따른다.
+기존 설치·데이터와의 호환성을 위해 앱 ID, 설치된 실행 파일 `Planrail.exe`, 내부 경로·Windows 자동 실행 등록 이름은 유지한다. 아래 일정 관리 안내는 Planrail 메뉴에 해당한다. WorkRail1.0.0 후속 개선의 실제 검증 범위는 [구현 기록](../implementation/2026-11-18-workrail-polish-and-recovery.md)을 따른다.
 
 기존 Node와 충돌하면 검증된 공식 MSI 설치에 한해 사용자 확인 후 Windows 표준 제거 화면으로 진행한다. 제거 전에는 작업을 저장하고 필요한 설정·전역 npm 도구 목록을 백업한다. 프로젝트 파일이나 잔여 폴더·PATH를 자동 삭제하거나 전역 도구를 이관하지 않는다. 제거 후 환경 재검사로 충돌 해소를 확인한 다음 **nvm-windows 설치**를 별도로 누른다. 개발 실행에서는 독립 관리 창으로 이어지며 시작 메뉴의 **WorkRail Node 환경 복구**로 다시 열 수 있다. 재부팅 필요나 작업 종료 불명 상태에서는 다음 설치를 차단한다.
 
@@ -26,11 +26,11 @@ Windows에 nvm이 없으면 공식 1.2.2 설치 지원을 선택하고 Windows �
 ## 내려받기와 확인
 
 GitHub 저장소의 Application Actions에서 해당 커밋의
-`Planrail-Windows11-x64-unsigned-<소스 SHA>` artifact를 내려받아 ZIP을 푼다.
-설치 파일은 `Planrail-<버전>-win-x64-<소스 SHA>.exe`다.
+`WorkRail-Windows11-x64-unsigned-<소스 SHA>` artifact를 내려받아 GitHub가 제공한 ZIP을 푼다.
+설치 파일은 `WorkRail-<버전>-win-x64-<소스 SHA>.exe`다. 같은 artifact 안의 `WorkRail-<버전>-win-x64-<소스 SHA>-update.zip`은 빌드에서 생성한 LAN 업데이트 묶음이다.
 `release-manifest.json`의 버전·소스 SHA·SHA256과 함께 제공한 `.sha256` 파일을 확인한다.
 PowerShell의 `Get-FileHash -Algorithm SHA256 <설치파일>` 결과가 일치해야 한다.
-CI의 가상 다음 버전 설치 파일은 UPDATE-TEST-ONLY라는 별도 비공개 artifact다. 업데이트 검증용 Windows 사용자/VM에서만 사용하며 일반 사용자 배포본이 아니다.
+CI의 가상 다음 버전 설치 파일은 별도 비공개 artifact `WorkRail-UPDATE-TEST-ONLY-<소스 SHA>`에 담긴다. 업데이트 검증용 Windows 사용자/VM에서만 사용한다.
 
 ## 설치와 제거
 
@@ -265,7 +265,7 @@ Windows 11 테스트 PC에서 설치 파일 SHA·IP/포트·방화벽 범위·�
 
 처음에는 호스트와 멤버 모두0.8.0 이상 설치 파일을 한 번 수동 설치해야 한다. 기존0.7.0에는 UPDATE 기능이 없다. 실제 Windows11 자동 설치·재실행 인수는 아직 미검증이며 [검증 범위](../implementation/2026-11-11-lan-app-updates.md)를 확인한다.
 
-호스트는 먼저 새 정식 버전을 수동 설치한다. Application Actions의 같은 커밋에서 **`Planrail-LAN-UPDATE-<소스 SHA>` artifact ZIP**을 다운로드한다. 이 ZIP 자체를 가져오며 압축을 풀거나 다른 ZIP 안에 다시 넣지 않는다. 설정 → 기본 설정 → 업데이트 배포에서 ‘업데이트 ZIP 가져오기’로 검사하고, 등록 버전·용량을 확인한 뒤 별도로 ‘배포 시작’을 누른다. 공유 서버가 꺼져 있으면 먼저 ‘공유 시작’을 누른다. 호스트 설치만으로 파일이 등록되지는 않는다. 등록 실패 시 기존 배포는 유지된다. UPDATE-TEST-ONLY 파일은 배포할 수 없다.
+호스트는 먼저 새 정식 버전을 수동 설치한다. Application Actions의 같은 커밋에서 **`WorkRail-LAN-UPDATE-<소스 SHA>` artifact ZIP**을 다운로드한다. 이 ZIP은 GitHub가 제공하며 루트에 설치 파일·blockmap·`latest.yml`·manifest·체크섬·안내 파일을 담는다. 다운로드한 ZIP을 그대로 사용한다. 설정 → 기본 설정 → 업데이트 배포에서 ‘업데이트 ZIP 가져오기’로 검사하고, 등록 버전·용량을 확인한 뒤 별도로 ‘배포 시작’을 누른다. 공유 서버가 꺼져 있으면 먼저 ‘공유 시작’을 누른다. 호스트 설치만으로 파일이 등록되지는 않는다. 등록 실패 시 기존 배포는 유지된다. UPDATE-TEST-ONLY 파일은 배포할 수 없다.
 
 승인된 멤버는 연결·재연결과 연결 중5분마다 새 버전을 확인한다. 프로젝트를 공유받지 않은 승인 멤버도 대상이다. 새 버전이 있으면 WorkRail 제목 옆에 UPDATE가 나타난다. 한 번 누르면 다운로드·검증을 시작하고 다운로드 중 편집할 수 있다. 진행 창을 닫아도 다운로드는 계속되며 취소와 재시도는 진행 창에서 누른다. 불완전 파일은 정리하고 재시도는 처음부터 시작한다.
 

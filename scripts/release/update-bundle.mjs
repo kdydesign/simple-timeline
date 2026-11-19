@@ -34,7 +34,7 @@ export async function createUpdateBundle({ directory, manifest: input }) {
   await writeFile(join(directory, checksumName), checksums)
   const names = [...files.map(f => f.name), 'release-manifest.json', checksumName].sort()
   if (files.reduce((sum, f) => sum + f.size, manifestHash.size + Buffer.byteLength(checksums)) > 2 * GiB) throw new Error('Release expansion limit exceeded')
-  const zipPath = join(directory, `Planrail-${input.version}-win-x64-${input.sourceSha}-update.zip`), temporary = `${zipPath}.${randomUUID()}.tmp`, zip = new ZipFile()
+  const zipPath = join(directory, `WorkRail-${input.version}-win-x64-${input.sourceSha}-update.zip`), temporary = `${zipPath}.${randomUUID()}.tmp`, zip = new ZipFile()
   try {
     const writing = pipeline(zip.outputStream, createWriteStream(temporary, { flags: 'wx' }))
     zip.on('error', error => zip.outputStream.destroy(error))

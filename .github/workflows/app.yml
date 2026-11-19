@@ -44,7 +44,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows' && success()
         with:
-          name: Planrail-Windows11-x64-unsigned-${{ github.sha }}
+          name: WorkRail-Windows11-x64-unsigned-${{ github.sha }}
           path: |
             release/*.exe
             release/*-update.zip
@@ -55,7 +55,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows' && success()
         with:
-          name: Planrail-LAN-UPDATE-${{ github.sha }}
+          name: WorkRail-LAN-UPDATE-${{ github.sha }}
           path: |
             release/*.exe
             release/*.exe.blockmap
@@ -67,7 +67,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows' && success()
         with:
-          name: Planrail-UPDATE-TEST-ONLY-${{ github.sha }}
+          name: WorkRail-UPDATE-TEST-ONLY-${{ github.sha }}
           path: |
             artifacts/windows-update/*.exe
             artifacts/windows-update/*.sha256

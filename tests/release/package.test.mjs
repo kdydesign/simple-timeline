@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
@@ -90,6 +90,22 @@ test("recognizes an x64 native addon outside ASAR and the production entry", asy
   assert.equal(result.arch, "x64");
   assert.equal(result.version, "0.1.0");
   assert.equal(result.main, "out/main/index.cjs");
+});
+test("expands the NSIS distribution name with the version and full source SHA", async (t) => {
+  const { load } = require("js-yaml");
+  const { expandMacro } = require("app-builder-lib/out/util/macroExpander.js");
+  const config = load(await readFile("electron-builder.yml", "utf8"));
+  const originalSha = process.env.ST_SOURCE_SHA;
+  t.after(() => {
+    if (originalSha === undefined) delete process.env.ST_SOURCE_SHA;
+    else process.env.ST_SOURCE_SHA = originalSha;
+  });
+  process.env.ST_SOURCE_SHA = "abcdef0123".repeat(4);
+  const pattern = config.nsis.artifactName ?? config.win.artifactName ?? config.artifactName;
+  for (const version of ["1.0.0", "1.0.1"]) {
+    const name = expandMacro(pattern, "x64", { version }, { ext: "exe" });
+    assert.equal(name, `WorkRail-${version}-win-x64-abcdef0123abcdef0123abcdef0123abcdef0123.exe`);
+  }
 });
 test("rejects a missing native binding before offering a successful packaged smoke", async (t) => {
   await assert.rejects(
