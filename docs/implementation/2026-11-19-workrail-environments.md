@@ -19,8 +19,8 @@ Linux x64 / Node 24.22.1. 깨끗한 기준 작업 트리에서 Node 서비스·I
 | --- | --- | --- |
 | Windows 기존 nvm | 구현·독립 검토 완료 | `5795819`, `85ab751`, `6386b42`, `dd87ad9`; 실제 Windows 인수는 별도 |
 | 환경 선택·WSL nodenv | 구현·독립 검토 완료 | `7100aea`, `1b89681`; 실제 Windows/WSL 인수는 별도 |
-| Home·NodeRail·footer | 구현·독립 검토 완료 | `3f0750a`, `b62466a`, `05d4dee`; runtime 버전 제공자는 후속 작업 |
-| 공유 버전·도움말 | 진행 중 | 구버전 공유 호환·메뉴별 읽기 상태 |
+| Home·NodeRail·footer | 구현·독립 검토 완료 | `3f0750a`, `b62466a`, `05d4dee`; runtime 버전은 공유 버전 작업에서 연결 |
+| 공유 버전·도움말 | 구현·독립 검토 완료 | `8c3b6e7`; 구버전 공유 호환·메뉴별 읽기 상태 |
 | 배포 이름 | 대기 | 외부 파일명과 설치 identity 구분 |
 | 통합 검사·인계 | 대기 | verify:app·harness·독립 검토·원격 Windows 패키지 |
 
@@ -77,3 +77,13 @@ UI 39개, 정렬 단위 검사 3개, sandboxed Electron 관련 검사 9개와 ty
 시각 검증은 Linux Electron의 일회성 프로필·DB와 합성 Windows/WSL 공유 상태를 사용했다. 실제 관리자 설치나 운영 DB를 사용하지 않았다. 실물 Windows/WSL 인수와 호스트/내 앱 버전 제공자는 이 검증 결과에 포함하지 않는다.
 
 독립 검토에서 제목 표시줄 설정의 클릭 이벤트가 탭 인수로 전달되는 회귀, Windows의 `busy:null`인 종료 미확정 작업의 UI 잠금, 긴 참여자 버전의 footer 침범을 확인했다. `05d4dee`에서 세 경로를 수정했고 UI 52개·sandboxed Electron 4개·typecheck가 통과했다. 같은 revision의 거절 응답은 기존 미확정 상태를 덮지 않으며, 정상 읽기·관리 창 응답은 유지한다. 좁은 창의 긴 버전은 안전하게 축약하고 툴팁·목록에 전체 값을 보존한다. 범위를 제한한 재검토에서 세 항목 해결·신규 결함 없음으로 승인했다.
+
+## 실행 버전·메뉴별 도움말 검증 기록
+
+`8c3b6e7`에서 기존 Window 상태 응답의 선택적 `runtimeVersion`과 멤버 공유 상태의 선택적 `hostVersion`을 연결했다. 호스트 버전은 인증된 snapshot 200/304와 changes sync 응답 헤더로 전달하며 기존 protocol 1·JSON 스키마·ETag를 유지한다. 연결 대상·자격이 바뀌면 이전 값을 지우고, 부재·형식 오류는 동기화를 막지 않고 확인 불가로 표시한다. 업데이트 배포 버전을 재사용하지 않는다.
+
+명시적 도움말 진입은 Home/PlanRail/NodeRail/공통 설정의 첫 글부터 시작하고 이후 같은 앱 세션에서 진입 메뉴별 글·검색어·스크롤을 복원한다. 전체 검색·관련 글로 다른 메뉴의 글을 열면 원래 진입 메뉴의 읽기 상태로 기억하며 실제 글의 소속 메뉴를 표시한다. 기존 인수 없는 호출의 역할 기반 PlanRail 진입과 오프라인 이미지·창 재사용·트레이 동반 동작은 유지한다.
+
+단위 65개, UI 50개, native 98개, 관련 sandboxed Electron 8개와 typecheck·하네스 7개가 통과했다. 임시 TLS/DB 및 두 개발 Electron 앱에서 실제 승인·동기화와 `1.0.0-dev` 수신을 확인했다. Windows 패키지의 가상 다음 버전에서 실제 설치 버전과 runtimeVersion을 비교하는 assertion을 추가했으며 Windows lifecycle 실행은 원격 CI 범위다.
+
+독립 검토는 명세 충족·중요 결함 없음으로 승인했다. 같은 글의 메뉴 전환 시 이미지 확대창, 이전 제목 표시줄 위치를 안내하는 문구, 인증되지 않은 원본 응답 헤더의 회귀 assertion은 경미한 개선으로 최종 통합 검토에 전달했다. Windows 설치 버전 assertion은 Task 6의 packaged CI에서 확인한다.

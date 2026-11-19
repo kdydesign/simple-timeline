@@ -2,7 +2,7 @@
 
 ## Node 환경 / Node Environment
 
-Node 관리 명령이 실행되는 운영체제·사용자 범위. [환경 확장 확정 설계](docs/design/workrail-environments-and-home.md)에서는 Windows 또는 WSL 배포판과 Linux 사용자 조합을 뜻한다. 관리 도구와 설치 버전 목록은 이 환경에 속하며 서로 다른 환경의 목록을 합치지 않는다. 현재 제품의 WSL 지원 완료를 뜻하지 않는다.
+Node 관리 명령이 실행되는 운영체제·사용자 범위. Windows 또는 WSL2 배포판의 기본 Linux 사용자 환경을 뜻한다. 관리 도구와 설치 버전 목록은 이 환경에 속하며 서로 다른 환경의 목록을 합치지 않는다.
 
 ## 선택한 Node 환경 / Selected Node Environment
 
@@ -114,7 +114,7 @@ Node 관리 명령이 실행되는 운영체제·사용자 범위. [환경 확�
 
 ## Node 버전 관리 / Node Version Management
 
-통합 도구의 두 번째 메뉴로, 사용자가 자기 PC의 Node 버전을 설치하고 사용할 버전을 선택하는 기능.
+NodeRail에서 사용자가 선택한 환경의 Node 버전을 설치하고 사용할 기본 버전을 선택하는 기능.
 일정 공유의 호스트·멤버 역할과 무관하게 각 사용자가 관리한다.
 
 ## PlanRail / 일정 관리 도구

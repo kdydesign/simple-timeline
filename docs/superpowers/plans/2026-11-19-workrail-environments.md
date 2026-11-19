@@ -62,10 +62,10 @@
 
 **Files:** `src/shared/sharing.ts`, `src/main/sharing/{host,transport,service}.ts`; `src/shared/{help,help-content}.ts`, `src/main/{help-window,window-ipc}.ts`, preload·renderer 도움말 진입 및 관련 unit/native/UI 테스트.
 **Interfaces:** `SharingState.hostVersion?: string|null`은 인증된 현재 호스트의 실행 버전이다. 기존 snapshot shape/protocol 유지, 선택적 응답 메타데이터 사용. 도움말은 `HelpSection = 'home'|'planrail'|'noderail'|'settings'` 전달 및 섹션별 읽기 상태를 지원한다.
-- [ ] 구버전 응답에 버전 없음/유효값/잘못된 값/연결 대상 교체 테스트, 메뉴별 첫 진입/읽기 위치/검색 복원 테스트의 실패를 확인한다.
-- [ ] 호스트 실행 버전 전달·클라이언트 검증/초기화를 연결한다. 배포 manifest 버전은 재사용하지 않는다.
-- [ ] 도움말 목차·열기 IPC·읽기 상태·전체 검색 메뉴 라벨을 연결한다. 기존 창 재사용·오프라인 자산·관련 글 링크를 보존하고 1.2.2 고정 호환 설명을 수정한다.
-- [ ] 해당 unit/UI/native 검사와 typecheck를 실행하고 커밋한다.
+- [x] 구버전 응답에 버전 없음/유효값/잘못된 값/연결 대상 교체 테스트, 메뉴별 첫 진입/읽기 위치/검색 복원 테스트의 실패를 확인한다.
+- [x] 호스트 실행 버전 전달·클라이언트 검증/초기화를 연결한다. 배포 manifest 버전은 재사용하지 않는다.
+- [x] 도움말 목차·열기 IPC·읽기 상태·전체 검색 메뉴 라벨을 연결한다. 기존 창 재사용·오프라인 자산·관련 글 링크를 보존하고 1.2.2 고정 호환 설명을 수정한다.
+- [x] 해당 unit/UI/native 검사와 typecheck를 실행하고 커밋한다.
 
 ## Task 5: 배포 산출물 이름 WorkRail 통일
 

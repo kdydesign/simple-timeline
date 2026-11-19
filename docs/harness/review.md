@@ -1,5 +1,11 @@
 # 하네스·문서 재점검
 
+## 2026-11-19 — WorkRail 환경 개선 구현 중간 점검
+
+agents-md quick audit는 **12/12, 루트 66줄 유지**다. 기존 실행·검증 명령이 package.json에 있고 루트 문서 링크 누락이 없음을 다시 확인했다. 새 환경·UI 계약은 루트 지침에 늘어놓지 않고 [구현 기록](../implementation/2026-11-19-workrail-environments.md)과 domain 인덱스로 연결한다. TypeScript·단위·UI 및 격리된 Electron 검사는 각 작업 기록을 따르며, 운영 프로필을 사용하는 dev 실행은 명령 검증 목적으로 수행하지 않는다. Windows 배포 검사와 전체 통합 검사는 해당 단계에서 별도로 기록한다.
+
+Wayfinder domain-modeling에 따라 CONTEXT의 Node 환경을 Windows/WSL2 기본 사용자 범위로 명확히 하고, 용어 설명에서 구현 진행 상태를 제거했다. 현재 구현·미검증 범위는 구현 기록에 둔다. 기존 승인 설계에 대안과 결정 이유가 있으므로 같은 결정을 중복 ADR로 만들지 않는다.
+
 ## 2026-11-19 — WorkRail 16개 개선 설계 재검토
 
 기준: 문서 HEAD `958719b`, 제품 기준 `3a343d7`. 두 커밋 사이 src/scripts/workflow/electron-builder/package.json에는 변경이 없음을 확인했다. 이번 범위는 16개 개선과 후속 위젯·공유 배지·환경 선택 요청의 통합 설계 및 문서 정리이며, 과거 제품 구현을 재적용하지 않는다.
