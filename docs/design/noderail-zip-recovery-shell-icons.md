@@ -2,6 +2,8 @@
 
 2026-11-19 사용자 협의를 반영해 구현한 설계. 문제 조사 당시 소스는 `6510c935`이다. [구현 및 검증 기록](../implementation/2026-11-19-windows-node-zip.md)
 
+후속 사용자 요청에 따라 [Windows 전 버전 ZIP 설치 설계 초안](windows-node-zip-all-versions.md)을 작성했다. 아래 버전별 적용 범위는 현재 구현이며, 후속 설계는 구현 전 상태다.
+
 ## NodeRail에서 공식 ZIP으로 설치
 
 Windows의 ‘설치’는 WorkRail이 선택한 Node 버전의 공식 Windows x64 ZIP을 검증해 기존 nvm의 버전 폴더에 등록한다. ‘사용’은 사용자가 따로 눌렀을 때 기존 nvm으로 전환한다. 사용자와 협의한 Windows x64 검증 시작 버전은 nvm-windows 1.1.10이다. 1.1.10과 팀에서 사용하는 1.1.11을 각각 검증하고, 이후 버전도 해당 버전에서 설치와 전환을 확인한 뒤 직접 ZIP 설치를 활성화한다. 2.x는 저장 구조를 별도로 검증해야 하고 WSL2는 배포판별 nodenv/node-build 설치 경로를 사용한다. [기존 환경별 지원 설계](workrail-environments-and-home.md)

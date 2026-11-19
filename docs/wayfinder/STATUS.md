@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-19 후속 설계 초안 작성. 사용자가 Windows nvm 버전에 관계없이 공식 ZIP 직접 설치로 통일하도록 지정했다. 저장 구조별 처리·실패 복구·검증 기준과 내부 로고 축소 시안을 [후속 설계](../design/windows-node-zip-all-versions.md)에 기록했다. 세부안은 검토 단계이며 제품 코드는 변경하지 않았다.
+
 2026-11-19 [승인 설계](../design/workrail-node-detail.md)의 레일 아이콘, 패널 A·검색 D, Home 작업 레이어·달력 일수, Windows/실행 중 WSL의 폴더·릴리스 열기를 구현했다. Windows footer E2E는 참여자 영역 실측값으로 검증한다. [구현 기록](../implementation/2026-11-19-node-detail.md)
 
 2026-11-19 환경 연동·통합 화면의 16개 개선 구현·독립 검토와 clean `91df811`의 Linux 전체 검사·하네스를 완료했다. [현재 구현·검증 기록](../implementation/2026-11-19-workrail-environments.md)에 지원 버전, WSL·nvm 실기 한계와 검사 근거를 구분했다. 원격 Windows 패키지 판정은 해당 배포 SHA의 Application 실행과 artifact를 확인한다. 아래 설계 확정·미착수 문구는 당시 이력이며 완료된 MVP 지도는 다시 열지 않는다.
