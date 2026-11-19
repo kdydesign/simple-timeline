@@ -129,7 +129,7 @@ export function createNodeManagementService(options: {
         }
         const mutation = activeLease ? undefined : await windows.mutationStatus?.()
         if (mutation === 'busy' || mutation === 'operation-unknown') machineReservation = mutation
-        if (mutation === 'clear') machineReservation = null
+        if (mutation === 'clear' || mutation === 'reboot-required') machineReservation = null
         if (mutation === 'reboot-required') rebootRequired = true
         const lockError = machineReservation ?? (mutation === 'reboot-required' ? mutation : null)
         const cleared = mutation === 'clear' && !state.busy && (state.error?.code === 'busy' || state.error?.code === 'operation-unknown')
@@ -265,8 +265,11 @@ export function createNodeManagementService(options: {
         code = await perform(kind, version, removal)
       } catch (error) {
         setPhase('verifying')
-        await inspect()
         code = error instanceof Error && ['busy', 'reboot-required', 'operation-unknown'].includes(error.message) ? error.message as NodeManagementErrorCode : 'operation-unknown'
+        if (!acquired && code === 'reboot-required') rebootRequired = true
+        await inspect()
+        // The owner may have finished between the failed acquisition and this inspection.
+        if (!acquired && rebootRequired) code = machineReservation ?? 'reboot-required'
       } finally {
         clearTimeout(timer)
       }

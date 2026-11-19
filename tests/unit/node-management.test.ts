@@ -482,3 +482,34 @@ it('keeps the observed machine reservation through an unavailable lock check unt
   expect((await service.getState()).error).toBeNull()
   expect(service.isBusy()).toBe(false)
 })
+
+it('releases an observed operation when its owner records terminal reboot-required and keeps mutations blocked', async () => {
+  let record: 'operation-unknown' | 'unreadable' | 'reboot-required' = 'operation-unknown'
+  let attempts = 0
+  const { service } = makeService(adapter({
+    mutationStatus: async () => { if (record === 'unreadable') throw Error('read failed'); return record },
+    acquireMutation: async () => { attempts++; throw Error('unexpected acquisition') },
+  }))
+  for (const status of ['operation-unknown', 'unreadable', 'operation-unknown'] as const) {
+    record = status
+    expect((await service.getState()).error?.code).toBe('operation-unknown')
+    expect(service.isBusy()).toBe(true)
+  }
+  record = 'reboot-required'
+  expect(await service.getState()).toMatchObject({ busy: null, error: { code: 'reboot-required' }, removal: { rebootRequired: true } })
+  expect(service.isBusy()).toBe(false)
+  expect((await service.install('22.9.0')).error?.code).toBe('reboot-required')
+  expect(attempts).toBe(0)
+})
+
+it('honours terminal evidence when an acquisition failure and its recovery inspection straddle completion', async () => {
+  let attempts = 0
+  const { service } = makeService(adapter({
+    acquireMutation: async () => { attempts++; throw Error('operation-unknown') },
+    mutationStatus: async () => 'reboot-required',
+  }))
+  expect(await service.use('22.9.0')).toMatchObject({ busy: null, error: { code: 'reboot-required' }, removal: { rebootRequired: true } })
+  expect(service.isBusy()).toBe(false)
+  expect((await service.installManager()).error?.code).toBe('reboot-required')
+  expect(attempts).toBe(1)
+})

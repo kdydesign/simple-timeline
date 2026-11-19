@@ -66,12 +66,14 @@ export function createEnvironmentCoordinator(options: {
   let saved: string | null | undefined
   let epoch = 0, scan = 0, commandGeneration = 0, writing = false, mutating = false
   let discovery: Promise<void> | null = null
+  const windowsInspections = new Set<Promise<NodeManagementState>>()
   const invalid = (message: string): NodeManagementError => ({ code: 'environment-conflict', message })
   const publish = (snapshot: NodeManagementState) => {
     state = { ...snapshot, environments, revision: state.revision + 1 }
     options.changed(state)
   }
   const denied = (error: NodeManagementError) => ({ ...state, error, [rejectedCommand]: true })
+  const targetSelected = () => !!active && environments.status === 'ready' && environments.selectedId === active.id
   const busy = () => mutating || writing || !!backend?.isBusy()
 
   function activate(next: NodeEnvironment | undefined) {
@@ -147,15 +149,19 @@ export function createEnvironmentCoordinator(options: {
   async function inspect(method: 'getState' | 'refreshCatalog') {
     const target = backend, command = commandGeneration
     if (target && !mutating && !writing) {
-      const snapshot = await target[method]()
-      if (command === commandGeneration && target === backend && !mutating && !writing) publish(snapshot)
+      const request = target[method]()
+      if (active?.kind === 'windows') windowsInspections.add(request)
+      try {
+        const snapshot = await request
+        if (command === commandGeneration && target === backend && !mutating && !writing) publish(snapshot)
+      } finally { windowsInspections.delete(request) }
     }
     return state
   }
 
   async function mutate(run: (target: Backend) => Promise<NodeManagementState>, windowsOnly = false) {
     if (busy() || discovery) return denied(nodeManagementError('busy'))
-    if (!backend || environments.status !== 'ready' || (windowsOnly && active?.kind !== 'windows')) return denied(invalid('실행 중인 관리 환경을 선택해 주세요.'))
+    if (!backend || !targetSelected() || (windowsOnly && active?.kind !== 'windows')) return denied(invalid('실행 중인 관리 환경을 선택해 주세요.'))
     if (options.barrier?.blocked()) return denied(nodeManagementError('shutdown'))
     ++scan
     ++commandGeneration
@@ -177,6 +183,12 @@ export function createEnvironmentCoordinator(options: {
       if (environments.status !== 'ready' || !isEnvironmentId(id) || !next) return denied(nodeManagementError('invalid-request'))
       writing = true
       try {
+        // While writing is reserved, no new inspection can start. Finish any Windows
+        // reads that could still discover a machine lock before committing another ID.
+        if (active?.kind === 'windows' && id !== active.id && windowsInspections.size) {
+          await Promise.allSettled(windowsInspections)
+          if (backend?.isBusy()) return denied(nodeManagementError('busy'))
+        }
         await options.store.write(id)
         saved = id
         environments = { ...environments, selectedId: id, error: null }
@@ -187,7 +199,7 @@ export function createEnvironmentCoordinator(options: {
     },
     async startEnvironment() {
       if (busy() || discovery) return denied(nodeManagementError('busy'))
-      if (!active || active.kind !== 'wsl2' || active.running || environments.status !== 'ready') return denied(nodeManagementError('invalid-request'))
+      if (!active || active.kind !== 'wsl2' || active.running || !targetSelected()) return denied(nodeManagementError('invalid-request'))
       if (options.barrier?.blocked()) return denied(nodeManagementError('shutdown'))
       const next = active
       mutating = true
@@ -201,7 +213,7 @@ export function createEnvironmentCoordinator(options: {
       return inspect('getState')
     },
     async cancelOperation() {
-      if (!backend?.cancelOperation || !state.busy?.cancellable) return denied(nodeManagementError('invalid-request'))
+      if (!backend?.cancelOperation || !targetSelected() || !state.busy?.cancellable) return denied(nodeManagementError('invalid-request'))
       await backend.cancelOperation()
       return state
     },
@@ -209,7 +221,7 @@ export function createEnvironmentCoordinator(options: {
     use: (version: string) => mutate(target => target.use(version)),
     installManager: () => mutate(target => target.installManager(), true),
     removeStandalone: (input: StandaloneRemovalConfirmation) => mutate(target => target.removeStandalone(input), true),
-    windowsSelected: () => environments.status === 'ready' && active?.kind === 'windows',
+    windowsSelected: () => targetSelected() && active?.kind === 'windows',
     isBusy: busy,
   }
 }

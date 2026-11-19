@@ -72,8 +72,9 @@ it('discards a late inspection and locks the target throughout a mutating comman
   inspectWin.mockReturnValueOnce(pending.promise)
   const first = service.selectEnvironment(windows.id)
   await vi.waitFor(() => expect(inspectWin).toHaveBeenCalledOnce())
-  const selected = await service.selectEnvironment(ubuntu.id)
-  pending.resolve({ ...selected, installedVersions: ['0.0.1'] })
+  const selecting = service.selectEnvironment(ubuntu.id)
+  pending.resolve({ ...module.emptyNodeState('win32', true), installedVersions: ['0.0.1'] })
+  const selected = await selecting
   expect((await first).installedVersions).not.toContain('0.0.1')
   const task = deferred<NodeManagementState>()
   vi.spyOn(guest, 'install').mockReturnValue(task.promise)
@@ -157,4 +158,78 @@ it('retains a Windows reservation and its recovery service across failed environ
   expect(createWindows).toHaveBeenCalledOnce()
   await coordinator.getState()
   expect((await coordinator.selectEnvironment(ubuntu.id)).environments?.selectedId).toBe(ubuntu.id)
+})
+
+it('commits the persisted selection and dispatch target together across a concurrent Windows lock inspection', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'workrail-select-'))
+  try {
+    const disk = module.environmentSelectionStore(directory)
+    await disk.write(windows.id)
+    const store = { read: disk.read, write: vi.fn(disk.write) }
+    const runningGuest = { ...ubuntu, running: true }
+    const discover = vi.fn(async () => [windows, runningGuest])
+    const mutationStatus = vi.fn<() => Promise<'clear' | 'operation-unknown'>>(async () => 'clear')
+    let win!: ReturnType<typeof createNodeManagementService>
+    const guest = createNodeManagementService({ platform: 'linux', arch: 'x64', loadCatalog: vi.fn(), windows: {} as never, changed: vi.fn() })
+    const guestUse = vi.spyOn(guest, 'use').mockResolvedValue(module.emptyNodeState('win32', true))
+    const changed = vi.fn<(s: NodeManagementState) => void>()
+    const coordinator = module.createEnvironmentCoordinator({
+      platform: 'win32', arch: 'x64', discover, store, changed, start: vi.fn(), createWsl: () => guest,
+      createWindows: onChange => {
+        win = createNodeManagementService({ platform: 'win32', arch: 'x64', changed: onChange, loadCatalog: vi.fn(),
+          windows: { mutationStatus, installManager: vi.fn(), changeVersion: vi.fn(), discover: async () => ({
+            manager: { status: 'missing', version: null }, activeVersion: null, activeSource: null, installedVersions: [], conflicts: [], installation: null,
+          }) },
+        })
+        return win
+      },
+    })
+    await coordinator.getState()
+    const winUse = vi.spyOn(win, 'use')
+    const lockRead = deferred<'operation-unknown'>(), inspecting = deferred<void>()
+    mutationStatus.mockImplementationOnce(() => { inspecting.resolve(); return lockRead.promise })
+    const inspection = coordinator.getState()
+    await inspecting.promise
+    const writeGate = deferred<void>()
+    store.write.mockImplementation(async id => { await writeGate.promise; await disk.write(id) })
+    const selecting = coordinator.selectEnvironment(ubuntu.id)
+    mutationStatus.mockResolvedValue('operation-unknown')
+    lockRead.resolve('operation-unknown')
+    await inspection
+    writeGate.resolve()
+    expect(await selecting).toMatchObject({ error: { code: 'busy' }, environments: { selectedId: windows.id } })
+    expect(await disk.read()).toBe(windows.id)
+    expect(changed.mock.calls.some(([s]) => s.environments?.selectedId === ubuntu.id)).toBe(false)
+    expect(coordinator.isBusy()).toBe(true)
+
+    // A recovery backend may outlive its registration during a scan. It can only inspect.
+    discover.mockResolvedValueOnce([runningGuest])
+    mutationStatus.mockResolvedValue('clear')
+    expect((await coordinator.getState()).environments?.selectedId).toBeNull()
+    expect(coordinator.isBusy()).toBe(false)
+    expect((await coordinator.use('22.1.0')).error?.code).toBe('environment-conflict')
+    expect(winUse).not.toHaveBeenCalled()
+    await coordinator.getState()
+
+    store.write.mockRejectedValueOnce(Error('selection rename failed'))
+    expect((await coordinator.selectEnvironment(ubuntu.id)).error?.code).toBe('operation-failed')
+    expect(coordinator.currentState().environments?.selectedId).toBe(windows.id)
+    expect(await disk.read()).toBe(windows.id)
+
+    const writing = deferred<void>(), commit = deferred<void>()
+    store.write.mockImplementationOnce(async id => { writing.resolve(); await commit.promise; await disk.write(id) })
+    const retry = coordinator.selectEnvironment(ubuntu.id)
+    await writing.promise
+    const inspectionsBeforeWrite = mutationStatus.mock.calls.length
+    expect((await coordinator.refreshCatalog()).environments?.selectedId).toBe(windows.id)
+    expect(mutationStatus).toHaveBeenCalledTimes(inspectionsBeforeWrite)
+    expect((await coordinator.use('22.1.0')).error?.code).toBe('busy')
+    expect(await disk.read()).toBe(windows.id)
+    commit.resolve()
+    expect((await retry).environments?.selectedId).toBe(ubuntu.id)
+    expect(await disk.read()).toBe(ubuntu.id)
+    await coordinator.use('22.1.0')
+    expect(guestUse).toHaveBeenCalledExactlyOnceWith('22.1.0')
+    expect(winUse).not.toHaveBeenCalled()
+  } finally { await rm(directory, { recursive: true, force: true }) }
 })
