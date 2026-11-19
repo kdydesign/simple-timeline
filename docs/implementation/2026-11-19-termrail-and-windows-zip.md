@@ -29,3 +29,5 @@ nvm 2.0.0·2.0.1의 공식 실행 파일 및 보조 실행 파일은 SHA-256으�
 Linux x64·Node 24.22.1에서 변경을 포함한 작업 트리(기준 `c5e630e`, dirty)의 `verify:app` 7단계가 통과했다. 세 시간대에서 단위 561개씩, UI 300개, 네이티브 98개, sandbox Electron E2E 121개가 통과했다. E2E에는 실제 로컬 SSH 서버에 접속해 창 분리·복귀·트레이 이후에도 같은 PTY에서 출력과 키 입력을 확인하는 사례가 포함된다. Windows 전용 검사의 결과는 해당 소스 SHA의 원격 실행에서 확인한다.
 
 원격 검사에서 저장된 카탈로그가 먼저 표시되는 경우, 새로고침 완료 후 설치 권한을 검사하도록 UI 테스트를 수정했다. WSL 권한 확인은 설정 경로와 실제 경로의 조상을 모두 대조하면서 소유자와 모드를 한 번의 stat 호출로 읽는다. 공백·개행·글로브 문자를 포함한 경로로 회귀를 검사했다. Windows 표준 사용자 인수 fixture는 첫 비대화형 로그인에서도 현재 사용자 SID로 등록된 프로필 하위에 AppData를 준비한다.
+
+Windows 표준 사용자 인수 검사에서 nvm 2.0.1의 shim과 link 모두 빈 저장소에 Node 24.22.1을 설치했다. 명시적인 전환 전까지 기본 버전·링크·PATH가 보존됐고, 전환 후 Node 24.22.1과 npm 11.19.1의 실행을 확인했다. 목록 확인에는 검증된 nvm 프로세스의 표준 출력을 사용한다. [shim 실행](https://github.com/kdydesign/simple-timeline/actions/runs/44544552199/job/135631504817) · [link 실행](https://github.com/kdydesign/simple-timeline/actions/runs/44544552199/job/135631505243)

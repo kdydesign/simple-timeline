@@ -89,7 +89,10 @@ it('launches 2.0.1 in the user account, with the registry snapshot and an offlin
   io.exec.mockResolvedValueOnce({ stdout: '  24.1.0\n* 22.9.0    (default)\n', stderr: '' })
   expect(await adapter.recognizesVersion!(modern, '22.9.0')).toBe(true)
   const listWorker = decode(io.exec.mock.calls.at(-1)![1].at(-1))
-  expect(listWorker).toContain("'list' 'installed'")
+  expect(listWorker).toContain("$start.FileName = '" + modern.exe + "'")
+  expect(listWorker).toContain("$start.Arguments = 'list installed'")
+  expect(listWorker).toContain('$start.UseShellExecute = $false')
+  expect(listWorker).toContain('$start.RedirectStandardOutput = $true')
   expect(listWorker).not.toContain('--json')
   expect(await adapter.changeVersion({ ...modern, executableDigest: 'a'.repeat(64) }, 'use', '22.9.0')).toEqual({ status: 'integrity-failed' })
 
