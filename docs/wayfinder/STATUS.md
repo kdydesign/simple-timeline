@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-19 구현 시작: 사용자가 Q12 확정 설계의 구현을 요청했다. [환경 연동·통합 화면 구현 기록](../implementation/2026-11-19-workrail-environments.md)과 [계획](../superpowers/plans/2026-11-19-workrail-environments.md)에 따라 진행한다. 아래 설계 확정·구현 미착수 문구는 당시 이력이다. 완료된 MVP 지도는 다시 열지 않는다.
+
 2026-11-19 Q12 확정: 사용자가 [환경별 Node 연동·Home 등 16개 통합 개선 설계](../design/workrail-environments-and-home.md)를 최종 승인했다. compact Home 시안·14px 공통 여백·위젯 목록 제한·작업 중 환경 변경 잠금·구버전 호스트 버전 확인 불가 처리까지 포함한다. **설계 확정·제품 구현 미착수**이며 아래 확인 대기 문구는 당시 이력이다.
 
 2026-11-19 전체 설계 재검토: [16개 개선의 통합 설계](../design/workrail-environments-and-home.md)에 코드 근거·예외 상태·요구별 수용 기준을 보강했다. Q4 소스 컴파일 지원, Q7 WSL 기본 사용자만, Q8 도구 미설치 공식 안내, Q9 artifact/실제 EXE·ZIP WorkRail 통일, Q10 메뉴별 도움말 읽기 위치, Q11 footer `외 N명`을 확정했다. 아래 이전 미결 표기는 이력이다. 통합 설계 최종 확인 전이며 제품 구현은 시작하지 않았다. [지침·문서 재점검](../harness/review.md#2026-11-19--workrail-16개-개선-설계-재검토) 참조.
