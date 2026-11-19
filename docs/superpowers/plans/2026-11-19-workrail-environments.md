@@ -51,12 +51,12 @@
 
 **Files:** `src/renderer/workrail/{Home,NodeScreen,NodeRecovery,PlanRailStatus,ToolDock}.tsx`, `useNodeManagement.ts`, `nodePresentation.ts`, `workrail.css`, `forest-crystal.css`, 필요 시 전용 widget/environment 컴포넌트; `tests/ui/workrail*.test.tsx`, `tests/unit/node-catalog-sort.test.ts`, 관련 E2E.
 **Interfaces:** Task 1/2의 manager/capabilities/environments/API를 소비한다. 공유 상태는 기존 memberPresence/deviceVersions 사용, Task 4의 선택적 hostVersion은 없으면 확인 불가. Node 상태와 작업은 Home/NodeRail에서 단일 hook을 공유한다.
-- [ ] 기능 제한·목록 불명·WSL 시작 전·최초 환경 선택·위젯 빠른 사용/중복 방지와 footer on/muted/unknown 테스트를 작성하고 실패를 확인한다.
-- [ ] 승인 시안과 같은 compact 위젯, 동일 높이 상단 카드, 14px 프레임, 실제 공유 배지, 선택 CTA·flat 메뉴·본문 폰트를 구현한다.
-- [ ] 환경명과 필요할 때만 환경 변경 창, 종료 WSL 시작, 현재 대상·기능 제한·작업 진행/취소를 연결한다. 작업 중 환경 변경 금지.
-- [ ] LTS·코드명/비 LTS 설명, 상태 아이콘+키보드 툴팁, 설치/사용/사용 중/다시 확인 구분, 기존 정렬·표 진행·패널 높이를 유지한다.
-- [ ] Home 노드 최대3/참여자 최대2와 전체 목록, footer 실제 연결 참여자+버전/외 N명, 상태별 알림 툴팁을 구현한다.
-- [ ] 관련 UI·단위 검사 및 typecheck 후 격리 프로필로 다크/라이트·작은 창 시각 검증을 수행하고 커밋한다.
+- [x] 기능 제한·목록 불명·WSL 시작 전·최초 환경 선택·위젯 빠른 사용/중복 방지와 footer on/muted/unknown 테스트를 작성하고 실패를 확인한다.
+- [x] 승인 시안과 같은 compact 위젯, 동일 높이 상단 카드, 14px 프레임, 실제 공유 배지, 선택 CTA·flat 메뉴·본문 폰트를 구현한다.
+- [x] 환경명과 필요할 때만 환경 변경 창, 종료 WSL 시작, 현재 대상·기능 제한·작업 진행/취소를 연결한다. 작업 중 환경 변경 금지.
+- [x] LTS·코드명/비 LTS 설명, 상태 아이콘+키보드 툴팁, 설치/사용/사용 중/다시 확인 구분, 기존 정렬·표 진행·패널 높이를 유지한다.
+- [x] Home 노드 최대3/참여자 최대2와 전체 목록, footer 실제 연결 참여자+버전/외 N명, 상태별 알림 툴팁을 구현한다.
+- [x] 관련 UI·단위 검사 및 typecheck 후 격리 프로필로 다크/라이트·작은 창 시각 검증을 수행하고 커밋한다.
 
 ## Task 4: 호스트 실행 버전과 메뉴별 도움말
 
