@@ -40,12 +40,12 @@
 
 **Files:** 새 `src/main/node-management/environments.ts`, `wsl.ts` 등; `src/shared/node-management.ts`, `service.ts`, `ipc-core.ts`, `ipc.ts`, `src/preload/index.ts`, `src/main/bootstrap.ts`, 필요 시 node-maintenance routing; `tests/unit/node-environments.test.ts`, `node-wsl.test.ts`, `node-management-ipc.test.ts`.
 **Interfaces:** `NodeEnvironment {id,label,kind:'windows'|'wsl2',distro?:string,user?:string,running:boolean}`. state의 선택적 `environments:{status:'loading'|'ready'|'error',items:NodeEnvironment[],selectedId:string|null,error:NodeManagementError|null}`. API `selectEnvironment(id:string)`, `startEnvironment()`, `cancelOperation()`를 추가한다. `getState`는 탐지·선택 복원 후 상태를 반환한다. 명령은 renderer 경로 입력을 받지 않고 발견한 ID를 검증한다. NodeOperation phase에 컴파일을 나타낼 수 있게 확장한다.
-- [ ] 단일 자동 선택/최초 복수 미선택/저장 선택 복원/대상 삭제/탐지 실패/중복 작업/지연 응답 테스트를 작성하고 실패를 확인한다.
-- [ ] WSL 목록·실행 상태만 조회한 뒤 선택된 실행 중 환경만 내부 검사한다. 종료 환경은 startEnvironment 전 내부 실행 0회를 검증한다. 기본 사용자·도구 경로와 Windows PATH 혼입을 구분한다. `catalog.ts`의 기존 Windows x64 전용 필터가 WSL 목록을 누락시키지 않도록 대상별 공식 목록 처리와 node-build 정의의 교집합을 연결한다. 기존 Windows parser 호출·테스트의 기본 동작은 보존한다.
-- [ ] nodenv versions/global 및 node-build install을 기본 사용자로 수행한다. 읽기·설치·전환 기능 제한, 바이너리/소스 빌드, 도구 없음 안내, 정확한 대상 취소·진행 로그·결과 재확인을 구현한다.
-- [ ] Windows 서비스와 함께 환경 coordinator에 연결하고 선택을 userData 아래 원자적 저장한다. 설치/사용 작업 중 전환을 막고 선택/명령 세대로 오래된 결과를 무시한다. 기존 복구 창은 Windows 전용 경로를 유지한다.
-- [ ] IPC/preload/bootstrap 연결 후 관련 unit 테스트와 typecheck를 실행한다. Windows/WSL 실제 실행을 하지 못한 범위는 구분한다.
-- [ ] 관련 파일만 커밋하고 후속 UI에 정확한 인터페이스를 보고한다.
+- [x] 단일 자동 선택/최초 복수 미선택/저장 선택 복원/대상 삭제/탐지 실패/중복 작업/지연 응답 테스트를 작성하고 실패를 확인한다.
+- [x] WSL 목록·실행 상태만 조회한 뒤 선택된 실행 중 환경만 내부 검사한다. 종료 환경은 startEnvironment 전 내부 실행 0회를 검증한다. 기본 사용자·도구 경로와 Windows PATH 혼입을 구분한다. `catalog.ts`의 기존 Windows x64 전용 필터가 WSL 목록을 누락시키지 않도록 대상별 공식 목록 처리와 node-build 정의의 교집합을 연결한다. 기존 Windows parser 호출·테스트의 기본 동작은 보존한다.
+- [x] nodenv versions/global 및 node-build install을 기본 사용자로 수행한다. 읽기·설치·전환 기능 제한, 바이너리/소스 빌드, 도구 없음 안내, 정확한 대상 취소·진행 로그·결과 재확인을 구현한다.
+- [x] Windows 서비스와 함께 환경 coordinator에 연결하고 선택을 userData 아래 원자적 저장한다. 설치/사용 작업 중 전환을 막고 선택/명령 세대로 오래된 결과를 무시한다. 기존 복구 창은 Windows 전용 경로를 유지한다.
+- [x] IPC/preload/bootstrap 연결 후 관련 unit 테스트와 typecheck를 실행한다. Windows/WSL 실제 실행을 하지 못한 범위는 구분한다.
+- [x] 관련 파일만 커밋하고 후속 UI에 정확한 인터페이스를 보고한다.
 
 ## Task 3: Home·NodeRail·footer·메뉴 스타일
 
