@@ -17,7 +17,7 @@ test('installer configuration conforms to the installed builder schema',async()=
   const {validateConfiguration}=require('app-builder-lib/out/util/config/config.js')
   await validateConfiguration(load(readFileSync('electron-builder.yml','utf8')),{add(){}})
 })
-test('the WR monogram icon provides native Windows sizes for window, tray and installer',()=>{
+test('the rail icon provides native Windows sizes for window, tray and installer',()=>{
   const c=load(readFileSync('electron-builder.yml','utf8'))
   assert.equal(c.win.icon,'resources/icon.ico')
   assert.ok(c.files.includes('resources/icon.png'), 'package the window icon referenced by main')
@@ -26,9 +26,9 @@ test('the WR monogram icon provides native Windows sizes for window, tray and in
   assert.equal(c.nsis.uninstallerIcon,c.win.icon)
   const ico=readFileSync(c.win.icon)
   assert.equal(ico.readUInt16LE(2),1)
-  assert.equal(ico.readUInt16LE(4),6)
-  const sizes=Array.from({length:6},(_,i)=>ico[6+i*16]||256)
-  assert.deepEqual(sizes.sort((a,b)=>a-b),[16,24,32,48,64,256])
+  assert.equal(ico.readUInt16LE(4),9)
+  const sizes=Array.from({length:ico.readUInt16LE(4)},(_,i)=>ico[6+i*16]||256)
+  assert.deepEqual(sizes.sort((a,b)=>a-b),[16,20,24,32,40,48,64,128,256])
   const bootstrap=readFileSync('src/main/bootstrap.ts','utf8')
   assert.match(bootstrap,/import windowsIcon from '..\/..\/resources\/icon.ico\?asset'/)
   assert.match(bootstrap,/const desktopIcon = process.platform === 'win32' \? windowsIcon : icon/)

@@ -1,7 +1,5 @@
 # WorkRail 앱 아이콘
 
-2026-11-19 사용자가 선택한 A · WR 시안을 벡터로 다시 그렸다. 흰 W와 하늘색 R이 한 획을 공유하고, 남색 글래스 바탕의 바깥 여백을 줄여 Windows 작업 표시줄에서도 타일이 크게 보이도록 했다.
+승인된 레일 심벌은 흰색 수평 획과 하늘색 사선 획을 짙은 남색 타일 위에 배치한다. [일반 원본](icon.svg)은 256 격자에 반경 31, 심벌 너비 222를 사용한다. [소형 원본](icon-small.svg)은 16px 격자에서 획 사이를 조정한 작업 표시줄·트레이용이다.
 
-[icon.svg](icon.svg)는 제목 표시줄과 일반 크기의 원본이다. [icon-small.svg](icon-small.svg)는 작은 트레이와 저해상도 표시를 위해 배경 명암을 단순화하고 W의 획과 R의 안쪽 공간을 16px 격자에 맞춘 원본이다. 이전 시안의 이미지 `workrail-wr-source.png`는 과거 디자인 기록에 해당한다.
-
-[icon.png](icon.png)는 256px이고, [icon.ico](icon.ico)는 16·24·32·48·64·256px 프레임을 포함한다. 각 프레임을 Inkscape로 해당 크기에서 직접 렌더링하고 ImageMagick으로 하나의 ICO에 묶었다. 16·24px 프레임은 작은 원본을 사용한다. Windows 실행 파일·설치 프로그램·창·트레이가 같은 ICO를 참조하며 제목 표시줄 등은 PNG를 사용한다.
+[PNG](icon.png)는 일반 원본의 256px 렌더링이다. [Windows ICO](icon.ico)는 16·20px에 소형 원본, 24·32·40·48·64·128·256px에 일반 원본을 담는다. 각 크기를 Inkscape로 렌더링한 후 ImageMagick으로 묶었다. 창·트레이·설치 프로그램은 같은 ICO를 참조한다. workrail-wr-source.png는 이전 모노그램 시안 기록이다.
