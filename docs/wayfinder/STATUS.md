@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-19 [NodeRail·Home 후속 설계](../design/workrail-node-detail.md) 협의 중. 레일 아이콘을 로컬 제품에 반영했고, 달력 일수와 Windows/실행 중 WSL 관리자 폴더 범위를 확정했다. 이전 빌드 Windows E2E 보정은 화면 개선과 함께 진행한다.
+
 2026-11-19 환경 연동·통합 화면의 16개 개선 구현·독립 검토와 clean `91df811`의 Linux 전체 검사·하네스를 완료했다. [현재 구현·검증 기록](../implementation/2026-11-19-workrail-environments.md)에 지원 버전, WSL·nvm 실기 한계와 검사 근거를 구분했다. 원격 Windows 패키지 판정은 해당 배포 SHA의 Application 실행과 artifact를 확인한다. 아래 설계 확정·미착수 문구는 당시 이력이며 완료된 MVP 지도는 다시 열지 않는다.
 
 2026-11-19 Q12 확정: 사용자가 [환경별 Node 연동·Home 등 16개 통합 개선 설계](../design/workrail-environments-and-home.md)를 최종 승인했다. compact Home 시안·14px 공통 여백·위젯 목록 제한·작업 중 환경 변경 잠금·구버전 호스트 버전 확인 불가 처리까지 포함한다. **설계 확정·제품 구현 미착수**이며 아래 확인 대기 문구는 당시 이력이다.
