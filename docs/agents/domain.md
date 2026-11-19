@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| NodeRail 사내 프록시와 설치·사용 진행 화면 | [확정 설계·시안 A·인수 기준](../design/noderail-proxy-and-loading.md). Windows 주소·포트 프록시, WSL2 배포판별 설정, 양쪽 목록 레이어, 두 헤더의 불투명도. 제품 구현 전 |
 | NodeRail 상세·Home 작업 레이어 및 마감 일수 | [설계 협의와 시안](../design/workrail-node-detail.md). [제품 반영 및 검증 범위](../implementation/2026-11-19-node-detail.md) |
 | 환경별 Node 연동·Home 개선 협의 | [통합 설계·요구별 수용 기준·시안](../design/workrail-environments-and-home.md). 기존 nvm 기능별 연동, WSL 기본 사용자·필요 시 소스 빌드·도구 수동 설치 안내, 자동 환경 선택, Home/도움말/footer 및 실제 배포 파일 이름까지 포함. Q12에서 수정 시안·세부안을 포함한 통합 설계 확정 후 별도 요청으로 구현·로컬 전체 검증·독립 검토 완료. 원격 패키지와 Windows/WSL 실기는 실행 기록의 범위를 구분한다. 현재 상태는 [구현·검증 기록](../implementation/2026-11-19-workrail-environments.md)과 [계획](../superpowers/plans/2026-11-19-workrail-environments.md)을 따른다 |
 | WorkRail 개선 구현·검증 | [구현 계획](../superpowers/plans/2026-11-18-workrail-polish-and-recovery.md) · [실행 기록](../implementation/2026-11-18-workrail-polish-and-recovery.md). 사용자 구현 요청으로 화면·역할 전환·Node 복구를 반영하고 로컬 전체 검증 완료. Windows 실기·원격 CI는 별도. 아래 과거 설계-only 상태와 구분 |
