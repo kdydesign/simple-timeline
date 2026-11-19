@@ -132,7 +132,7 @@ it.skipIf(!modernRunner)('installs the first ZIP on official nvm 2.0.1 and activ
   })
   expect(initial).toMatchObject({
     manager: { status: 'ready', version: '2.0.1' },
-    installation: { family: 'modern', mode: modernMode },
+    installation: { family: 'modern', mode: modernMode, root: process.env.WORKRAIL_TEST_NVM_ROOT },
     installedVersions: [], activeVersion: null, conflicts: [],
     capabilities: { install: { available: true }, use: { available: true } },
   })

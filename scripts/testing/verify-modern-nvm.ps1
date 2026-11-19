@@ -54,8 +54,39 @@ if ($AsStandardUser) {
     throw "nvm installer exited $($setup.ExitCode). $detail"
   }
   $env:NVM_HOME = [Environment]::GetEnvironmentVariable('NVM_HOME','User')
-  $env:Path += ';' + [Environment]::GetEnvironmentVariable('Path','User')
   $nvm = Join-Path $env:NVM_HOME 'nvm.exe'
+  # Keep the installer's data root (and its real shims), but give this test
+  # a separate version inventory. nvm config set root does not move old versions.
+  $preference = 'HKCU:\Software\Author Software\Preferences\nvm'
+  $dataRoot = Split-Path -Parent (Get-ItemPropertyValue -LiteralPath $preference -Name InstallRoot)
+  if (-not $dataRoot.StartsWith($env:USERPROFILE + '\', [StringComparison]::OrdinalIgnoreCase)) {
+    throw 'Expected nvm storage in the isolated account profile'
+  }
+  # Only repair the disposable account if the installer's persisted PATH lacks
+  # the data root's .nodejs entry. Preserve an existing equivalent spelling.
+  $nodeEntry = Join-Path $dataRoot '.nodejs'
+  $userEnvironment = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
+  try {
+    $raw = $userEnvironment.GetValue('Path', '', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+    $hasNodeEntry = @($raw.Split(';') | Where-Object {
+      $segment = [Environment]::ExpandEnvironmentVariables($_.Trim().Trim('"'))
+      [IO.Path]::IsPathRooted($segment) -and [IO.Path]::GetFullPath($segment).TrimEnd('\') -ieq $nodeEntry
+    }).Count -gt 0
+    Write-Output "Installer user PATH contained the nvm .nodejs directory: $hasNodeEntry"
+    if (-not $hasNodeEntry) {
+      $kind = if ($userEnvironment.GetValueNames() -contains 'Path') { $userEnvironment.GetValueKind('Path') } else { [Microsoft.Win32.RegistryValueKind]::ExpandString }
+      $userEnvironment.SetValue('Path', (@($nodeEntry, $raw) -ne '') -join ';', $kind)
+    }
+  } finally { $userEnvironment.Dispose() }
+  $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+  $testRoot = Join-Path $dataRoot 'workrail-ci-versions'
+  New-Item -Path $testRoot -ItemType Directory | Out-Null
+  & $nvm config set "root=$testRoot"
+  if ($LASTEXITCODE -ne 0 -or (Get-ItemPropertyValue -LiteralPath $preference -Name InstallRoot) -ne $testRoot) {
+    throw 'nvm did not select the empty test version directory'
+  }
+  $env:WORKRAIL_TEST_NVM_ROOT = $testRoot
+
   if ($Mode -eq 'link') {
     & $nvm use link
     if ($LASTEXITCODE -ne 0) { throw 'nvm could not enter link mode' }
