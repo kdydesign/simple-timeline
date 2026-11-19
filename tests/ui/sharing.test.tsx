@@ -25,7 +25,7 @@ it('places member sync immediately before modes and reports the connection in th
  render(<App api={m.api}/>);const sync=await screen.findByRole('button',{name:'수동 동기화'});expect(sync.nextElementSibling).toHaveAttribute('aria-label','조회 모드');
  const footer=screen.getByRole('contentinfo',{name:'PlanRail 상태'});
  expect(within(footer).getByText('멤버')).toBeVisible();
- const connection=within(footer).getByText('연결 정상');expect(connection).toHaveAttribute('data-connected','true');expect(connection).toHaveAttribute('aria-label','공유 연결 상태: 연결 정상 · 마지막 정상 확인: 2026-11-10T08:00:00Z');
+ const connection=within(footer).getByLabelText(/^공유 연결 상태: 연결 정상 ·/);expect(connection).toHaveAttribute('data-connected','true');expect(connection).toHaveAttribute('aria-label','공유 연결 상태: 연결 정상 · 마지막 정상 확인: 2026-11-10T08:00:00Z');
  expect(screen.queryByRole('button',{name:/공유 연결 상태/})).toBeNull();
  await u.click(screen.getByRole('button',{name:'공유 일정 편집'}));expect(screen.getByLabelText('일정 이름')).toHaveAttribute('readonly');expect(screen.queryByRole('button',{name:'삭제'})).not.toBeInTheDocument();
  await u.click(screen.getByLabelText('시작일 알림'));await u.click(screen.getByRole('button',{name:'저장'}));await u.click(screen.getByRole('button',{name:'변경'}));await waitFor(()=>expect(f.api.saveReminder).toHaveBeenCalledOnce());
@@ -91,7 +91,7 @@ it('shows member-intent red status and disabled sync while the first pairing sti
  const sync=await screen.findByRole('button',{name:'수동 동기화'});expect(sync).toBeDisabled();expect(sync.nextElementSibling).toHaveAttribute('aria-label','조회 모드');
  const footer=screen.getByRole('contentinfo',{name:'PlanRail 상태'});
  expect(within(footer).getByText('개인 전용')).toBeVisible();
- expect(within(footer).getByText('연결 승인 대기')).toHaveAttribute('data-connected','false');
+ expect(within(footer).getByLabelText(/^공유 연결 상태: 연결 승인 대기 ·/)).toHaveAttribute('data-connected','false');
  expect(within(footer).queryByText('멤버')).toBeNull();
  expect(sync).toHaveAccessibleDescription('설정과 연결 승인이 필요합니다.');
 });
@@ -129,12 +129,12 @@ it.each(['host','member','personal'] as const)('keeps the committed %s role in t
  const f=sharingFixture({role,status:role==='personal'?'personal':'disconnected',message:''});const {container}=render(<App api={memoryApi().api}/>);await screen.findByRole('button',{name:'프로젝트 추가'});
  const footer=screen.getByRole('contentinfo',{name:'PlanRail 상태'}),label=role==='host'?'호스트':role==='member'?'멤버':'개인 전용';
  expect(within(footer).getByText(label)).toBeVisible();
- expect(within(footer).getByText(role==='personal'?'공유 미설정':'연결을 확인할 수 없습니다')).toHaveAttribute('data-connected','false');
+ expect(within(footer).getByLabelText(role==='personal'?/^공유 연결 상태: 공유 미설정 ·/:/^공유 연결 상태: 연결을 확인할 수 없습니다 ·/)).toHaveAttribute('data-connected','false');
  expect(container.querySelector('.brand .role-badge')).toBeNull();
  if(role!=='personal'){
   act(()=>f.emit({status:'connected'}));expect(within(footer).getByText(label)).toBeVisible();
-  expect(within(footer).getByText(role==='host'?'공유 제공 중':'연결 정상')).toHaveAttribute('data-connected','true');
+  expect(within(footer).getByLabelText(role==='host'?/^공유 연결 상태: 공유 제공 중 ·/:/^공유 연결 상태: 연결 정상 ·/)).toHaveAttribute('data-connected','true');
   act(()=>f.emit({status:'error',message:'공유 연결 오류'}));expect(within(footer).getByText(label)).toBeVisible();
-  expect(within(footer).getByText('공유 연결 오류')).toHaveAttribute('data-connected','false');
+  expect(within(footer).getByLabelText(/^공유 연결 상태: 공유 연결 오류 ·/)).toHaveAttribute('data-connected','false');
  }
 })

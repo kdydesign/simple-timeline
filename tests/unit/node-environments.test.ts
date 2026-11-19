@@ -126,3 +126,35 @@ it('routes inspection of a latched WSL job to its owner before replacing the bac
   expect(result.busy).toBeNull()
   expect(result.environments?.items[0].running).toBe(false)
 })
+
+it('retains a Windows reservation and its recovery service across failed environment and Node inspections', async () => {
+  const discover = vi.fn(async () => [windows, ubuntu])
+  const inspect = vi.fn(async () => ({
+    manager: { status: 'missing' as const, version: null }, installedVersions: [], activeVersion: null,
+    activeSource: null, conflicts: [], installation: null,
+  }))
+  let lock: 'clear' | 'operation-unknown' = 'operation-unknown'
+  const createWindows = vi.fn((changed: module.EnvironmentChanged) => createNodeManagementService({
+    platform: 'win32', arch: 'x64', changed, loadCatalog: async () => [],
+    windows: { discover: inspect, mutationStatus: async () => lock, installManager: vi.fn(), changeVersion: vi.fn() },
+  }))
+  const coordinator = module.createEnvironmentCoordinator({
+    platform: 'win32', arch: 'x64', discover, createWindows, createWsl: vi.fn(), start: vi.fn(),
+    store: { read: async () => windows.id, write: vi.fn() }, changed: vi.fn(),
+  })
+  expect(await coordinator.getState()).toMatchObject({ busy: null, error: { code: 'operation-unknown' } })
+  discover.mockRejectedValueOnce(Error('WSL inventory unavailable'))
+  expect((await coordinator.getState()).environments?.status).toBe('error')
+  expect(coordinator.isBusy()).toBe(true)
+  expect((await coordinator.selectEnvironment(ubuntu.id)).error?.code).toBe('busy')
+  inspect.mockRejectedValueOnce(Error('Windows inspection unavailable'))
+  expect(await coordinator.refreshCatalog()).toMatchObject({ error: { code: 'operation-unknown' }, manager: { status: 'error' } })
+  expect(coordinator.isBusy()).toBe(true)
+  lock = 'clear'
+  discover.mockRejectedValueOnce(Error('WSL inventory still unavailable'))
+  expect(await coordinator.getState()).toMatchObject({ error: null, environments: { status: 'error' } })
+  expect(coordinator.isBusy()).toBe(false)
+  expect(createWindows).toHaveBeenCalledOnce()
+  await coordinator.getState()
+  expect((await coordinator.selectEnvironment(ubuntu.id)).environments?.selectedId).toBe(ubuntu.id)
+})

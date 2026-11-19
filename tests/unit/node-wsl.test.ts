@@ -428,3 +428,13 @@ it('discards a pending catalog for a changed user or a newer mutation', async ()
     expect((await refresh).catalog).toMatchObject({ status: 'idle', releases: [] })
   }
 })
+
+it.runIf(process.platform === 'linux')('keeps a missing configured global for verification without claiming it as usable', async () => {
+  const f = await fixture()
+  try {
+    await writeFile(join(f.root, 'version'), '22.1.0')
+    const info = await f.inspect()
+    expect(info).toMatchObject({ global: '22.1.0', activeVersion: null, installedVersions: ['20.1.0'],
+      capabilities: { list: { available: true }, install: { available: true } } })
+  } finally { await rm(f.home, { recursive: true, force: true }) }
+})

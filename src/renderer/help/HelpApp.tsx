@@ -19,7 +19,7 @@ export function HelpApp({api}:{api:HelpApi}) {
    const raw:unknown=r.reading
    const next=validHelpReading(raw)?raw:validLegacyHelpReading(raw)?{...raw,section:'planrail' as const}:undefined
    if(!r.ok||!next)throw Error()
-   if(pendingReading.current?.topicId!==next.topicId){setBrokenImage(false);setZoom(false)}
+   if(pendingReading.current?.topicId!==next.topicId||pendingReading.current.section!==next.section){setBrokenImage(false);setZoom(false)}
    restoreScroll.current=next.scrollTop;pendingReading.current=next;setReading(next)
    setOpenId(r.openId??0);setVersion(r.version??'');setMaximized(!!r.maximized)
   }).catch(()=>{if(generation===loadGeneration.current)setFailed(true)})

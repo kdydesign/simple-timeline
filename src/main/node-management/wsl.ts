@@ -107,6 +107,7 @@ export function createWslService(options: {
       if (changed) { invalidateCatalog(); releases = undefined }
       publish({
         manager: info.manager, installedVersions: info.installedVersions, activeVersion: info.activeVersion,
+        configuredDefaultVersion: isNodeVersion(info.global) ? info.global : undefined,
         activeSource: info.activeVersion ? 'nodenv' : null, capabilities: info.capabilities, conflicts: info.conflicts,
         checkedAt: new Date().toISOString(),
         ...(changed ? { error: changedTarget, catalog: emptyNodeState('win32', true).catalog, operationLog: [], operationLogPath: undefined }
@@ -120,7 +121,7 @@ export function createWslService(options: {
       current = undefined
       releases = undefined
       publish({ manager: { kind: 'nodenv', status: 'error', version: null }, checkedAt: null, installedVersions: [],
-        capabilities: capabilities(inspectionError.message), activeVersion: null, activeSource: null, conflicts: [],
+        capabilities: capabilities(inspectionError.message), activeVersion: null, configuredDefaultVersion: undefined, activeSource: null, conflicts: [],
         error: inspectionError, catalog: emptyNodeState('win32', true).catalog })
     }
   }
@@ -152,7 +153,7 @@ export function createWslService(options: {
         release()
         current = undefined
         releases = undefined
-        publish({ ...emptyNodeState('win32', true), operationLog: state.operationLog, operationLogPath: state.operationLogPath,
+        publish({ ...emptyNodeState('win32', true), configuredDefaultVersion: undefined, operationLog: state.operationLog, operationLogPath: state.operationLogPath,
           error: error('verification-failed', 'WSL 배포판 종료를 확인했습니다. 다음 환경 시작 후 작업 결과를 다시 확인해 주세요.') })
       }
       return state

@@ -77,10 +77,10 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       setReadError(null)
     } else if (kind === 'maintenance') {
       setMaintenanceError(result.error.message)
-    } else if (kind === 'mutation') {
+    } else if (kind === 'mutation' && result.error.code === 'ipc-unavailable') {
       // An unrelated snapshot cannot confirm a command that never returned a state.
       setMutationFailure({ request, error: result.error })
-    } else if (kind === 'control') {
+    } else if (kind === 'control' || kind === 'mutation') {
       setControlError(result.error)
     } else if (startRevision === currentRevision && request === current.request) {
       setReadError(result.error)

@@ -70,3 +70,26 @@ it('ignores a failed prewarm response after a newer explicit open succeeds',asyn
  rejectOld(Error('late prewarm failure'));await waitFor(()=>expect(screen.queryByRole('alert')).toBeNull());
  await new Promise(resolve=>setTimeout(resolve,50));expect(screen.getByRole('heading',{name:'간트 이동과 확대·축소'})).toBeVisible();
 });
+
+it.each(['zoom', 'broken'] as const)('resets the %s image state when a new entry menu restores the same illustrated article', async mode => {
+  let section: HelpReadingState['section'] = 'home'
+  let opened!: () => void
+  const api: HelpApi = {
+    command: async () => ({ ok: true, reading: { section, topicId: 'member-sync', query: '', scrollTop: 0 } }),
+    onOpen: callback => { opened = callback; return () => {} },
+  }
+  render(<HelpApp api={api} />)
+  const button = await screen.findByRole('button', { name: /화면 확대:/ })
+  if (mode === 'zoom') {
+    await userEvent.click(button)
+    expect(screen.getByRole('dialog', { name: '이미지 확대' })).toBeVisible()
+  } else {
+    fireEvent.error(within(button).getByRole('img'))
+    expect(screen.getByText(/이미지를 불러오지 못했습니다/)).toBeVisible()
+  }
+  section = 'planrail'
+  await act(async () => opened())
+  expect(screen.queryByRole('dialog', { name: '이미지 확대' })).toBeNull()
+  expect(screen.getByRole('button', { name: /화면 확대:/ })).toBeVisible()
+  expect(screen.getByText(/PlanRail 하단.*마지막 정상 확인/)).toBeVisible()
+})

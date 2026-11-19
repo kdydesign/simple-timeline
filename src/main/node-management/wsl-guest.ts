@@ -268,7 +268,7 @@ export function parseGuestProbe(output: string): WslInspection {
   return {
     user, arch: ({ x86_64: 'x64', aarch64: 'arm64', i686: 'x86' } as Record<string,string>)[arch] ?? arch,
     root, builder, definitions: (fields.get('definitions') ?? '').split(/\s+/).filter(isNodeVersion), buildTools: fields.has('buildTools'),
-    global, activeVersion: isNodeVersion(global) ? global : null, installedVersions: [...installed],
+    global, activeVersion: listed && isNodeVersion(global) && installed.has(global) ? global : null, installedVersions: [...installed],
     manager: { kind: 'nodenv', path, status: ready ? 'ready' : status === 'missing' ? 'missing' : 'error', version },
     conflicts: conflict ? [{ code: 'path-priority', path: conflict, message: '다른 Node가 PATH에서 nodenv보다 먼저 발견되었습니다.' }] : [],
     capabilities: ready ? { list: availability(listReason), use: availability(mutationReason), install: availability(mutationReason ?? (builder ? null : missingBuilder)) } : capabilities(reason),

@@ -467,3 +467,18 @@ it('streams an allowed HTTP redirect through the real Node fetch transport', asy
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
   }
 })
+
+it('keeps the observed machine reservation through an unavailable lock check until a verified clear', async () => {
+  let lock: 'unknown' | 'failed' | 'clear' = 'unknown'
+  const { service } = makeService(adapter({ mutationStatus: async () => {
+    if (lock === 'failed') throw Error('lock unavailable')
+    return lock === 'clear' ? 'clear' : 'operation-unknown'
+  } }))
+  await service.getState()
+  lock = 'failed'
+  expect((await service.getState()).error?.code).toBe('operation-unknown')
+  expect(service.isBusy()).toBe(true)
+  lock = 'clear'
+  expect((await service.getState()).error).toBeNull()
+  expect(service.isBusy()).toBe(false)
+})

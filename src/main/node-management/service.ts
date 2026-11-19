@@ -97,6 +97,7 @@ export function createNodeManagementService(options: {
   let confirmation: { id: string; fingerprint: string; target: MsiEvidence } | null = null
   let rebootRequired = false
   let msiExitCode: number | null = null
+  let machineReservation: 'busy' | 'operation-unknown' | null = null
   let activeLease: MachineMutationLease | undefined
   let inspection: Promise<WindowsDiscovery | null> | null = null
   let catalogRequest: Promise<void> | null = null
@@ -126,15 +127,19 @@ export function createNodeManagementService(options: {
         if (!target || confirmation?.fingerprint !== fingerprint) {
           confirmation = target ? { id: randomBytes(32).toString('hex'), fingerprint: fingerprint!, target } : null
         }
-        const mutation = activeLease ? 'clear' : await windows.mutationStatus?.()
+        const mutation = activeLease ? undefined : await windows.mutationStatus?.()
+        if (mutation === 'busy' || mutation === 'operation-unknown') machineReservation = mutation
+        if (mutation === 'clear') machineReservation = null
         if (mutation === 'reboot-required') rebootRequired = true
+        const lockError = machineReservation ?? (mutation === 'reboot-required' ? mutation : null)
+        const cleared = mutation === 'clear' && !state.busy && (state.error?.code === 'busy' || state.error?.code === 'operation-unknown')
         publish({ removal: {
           status: target && !rebootRequired ? 'available' : manualRemoval ? 'manual' : 'unavailable',
           target: target ? { version: target.version, path: target.nodePath } : null,
           confirmationId: rebootRequired ? null : confirmation?.id ?? null,
           reason: manualRemoval && !target ? messages['removal-unavailable'] : null,
           rebootRequired, msiExitCode,
-        }, ...(mutation && mutation !== 'clear' ? { error: nodeManagementError(mutation) } : mutation === 'clear' && !state.busy && ['busy', 'operation-unknown'].includes(state.error?.code ?? '') ? { error: null } : {}) })
+        }, ...(lockError ? { error: nodeManagementError(lockError) } : cleared ? { error: null } : {}) })
         return current
       } catch {
         confirmation = null
@@ -144,7 +149,7 @@ export function createNodeManagementService(options: {
           manager: { status: 'error', version: null },
           activeVersion: null,
           activeSource: null,
-          error: nodeManagementError('inspection-failed'),
+          error: nodeManagementError(machineReservation ?? 'inspection-failed'),
         })
         return null
       }
@@ -234,6 +239,7 @@ export function createNodeManagementService(options: {
   }
 
   async function operate(kind: NodeOperation['kind'], version: string | null = null, removal?: { fingerprint: string; target: MsiEvidence }): Promise<NodeManagementState> {
+    if (machineReservation) return { ...state, error: nodeManagementError(machineReservation) }
     if (rebootRequired) return { ...state, error: nodeManagementError('reboot-required') }
     if (state.busy) return state.error?.code === 'operation-unknown' ? state : { ...state, error: nodeManagementError('busy') }
     if (barrier?.blocked()) return { ...state, error: nodeManagementError('shutdown') }
@@ -268,6 +274,7 @@ export function createNodeManagementService(options: {
         try { await lease.finish(code === 'operation-unknown' ? 'unknown' : code === 'reboot-required' ? 'reboot-required' : 'complete') } catch { code = 'operation-unknown' }
       }
       activeLease = undefined
+      if (!acquired && (code === 'busy' || code === 'operation-unknown')) machineReservation = code
       if (code === 'operation-unknown' && acquired) {
         setPhase('waiting')
         publish({ error: nodeManagementError(code) })
@@ -308,7 +315,7 @@ export function createNodeManagementService(options: {
       confirmation = null
       return operate('remove-standalone', null, confirmed)
     },
-    isBusy: () => state.busy !== null || state.error?.code === 'operation-unknown' || state.error?.code === 'busy',
+    isBusy: () => machineReservation !== null || state.busy !== null || state.error?.code === 'operation-unknown' || state.error?.code === 'busy',
   }
 }
 

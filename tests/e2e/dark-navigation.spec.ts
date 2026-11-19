@@ -6,7 +6,7 @@ test('dark-only surfaces, project popup and independent row background match the
  await expect(p.locator('html')).toHaveAttribute('data-theme','dark')
  await expect(p.getByRole('button',{name:/^(라이트|다크) 모드$/})).toHaveCount(0)
  await expect(p.locator('.workspace')).toHaveCSS('padding','14px')
- await expect(p.locator('.app-shell')).toHaveCSS('margin','6px 14px 0px')
+ await expect(p.locator('.app-shell')).toHaveCSS('margin','14px 14px 0px')
  await expect(p.locator('.toolbar')).toHaveCSS('background-color','rgba(43, 46, 49, 0.5)')
  await p.getByRole('button',{name:'프로젝트 목록',exact:true}).click()
  await expect(p.locator('.project-popup')).toHaveCSS('background-color','rgba(43, 46, 49, 0.7)')

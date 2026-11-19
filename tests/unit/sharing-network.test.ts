@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { createServer, request, type Server } from 'node:https'
+import type { IncomingHttpHeaders } from 'node:http'
 import { createHash } from 'node:crypto'
 import { connect as connectTcp } from 'node:net'
 import { createHostIdentity, type HostIdentity } from '../../src/main/sharing/identity'
@@ -56,7 +57,11 @@ async function ready(f: Awaited<ReturnType<typeof fixture>>) {
 describe('real loopback pinned HTTPS and pairing', () => {
   it('carries host runtime version on authenticated snapshot 200 and 304 without changing the body', async () => {
     const f = await fixture({appVersion:'2.7.3-dev'})
-    expect(await pinnedRequest({...f,path:'/v1/identity'})).not.toMatchObject({hostVersion:'2.7.3-dev'})
+    for (const [path, status] of [['/v1/identity', 200], ['/v1/snapshot', 401]] as const) {
+      const response = await rawHttp(f, path, {})
+      expect(response.status).toBe(status)
+      expect(response.headers).not.toHaveProperty('x-planrail-version')
+    }
     await expect(f.client.poll()).rejects.toMatchObject({code:'UNAUTHORIZED'})
     await ready(f)
     const synced = await f.client.poll()
@@ -441,10 +446,10 @@ async function rawBegin(f: Awaited<ReturnType<typeof fixture>>, localAddress?: s
 function pairRequest(f: Awaited<ReturnType<typeof fixture>>, action: string, body: unknown, proof = 'b'.repeat(64)) {
   return pinnedRequest({ address: f.address, trust: f.trust, path: '/v1/pair/' + action, method: 'POST', body, proof })
 }
-async function rawHttp(f: Awaited<ReturnType<typeof fixture>>, path: string, headers: Record<string, string>, method = 'GET'): Promise<{ status: number; body: unknown }> {
+async function rawHttp(f: Awaited<ReturnType<typeof fixture>>, path: string, headers: Record<string, string>, method = 'GET'): Promise<{ status: number; headers: IncomingHttpHeaders; body: unknown }> {
   return new Promise((resolve, reject) => {
     const req = request({ host: f.address.address, port: f.address.port, servername: identity.serverName, ca: identity.certificate, path, method, headers: { 'x-planrail-protocol': '1', ...headers }, agent: false }, res => {
-      const chunks: Buffer[] = []; res.on('data', c => chunks.push(c)); res.on('end', () => resolve({ status: res.statusCode!, body: JSON.parse(Buffer.concat(chunks).toString()) }))
+      const chunks: Buffer[] = []; res.on('data', c => chunks.push(c)); res.on('end', () => resolve({ status: res.statusCode!, headers: res.headers, body: JSON.parse(Buffer.concat(chunks).toString()) }))
     })
     req.on('error', reject); req.end()
   })

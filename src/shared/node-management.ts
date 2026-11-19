@@ -75,6 +75,7 @@ export interface NodeManagementState {
   platform: string
   supported: boolean
   manager: { kind?: 'nvm-windows' | 'nodenv'; path?: string; status: 'checking' | 'missing' | 'ready' | 'error'; version: string | null }
+  configuredDefaultVersion?: string
   activeVersion: string | null
   activeSource: 'nvm' | 'nodenv' | 'standalone' | null
   installedVersions: string[]

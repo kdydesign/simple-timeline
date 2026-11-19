@@ -22,7 +22,9 @@ export function nodeProgress({ state, mutation, environmentPending, environment,
   if (!operation) return cancelPending ? '작업 취소 확인 중' : null
   const name = operation.kind === 'remove-standalone' ? '기존 Node.js 제거' : operation.kind === 'install-manager' ? supportedManager + ' 설치'
     : operation.kind === 'install' ? operation.version + ' 설치' : operation.version + ' 사용'
-  return name + ' · ' + phases[state?.busy?.phase ?? 'checking'] + (cancelPending ? ' · 작업 취소 확인 중' : '')
+  const phase = state?.busy?.phase ?? 'checking'
+  const description = phase === 'waiting' && environment?.kind === 'wsl2' ? 'WSL 작업 완료 대기 중' : phases[phase]
+  return name + ' · ' + description + (cancelPending ? ' · 작업 취소 확인 중' : '')
 }
 
 export function nodeEnvironmentReady({ state, environment }: NodeManagement) {
@@ -61,6 +63,7 @@ export function nodeActiveVersionLabel(node: NodeManagement) {
   if (environment?.kind === 'wsl2' && !environment.running) return '확인 전'
   if (!nodeEnvironmentReady(node)) return state?.environments?.status === 'ready' ? '환경 선택 필요' : '환경 확인 중…'
   if (state?.activeVersion) return state.activeVersion
+  if (state?.configuredDefaultVersion) return nodeInventoryKnown(node) ? state.configuredDefaultVersion + ' 미설치' : '확인할 수 없음'
   if (state?.activeSource || state?.conflicts.some(conflict => conflict.code === 'path-priority')) return '확인할 수 없음'
   return state?.checkedAt ? '사용 중인 버전 없음' : '환경 확인 중…'
 }

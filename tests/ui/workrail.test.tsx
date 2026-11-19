@@ -1,6 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { parseGuestProbe } from '../../src/main/node-management/wsl-guest'
+import { createWslService } from '../../src/main/node-management/wsl'
+import { createNodeRouting } from '../../src/main/node-management-routing'
+import { createEnvironmentCoordinator } from '../../src/main/node-management/environments'
+import { createNodeManagementService, nodeManagementError } from '../../src/main/node-management/service'
 import { App } from '../../src/renderer/App'
 import type { NodeManagementApi, NodeManagementResult, NodeManagementState } from '../../src/shared/node-management'
 import type { ChangeNotificationState } from '../../src/shared/sharing'
@@ -794,15 +799,34 @@ it('locks both tools when a persisted Windows operation is unknown without a run
   expect(fixture.api.getState).toHaveBeenCalledTimes(2)
 })
 
-it.each(['select', 'use'] as const)('keeps the published unknown operation after a same-revision %s denial', async command => {
-  const environments = { status: 'ready' as const, items: [windows, ubuntu], selectedId: windows.id, error: null }
-  const unknown = { code: 'operation-unknown', message: '이전에 시작한 작업의 결과를 확인해야 합니다.' } as const
-  const denied = { code: 'busy', message: '진행 중인 작업이 있습니다.' } as const
-  const fixture = nodeFixture({ environments })
-  let finish!: (value: NodeManagementResult) => void
-  const request = () => new Promise<NodeManagementResult>(resolve => { finish = resolve })
-  fixture.api.selectEnvironment.mockImplementationOnce(request)
-  fixture.api.use.mockImplementationOnce(request)
+it.each(['select', 'use'] as const)('keeps the published Windows lock after a routed %s denial', async command => {
+  let locked = false
+  let listener: ((state: NodeManagementState) => void) | undefined
+  const coordinator = createEnvironmentCoordinator({
+    platform: 'win32', arch: 'x64', discover: async () => [windows, ubuntu],
+    store: { read: async () => windows.id, write: vi.fn() }, start: vi.fn(), createWsl: vi.fn(),
+    createWindows: changed => createNodeManagementService({
+      platform: 'win32', arch: 'x64', loadCatalog: async () => nodeState.catalog.releases, changed,
+      windows: {
+        discover: async () => ({ manager: nodeState.manager, activeSource: nodeState.activeSource, activeVersion: nodeState.activeVersion,
+          installedVersions: nodeState.installedVersions, conflicts: [], installation: null }),
+        mutationStatus: async () => locked ? 'operation-unknown' : 'clear',
+        installManager: vi.fn(), changeVersion: vi.fn(),
+      },
+    }),
+    changed: () => listener?.(route.decorate()),
+  })
+  const route = createNodeRouting(coordinator, { required: false, isActive: () => false, open: vi.fn(),
+    getState: () => ({ status: 'idle', error: null, recoveryShortcut: null }) })
+  let release!: () => void
+  const request = new Promise<void>(resolve => { release = resolve })
+  const api = nodeFixture().api
+  api.getState.mockImplementation(() => route.dispatch(['getState'], true))
+  api.refreshCatalog.mockImplementation(() => route.dispatch(['refreshCatalog'], true))
+  api.selectEnvironment.mockImplementation(async id => { await request; return route.dispatch(['selectEnvironment', id], true) })
+  api.use.mockImplementation(async () => { await request; return route.dispatch(['use', '22.20.0'], true) })
+  window.workrailNodeManagement = { ...api, onChange: callback => { listener = callback; return () => { listener = undefined } } }
+  const denied = nodeManagementError('busy'), unknown = nodeManagementError('operation-unknown')
   render(<App initialTool="home" api={memoryApi().api} />)
   const change = await within(home()).findByRole('button', { name: '환경 변경' })
   if (command === 'select') {
@@ -812,8 +836,9 @@ it.each(['select', 'use'] as const)('keeps the published unknown operation after
   } else {
     fireEvent.click(within(home()).getByRole('button', { name: '22.20.0 사용' }))
   }
-  act(() => fixture.emit({ error: unknown, busy: null }))
-  await act(async () => finish({ ok: true, data: { ...nodeState, environments, revision: 2, error: denied, busy: null } }))
+  locked = true
+  await act(async () => { await coordinator.getState() })
+  await act(async () => { release() })
   if (command === 'select') {
     const dialog = screen.getByRole('dialog', { name: '관리 환경 선택' })
     expect(within(dialog).getByText(denied.message)).toBeVisible()
@@ -826,4 +851,23 @@ it.each(['select', 'use'] as const)('keeps the published unknown operation after
   expect(within(node()).getByText(unknown.message)).toBeVisible()
   expect(within(node()).getByRole('button', { name: '환경 변경' })).toBeDisabled()
   expect(within(node()).getByRole('button', { name: '환경 다시 검사' })).toBeEnabled()
+})
+
+it('offers Install for a configured WSL default missing from the completed inventory', async () => {
+  const version = '25.2.0'
+  const info = parseGuestProbe(['WORKRAIL_PROBE_V1', 'user','minsu', 'arch','x86_64', 'manager','/usr/bin/nodenv',
+    'root','/home/minsu/.nodenv', 'status','ready', 'managerVersion','nodenv 1.6.2', 'global',version, 'listed','yes',
+    'installed','24.11.0', 'shims','yes', 'writable','yes', 'builder','/usr/bin/node-build', 'definitions',version, ''].join('\0'))
+  const target = { ...ubuntu, running: true, user: info.user }
+  const wsl = createWslService({ environment: target, runner: { probe: async () => info, change: vi.fn(), isStopped: vi.fn() },
+    loadCatalog: async () => nodeState.catalog.releases, changed: vi.fn() })
+  const fixture = nodeFixture({ ...await wsl.refreshCatalog(), environments: { status: 'ready', items: [target], selectedId: target.id, error: null } })
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const action = await within(node()).findByRole('button', { name: version + ' 설치' })
+  expect(action).toBeEnabled()
+  expect(within(node()).getByRole('region', { name: '기본 버전' })).toHaveTextContent(version + ' 미설치')
+  await act(async () => fireEvent.click(action))
+  expect(fixture.api.install).toHaveBeenCalledExactlyOnceWith(version)
+  act(() => fixture.emit({ busy: { kind: 'install', phase: 'waiting', version } }))
+  expect(within(node()).getByText(/25\.2\.0 설치.*WSL 작업 완료 대기/)).toBeVisible()
 })

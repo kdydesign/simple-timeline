@@ -41,6 +41,12 @@ export function emptyNodeState(platform: string, supported: boolean): NodeManage
 export type EnvironmentChanged = (state: NodeManagementState, user?: string | null) => void
 type Backend = NodeManagementService & { cancelOperation?(): Promise<NodeManagementState> }
 
+// A command-local error stays on its reply and never becomes a published state.
+const rejectedCommand = Symbol('rejected environment command')
+export function environmentCommandError(reply: NodeManagementState) {
+  return rejectedCommand in reply ? reply.error : null
+}
+
 export function createEnvironmentCoordinator(options: {
   platform: string
   arch: string
@@ -65,10 +71,15 @@ export function createEnvironmentCoordinator(options: {
     state = { ...snapshot, environments, revision: state.revision + 1 }
     options.changed(state)
   }
-  const denied = (error: NodeManagementError) => ({ ...state, error })
+  const denied = (error: NodeManagementError) => ({ ...state, error, [rejectedCommand]: true })
   const busy = () => mutating || writing || !!backend?.isBusy()
 
   function activate(next: NodeEnvironment | undefined) {
+    // Keep the Windows service that observed the machine reservation available for recovery.
+    if (active?.kind === 'windows' && backend?.isBusy() && next?.id !== active.id) {
+      publish(state)
+      return
+    }
     if (active?.id === next?.id && active?.running === next?.running && active?.distro === next?.distro) {
       if (next && active?.user) environments = { ...environments, items: environments.items.map(e => e.id === next.id ? { ...e, user: active!.user } : e) }
       publish(state)
@@ -157,6 +168,7 @@ export function createEnvironmentCoordinator(options: {
   }
 
   return {
+    currentState: () => state,
     getState: () => read('getState'),
     refreshCatalog: () => read('refreshCatalog'),
     async selectEnvironment(id: string) {
