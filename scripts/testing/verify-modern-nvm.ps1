@@ -120,7 +120,8 @@ try {
   $workerErrors = @(Get-Content -LiteralPath $err)
   $workerErrors | Write-Output
   if ($child.ExitCode -ne 0) {
-    $detail = ($workerErrors | Select-Object -First 5) -join ' '
+    $detail = (($workerErrors -join "`n") -replace '(?i)-EncodedCommand\s+[A-Za-z0-9+/=]+','-EncodedCommand [omitted]' -replace '\x1b\[[0-9;]*m|\^\[\[[0-9;]*m','').Trim()
+    if ($detail.Length -gt 4000) { $detail = $detail.Substring(0, 4000) }
     throw "Standard-user acceptance exited $($child.ExitCode). $detail"
   }
 } finally {

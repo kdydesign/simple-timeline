@@ -60,7 +60,13 @@ const modernRunner = hostedWindows && (modernMode === 'shim' || modernMode === '
 
 it.skipIf(!modernRunner)('installs the first ZIP on official nvm 2.0.1 and activates it on request', async () => {
   const windows = createWindowsNodeAdapter(fetch, async () => fetch)
-  const initial = await windows.discover()
+  const initial = await windows.discover().catch(error => {
+    // execFile's normal message starts with the entire UTF-16 EncodedCommand.
+    // Surface the exit evidence first so CI can distinguish a timeout from a registry or module error.
+    if (!error || typeof error !== 'object' || !('cmd' in error)) throw error
+    const exit = JSON.stringify({ code: error.code, signal: error.signal, killed: error.killed })
+    throw new Error('Windows environment discovery failed ' + exit + '\n' + String(error.stderr || 'No PowerShell stderr'))
+  })
   expect(initial).toMatchObject({
     manager: { status: 'ready', version: '2.0.1' },
     installation: { family: 'modern', mode: modernMode },
