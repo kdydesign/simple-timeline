@@ -7,10 +7,12 @@ import { promisify } from 'node:util'
 import { isNodeVersion } from '../../shared/node-management'
 import { fetchBoundedAsset, type NodeFetch } from './catalog'
 import { discoverWindowsNode, getDownloadProxy, isSafeNvmPath, type NvmInstallation } from './discovery'
-import { recognizesClassicVersion } from './classic-list'
+import { parseModernList, readClassicList } from './classic-list'
+import { verifyClassicRelease } from './official-classic'
+import { allowedNodeSigner, nodeSignatureCheck } from './node-signing'
 import { downloadNodeZip, NodeZipDownloadError } from './zip-download'
-import { IncompleteNodeInstallationError, installVerifiedNodeZip, inspectNodeZipInstallation } from './zip-install'
-import { classicDigests, legacyHelpers, modernDigest, modernHelpers, usesOfficialNodeZip } from './manager-support'
+import { IncompleteNodeInstallationError, installVerifiedNodeZip, inspectNodeZipInstallation, prepareNodeZipRoot } from './zip-install'
+import { knownClassicVersion, legacyHelpers, modernReleases } from './manager-support'
 import { isExplorerComponent, samePath } from './windows-probe'
 import { modernRegistryRead } from './modern-manager'
 import { createMachineMutationLock } from './mutation-lock'
@@ -25,26 +27,24 @@ const GITHUB_ASSET_ORIGINS = new Set(['https://release-assets.githubusercontent.
 const exec = promisify(execFile)
 
 type ElevationInvocation = { executable: string; executableDigest: string } & (
-  | { args: ['install' | 'use', string, '64']; legacyHelperRoot?: string; useProxyEnvironment?: boolean; nvmHome: string; nvmSymlink: string; settingsDigest: string }
+  | { args: ['use', string, '64']; legacyHelperRoot?: string; nvmHome: string; nvmSymlink: string; settingsDigest: string }
   | { args: [] }
 )
 
-function validateInstallation(installation: NvmInstallation, command: 'install' | 'use', version: string) {
+function validateInstallation(installation: NvmInstallation, command: 'install' | 'use' | 'list', version?: string) {
   for (const path of [installation.exe, installation.home, installation.root, installation.symlink]) {
     if (!isSafeNvmPath(path)) throw Error('Invalid nvm path')
   }
   if (win32.join(installation.home, 'nvm.exe').toLowerCase() !== installation.exe.toLowerCase()
-    || (command !== 'install' && command !== 'use') || !isNodeVersion(version) || !/^[a-f0-9]{64}$/.test(installation.settingsDigest)) throw Error('Invalid nvm command')
+    || (command !== 'list' && !isNodeVersion(version)) || !/^[a-f0-9]{64}$/.test(installation.settingsDigest)) throw Error('Invalid nvm command')
 }
 
-export function buildNvmInvocation(installation: NvmInstallation, command: 'install' | 'use', version: string): ElevationInvocation {
+export function buildNvmInvocation(installation: NvmInstallation, command: 'use', version: string): ElevationInvocation {
   validateInstallation(installation, command, version)
-  if (installation.family !== 'classic' || !Object.hasOwn(classicDigests, installation.version)
-    || installation.executableDigest !== classicDigests[installation.version]) throw Error('Unverified classic nvm')
+  if (installation.family !== 'classic' || command !== 'use' || knownClassicVersion(installation.executableDigest) !== installation.version) throw Error('Unverified classic nvm')
   return {
     executable: installation.exe, executableDigest: installation.executableDigest,
-    ...(installation.version !== '1.2.2' && command === 'use' ? { legacyHelperRoot: installation.root } : {}),
-    ...(installation.useProxyEnvironment && command === 'install' ? { useProxyEnvironment: true } : {}),
+    ...(installation.version !== '1.2.2' ? { legacyHelperRoot: installation.root } : {}),
     args: [command, version, '64'], nvmHome: installation.home, nvmSymlink: installation.symlink,
     settingsDigest: installation.settingsDigest,
   }
@@ -79,28 +79,6 @@ $stream = Open-VerifiedFile ${psLiteral(win32.join(root, relative))} ${psLiteral
 if ($null -eq $stream) { ${onFailure} }
 $helpers += $stream`).join('\n')
 }
-
-// In 1.1.11 and 1.2.2 web.SetProxy passes verifyssl=true directly to
-// InsecureSkipVerify. Keep Go's default, certificate-validating transport
-// and use its HTTP(S)_PROXY support for this invocation only.
-const classicDownloadProxy = String.raw`
-$proxyReader = [IO.StreamReader]::new($settings, [Text.Encoding]::UTF8, $false, 1024, $true)
-try { $original = $proxyReader.ReadToEnd() } finally { $proxyReader.Dispose() }
-$proxyLine = [regex]::new('(?m)^[\t ]*proxy:([^\r\n]*)')
-$match = $proxyLine.Match($original)
-if (!$match.Success) { exit 1620 }
-$route = $match.Groups[1].Value.Trim()
-if ($route -notmatch '^https?://') { $route = 'http://' + $route }
-$env:HTTPS_PROXY = $route
-$env:HTTP_PROXY = $route
-$env:NO_PROXY = $null
-$env:NVM_HOME = $stage
-$bytes = [Text.Encoding]::UTF8.GetBytes($proxyLine.Replace($original, 'proxy: none', 1))
-$stagedSettings = [IO.File]::Open([IO.Path]::Combine($stage, 'settings.txt'), [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::Read)
-$helpers += $stagedSettings
-$stagedSettings.Write($bytes, 0, $bytes.Length)
-$stagedSettings.Flush()
-`
 
 export function createElevationCommand(system: string, invocation: ElevationInvocation): string[] {
   let command = `
@@ -146,7 +124,6 @@ $fallback = [IO.File]::Open($fallbackPath, [IO.FileMode]::CreateNew, [IO.FileAcc
 $fallbackBytes = [Text.Encoding]::ASCII.GetBytes('@exit /b 1' + [char]13 + [char]10)
 $fallback.Write($fallbackBytes, 0, $fallbackBytes.Length)
 $fallback.Flush()
-${invocation.useProxyEnvironment && action === 'install' ? classicDownloadProxy : ''}
 $launching = $true
 & $stagedExe ${psLiteral(action)} ${psLiteral(version)} ${psLiteral(arch)}
 $launching = $false
@@ -209,20 +186,18 @@ try {
   return encoded.at(-1)!.length < 30_000 ? encoded : ['-NoProfile', '-NonInteractive', '-Command', launcher]
 }
 
-function modernCommand(installation: Extract<NvmInstallation, { family: 'modern' }>, action: 'install' | 'use', version: string) {
+function modernCommand(installation: Extract<NvmInstallation, { family: 'modern' }>, action: 'list' | 'use', version?: string) {
   validateInstallation(installation, action, version)
-  if (installation.version !== '2.0.1' || installation.executableDigest !== modernDigest) throw Error('Unverified modern nvm')
-  // --local accepts only major or major.minor. --no-install preserves the
-  // requested exact version and never installs a missing one.
-  const args = action === 'use' ? ['use', version, '--no-install'] : ['install', version]
-  if (installation.existingVersion !== undefined && !isNodeVersion(installation.existingVersion)) throw Error('Invalid installed version evidence')
-  // With an empty default the CLI auto-activates when ScanInstalled is empty.
-  // Keep a previously verified node.exe present until the install exits.
-  const existingNode = installation.existingVersion && win32.join(installation.root, 'v' + installation.existingVersion, 'node.exe')
-  const preserveDefault = action === 'install' ? `
-  if (!$settings['ActiveVersion']) {
-    ${existingNode ? '$helpers += [IO.File]::OpenRead(' + psLiteral(existingNode) + ')' : "throw 'First install would activate Node'"}
-  }` : ''
+  const release = modernReleases.find(candidate => candidate.digest === installation.executableDigest && candidate.version === installation.version)
+  if (!release) throw Error('Unverified modern nvm')
+  // The plain installed table is local. The JSON variant queries the release catalog.
+  const execution = action === 'list' ? `
+  $rows = & ${psLiteral(installation.exe)} 'list' 'installed'
+  if ($LASTEXITCODE -eq 0) { $rows | ForEach-Object { [Console]::WriteLine($_) } }
+  exit $LASTEXITCODE` : `
+  $child = Start-Process -FilePath ${psLiteral(installation.exe)} -WorkingDirectory ([Environment]::SystemDirectory) -ArgumentList @('use', ${psLiteral(version!)}, '--no-install') -Wait -PassThru -WindowStyle Hidden
+  if ($null -eq $child.ExitCode) { throw 'Unknown completion' }
+  $failure = if ($child.ExitCode -eq 0) { 0 } else { 1 }`
   return psArgs(`
 $ErrorActionPreference = 'Stop'
 ${verifiedFileFunction}
@@ -232,13 +207,12 @@ try {
   $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
   $principal = New-Object Security.Principal.WindowsPrincipal($identity)
   if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'User context required' }
-  ${lockHelpers(installation.home, { 'nvm.exe': modernDigest, ...modernHelpers }, "throw 'Unverified file'")}
+  ${lockHelpers(installation.home, { 'nvm.exe': release.digest, ...release.helpers }, "throw 'Unverified file'")}
   $failure = 1620
   ${modernRegistryRead}
   $hash = [Security.Cryptography.SHA256]::Create()
   try { $actual = [BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($snapshot))).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
   if ($actual -ne ${psLiteral(installation.settingsDigest)}) { throw 'Registry preferences changed' }
-  ${preserveDefault}
   $env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData')
   $env:APPDATA = [Environment]::GetFolderPath('ApplicationData')
   $env:USERPROFILE = [Environment]::GetFolderPath('UserProfile')
@@ -247,9 +221,7 @@ try {
   $env:NVM_HOME = ${psLiteral(installation.home)}
   $env:NoDefaultCurrentDirectoryInExePath = '1'
   $failure = 1611
-  $child = Start-Process -FilePath ${psLiteral(installation.exe)} -WorkingDirectory ([Environment]::SystemDirectory) -ArgumentList @(${args.map(psLiteral).join(', ')}) -Wait -PassThru -WindowStyle Hidden
-  if ($null -eq $child.ExitCode) { throw 'Unknown completion' }
-  $failure = if ($child.ExitCode -eq 0) { 0 } else { 1 }
+  ${execution}
 } catch { } finally {
   foreach ($stream in $helpers) { $stream.Dispose() }
 }
@@ -377,6 +349,7 @@ export async function resolveSystemPowerShell() {
 }
 
 export function createWindowsNodeAdapter(request: NodeFetch, zipTransport?: (proxy?: string) => Promise<NodeFetch>): WindowsNodeAdapter {
+  const verifiedClassic = new Map<string, string>()
   const officialDigests = new Map<string, string>()
   const officialPackages = new Set<string>()
   let machineLock: Promise<ReturnType<typeof createMachineMutationLock>> | null = null
@@ -389,9 +362,32 @@ export function createWindowsNodeAdapter(request: NodeFetch, zipTransport?: (pro
     return machineLock
   }
 
+  async function verifiedClassicList(installation: NvmInstallation, system: string) {
+    return readClassicList(installation, system, readBoundedFile,
+      knownClassicVersion(installation.executableDigest) ?? verifiedClassic.get(installation.executableDigest))
+  }
+
   async function runPowerShell(script: string, timeout = 8_000) {
     const { powershell, options } = await resolveSystemPowerShell()
     return (await exec(powershell, psArgs(script), { ...options, timeout })).stdout.trim()
+  }
+
+  async function checkModernStorage(path: string) {
+    // Match nvm's writable-group ACL check without modifying any permissions.
+    // Include Everyone in addition to Authenticated Users and the local Users group.
+    const verdict = await runPowerShell(`
+$ErrorActionPreference = 'Stop'
+$dir = [IO.DirectoryInfo]::new(${psLiteral(path)})
+if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit 1 }
+$acl = $dir.GetAccessControl()
+$descriptor = [Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)
+if ($null -eq $descriptor.DiscretionaryAcl) { exit 1 }
+foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
+  if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -in @('S-1-1-0', 'S-1-5-11', 'S-1-5-32-545') -and
+      ([int64]$rule.FileSystemRights -band 0x500d0156) -ne 0) { exit 1 }
+}
+[Console]::WriteLine('VERIFIED')`).catch(() => '')
+    if (verdict !== 'VERIFIED') throw Error('zip-permission')
   }
 
   async function elevate(invocation: ElevationInvocation) {
@@ -413,11 +409,17 @@ export function createWindowsNodeAdapter(request: NodeFetch, zipTransport?: (pro
     }
   }
 
+  async function managerVersions(installation: NvmInstallation) {
+    const shell = await resolveSystemPowerShell()
+    if (installation.family === 'classic') return verifiedClassicList(installation, shell.system)
+    const args = modernCommand(installation, 'list')
+    const { stdout } = await exec(shell.powershell, args, { ...shell.options, timeout: 30_000 })
+    return parseModernList(stdout)
+  }
+
   return {
-    async recognizesVersion(installation, version) {
-      const { system } = await resolveSystemPowerShell()
-      return recognizesClassicVersion(installation, version, system, readBoundedFile)
-    },
+    managerVersions,
+    recognizesVersion: async (installation, version) => (await managerVersions(installation))?.includes(version) === true,
     async verifiedDirectory(root) {
       return isSafeNvmPath(root) && win32.normalize(root).replace(/\\$/, '').slice(3).split('\\').every(isExplorerComponent)
         && (await lstat(root)).isDirectory() && samePath(root, await realpath(root))
@@ -499,9 +501,18 @@ ${modernRegistryRead}
       readLink: readlink,
       listDirectories: async path => (await readdir(path, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name),
       readSettings: path => readBoundedFile(path, 64 * 1024),
+      async verifyClassicRelease(path, digest) {
+        const cached = verifiedClassic.get(digest)
+        if (cached) return cached
+        const bytes = await readBoundedFile(path, 32 * 1024 * 1024)
+        if (createHash('sha256').update(bytes).digest('hex') !== digest) return null
+        const version = await verifyClassicRelease(request, bytes).catch(() => null)
+        if (version) verifiedClassic.set(digest, version)
+        return version
+      },
       getManagerDigest: async path => createHash('sha256').update(await readBoundedFile(path, 32 * 1024 * 1024)).digest('hex'),
       async getNodeVersion(path) {
-      if (!/\\node(?:64)?\.exe$/i.test(path)) return null
+        if (!/\\node(?:64)?\.exe$/i.test(path)) return null
         // File metadata is sufficient for a diagnostic and avoids executing a
         // PATH-selected standalone program just to learn its version.
         const version = await runPowerShell(`[Console]::WriteLine([Diagnostics.FileVersionInfo]::GetVersionInfo(${psLiteral(path)}).ProductVersion)`)
@@ -510,11 +521,11 @@ ${modernRegistryRead}
       isX64Node,
     }),
     async changeVersion(installation, command, version, phase = () => {}) {
-      if (command === 'install' && installation.family === 'classic' && usesOfficialNodeZip(installation.version)) {
+      if (command === 'install') {
         const validate = async () => {
-          const current = await this.discover()
+          const current = await this.discover().catch(() => { throw Error('nvm-settings-check') })
           const fresh = current.installation
-          if (!current.capabilities?.install.available || !fresh || fresh.family !== 'classic'
+          if (!current.capabilities?.install.available || !fresh || fresh.family !== installation.family
             || fresh.executableDigest !== installation.executableDigest || fresh.settingsDigest !== installation.settingsDigest
             || !samePath(fresh.exe, installation.exe) || !samePath(fresh.root, installation.root)
             || !samePath(fresh.symlink, installation.symlink)) throw Error('nvm-settings-check')
@@ -523,20 +534,44 @@ ${modernRegistryRead}
         try {
           validateInstallation(installation, command, version)
           const discovered = await validate()
+          if (installation.family === 'classic' && !knownClassicVersion(installation.executableDigest)) {
+            const { system } = await resolveSystemPowerShell()
+            const listed = await verifiedClassicList(installation, system).catch(() => null)
+            if (!listed || !discovered.installedVersions.every(installed => listed.includes(installed))) return { status: 'nvm-list-unsupported' }
+          }
+          await prepareNodeZipRoot(installation.root, version, installation.family === 'modern')
+          if (installation.family === 'modern') await checkModernStorage(installation.root)
           const existing = await inspectNodeZipInstallation(installation.root, version)
           if (existing === 'incomplete') return { status: 'zip-incomplete' }
           if (existing === 'complete') return { status: discovered.installedVersions.includes(version) ? 'success' : 'zip-incomplete' }
           if (!zipTransport) return { status: 'zip-download' }
           let transport: NodeFetch
-          try { transport = await zipTransport(getDownloadProxy(installation)) }
+          try { transport = await zipTransport(getDownloadProxy(discovered.installation)) }
           catch { return { status: 'zip-download' } }
           const archive = await downloadNodeZip(version, transport, phase)
           phase('extracting')
-          await installVerifiedNodeZip({ root: installation.root, version, archive, beforePublish: async () => { await validate() } })
+          await installVerifiedNodeZip({ root: installation.root, version, archive, beforePublish: async staging => {
+            const fresh = discovered.installation
+            if (fresh?.family === 'modern') {
+              await checkModernStorage(staging)
+              const policy = fresh.signingPolicy
+              if (!policy) throw new NodeZipDownloadError('zip-integrity')
+              const signer = await runPowerShell(nodeSignatureCheck(win32.join(staging, 'node.exe'), policy), 60_000)
+                .catch(() => { throw Error('zip-blocked') })
+              if (!allowedNodeSigner(signer, policy)) {
+                throw new NodeZipDownloadError('zip-integrity')
+              }
+            }
+            const current = await validate()
+            if (current.activationDigest !== discovered.activationDigest || current.activeVersion !== discovered.activeVersion
+              || current.activeSource !== discovered.activeSource || current.activeX64 !== discovered.activeX64) throw Error('nvm-settings-check')
+          } })
           return { status: 'success' }
         } catch (error) {
           if (error instanceof IncompleteNodeInstallationError) return { status: 'zip-incomplete' }
           if (error instanceof NodeZipDownloadError) return { status: error.code }
+          if (error instanceof Error && error.message === 'zip-permission') return { status: 'zip-permission' }
+          if (error instanceof Error && error.message === 'zip-blocked') return { status: 'zip-blocked' }
           if (error instanceof Error && error.message === 'nvm-settings-check') return { status: 'nvm-settings-check' }
           const systemError = error as NodeJS.ErrnoException
           if (['EACCES', 'EPERM'].includes(systemError.code ?? '')) return { status: 'zip-permission' }

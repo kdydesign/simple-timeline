@@ -7,20 +7,38 @@ export const classicDigests = {
   '1.1.11': 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791',
   '1.2.2': '665b0b033e88098367381e929b71cfc96dc4058a3cb6fef760a0ccc9a883dd13',
 } as const
-export function usesOfficialNodeZip(version: string) {
-  return version === '1.1.10' || version === '1.1.11'
+export function knownClassicVersion(digest: string) {
+  return (Object.keys(classicDigests) as (keyof typeof classicDigests)[]).find(version => classicDigests[version] === digest)
 }
-export const modernDigest = '0a8b88433fde1cbf48a03b7589b744361b20b4401a3be167614f82c62d26b29e'
 export const legacyHelpers = {
   'elevate.cmd': '792d6a485d26b3ae1c926d1d4915e5eaf9a40113afd623212d1a9591e56bb1d5',
   'elevate.vbs': '3219b67d6c49d02b832026d13ece959c85d64690326d6b3f10923790c8a5f130',
 }
-export const modernHelpers = {
-  '.shim\\node.exe': '79c7fb995b45030f3366c4552085d1f2b389f0f46ac829d1932413ec2c3de26d',
-  'utils\\proxy.exe': 'fb4256ea5f2f7a3cfceeed9f7bf889a031ad04e594f6e4c5a9851824f561af90',
-  'utils\\reshim.exe': '96b991812cf342833a225de9f5abe10a3f067bc5a898b30c6538f29530521b8d',
-  'utils\\sync.exe': '26a564b61887676e55023e4f8476750988d425968c953bcc7126a14f035daf78',
-}
+// Hashes of the unpacked AMD64 community installers. Both releases use the
+// same local list, registry and version-directory contract.
+export const modernReleases = [
+  {
+    version: '2.0.1',
+    digest: '0a8b88433fde1cbf48a03b7589b744361b20b4401a3be167614f82c62d26b29e',
+    helpers: {
+      '.shim\\node.exe': '79c7fb995b45030f3366c4552085d1f2b389f0f46ac829d1932413ec2c3de26d',
+      'utils\\proxy.exe': 'fb4256ea5f2f7a3cfceeed9f7bf889a031ad04e594f6e4c5a9851824f561af90',
+      'utils\\reshim.exe': '96b991812cf342833a225de9f5abe10a3f067bc5a898b30c6538f29530521b8d',
+      'utils\\sync.exe': '26a564b61887676e55023e4f8476750988d425968c953bcc7126a14f035daf78',
+    },
+  },
+  {
+    version: '2.0.0',
+    digest: 'a0de6044aa09e18e41b50291779a85a4dd6c52131f9b835c750606cd92f984b9',
+    helpers: {
+      '.shim\\node.exe': '8f711595d86e7414e57439054e77198c47fc5902df6e019fb337f75fde454202',
+      'utils\\proxy.exe': 'fb019c7f340e7e4893514f9c551b955ad6d6b8e208419271c54a403b366a78b6',
+      'utils\\reshim.exe': '77ba2e09b912f2f4de1118557b7d0c2bf0a75b4d1f52a1c76e58878252d54370',
+      'utils\\sync.exe': '79793ea532229a404fcf3b00d7f2efab846d6f68ac4fb26b8e5a37c21faab20b',
+    },
+  },
+] as const
+export type ModernRelease = typeof modernReleases[number]
 export const availability = (reason: string | null) => ({ available: reason === null, reason })
 export function capabilities(reason: string | null): NodeCapabilities {
   return { list: availability(reason), install: availability(reason), use: availability(reason) }

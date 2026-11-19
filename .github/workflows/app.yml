@@ -3,6 +3,25 @@ on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
 jobs:
+  modern-node-zip:
+    name: Windows ZIP / nvm 2.0.1 / ${{ matrix.mode }}
+    runs-on: windows-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [shim, link]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24.22.1"
+          cache: npm
+      - run: npm ci
+      - name: Verify first install and explicit activation as a standard Windows user
+        run: ./scripts/testing/verify-modern-nvm.ps1 -Mode ${{ matrix.mode }}
   app:
     timeout-minutes: 45
     strategy:
@@ -26,7 +45,7 @@ jobs:
         run: xvfb-run -a npm run verify:app
       - if: runner.os == 'Windows'
         run: npm run verify:app
-      - name: Verify official Windows Node ZIP with nvm 1.1.10 and 1.1.11
+      - name: Verify official Windows Node ZIP with nvm 1.1.10, 1.1.11 and 1.2.2
         if: runner.os == 'Windows'
         run: ./scripts/testing/verify-classic-nvm.ps1
       - name: Build unsigned current-user Windows installer

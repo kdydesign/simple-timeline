@@ -12,6 +12,7 @@ export interface WindowsProbe {
   completeNodePackage?(root: string, version: string): Promise<boolean>
   readModernSettings?(): Promise<string>
   readSettings(path: string): Promise<Buffer>
+  verifyClassicRelease?(path: string, digest: string): Promise<string | null>
   getManagerDigest(path: string): Promise<string>
   getNodeVersion(path: string): Promise<string | null>
   isX64Node(path: string): Promise<boolean>
@@ -41,7 +42,7 @@ export async function readInstalled(root: string, probe: WindowsProbe, filenames
     if (!name.startsWith('v') || !isNodeVersion(version)) return null
     for (const filename of filenames) {
       const path = win32.join(root, name, filename)
-      if (await probe.pathKind(path) === 'file' && await probe.isX64Node(path) && await probe.getNodeVersion(path) === version) return version
+      if (await probe.pathKind(path) === 'file' && samePath(await probe.resolvePath(path), path) && await probe.isX64Node(path) && await probe.getNodeVersion(path) === version) return version
     }
     return null
   }))

@@ -1,6 +1,6 @@
 import { on } from 'node:events'
 import { createWriteStream } from 'node:fs'
-import { lstat, mkdir, mkdtemp, rename, rm } from 'node:fs/promises'
+import { access, constants, lstat, mkdir, mkdtemp, rename, rm } from 'node:fs/promises'
 import { dirname, isAbsolute, join, normalize } from 'node:path'
 import { Transform, type Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
@@ -13,12 +13,15 @@ const MiB = 1024 ** 2
 const requiredNpmFiles = ['npm.cmd', 'node_modules/npm/package.json', 'node_modules/npm/bin/npm-cli.js']
 const unsafeZip = () => new Error('공식 Node ZIP의 경로, 파일 속성 또는 크기가 올바르지 않습니다.')
 
-async function checkedTarget(root: string, version: string) {
+async function checkedTarget(root: string, version: string, allowMissingRoot = false) {
   if (!isNodeVersion(version) || !isAbsolute(root) || root.split(/[\\/]/).includes('..')) throw unsafeZip()
   let ancestor = normalize(root)
   for (;;) {
-    const info = await lstat(ancestor)
-    if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('nvm 저장 경로에 링크 또는 일반 디렉터리가 아닌 항목이 있습니다.')
+    const info = await lstat(ancestor).catch((error: NodeJS.ErrnoException) => {
+      if (allowMissingRoot && ancestor === normalize(root) && error.code === 'ENOENT') return null
+      throw error
+    })
+    if (info && (!info.isDirectory() || info.isSymbolicLink())) throw new Error('nvm 저장 경로에 링크 또는 일반 디렉터리가 아닌 항목이 있습니다.')
     const parent = dirname(ancestor)
     if (ancestor === parent) break
     ancestor = parent
@@ -53,6 +56,15 @@ async function inspectDirectory(target: string, existingPackage = true): Promise
     throw error
   }
   return 'complete'
+}
+
+export async function prepareNodeZipRoot(root: string, version: string, allowCreate: boolean) {
+  await checkedTarget(root, version, allowCreate)
+  if (allowCreate) {
+    await mkdir(root).catch((error: NodeJS.ErrnoException) => { if (error.code !== 'EEXIST') throw error })
+    await checkedTarget(root, version)
+  }
+  await access(root, constants.W_OK)
 }
 
 export async function inspectNodeZipInstallation(root: string, version: string) {
@@ -142,7 +154,7 @@ interface NodeZipInstallation {
   root: string
   version: string
   archive: Buffer
-  beforePublish?: () => Promise<void>
+  beforePublish?: (staging: string) => Promise<void>
 }
 export async function installVerifiedNodeZip({ root, version, archive, beforePublish }: NodeZipInstallation): Promise<'installed' | 'already-installed'> {
   const target = await checkedTarget(root, version)
@@ -157,7 +169,7 @@ export async function installVerifiedNodeZip({ root, version, archive, beforePub
   try {
     await extract(archive, version, staging)
     if (await inspectDirectory(staging, false) !== 'complete') throw new Error('Node ZIP에서 node.exe 또는 npm 구성을 확인할 수 없습니다.')
-    await beforePublish?.()
+    await beforePublish?.(staging)
     if (await checkExisting()) return 'already-installed'
     try {
       await rename(staging, target)

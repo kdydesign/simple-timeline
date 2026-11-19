@@ -5,6 +5,7 @@ const tools = [
   { id: 'home', label: 'Home' },
   { id: 'planrail', label: 'PlanRail' },
   { id: 'node', label: 'NodeRail' },
+  { id: 'termrail', label: 'TermRail' },
 ] as const
 
 export type WorkRailTool = typeof tools[number]['id']

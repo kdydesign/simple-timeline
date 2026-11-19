@@ -14,7 +14,7 @@ import {IconButton} from './components/Icon';
 import {restoreFocus} from './state/restoreFocus';
 import {normalizeReminder} from '../domain/reminder';
 import {useReminders} from './state/useReminders';
-import { useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
 import type { HelpSection } from "../shared/help";
 import type { TimelineApi } from "../shared/api";
 import type { ApiError, YearMonth, Result, Id, Schedule, Project, ReminderSettings } from "../shared/types";
@@ -53,6 +53,8 @@ import "./flat-glass.css";
 import "./planrail.css";
 import "./forest-crystal.css";
 import "./workrail.css";
+const TermRail = lazy(() => import('./termrail/TermRail').then(({ TermRail }) => ({ default: TermRail })));
+
 interface Confirmation {
   title: string;
   message: string;
@@ -71,6 +73,7 @@ export function App({
   initialTool?: WorkRailTool;
 }) {
   const [tool, setTool] = useState(initialTool);
+  const [openedTermRail, setOpenedTermRail] = useState(initialTool === 'termrail');
   const [runtimeVersion, setRuntimeVersion] = useState<string>();
   const planrailActive = tool === "planrail";
   const dockButton = useRef<HTMLButtonElement>(null);
@@ -153,7 +156,7 @@ export function App({
   const openHelp = useCallback(() => { void window.timelineWindow?.command("help", helpSection); }, [helpSection]);
   useEffect(() => {
     const handleHelp = (event: KeyboardEvent) => {
-      if (event.key !== "F1" || !window.timelineWindow) return;
+      if (event.key !== "F1" || !window.timelineWindow || (event.target as Element | null)?.closest?.("[data-terminal-input]")) return;
       event.preventDefault();
       if (!event.repeat) openHelp();
     };
@@ -164,6 +167,7 @@ export function App({
     || settingsVisible || !!quickReminder || !!confirmation || dayModalOpen;
   const selectTool = (next: WorkRailTool) => {
     if (dockBlocked) return;
+    if (next === 'termrail') setOpenedTermRail(true);
     setTool(next);
   };
   useEffect(()=>{setFieldErrors({});serverFieldErrors.current={};pendingFieldFocus.current=null;setValidationActive(false)},[model?.session]);
@@ -636,7 +640,7 @@ export function App({
       <Titlebar onSettings={sharing.state&&sharing.api?()=>sharing.openSettings():undefined} onHelp={openHelp} onRuntimeVersion={setRuntimeVersion} sharing={null} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
       {updates.frozen&&<div className="update-blocked update-ui" role="alert">{updates.editingBlocked?'앱을 종료한 뒤 다시 열어 주세요. 종료 준비 실패로 편집을 잠시 중지했습니다.':'업데이트 설치 준비 중입니다. 저장을 마칠 때까지 기다려 주세요.'}</div>}
       <div className="saving-content" inert={updates.frozen||saveShieldActive} onKeyDownCapture={event => {
-        if (event.key !== "F6" || dockBlocked) return;
+        if (event.key !== "F6" || dockBlocked || (event.target as Element | null)?.closest?.("[data-terminal-input]")) return;
         event.preventDefault();
         dockButton.current?.focus();
       }}>
@@ -796,6 +800,9 @@ export function App({
           selectTool("node");
           requestAnimationFrame(() => dockButton.current?.focus());
         }}/>}
+      {openedTermRail && <Suspense fallback={tool === "termrail" ? <div role="status">TermRail 여는 중…</div> : null}>
+        <TermRail active={tool === "termrail"} />
+      </Suspense>}
       <div className="workrail-node-seat" aria-hidden={tool!=="node"||undefined} inert={tool!=="node"}><NodeScreen node={node} onEnvironment={environmentPicker.openPicker}/></div>
       </div>
       {!dockBlocked && environmentPicker.dialog}

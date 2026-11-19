@@ -1,10 +1,13 @@
 # Only the disposable Windows CI runner is allowed to exercise actual nvm links.
 $ErrorActionPreference = 'Stop'
-if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows') { throw 'Disposable Windows runner required' }
+if ($env:GITHUB_ACTIONS -ne 'true' -or $env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ENVIRONMENT -ne 'github-hosted') {
+  throw 'A disposable GitHub-hosted Windows VM is required'
+}
 $directory = Join-Path $env:RUNNER_TEMP ('workrail-nvm-' + [Guid]::NewGuid())
 $digests = @{
   '1.1.10' = '79974e8d60916910ffee604434668909a40f66b413d6cbee6bd88f9e868238ab'
   '1.1.11' = '12e9c418a6b0d9d06736b7ccbf67225fe081f64e81f9ab831bc399b4255d8aad'
+  '1.2.2' = '74232ea51c060ecd44ecf2cebee314ed9e3f6da56e1f9484d8d46c4e8bb6ae0e'
 }
 try {
   New-Item -ItemType Directory -Path $directory | Out-Null

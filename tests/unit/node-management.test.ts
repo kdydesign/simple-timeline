@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { fetchBoundedAsset, parseNodeCatalog } from '../../src/main/node-management/catalog'
-import { discoverWindowsNode, type WindowsDiscovery } from '../../src/main/node-management/discovery'
+import { discoverWindowsNode, getDownloadProxy, type WindowsDiscovery } from '../../src/main/node-management/discovery'
 import { createNodeManagementService, type WindowsNodeAdapter } from '../../src/main/node-management/service'
 import { buildNvmInvocation, createWindowsNodeAdapter, createElevationCommand, mergeWindowsEnvironment, readElevatedExit } from '../../src/main/node-management/windows'
 import { createMutationBarrier } from '../../src/main/updates/installer'
@@ -48,7 +48,7 @@ function local(overrides: { completePackage?: boolean; settings?: string; path?:
     readEnvironment: async () => overrides.env ?? { Path: [home, ...(overrides.path ?? []), symlink].join(';'), NVM_HOME: home, NVM_SYMLINK: symlink },
     pathKind: async path => entries.get(path.toLowerCase()) as 'file' | 'directory' | 'symlink' ?? 'missing',
     resolvePath: async path => path.toLowerCase() === symlink.toLowerCase() ? home + '\\v22.9.0' : path,
-    completeNodePackage: async () => overrides.completePackage ?? false,
+    completeNodePackage: async () => overrides.completePackage ?? true,
     listDirectories: async () => ['v22.9.0', 'v24.11.0', 'external'],
     readSettings: async () => Buffer.from(overrides.settings ?? settings),
     getManagerDigest: async (path: string) => overrides.helperDigests?.[path] ?? overrides.digest ?? officialDigest,
@@ -65,6 +65,7 @@ function adapter(overrides: Partial<WindowsNodeAdapter> = {}): WindowsNodeAdapte
     discover: async () => ready,
     changeVersion: async () => { throw Error('unexpected elevation') },
     installManager: async () => { throw Error('unexpected installer') },
+    recognizesVersion: async () => true,
     ...overrides,
   }
 }
@@ -109,7 +110,7 @@ describe('Windows Node discovery', () => {
       installation: { family: 'classic', executableDigest: digest },
       capabilities: { list: { available: true }, install: { available: true }, use: { available: false } },
     })
-    expect(buildNvmInvocation(state.installation!, 'install', '22.9.0').executableDigest).toBe(digest)
+    expect(buildNvmInvocation(state.installation!, 'use', '22.9.0').executableDigest).toBe(digest)
   })
 
   it('enables 1.1.11 switching only with both original elevation helpers', async () => {
@@ -126,12 +127,10 @@ describe('Windows Node discovery', () => {
     expect(changed.capabilities?.use.available).toBe(false)
   })
 
-  it('allows local use with a custom mirror but refuses downloads with a precise reason', async () => {
+  it('allows official ZIP downloads with a custom classic mirror', async () => {
     const current = await local({ settings: settings + 'node_mirror: https://custom.example/dist/' })
-    const { service } = makeService(adapter({ discover: async () => current }))
-    expect((await service.install('24.11.0')).error?.message).toContain('미러')
-    expect((await service.use('22.9.0')).error).toBeNull()
-    expect((await service.getState()).removal?.status).toBe('unavailable')
+    expect(current.capabilities).toMatchObject({ install: { available: true }, use: { available: true } })
+    expect(current.conflicts).toEqual([])
   })
 
   it.each(['${MIRROR_FIELD}: https://evil.test/', 'root : C:\\mismatch'])('rejects an ambiguous raw settings line %s', async line => {
@@ -189,11 +188,6 @@ describe('Windows Node discovery', () => {
     expect(state.conflicts).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'link-occupied', path: symlink })]))
   })
 
-  it('treats custom mirrors as unsafe for elevated downloads', async () => {
-    const state = await local({ settings: 'root: ' + home + '\npath: ' + symlink + '\nnode_mirror: https://nodejs.org.evil.test/dist/' })
-    expect(state.conflicts).toEqual([expect.objectContaining({ code: 'mirror', path: null })])
-  })
-
   it.each([
     ['1.1.11', 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791', 'gateway.example:8080'],
     ['1.2.2', officialDigest, 'https://[2001:db8::1]:443/'],
@@ -202,11 +196,10 @@ describe('Windows Node discovery', () => {
     const state = await local({ digest, settings: bytes })
     expect(state).toMatchObject({
       manager: { version }, conflicts: [], capabilities: { install: { available: true } },
-      installation: { useProxyEnvironment: true, settingsDigest: createHash('sha256').update(bytes).digest('hex') },
+      installation: { settingsDigest: createHash('sha256').update(bytes).digest('hex') },
     })
-    const invocation = buildNvmInvocation(state.installation!, 'install', '24.11.0')
-    expect(invocation).toMatchObject({ useProxyEnvironment: true })
-    expect(JSON.stringify([state, invocation])).not.toContain(proxy)
+    expect(getDownloadProxy(state.installation)).toBe(new URL(proxy.includes('://') ? proxy : 'http://' + proxy).origin)
+    expect(JSON.stringify(state)).not.toContain(proxy)
   })
 
   it.each([
@@ -269,8 +262,8 @@ describe('elevated Windows commands', () => {
       nvmSymlink: symlink,
       settingsDigest,
     })
-    expect(() => buildNvmInvocation(ready.installation!, 'install', '24.11.0\nRemove-Item C:\\')).toThrow()
-    expect(() => buildNvmInvocation(ready.installation!, 'uninstall' as 'install', '24.11.0')).toThrow()
+    expect(() => buildNvmInvocation(ready.installation!, 'use', '24.11.0\nRemove-Item C:\\')).toThrow()
+    expect(() => buildNvmInvocation(ready.installation!, 'install' as 'use', '24.11.0')).toThrow()
   })
 
   it('keeps a 1.1.11 helper-verified use within the Windows process argument limit', () => {
@@ -283,16 +276,8 @@ describe('elevated Windows commands', () => {
     expect(args.join(' ').length + 100).toBeLessThan(32767)
   })
 
-  it('fits the proxy-aware classic install in one CreateProcess command line for a long user directory', () => {
-    const directory = 'C:\\Users\\' + 'a'.repeat(165) + '\\AppData\\Local\\nvm'
-    const installation = { ...ready.installation!, family: 'classic' as const, version: '1.2.2' as const, home: directory, root: directory,
-      exe: directory + '\\nvm.exe', useProxyEnvironment: true as const, executableDigest: officialDigest }
-    const args = createElevationCommand('C:\\Windows\\System32', buildNvmInvocation(installation, 'install', '24.11.0'))
-    expect(args.join(' ').length + 100).toBeLessThan(32767)
-  })
-
   it('keeps trusted commands encoded and distinguishes unknown completion from a cancelled UAC prompt', () => {
-    const args = createElevationCommand('C:\\Windows\\System32', buildNvmInvocation(ready.installation!, 'install', '24.11.0'))
+    const args = createElevationCommand('C:\\Windows\\System32', buildNvmInvocation(ready.installation!, 'use', '24.11.0'))
     expect(args.slice(0, -1)).toEqual(['-NoProfile', '-NonInteractive', '-EncodedCommand'])
     expect(Buffer.from(args.at(-1)!, 'base64').toString('utf16le')).toContain('-Verb RunAs')
     expect(readElevatedExit('WORKRAIL_ELEVATION_CANCELLED', 0)).toEqual({ status: 'cancelled' })
@@ -380,14 +365,14 @@ describe('Node operations', () => {
 
   it.each([
     ['cancelled', 'cancelled'],
-    ['failed', 'nvm-install-failed'],
+    ['failed', 'zip-extraction'],
     ['success', 'verification-failed'],
   ] as const)('reports %s when the requested version is still missing', async (status, code) => {
     const { service } = makeService(adapter({ changeVersion: async () => ({ status }) }))
     await service.refreshCatalog()
     const state = await service.install('24.11.0')
     expect(state).toMatchObject({ error: { code }, busy: null, installedVersions: ['22.9.0'] })
-    if (status !== 'cancelled') expect(state.error?.message).toContain('배포 서버')
+    if (status === 'success') expect(state.error?.message).toContain('설치 목록')
   })
 
   it('returns an unknown result while retaining the quit/update barrier even if the files later look changed', async () => {
@@ -448,7 +433,7 @@ describe('Node operations', () => {
     const { service } = makeService(adapter({
       discover: async () => ({
         ...ready, manager: { status: 'ready', version: '2.0.1' },
-        installation: { ...ready.installation!, family: 'modern', version: '2.0.1', mode: 'shim' },
+        installation: { ...ready.installation!, family: 'modern', signingPolicy: null, version: '2.0.1', mode: 'shim' },
         activeVersion: installed ? '24.11.0' : '22.9.0',
         installedVersions: installed ? ['24.11.0', '22.9.0'] : ['22.9.0'],
       }),
@@ -570,7 +555,7 @@ it('honours terminal evidence when an acquisition failure and its recovery inspe
 it.each(['classic', 'modern'] as const)('rechecks the %s data root independently of the executable and refuses a changed or missing directory', async family => {
   const install = { ...ready.installation!, root: 'D:\\versions' }
   const verified = family === 'modern'
-    ? { ...install, family: 'modern' as const, version: '2.0.1' as const, mode: 'shim' as const }
+    ? { ...install, family: 'modern' as const, signingPolicy: null, version: '2.0.1' as const, mode: 'shim' as const }
     : { ...install, family: 'classic' as const, version: '1.2.2' as const }
   let current = verified
   let exists = true
@@ -602,8 +587,8 @@ it.runIf(process.platform === 'win32')('accepts an existing local Windows folder
 
 it('dismisses a finished install failure only on an explicit successful recheck', async () => {
   const { service } = makeService(adapter({ changeVersion: async () => ({ status: 'failed' }), mutationStatus: async () => 'clear' }))
-  expect((await service.install('24.11.0')).error?.code).toBe('nvm-install-failed')
-  expect((await service.getState()).error?.code).toBe('nvm-install-failed')
+  expect((await service.install('24.11.0')).error?.code).toBe('zip-extraction')
+  expect((await service.getState()).error?.code).toBe('zip-extraction')
   expect((await service.getState('recheck')).error).toBeNull()
   expect((await service.use('22.9.0')).error).toBeNull()
 })
@@ -617,7 +602,7 @@ it('recognizes the official 1.1.10 binary and checks both legacy helpers for swi
 
 it('excludes a direct-install version with missing npm from install discovery', async () => {
   const digest = 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791'
-  expect((await local({ digest })).installedVersions).not.toContain('22.9.0')
+  expect((await local({ digest, completePackage: false })).installedVersions).not.toContain('22.9.0')
   const dualArch = await local({ digest, completePackage: true, changes: [
     [home + '\\v22.9.0\\node.exe', 'missing'], [home + '\\v22.9.0\\node64.exe', 'file'],
   ] })
@@ -674,7 +659,7 @@ it('settles the previous machine-lock inspection before acquiring the install le
     const failedInstall = service.install('24.11.0')
     resume()
     await automaticRead
-    expect((await failedInstall).error?.code).toBe('nvm-install-failed')
+    expect((await failedInstall).error?.code).toBe('zip-extraction')
     expect(await lock.status()).toBe('clear')
     expect(service.isBusy()).toBe(false)
     expect((await service.getState('recheck')).error).toBeNull()
@@ -683,4 +668,13 @@ it('settles the previous machine-lock inspection before acquiring the install le
     resume()
     await rm(directory, { recursive: true, force: true })
   }
+})
+
+it('compares a fresh service inventory with its manager on explicit recheck after restart', async () => {
+  let listed: string[] | null = null
+  const { service } = makeService(adapter({ managerVersions: async () => listed }))
+  expect((await service.getState()).error).toBeNull()
+  expect((await service.getState('recheck')).error?.code).toBe('verification-failed')
+  listed = ['22.9.0']
+  expect((await service.getState('recheck')).error).toBeNull()
 })

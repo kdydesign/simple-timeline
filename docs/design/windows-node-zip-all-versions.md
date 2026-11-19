@@ -1,6 +1,6 @@
 # Windows Node 설치의 공식 ZIP 통일
 
-2026-11-19 사용자 요청에 따른 후속 설계 초안. 설치 방식 변경은 사용자 지정 사항이며 ZIP 세부 연동은 기술 검토 단계이며 아이콘 크기별 적용 비율은 사용자 확인을 마쳤다. 제품 구현은 별도 요청 후 진행한다. 현재 배포 구현은 nvm 1.1.10·1.1.11에 ZIP을 적용한다. [이전 설계와 검증](noderail-zip-recovery-shell-icons.md)
+2026-11-19 사용자가 Windows ZIP 설치 통일과 아이콘 크기별 적용 비율을 승인했다. 아래 현황 대조는 설계 시점의 기준이다. 이후 관리자별 연동과 플랫폼 검증 범위는 [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md)을 따른다. [이전 설계와 검증](noderail-zip-recovery-shell-icons.md)
 
 ## 결정과 배경
 

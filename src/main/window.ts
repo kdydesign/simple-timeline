@@ -1,3 +1,4 @@
+import { installTermWindows } from './term-window'
 import { BrowserWindow, screen } from 'electron'
 import { initialWindowBounds } from './window-bounds'
 import { release } from 'node:os'
@@ -29,7 +30,7 @@ export function createWindow(preload: string, url: string, onShown?: () => void,
   window.webContents.once('render-process-gone', () => { startup?.mark('renderer-exited'); reveal() })
   window.once('show', () => onShown?.())
   window.setMenu(null)
-  window.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
+  installTermWindows(window, url, icon)
   window.webContents.on('will-navigate', (event, next) => {
     if (next !== url) event.preventDefault()
   })

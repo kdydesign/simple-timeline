@@ -48,7 +48,9 @@ import { profileDirectory } from './profile'
 import { createWindow } from './window'
 import { registerTimelineIpc } from './ipc'
 import { registerWindowIpc } from './window-ipc'
-import { resolveRendererUrl } from './ipc-core'
+import { TermRailSshService } from './termrail/ssh-service'
+import { registerTermRailSshIpc } from './termrail/ssh-ipc'
+import { isTrustedSender, resolveRendererUrl } from './ipc-core'
 import { createAbout } from './about'
 import { installCloseGuard, type CloseChoice } from './close'
 import { createTray, updateSharingTray } from './tray'
@@ -185,6 +187,15 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     desktopIcon,
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
+  const termRailSsh = new TermRailSshService(join(profile, 'termrail-known-hosts.json'))
+  const unregisterTermRail = registerTermRailSshIpc(termRailSsh, (event, _id, method) =>
+    isTrustedSender(event, window, rendererUrl) &&
+    (method === 'read' || method === 'close' || (!installPending && !appMutationBarrier.blocked())))
+  // A new renderer cannot own sessions opened by the previous document.
+  window.webContents.on('render-process-gone', () => termRailSsh.dispose())
+  window.webContents.on('did-start-navigation', (details) => {
+    if (details.isMainFrame && !details.isSameDocument) termRailSsh.dispose()
+  })
   nodeIpc = registerNodeManagementIpc(window, rendererUrl, nodeManagement,nodeRouting)
   configureTaskbarDetails(window,{platform:process.platform,packaged:app.isPackaged,exePath:process.execPath,shellIconName:__WORKRAIL_SHELL_ICON_NAME__})
   let help:ReturnType<typeof createHelpWindow>|undefined
@@ -364,6 +375,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
   async function finishShutdown(){
+    unregisterTermRail();termRailSsh.dispose()
     help?.dispose();releases.dispose()
     powerMonitor.removeListener('resume',resume);powerMonitor.removeListener('suspend',suspend)
     nativeReminders.dispose()

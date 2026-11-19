@@ -1,3 +1,5 @@
+import './term-window'
+import './termrail-ssh'
 import {updatesChannel,updatesChanged,updatesGuard,updatesGuardReply,type UpdateApi,type UpdateState,type UpdateGuardRequest} from '../shared/updates'
 import {sharingChannel,sharingChanged,type SharingApi,type SharingState} from '../shared/sharing'
 import {reminderChannel,reminderChanged,type ReminderApi} from '../shared/reminder-api'

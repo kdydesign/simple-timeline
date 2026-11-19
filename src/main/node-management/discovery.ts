@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
 import { win32 } from 'node:path'
 import { isNodeVersion, type NodeConflict, type NodeManagementState } from '../../shared/node-management'
-import { availability, capabilities, classicDigests, legacyHelpers, modernDigest, proxyConflict, usesOfficialNodeZip } from './manager-support'
+import { availability, capabilities, classicDigests, legacyHelpers, modernReleases, type ModernRelease, proxyConflict, knownClassicVersion } from './manager-support'
+import type { NodeSigningPolicy } from './node-signing'
 import { inspectModernManager } from './modern-manager'
 import { contains, isSafeNvmPath, readInstalled, samePath, verifiedFiles, type WindowsProbe } from './windows-probe'
 export { isSafeNvmPath, type WindowsProbe } from './windows-probe'
@@ -10,18 +11,20 @@ export const NVM_VERSION = '1.2.2'
 export const NVM_EXE_DIGEST = classicDigests[NVM_VERSION]
 
 export type NvmInstallation = InstallationPaths & (
-  | { family: 'classic'; version: keyof typeof classicDigests; useProxyEnvironment?: true }
-  | { family: 'modern'; existingVersion?: string; version: '2.0.1'; mode: 'shim' | 'link' }
+  | { family: 'classic'; version: string }
+  | { family: 'modern'; signingPolicy: NodeSigningPolicy | null; version: ModernRelease['version']; mode: 'shim' | 'link' }
 )
 // Network configuration stays in the main process and cannot enter JSON diagnostics.
-const classicProxies = new WeakMap<NvmInstallation, string>()
+const downloadProxies = new WeakMap<NvmInstallation, string>()
+export function setDownloadProxy(manager: NvmInstallation, proxy: string) {
+  downloadProxies.set(manager, new URL(proxy.includes('://') ? proxy : 'http://' + proxy).origin)
+}
 export function getDownloadProxy(manager: NvmInstallation | null) {
-  if (manager?.family !== 'classic' || !manager.useProxyEnvironment) return undefined
-  const proxy = classicProxies.get(manager)
-  if (!proxy) throw Error('Verified proxy setting unavailable')
-  return proxy
+  if (manager?.downloadsBlocked) throw Error('nvm download policy')
+  return manager ? downloadProxies.get(manager) : undefined
 }
 interface InstallationPaths {
+  downloadsBlocked?: true
   executableDigest: string
   exe: string
   home: string
@@ -31,6 +34,7 @@ interface InstallationPaths {
 }
 export interface WindowsDiscovery extends Pick<NodeManagementState, 'manager' | 'activeVersion' | 'activeSource' | 'installedVersions' | 'conflicts' | 'capabilities'> {
   installation: NvmInstallation | null
+  activationDigest?: string
   activeX64?: false
 }
 const localPath = (path: string) => /^[a-z]:[\\/]/i.test(path) && !/[\x00-\x1f|<>"*?]/.test(path)
@@ -57,10 +61,6 @@ function parseSettings(bytes: Buffer): Map<string, string> {
     settings.set(name, value.trim())
   }
   return settings
-}
-
-function isDefaultSource(value: string | undefined, official: string): boolean {
-  return !value || value === 'none' || value === official || value === official + '/'
 }
 
 export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsDiscovery> {
@@ -97,12 +97,14 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
         throw Error('Nvm executable and configured home do not match')
       }
       const executableDigest = await probe.getManagerDigest(exe)
-      const classicVersion = (Object.keys(classicDigests) as (keyof typeof classicDigests)[]).find(key => classicDigests[key] === executableDigest)
-      if (executableDigest === modernDigest) {
-        version = '2.0.1'
-        linkedNode = await inspectModernManager(probe, home, result, searchPath)
+      const knownVersion = knownClassicVersion(executableDigest)
+      const modernRelease = modernReleases.find(release => release.digest === executableDigest)
+      const classicVersion = knownVersion ?? (modernRelease ? null : await probe.verifyClassicRelease?.(exe, executableDigest))
+      if (modernRelease) {
+        version = modernRelease.version
+        linkedNode = await inspectModernManager(probe, home, result, searchPath, modernRelease)
       } else if (!classicVersion) {
-        addConflict('manager-configuration', exe, '기존 nvm 실행 파일을 공식 배포본과 대조할 수 없습니다.')
+        addConflict('manager-configuration', exe, 'nvm.exe를 공식 배포본과 대조할 수 없습니다. 설치 경로와 공식 GitHub 릴리스 접근을 확인해 주세요.')
         result.manager = { status: 'error', version, path: exe }
       } else {
         version = classicVersion
@@ -121,26 +123,21 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
           throw Error('Unsafe or mismatched nvm root or link')
         }
         const versions = await readInstalled(root, probe)
-        result.installedVersions = usesOfficialNodeZip(classicVersion)
-          ? (await Promise.all(versions.map(async v => await probe.completeNodePackage?.(root, v) ? v : null))).filter(v => v !== null)
-          : versions
+        result.installedVersions = (await Promise.all(versions.map(async v => await probe.completeNodePackage?.(root, v) ? v : null))).filter(v => v !== null)
         result.manager = { status: 'ready', version, kind: 'nvm-windows', path: exe }
         result.capabilities = capabilities(null)
         result.installation = { family: 'classic', version: classicVersion, executableDigest, exe, home, root, symlink, settingsDigest: createHash('sha256').update(settingsBytes).digest('hex') }
-        if (classicVersion !== NVM_VERSION && !await verifiedFiles(probe, root, legacyHelpers)) {
+        if (!knownVersion) {
+          result.capabilities.use = availability('이 공식 nvm 배포본의 관리자 권한 전환 동작은 확인이 필요합니다. Windows 터미널에서 사용할 버전을 선택해 주세요.')
+        } else if (classicVersion !== NVM_VERSION && !await verifiedFiles(probe, root, legacyHelpers)) {
           result.capabilities.use = availability(classicVersion + ' 전환에 필요한 공식 elevate.cmd 및 elevate.vbs를 확인해 주세요.')
         }
         const configuredProxy = settings.get('proxy')
         const proxy = proxyConflict(configuredProxy, 'classic')
-        if (proxy) conflicts.push(proxy)
-        else if (configuredProxy && configuredProxy !== 'none') {
-          result.installation.useProxyEnvironment = true
-          classicProxies.set(result.installation, new URL(configuredProxy.includes('://') ? configuredProxy : 'http://' + configuredProxy).origin)
-        }
-        if (!isDefaultSource(settings.get('node_mirror'), 'https://nodejs.org/dist')
-          || !isDefaultSource(settings.get('npm_mirror'), 'https://github.com/npm/cli/archive')) {
-          addConflict('mirror', null, 'nvm의 Node·npm 미러를 공식 배포 주소로 설정한 뒤 설치를 다시 시도해 주세요.')
-        }
+        if (proxy) {
+          conflicts.push(proxy)
+          result.installation.downloadsBlocked = true
+        } else if (configuredProxy && configuredProxy !== 'none') setDownloadProxy(result.installation, configuredProxy)
         const linkKind = await probe.pathKind(symlink)
         if (linkKind === 'symlink') {
           const target = await probe.resolvePath(symlink).catch(() => null)
@@ -172,13 +169,24 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
       result.manager = { status: 'error', version, path: exe, ...(version ? { kind: 'nvm-windows' as const } : {}) }
       result.installation = null
       if (error instanceof AmbiguousProxySetting) addConflict('proxy', null, error.message)
-      else addConflict('manager-configuration', home, version === '2.0.1'
+      else addConflict('manager-configuration', home, version?.startsWith('2.')
         ? 'nvm 2.x 레지스트리 설정과 Node 저장소를 읽을 수 없습니다.'
         : 'nvm 설치 위치, settings.txt, NVM_HOME 및 NVM_SYMLINK 설정을 확인한 뒤 다시 검사해 주세요.')
     }
   } else if (env.NVM_HOME || env.NVM_SYMLINK) {
     result.manager.status = 'error'
     addConflict('manager-configuration', null, 'Windows에 남아 있는 NVM_HOME과 NVM_SYMLINK 설정 및 nvm 설치 위치를 확인해 주세요.')
+  }
+
+  if (result.installation) {
+    const manager = result.installation
+    const paths = [manager.symlink]
+    if (manager.family === 'modern' && manager.mode === 'link') paths.push(win32.join(win32.dirname(manager.root), '.link', 'nodejs'))
+    const links = await Promise.all(paths.map(async path => {
+      const kind = await probe.pathKind(path)
+      return kind === 'symlink' ? [kind, await probe.readLink?.(path)] : [kind]
+    }))
+    result.activationDigest = createHash('sha256').update(JSON.stringify([env.Path, env.PATHEXT, env.NVM_HOME, env.NVM_SYMLINK, links])).digest('hex')
   }
 
   const badExtensions = extensions.some(extension => !/^\.[a-z0-9]{1,8}$/.test(extension))
@@ -216,7 +224,7 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
     const path = nodePaths[nodeIndex]!
     if (linkIndex === nodeIndex && linkedNode && win32.basename(path).toLowerCase() === 'node.exe') {
       result.activeVersion = linkedNode.version
-      result.activeSource = 'nvm'
+      result.activeSource = linkedNode.version ? 'nvm' : null
       if (!linkedNode.x64) result.activeX64 = false
     } else {
       const directory = win32.dirname(path)

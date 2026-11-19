@@ -74,7 +74,7 @@ it.each(['resolver unavailable', 'non-local result', 'different directory identi
 
 it('launches 2.0.1 in the user account, with the registry snapshot and an offline exact-version switch', async () => {
   const adapter = createWindowsNodeAdapter(vi.fn())
-  const modern = { ...installation, family: 'modern' as const, version: '2.0.1' as const, mode: 'shim' as const, executableDigest: '0a8b88433fde1cbf48a03b7589b744361b20b4401a3be167614f82c62d26b29e' }
+  const modern = { ...installation, family: 'modern' as const, version: '2.0.1' as const, mode: 'shim' as const, signingPolicy: null, executableDigest: '0a8b88433fde1cbf48a03b7589b744361b20b4401a3be167614f82c62d26b29e' }
   expect(await adapter.changeVersion(modern, 'use', '22.9.0')).toEqual({ status: 'success' })
   const [, args] = io.exec.mock.calls[0]
   const worker = decode(args.at(-1))
@@ -85,10 +85,13 @@ it('launches 2.0.1 in the user account, with the registry snapshot and an offlin
   expect(await adapter.changeVersion(modern, 'use', '22.9.0')).toEqual({ status: 'failed' })
   expect(worker).toContain('Registry64')
   expect(worker).not.toContain('-Verb RunAs')
-  expect(await adapter.changeVersion({ ...modern, existingVersion: '20.12.2' }, 'install', '24.1.0')).toEqual({ status: 'success' })
-  const installWorker = decode(io.exec.mock.calls.at(-1)![1].at(-1))
-  expect(installWorker).toContain("[IO.File]::OpenRead('" + home + "\\v20.12.2\\node.exe')")
-  expect(await adapter.changeVersion({ ...modern, executableDigest: 'a'.repeat(64) }, 'install', '22.9.0')).toEqual({ status: 'integrity-failed' })
+  io.exec.mockResolvedValueOnce({ stdout: '  24.1.0\n* 22.9.0    (default)\n', stderr: '' })
+  expect(await adapter.recognizesVersion!(modern, '22.9.0')).toBe(true)
+  const listWorker = decode(io.exec.mock.calls.at(-1)![1].at(-1))
+  expect(listWorker).toContain("'list' 'installed'")
+  expect(listWorker).not.toContain('--json')
+  expect(await adapter.changeVersion({ ...modern, executableDigest: 'a'.repeat(64) }, 'use', '22.9.0')).toEqual({ status: 'integrity-failed' })
+
 })
 
 it('denies any subprocess read access to the classic 1.1.11 asynchronous fallback while nvm runs', async () => {

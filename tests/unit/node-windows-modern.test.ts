@@ -1,6 +1,7 @@
+import { modernReleases } from '../../src/main/node-management/manager-support'
 import { win32 } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { discoverWindowsNode, type WindowsProbe } from '../../src/main/node-management/discovery'
+import { discoverWindowsNode, getDownloadProxy, type WindowsProbe } from '../../src/main/node-management/discovery'
 
 const home = String.raw`C:\Users\Kim\AppData\Local\Author Software\nvm`
 const root = win32.join(home, 'installs')
@@ -13,7 +14,7 @@ const digests = new Map([
   [path('utils', 'proxy.exe'), 'fb4256ea5f2f7a3cfceeed9f7bf889a031ad04e594f6e4c5a9851824f561af90'],
   [path('utils', 'sync.exe'), '26a564b61887676e55023e4f8476750988d425968c953bcc7126a14f035daf78'],
 ])
-function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim' | 'link' | 'command' | 'helper-read' | 'empty' | 'x86' | 'redirected-node') {
+function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim' | 'link' | 'command' | 'helper-read' | 'empty' | 'x86' | 'redirected-node', release = modernReleases[0] as typeof modernReleases[number]) {
   const linkedTarget = settings.OperatingMode === 'link' ? path('installs', 'v22.9.0') : path('.shim')
   const probe: WindowsProbe = {
     readEnvironment: async () => ({ Path: home + ';' + path('.nodejs'), NVM_HOME: home }),
@@ -23,15 +24,18 @@ function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim
       : (broken === 'command' && p === path('.nodejs', 'node.com')) || digests.has(p) || (settings.ActiveVersion !== '' && p === path('.nodejs', 'node.exe')) || p === path('installs', 'v22.9.0', 'node.exe') ? 'file'
       : p === root || p === home ? 'directory' : 'missing',
     resolvePath: async p => {
-      if (p === path('.nodejs') && settings.ActiveVersion === '') throw Error('no active target')
+      if (p === path('.nodejs') && settings.ActiveVersion === '' && settings.OperatingMode === 'link') throw Error('no active target')
       if (broken === 'redirected-node' && p === path('installs', 'v22.9.0', 'node.exe')) return 'D:\\other\\node.exe'
       return p === path('.nodejs') ? (broken === 'link' ? 'D:\\other' : linkedTarget) : p
     },
+    completeNodePackage: async () => true,
     listDirectories: async () => { if (broken === 'list') throw Error('unreadable'); return broken === 'empty' ? [] : ['v22.9.0'] },
     readSettings: async () => { throw Error('2.x has no settings.txt') },
     getManagerDigest: async p => {
       if (broken === 'helper-read' && p === path('utils', 'reshim.exe')) throw Error('access denied')
-      return broken === 'shim' && p.endsWith('node.exe') ? 'bad' : digests.get(p) ?? ''
+      if (broken === 'shim' && p.endsWith('node.exe')) return 'bad'
+      if (p === path('nvm.exe')) return release.digest
+      return release.helpers[win32.relative(home, p) as keyof typeof release.helpers] ?? ''
     },
     getNodeVersion: async p => p === path('installs', 'v22.9.0', 'node.exe') ? '22.9.0' : null,
     isX64Node: async () => broken !== 'x86',
@@ -39,7 +43,14 @@ function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim
   return discoverWindowsNode(probe)
 }
 
-describe('nvm-windows 2.0.1', () => {
+describe('nvm-windows community registry layout', () => {
+  it.each(modernReleases)('recognizes the verified $version CLI and its matching helpers', async release => {
+    expect(await inspect({}, undefined, release)).toMatchObject({
+      manager: { status: 'ready', version: release.version },
+      installation: { family: 'modern', executableDigest: release.digest }, conflicts: [],
+    })
+  })
+
   it.each(['shim', 'link'])('identifies the default Node through the %s layout', async OperatingMode => {
     expect(await inspect({ OperatingMode })).toMatchObject({
       manager: { status: 'ready', kind: 'nvm-windows', version: '2.0.1' },
@@ -48,7 +59,7 @@ describe('nvm-windows 2.0.1', () => {
       activeVersion: '22.9.0', activeSource: 'nvm', installedVersions: ['22.9.0'],
     })
   })
-  it.each([{ MirrorNode: ['https://mirror.invalid/'] }, { AllowInsecureDownloads: 1 }, { AutoInstallModuleList: ['custom-module'] }])(
+  it.each([{ AllowInsecureDownloads: 1 }, { AutoInstallModuleList: ['custom-module'] }])(
     'keeps use available with nonstandard download settings %j', async settings => {
       expect((await inspect(settings)).capabilities).toMatchObject({ install: { available: false }, use: { available: true } })
     },
@@ -57,6 +68,7 @@ describe('nvm-windows 2.0.1', () => {
     'permits installation through a configured registry proxy %s', async Proxy => {
       const state = await inspect({ Proxy })
       expect(state).toMatchObject({ conflicts: [], capabilities: { install: { available: true }, use: { available: true } } })
+      expect(getDownloadProxy(state.installation)).toBe(new URL(Proxy.includes('://') ? Proxy : 'http://' + Proxy).origin)
       expect(JSON.stringify(state)).not.toContain('gateway.example')
     },
   )
@@ -93,13 +105,13 @@ describe('nvm-windows 2.0.1', () => {
   })
   it('uses a local x86 installation as evidence of a prior install without offering it for x64 use', async () => {
     expect(await inspect({ OperatingMode: 'link', ActiveVersion: '' }, 'x86')).toMatchObject({
-      installation: { existingVersion: '22.9.0' }, installedVersions: [], activeVersion: null,
+      installedVersions: [], activeVersion: null,
       capabilities: { list: { available: true }, install: { available: true } },
     })
   })
   it('does not use a redirected executable as prior-install evidence', async () => {
     expect(await inspect({ OperatingMode: 'link', ActiveVersion: '' }, 'redirected-node')).toMatchObject({
-      installedVersions: [], capabilities: { install: { available: false } },
+      installedVersions: [], capabilities: { install: { available: true } },
     })
   })
   it.each(['disabled', '  DiSABLED  ', 'NONE', ' off', '0'])('blocks install and link use when revocation is %j', async AuthenticodeRevocation => {
@@ -118,11 +130,19 @@ describe('nvm-windows 2.0.1', () => {
     expect((await inspect({ WriteSources: { [key]: source } })).capabilities).toMatchObject({ install: { available: true }, use: { available: false, reason: expect.stringContaining(key) } })
     expect((await inspect({ WriteSources: { [key]: 'user-preference' } })).capabilities?.use.available).toBe(true)
   })
-  it('blocks a first install that would select a new default version, including a policy-controlled empty default', async () => {
-    for (const WriteSources of [{}, { ActiveVersion: 'machine-policy' }]) {
-      const state = await inspect({ OperatingMode: 'link', ActiveVersion: '', WriteSources }, 'empty')
-      expect(state.capabilities?.install).toMatchObject({ available: false, reason: expect.stringContaining('기본 버전') })
-    }
+  it.each(['link', 'shim'])('allows a first ZIP install with no active version in %s mode', async OperatingMode => {
+    const state = await inspect({ OperatingMode, ActiveVersion: '', WriteSources: { ActiveVersion: 'machine-policy' } }, 'empty')
+    expect(state).toMatchObject({ activeVersion: null, activeSource: null, capabilities: { install: { available: true }, use: { available: false } } })
+  })
+  it.each(['machine-policy', 'user-policy', 'machine-preference', 'user-preference'])('respects the effective mirror source %s', async source => {
+    const state = await inspect({ MirrorNode: ['https://mirror.invalid/'], WriteSources: { MirrorNode: source } })
+    expect(state.capabilities?.install.available).toBe(source.endsWith('preference'))
+    if (source.endsWith('policy')) expect(() => getDownloadProxy(state.installation)).toThrow()
+  })
+  it.each(['LocalInstallOnly', 'AirGapped'])('prevents the catalog and ZIP from bypassing %s', async setting => {
+    const state = await inspect({ [setting]: 1 })
+    expect(state.capabilities).toMatchObject({ install: { available: false }, use: { available: true } })
+    expect(() => getDownloadProxy(state.installation)).toThrow()
   })
   it('retains a readable inventory when a helper cannot be opened', async () => {
     expect(await inspect({}, 'helper-read')).toMatchObject({ installedVersions: ['22.9.0'], capabilities: { list: { available: true }, use: { available: false } } })

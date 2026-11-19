@@ -6,17 +6,18 @@ import type { MachineMutationLease } from './mutation-lock'
 import { isNodeVersion, type NodeManagementError, type NodeManagementErrorCode, type NodeManagementState, type NodeOperation, type NodeRelease } from '../../shared/node-management'
 import type { MutationBarrier } from '../updates/installer'
 import { samePath } from './windows-probe'
-import { capabilities, usesOfficialNodeZip } from './manager-support'
+import { capabilities } from './manager-support'
 import type { NvmInstallation, WindowsDiscovery } from './discovery'
 
 export interface ElevatedResult {
   status: 'success' | 'cancelled' | 'failed' | 'unknown' | 'download-failed' | 'integrity-failed'
     | 'zip-download' | 'zip-integrity' | 'zip-permission' | 'zip-incomplete' | 'zip-extraction' | 'zip-blocked'
-    | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
+    | 'nvm-list-unsupported' | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
 }
 
 export interface WindowsNodeAdapter {
   discover(): Promise<WindowsDiscovery>
+  managerVersions?(installation: NvmInstallation): Promise<string[] | null>
   recognizesVersion?(installation: NvmInstallation, version: string): Promise<boolean>
   verifiedDirectory?(root: string): Promise<boolean>
   inspectStandalone?(): Promise<MsiEvidence[]>
@@ -47,12 +48,12 @@ const messages: Record<NodeManagementErrorCode, string> = {
   'version-not-installed': '이 Windows x64 버전이 nvm에 설치되어 있지 않습니다.',
   cancelled: 'Windows 권한 요청 또는 설치가 취소되었습니다.',
   'zip-download': '공식 Node 배포 파일을 받지 못했습니다. 사내 프록시와 배포 서버 연결을 확인해 주세요.',
-  'zip-integrity': '공식 릴리스 서명 또는 ZIP의 SHA-256을 확인하지 못해 설치를 중단했습니다.',
-  'zip-permission': 'nvm 버전 폴더에 쓸 수 없습니다. 해당 폴더의 접근 권한을 확인해 주세요.',
+  'zip-integrity': '공식 릴리스 서명, ZIP의 SHA-256 또는 node.exe 서명자 정책을 확인하지 못해 설치를 중단했습니다.',
+  'zip-permission': 'nvm 버전 폴더의 접근 권한을 확인해 주세요. 현재 사용자의 쓰기 권한이 필요하며 2.x 저장소는 다른 일반 사용자가 쓸 수 없어야 합니다.',
   'zip-incomplete': '같은 버전의 불완전한 설치 폴더가 있습니다. 관리자 폴더에서 해당 버전을 확인해 주세요.',
   'zip-extraction': '공식 ZIP을 설치 폴더에 준비하지 못했습니다. 디스크 여유 공간과 파일 상태를 확인해 주세요.',
   'zip-blocked': 'Windows 보안 정책이 설치 파일을 차단했습니다. 사내 보안 담당자에게 차단 기록을 확인해 주세요.',
-  'nvm-install-failed': 'nvm이 Node 설치를 완료하지 못했습니다. 공식 배포 서버 연결, 사내 프록시의 응답 및 설치 폴더 권한을 확인한 뒤 다시 시도해 주세요.',
+  'nvm-list-unsupported': '이 공식 nvm의 목록 형식과 버전 폴더가 일치하는지 확인할 수 없습니다. 터미널에서 nvm list 결과와 settings.txt의 root 경로를 확인해 주세요.',
   'operation-failed': 'Node 작업에 실패했습니다. Windows 권한, 인터넷 연결 및 nvm 설정을 확인해 주세요.',
   'operation-unknown': 'Node 작업이 아직 실행 중일 수 있습니다. Windows 작업 관리자에서 설치 프로그램과 승격 작업이 끝났는지 확인해 주세요. 중복 변경은 차단됩니다. 작업이 끝난 뒤 Windows를 재부팅하고 복구 창에서 다시 검사해 주세요.',
   'operation-slow': '예상보다 오래 걸리고 있습니다. Windows 권한 확인 또는 설치 창을 확인해 주세요.',
@@ -77,6 +78,7 @@ const exitErrors = {
   'integrity-failed': 'integrity-failed',
   'zip-download': 'zip-download', 'zip-integrity': 'zip-integrity', 'zip-permission': 'zip-permission',
   'zip-incomplete': 'zip-incomplete', 'zip-extraction': 'zip-extraction', 'zip-blocked': 'zip-blocked',
+  'nvm-list-unsupported': 'nvm-list-unsupported',
   'nvm-settings-check': 'nvm-settings-check',
   'command-processor-check': 'command-processor-check',
   'command-autorun': 'command-autorun',
@@ -117,6 +119,7 @@ export function createNodeManagementService(options: {
   let incompleteFolder: string | null = null
   let activeLease: MachineMutationLease | undefined
   let inspection: Promise<WindowsDiscovery | null> | null = null
+  let rechecking: Promise<NodeManagementState> | undefined
   let catalogRequest: Promise<void> | null = null
 
   function publish(patch: Partial<NodeManagementState>) {
@@ -128,7 +131,7 @@ export function createNodeManagementService(options: {
     if (inspection) return inspection
     inspection = (async () => {
       try {
-        const { installation, activeX64, ...discovery } = await windows.discover()
+        const { installation, activeX64, activationDigest, ...discovery } = await windows.discover()
         publish({
           ...discovery,
           ...(discovery.capabilities?.list.available === false && discovery.manager.path && discovery.manager.path === state.manager.path && discovery.manager.version === state.manager.version
@@ -136,7 +139,7 @@ export function createNodeManagementService(options: {
           checkedAt: new Date().toISOString(),
           ...(state.error?.code === 'inspection-failed' ? { error: null } : {}),
         })
-        const current = { installation, activeX64, ...discovery }
+        const current = { installation, activeX64, activationDigest, ...discovery }
         const entries = windows.inspectStandalone && current.manager.status === 'missing' ? await windows.inspectStandalone() : []
         const manualRemoval = current.manager.status === 'missing' && (discovery.conflicts.length > 0 || entries.length > 0)
         const target = selectStandaloneTarget(entries, current)
@@ -197,15 +200,22 @@ export function createNodeManagementService(options: {
     return current.capabilities ? !current.capabilities[operation].available : current.conflicts.length > 0
   }
 
-  async function verifyZip(check: NonNullable<typeof pendingZip>, fresh: WindowsDiscovery | null) {
+  function matchesZip(check: NonNullable<typeof pendingZip>, fresh: WindowsDiscovery | null) {
     const original = check.before.installation
     const current = fresh?.installation
-    if (!fresh || !original || !current || fresh.manager.status !== 'ready'
-      || original.executableDigest !== current.executableDigest || original.settingsDigest !== current.settingsDigest
-      || !samePath(original.exe, current.exe) || !samePath(original.root, current.root) || !samePath(original.symlink, current.symlink)
-      || fresh.activeVersion !== check.before.activeVersion || fresh.activeSource !== check.before.activeSource
-      || fresh.activeX64 !== check.before.activeX64 || !fresh.installedVersions.includes(check.version)) return false
-    return await windows.recognizesVersion?.(current, check.version).catch(() => false) === true
+    return !!(original && current && fresh && fresh.manager.status === 'ready'
+      && original.family === current.family && original.executableDigest === current.executableDigest && original.settingsDigest === current.settingsDigest
+      && samePath(original.exe, current.exe) && samePath(original.root, current.root) && samePath(original.symlink, current.symlink)
+      && fresh.activationDigest === check.before.activationDigest && fresh.activeVersion === check.before.activeVersion && fresh.activeSource === check.before.activeSource
+      && fresh.activeX64 === check.before.activeX64 && fresh.installedVersions.includes(check.version))
+  }
+
+  async function verifyZip(check: NonNullable<typeof pendingZip>, fresh: WindowsDiscovery | null) {
+    if (!matchesZip(check, fresh) || !fresh?.installation) return false
+    if (!await windows.recognizesVersion?.(fresh.installation, check.version).catch(() => false)) return false
+    // Modern list can bootstrap the profile. Check the activation link and PATH
+    // after that process exits as well as after publishing the directory.
+    return fresh.installation.family !== 'modern' || matchesZip(check, await inspect())
   }
 
   async function confirmZip(before: WindowsDiscovery, fresh: WindowsDiscovery | null, version: string) {
@@ -254,7 +264,8 @@ export function createNodeManagementService(options: {
           if (!current.installation || current.manager.status !== 'ready' || operationBlocked(current, 'install')) return 'environment-conflict'
         }
         if (current.installedVersions.includes(version)) {
-          return usesOfficialNodeZip(current.installation.version) ? confirmZip(current, current, version) : null
+          setPhase('verifying')
+          return confirmZip(current, current, version)
         }
         if (state.catalog.status !== 'ready') return 'catalog-unavailable'
         if (!state.catalog.releases.some(release => release.version === version)) return 'version-unavailable'
@@ -262,19 +273,17 @@ export function createNodeManagementService(options: {
         if (!current.installedVersions.includes(version)) return 'version-not-installed'
         if (current.activeVersion === version && current.activeSource === 'nvm' && current.activeX64 !== false) return null
       }
-      setPhase(kind === 'install' && usesOfficialNodeZip(current.installation.version) ? 'checking' : 'waiting')
+      setPhase(kind === 'install' ? 'checking' : 'waiting')
       outcome = await windows.changeVersion(current.installation, kind, version, setPhase)
     }
     setPhase('verifying')
     const updated = await inspect()
-    if (kind === 'install' && outcome.status === 'failed') return 'nvm-install-failed'
+    if (kind === 'install' && outcome.status === 'failed') return 'zip-extraction'
     if (outcome.status === 'zip-incomplete' && current.installation && version) incompleteFolder = win32.join(current.installation.root, 'v' + version)
     if (outcome.status !== 'success') return exitErrors[outcome.status]
-    if (kind === 'install' && current.installation && usesOfficialNodeZip(current.installation.version) && version) return confirmZip(current, updated, version)
-    const preservedDefault = kind !== 'install' || (updated?.activeVersion === current.activeVersion && updated.activeSource === current.activeSource)
-    const verified = preservedDefault && updated && updated.manager.status === 'ready' && (kind === 'install-manager' ? updated.conflicts.length === 0 : !operationBlocked(updated, kind)) && (
+    if (kind === 'install') return version ? confirmZip(current, updated, version) : 'invalid-request'
+    const verified = updated && updated.manager.status === 'ready' && (kind === 'install-manager' ? updated.conflicts.length === 0 : !operationBlocked(updated, kind)) && (
       kind === 'install-manager' ? updated.installation !== null
-        : kind === 'install' ? version !== null && updated.installedVersions.includes(version)
         : updated.activeSource === 'nvm' && updated.activeVersion === version && updated.activeX64 !== false
     )
     return verified ? null : 'verification-failed'
@@ -302,6 +311,7 @@ export function createNodeManagementService(options: {
       let acquired = false
       try {
         // Finish any passive observation of the machine lock before acquiring our own.
+        if (rechecking) await rechecking
         if (inspection) await inspection
         lease = await windows.acquireMutation?.(kind)
         acquired = true
@@ -331,10 +341,11 @@ export function createNodeManagementService(options: {
         await new Promise<never>(() => {})
       } else {
         let reason = code === 'environment-conflict' && (kind === 'install' || kind === 'use') ? state.capabilities?.[kind].reason : null
+        if (code === 'zip-permission' && inspectedInstallation) reason = messages[code] + ' ' + inspectedInstallation.root
         if (code === 'zip-incomplete' && incompleteFolder) reason = messages[code] + ' ' + incompleteFolder
         incompleteFolder = null
         if (code === 'verification-failed' && kind === 'install') {
-          reason = 'nvm 설치 결과를 확인하지 못했습니다. 설치 목록과 기본 버전을 다시 검사해 주세요. 요청한 버전이 없다면 공식 배포 서버 연결과 프록시 응답을 확인해 주세요.'
+          reason = '설치 폴더와 nvm 설치 목록 또는 기본 버전이 일치하지 않습니다. 환경 다시 검사로 설치 상태를 확인해 주세요.'
         }
         const error = code ? { code, message: reason ?? messages[code] } : null
         const operationLog = error ? [...(state.operationLog ?? []).slice(-19), [kind, version, error.code].filter(Boolean).join(' · ')] : state.operationLog
@@ -350,6 +361,35 @@ export function createNodeManagementService(options: {
     return result
   }
 
+  async function readState(intent?: 'recheck') {
+    if (supported && !state.busy) {
+      const previous = state.error
+      const fresh = await inspect()
+      if (intent === 'recheck' && fresh && fresh.capabilities?.list.available !== false
+        && !state.busy && !machineReservation && !rebootRequired) {
+        const check = pendingZip
+        if (check) {
+          const matches = await verifyZip(check, fresh)
+          if (pendingZip === check && !state.busy && !machineReservation && !rebootRequired) {
+            if (matches) pendingZip = null
+            publish({ error: matches ? null : nodeManagementError('verification-failed') })
+          }
+        } else if (fresh.installation && windows.managerVersions) {
+          const listed = await windows.managerVersions(fresh.installation).catch(() => null)
+          const after = fresh.installation.family === 'modern' ? await inspect() : fresh
+          if (!state.busy && !machineReservation && !rebootRequired) {
+            const matches = listed && after?.installation?.settingsDigest === fresh.installation.settingsDigest
+              && after.installation.executableDigest === fresh.installation.executableDigest
+              && after.activationDigest === fresh.activationDigest
+              && after.installedVersions.every(version => listed.includes(version))
+            publish({ error: matches ? null : nodeManagementError('verification-failed') })
+          }
+        } else if (previous && previous === state.error) publish({ error: null })
+      }
+    }
+    return state
+  }
+
   return {
     async verifiedManagerFolder(): Promise<string | null> {
       const before = inspectedInstallation
@@ -361,23 +401,10 @@ export function createNodeManagementService(options: {
         || !samePath(before.root, after.root) || !await windows.verifiedDirectory?.(after.root)) return null
       return after.root
     },
-    async getState(intent?: 'recheck') {
-      if (supported && !state.busy) {
-        const previous = state.error
-        const fresh = await inspect()
-        if (intent === 'recheck' && fresh && fresh.capabilities?.list.available !== false
-          && !state.busy && !machineReservation && !rebootRequired) {
-          const check = pendingZip
-          if (check) {
-            const matches = await verifyZip(check, fresh)
-            if (pendingZip === check && !state.busy && !machineReservation && !rebootRequired) {
-              if (matches) pendingZip = null
-              publish({ error: matches ? null : nodeManagementError('verification-failed') })
-            }
-          } else if (previous && previous === state.error) publish({ error: null })
-        }
-      }
-      return state
+    getState(intent?: 'recheck') {
+      if (intent !== 'recheck') return readState()
+      rechecking ??= readState(intent).finally(() => { rechecking = undefined })
+      return rechecking
     },
     async refreshCatalog() {
       if (supported && !state.busy) {

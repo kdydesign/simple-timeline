@@ -5,8 +5,8 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
-| TermRail SSH 터미널 | [승인된 화면·동작과 후속 검토 항목](../design/ssh-terminal-menu.md). 네 번째 시안 기준으로 설계 확정, 제품 구현 미착수. |
-| Windows 전 버전 공식 ZIP 설치·내부 로고 축소 | [후속 설계 초안·시안](../design/windows-node-zip-all-versions.md). Windows 설치 방식 통일과 크기별 아이콘 축소 기준을 기록했으며 세부 연동은 기술 검토 단계. |
+| TermRail SSH 터미널 | [승인된 화면·동작과 후속 검토 항목](../design/ssh-terminal-menu.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |
+| Windows 전 버전 공식 ZIP 설치·내부 로고 축소 | [후속 설계 초안·시안](../design/windows-node-zip-all-versions.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |
 | Node 공식 ZIP 설치·실패 후 환경 다시 검사·Windows 셸 아이콘 | [설계](../design/noderail-zip-recovery-shell-icons.md) · [구현 및 검증](../implementation/2026-11-19-windows-node-zip.md). Windows nvm 1.1.10·1.1.11 직접 설치, 종료 확인 후 재검사, 시작 메뉴와 작업 표시줄 아이콘. |
 | NodeRail 사내 프록시와 설치·사용 진행 화면 | [확정 설계·시안 A·인수 기준](../design/noderail-proxy-and-loading.md). Windows 주소·포트 프록시, WSL2 배포판별 설정, 양쪽 목록 레이어, 두 헤더의 불투명도. [구현과 검증 범위](../implementation/2026-11-19-noderail-proxy-loading.md) |
 | NodeRail 상세·Home 작업 레이어 및 마감 일수 | [설계 협의와 시안](../design/workrail-node-detail.md). [제품 반영 및 검증 범위](../implementation/2026-11-19-node-detail.md) |

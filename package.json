@@ -2,7 +2,7 @@
   "name": "simple-timeline",
   "version": "1.0.0",
   "private": true,
-  "description": "WorkRail team toolkit: Planrail schedules and Node version management",
+  "description": "WorkRail team toolkit for scheduling, Node version management and SSH terminals",
   "main": "out/main/index.cjs",
   "engines": {
     "node": ">=24.22.1 <25"
@@ -28,6 +28,8 @@
   },
   "dependencies": {
     "@peculiar/x509": "2.2.0",
+    "@xterm/addon-fit": "0.11.0",
+    "@xterm/xterm": "6.0.0",
     "better-sqlite3": "13.0.3",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
@@ -39,6 +41,7 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "reflect-metadata": "0.2.2",
+    "ssh2": "1.17.0",
     "tailwind-merge": "3.7.0",
     "yauzl": "3.2.0"
   },
@@ -54,6 +57,7 @@
     "@types/node": "24.19.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@types/ssh2": "1.15.6",
     "@types/yauzl": "3.4.0",
     "@vitejs/plugin-react": "6.2.1",
     "electron": "45.2.1",

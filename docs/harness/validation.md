@@ -99,6 +99,7 @@ native 내부 Electron 실행 예산은300초다(상위 명령360초에 컴파�
 | `artifacts/packaged/`, `release/`, `artifacts/windows-update/`, `artifacts/windows-legacy/` | Windows lifecycle 결과·정식 설치본·검증 전용 업데이트 fixture |
 
 [Application CI](../../.github/workflows/app.yml)는 Ubuntu/Windows, 작업별 45분 제한으로 앱 검사를 실행한다.
+Windows 앱 작업은 공식 nvm 1.1.10·1.1.11·1.2.2 인수 스크립트를 실행한다. 별도 Windows 작업은 nvm 2.0.1 shim·link 모드를 각각 일회성 VM의 표준 사용자 계정으로 검사한다.
 Windows에서만 현재·검증 전용 다음 버전·고정된 실제0.2.1 설치본을 만들고 패키지 검사를 실행한다. 로그는 실패해도 업로드하며 설치본은 성공한 경우만 제공한다.
 `test:packaged`는 test-only updater harness를 별도 `artifacts/packaged-harness`에 번들한 뒤 기존 lifecycle과 `packaged.update.spec.ts`를 순서대로 실행한다. 새 검사는 실제 production adapter·bootstrap 종료·NSIS·자동 재실행·read-only 자료 보존을 검증하며, 자동 재실행한 앱은 강제 종료하지 않고 일회성 VM 폐기에 맡긴다. 이 harness는 app.asar에 포함되지 않으며 production catalog가 test-only 파일을 거부하는 계약도 유지한다. 실행하지 않은 Windows 검사는 통과로 기록하지 않는다.
 이 workflow는 retention-days를 지정하지 않아 저장소/조직 기본 보관 설정을 따른다. 모두 14일이라고 가정하지 않는다.

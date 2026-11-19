@@ -1,5 +1,5 @@
 import type {HelpSection,HelpTopicId} from './help'
-export const helpSectionLabels:Record<HelpSection,string>={home:'Home',planrail:'PlanRail',noderail:'NodeRail',settings:'공통 설정'}
+export const helpSectionLabels:Record<HelpSection,string>={home:'Home',planrail:'PlanRail',noderail:'NodeRail',termrail:'TermRail',settings:'공통 설정'}
 export const planrailHelpGroups=['시작하기','기본 사용법','간트·달력','알림·창','호스트 사용법','멤버 사용법','문제 해결'] as const
 export interface HelpArticle {
  id:HelpTopicId;menu:HelpSection;section:typeof planrailHelpGroups[number];title:string;intro:string
@@ -308,18 +308,23 @@ const coreHelpArticles:HelpArticle[]=[
  }
 ]
 export const helpArticles:HelpArticle[]=[
- {id:'workrail-home',menu:'home',section:'시작하기',title:'WorkRail 홈과 도구 전환',intro:'WorkRail은 PlanRail 일정과 내 PC의 Node 개발 환경을 한곳에서 관리하는 팀 도구입니다.',steps:[
+ {id:'workrail-home',menu:'home',section:'시작하기',title:'WorkRail 홈과 도구 전환',intro:'WorkRail은 일정, 내 PC의 Node 개발 환경과 SSH 터미널을 한곳에서 관리하는 팀 도구입니다.',steps:[
   {title:'통합 현황을 확인합니다',text:'홈에서 오늘을 포함하는 개인·공유 일정과 공유 연결 상태, 내 PC의 Node 환경을 확인합니다. 연결이 끊기면 최신 공유 내용이 아닐 수 있으므로 상태 안내도 함께 확인하세요. PlanRail 상태에 내 WorkRail 실행 버전과, 멤버라면 정상 동기화에서 받은 호스트 실행 버전이 표시됩니다. 호스트 버전 정보가 없는 구버전과도 동기화할 수 있으며 이 경우 확인 불가로 표시됩니다.'},
   {title:'오늘의 마감과 Node 작업을 확인합니다',text:'오늘의 일정에는 종료일까지 남은 달력 일수 또는 오늘 마감이 표시됩니다. Node 작업에서 버전을 바꾸면 위젯 위에 진행 상태가 표시됩니다. 내 개발 환경의 폴더 버튼은 선택한 Windows nvm의 버전 저장 위치 또는 실행 중인 WSL 기본 사용자의 nodenv 루트를 탐색기에서 엽니다.'},
-  {title:'상단 메뉴로 도구를 전환합니다',text:'PlanRail을 열면 기존 간트·달력과 일정 편집을 사용할 수 있습니다. NodeRail은 각 사용자의 PC에 적용되며 호스트·멤버 역할과 관계없습니다.'},
+  {title:'상단 메뉴로 도구를 전환합니다',text:'PlanRail을 열면 기존 간트·달력과 일정 편집을 사용할 수 있습니다. NodeRail에서 내 PC의 Node 버전을 관리하고, TermRail에서 SSH 서버에 연결합니다. 두 도구 모두 일정 공유 역할과 관계없이 사용할 수 있습니다.'},
   {title:'작성 중인 내용은 그대로 둡니다',text:'메뉴를 바꿔도 일정 입력과 날짜·화면 위치는 유지되고 공유와 알림도 계속 실행됩니다. 앱을 완전히 종료하기 전에는 작성 중인 내용을 저장하세요.'}],related:['app-overview','node-management']},
+ {id:'ssh-terminal',menu:'termrail',section:'기본 사용법',title:'SSH 서버 연결과 터미널 배치',intro:'TermRail에서 서버에 접속하고 여러 터미널의 배치를 저장합니다.',steps:[
+  {title:'서버를 엽니다',text:'탭의 ＋에서 새 터미널을 선택하고 서버 이름·호스트·포트를 저장하세요. 목록의 서버는 더블클릭으로 열고 우클릭으로 수정할 수 있습니다. 처음 연결하는 서버는 관리자에게 받은 지문을 확인한 뒤 로그인하세요.'},
+  {title:'터미널을 배치합니다',text:'서버 이름을 터미널 가장자리로 끌어 분할합니다. 경계를 움직여 크기를 바꾸거나 탭을 우클릭해 별도 창으로 옮길 수 있습니다. 별도 창을 닫으면 연결된 탭이 메인 창으로 돌아옵니다.'},
+  {title:'레이아웃을 다시 엽니다',text:'레이아웃 옆 저장으로 전체 창과 분할 비율을 기록합니다. 저장한 레이아웃을 열면 현재 세션이 종료되고 저장된 서버에 새 연결을 시작합니다. 각 터미널에서 아이디와 비밀번호를 입력하세요.'},
+ ],related:['workrail-home','window-tray']},
  {id:'node-management',menu:'noderail',section:'기본 사용법',title:'Node 버전 설치와 전환',intro:'Windows x64의 기존 nvm-windows와 WSL2 배포판 기본 사용자의 nodenv를 관리합니다. 실행 파일과 설정을 검증한 뒤 조회·설치·사용에 필요한 기능을 각각 확인합니다.',steps:[
   {title:'관리할 환경을 선택합니다',text:'환경이 하나면 자동으로 선택합니다. 여러 개면 마지막으로 사용한 환경을 복원하고, 처음에는 직접 선택합니다. Home과 NodeRail에서 같은 대상을 사용하며 환경 변경 버튼으로 바꿀 수 있습니다. 종료된 WSL 배포판은 환경 시작 버튼을 누른 뒤 내부 Node 설정을 조회합니다. 환경 다시 검사 중에는 버전 패널 상단에 진행선이 표시됩니다. 제목 옆의 최신 릴리스로 선택한 관리자의 공식 다운로드 페이지를 열 수 있습니다.'},
-  {title:'기존 Windows nvm을 확인합니다',text:'nvm-windows 1.x는 공용 심볼릭 링크를, 2.x는 검증된 설정과 기본 버전을 사용합니다. 기존 nvm의 조회·설치·사용은 각 기능을 확인한 뒤 제공합니다. nvm 2.0.1에서 ActiveVersion과 기존 Node 설치가 모두 없는 초기 상태에서는 첫 설치가 기본 버전을 자동 설정하므로 WorkRail에서 설치 버튼을 제한합니다. Windows 터미널에서 공식 nvm으로 첫 버전을 설치한 뒤 다시 확인하세요.'},
+  {title:'기존 Windows nvm을 확인합니다',text:'WorkRail은 nvm 실행 파일과 설정된 버전 저장 폴더를 확인합니다. 조회·설치·사용 중 제한된 기능이 있으면 환경 상태에서 이유를 확인하세요. nvm 2.x에 설치한 Node가 없어도 저장 폴더에 쓸 수 있으면 첫 버전을 설치할 수 있습니다. 현재 버전은 사용을 눌러 선택합니다.'},
   {title:'Windows에 nvm이 없는 경우',text:'별도의 공식 nvm-windows 1.2.2 설치 지원을 사용할 수 있습니다. 최초 설치로 PATH가 바뀌면 터미널을 다시 여세요. 다운로드가 실패하면 공식 nvm-windows 릴리스에서 수동 설치한 뒤 환경을 다시 확인하세요. 기존 Node와 충돌하는 경우 공식 MSI 대상을 확인했을 때 Windows 표준 화면에서 제거할 수 있습니다. 전역 도구·설정은 직접 백업하고, 개발 실행에서는 WorkRail Node 환경 복구 창에서 계속합니다.'},
   {title:'WSL의 nodenv와 빌드 도구를 준비합니다',text:'배포판의 기본 사용자로 공식 nodenv와 node-build 안내(github.com/nodenv/nodenv, github.com/nodenv/node-build)를 따라 설치하고 셸 초기화를 확인하세요. WorkRail은 도구를 자동 설치하지 않습니다. node-build가 없어도 지원되는 조회·전환은 사용할 수 있습니다. 필요한 경우 Node를 소스에서 빌드하며 시간과 디스크 공간, 배포판의 컴파일 도구가 필요합니다.'},
-  {title:'Windows에서 ZIP으로 설치합니다',text:'공식 nvm-windows 1.1.10·1.1.11에서는 WorkRail이 Windows x64용 공식 ZIP과 서명된 해시를 확인해 버전 폴더에 설치합니다. 설치 후 사용을 누르면 해당 Node로 전환합니다. 실패 후에는 환경 다시 검사로 실제 설치 목록과 작업 상태를 확인하세요.'},
-  {title:'사내 프록시로 설치합니다',text:'Windows nvm에 설정한 사용자명·비밀번호 없는 HTTP(S) 주소·포트 프록시를 사용할 수 있습니다. 공식 미러와 TLS 검증은 유지합니다. WSL은 선택한 배포판 기본 사용자의 로그인 환경에 내보낸 프록시와 NO_PROXY 예외를 따릅니다. 공식 배포 목록 조회는 WorkRail의 네트워크 연결을 사용합니다.'},
+  {title:'Windows에서 ZIP으로 설치합니다',text:'설치할 버전을 선택하면 WorkRail이 nodejs.org에서 Windows x64용 Node ZIP을 받습니다. 서명된 해시 목록과 ZIP의 SHA-256을 확인한 뒤 nvm에 설정된 버전 폴더에 압축을 풀고 설치 목록을 확인합니다. 설치 후 사용을 누르면 해당 버전으로 전환합니다. 오류가 발생하면 환경 다시 검사로 실제 설치 목록과 작업 상태를 확인하세요.'},
+  {title:'사내 프록시로 설치합니다',text:'Windows nvm에 설정한 사용자명·비밀번호 없는 HTTP(S) 주소·포트 프록시를 사용할 수 있습니다. ZIP은 nvm의 개인 미러 설정과 관계없이 공식 Node 배포 서버에서 받습니다. 조직 정책이 공식 서버를 통한 설치를 제한하면 환경 안내를 확인하세요. WSL은 선택한 배포판 기본 사용자의 로그인 환경에 내보낸 프록시와 NO_PROXY 예외를 따릅니다. 공식 배포 목록 조회는 WorkRail의 네트워크 연결을 사용합니다.'},
   {title:'공식 목록에서 설치하고 사용합니다',text:'설치와 사용은 별개입니다. LTS는 장기 지원 계열로 Krypton처럼 계열 코드명이 있으며 코드명만으로 현재 지원 여부를 판단할 수 없습니다. 공식 목록에 있어도 환경의 아키텍처와 도구의 지원 여부에 따라 설치가 제한될 수 있습니다. WSL에서 사용을 누르면 기본 사용자의 nodenv 기본 버전이 바뀝니다. 프로젝트의 .node-version과 셸의 NODENV_VERSION이 기본값보다 우선합니다. 실행 중인 Node 프로세스는 그대로 유지됩니다.'},
   {title:'작업 취소와 상태를 확인합니다',text:'설치·사용 단계는 두 목록 위의 작업 레이어에 표시됩니다. 작업 중에는 환경 변경, 앱 종료와 업데이트 설치를 기다립니다. WSL 작업의 종료 여부가 불명확하면 해당 배포판이 종료된 상태임을 다시 확인할 때까지 잠금이 유지됩니다. 로그를 보존하고 작업을 확인한 뒤 필요한 경우 배포판을 직접 종료하세요. WorkRail은 배포판을 자동 종료하지 않습니다. 중단된 작업 뒤 nodenv rehash에서 잠금 오류가 나오면 실제 로그와 공식 nodenv 복구 방법을 확인하세요.'}],note:'다른 터미널에서 같은 관리자 설정이나 배포판을 동시에 변경하면 확인 시점과 실행 시점의 상태가 달라질 수 있습니다. 작업 후 목록과 현재 사용 또는 기본 버전을 다시 확인하세요.',related:['workrail-home','saving-errors']},
  {id:'settings',menu:'settings',section:'기본 사용법',title:'기본 설정과 공유 설정',intro:'제목 표시줄은 릴리즈노트·도움말 | 설정 | 최소화·최대화·닫기 순서입니다. 톱니바퀴를 누르면 기본 설정 탭이 열립니다.',image:{file:'settings-personal.png',width:880,alt:'설정의 기본 설정·공유 설정 탭과 개인 휴일 입력',caption:'가상 개인 휴일을 등록한 실제 앱 화면',points:[{step:1,x:5,y:26},{step:2,x:5,y:46}]},steps:[

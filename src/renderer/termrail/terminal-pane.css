@@ -1,0 +1,36 @@
+.termrail-console {
+  --console-bg: #f4f9f6;
+  --console-fg: #16382e;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 6px;
+  background: var(--console-bg);
+  color: var(--console-fg);
+  font: 13px/1.4 Consolas, "Malgun Gothic", monospace;
+}
+[data-theme="dark"] .termrail-console { --console-bg: #171d22; --console-fg: #e2ebef; }
+.termrail-xterm { flex: 1 1 0; min-width: 0; min-height: 0; overflow: hidden; }
+.termrail-console-prompt { position: absolute; inset: 4px 6px; overflow: auto; }
+.termrail-login label { display: flex; align-items: baseline; gap: .5ch; white-space: nowrap; }
+.termrail-login input {
+  flex: 1 1 0;
+  min-width: 0;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+}
+.termrail-login input:focus { outline: 0; }
+.termrail-host-key { display: grid; gap: 4px; justify-items: start; overflow-wrap: anywhere; }
+.termrail-host-key div { display: flex; flex-wrap: wrap; gap: 5px; }
+.termrail-host-key button { font: 12px/1.4 "Segoe UI","Malgun Gothic",sans-serif; padding: 1px 6px; }
+.termrail-console-status, .termrail-transcript-note { flex: none; overflow-wrap: anywhere; }

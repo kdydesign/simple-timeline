@@ -1,0 +1,81 @@
+.termrail {
+  grid-area: 1 / 1;
+  position: relative;
+  display: grid;
+  grid-template-columns: clamp(88px, 10vw, 128px) minmax(0, 1fr);
+  gap: 6px;
+  padding: var(--workrail-frame, 14px);
+  min-width: 0;
+  min-height: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+.termrail[inert] { visibility: hidden; pointer-events: none; }
+.termrail-sidebar, .termrail-work {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--rim, var(--border));
+  border-radius: 4px;
+  background: var(--surface);
+}
+.termrail-side-head { display: flex; align-items: center; justify-content: space-between; gap: 1px; padding: 5px 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
+.termrail-side-head button, .termrail-servers button, .termrail-layouts button, .termrail-tabs button,
+.termrail-caption button, .termrail-menu button, .termrail-notice button {
+  border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--text); font: inherit;
+}
+.termrail-side-head button { color: var(--accent); padding: 0 2px; white-space: nowrap; }
+.termrail-servers { flex: 1; min-height: 0; overflow: auto; }
+.termrail-layouts { max-height: 28%; overflow: auto; }
+.termrail-layout-title { border-top: 1px solid var(--rim, var(--border)); }
+.termrail-servers button, .termrail-layouts button {
+  display: block; width: 100%; height: 20px; line-height: 20px; font-size: 12px; padding: 0 8px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;
+}
+.termrail :is(button,input):focus-visible, .termrail-caption button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.termrail-tabs { display: flex; flex: 0 0 23px; align-items: stretch; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; background: var(--subtle); border-bottom: 1px solid var(--border); }
+.termrail-tabs [role="tablist"] { display: flex; }
+.termrail-tabs button { flex: none; padding: 0 9px; color: var(--muted); font-size: 11px; white-space: nowrap; border-right: 1px solid var(--border); }
+.termrail-tabs [aria-selected="true"] { background: var(--selected-control); box-shadow: inset 0 2px var(--accent); color: var(--text); }
+.termrail-tabs .termrail-add-tab { width: 23px; padding: 0; text-align: center; font-size: 14px; }
+.termrail-stage, .termrail-split, .termrail-leaf { position: relative; display: flex; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+.termrail-stage[hidden] { display: none; }
+.termrail-split.column, .termrail-leaf { flex-direction: column; }
+.termrail-branch { display: flex; min-width: 0; min-height: 0; flex-basis: 0; overflow: hidden; }
+.termrail-divider { flex: 0 0 5px; cursor: col-resize; background: var(--border); touch-action: none; }
+.column > .termrail-divider { cursor: row-resize; }
+.termrail-divider:is(:hover,:focus-visible,:active) { background: var(--accent); outline: none; }
+.termrail-leaf { background: var(--subtle); }
+.termrail-caption {
+  display: flex; flex: 0 0 19px; align-items: center; gap: 6px; min-width: 0; padding: 0 5px 0 7px;
+  background: var(--surface); color: var(--muted); font-size: 10.5px; line-height: 17px;
+}
+.termrail-caption span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.termrail-caption::before { content: ''; flex: 0 0 5px; height: 5px; border-radius: 50%; background: #ccab67; }
+.termrail-leaf:has([data-state="connected"]) > .termrail-caption::before { background: #86b9a1; }
+.termrail-leaf:has([data-state="failed"], [data-state="closed"], .termrail-session-error) > .termrail-caption::before { background: #d47d77; }
+.termrail-leaf[data-focused="true"] > .termrail-caption { background: var(--selected-control); color: var(--text); }
+.termrail-caption button, .termrail-notice button { margin-left: auto; padding: 0 4px; font-size: 14px; line-height: 16px; }
+.termrail-empty { margin: auto; padding: 8px; color: var(--muted); font-size: 12px; }
+.termrail-drop { position: absolute; z-index: 2; pointer-events: none; inset: 0; background: #5685ae5c; border: 1px solid var(--accent); }
+.termrail-drop.left { right: 50%; }
+.termrail-drop.right { left: 50%; }
+.termrail-drop.top { bottom: 50%; }
+.termrail-drop.bottom { top: 50%; }
+.termrail-menu, .termrail-dialog { border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--surface); box-shadow: var(--popup-shadow); }
+.termrail-menu { position: fixed; z-index: 20; padding: 3px; min-width: 125px; max-height: 50vh; overflow: auto; }
+.termrail-menu button { display: block; width: 100%; padding: 4px 7px; font-size: 12px; text-align: left; }
+.termrail-dialog { width: min(275px, 95vw); padding: 14px; }
+.termrail-dialog::backdrop { background: #14191f66; }
+.termrail-dialog h3 { margin: 0 0 12px; font-size: 15px; }
+.termrail-dialog label { display: grid; gap: 4px; margin-top: 8px; font-size: 12px; }
+.termrail-dialog input { padding: 4px 6px; font-size: 13px; border-radius: 3px; }
+.termrail-actions { display: flex; justify-content: flex-end; gap: 6px; margin-top: 12px; }
+.termrail-actions button { padding: 3px 8px; border-radius: 3px; font-size: 12px; }
+.termrail-actions button[type="submit"] { background: var(--selected-control); border-color: var(--selected-border); }
+.termrail-notice { display: flex; align-items: center; gap: 8px; position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--surface); color: var(--text); padding: 7px 10px; border: 1px solid var(--border); border-radius: 4px; }
+.termrail-dialog [role="alert"], .termrail-session-error { color: var(--warning-text); font-size: 12px; }
+.termrail-session-error { padding: 0 8px; }
+.termrail-floating { display: flex; width: 100vw; height: 100vh; color: var(--text); background: var(--page); }

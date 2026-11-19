@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { buffer } from 'node:stream/consumers'
-import { IncompleteNodeInstallationError, installVerifiedNodeZip, inspectNodeZipInstallation } from '../../src/main/node-management/zip-install'
+import { IncompleteNodeInstallationError, installVerifiedNodeZip, inspectNodeZipInstallation, prepareNodeZipRoot } from '../../src/main/node-management/zip-install'
 
 const { ZipFile } = createRequire(import.meta.url)('yazl')
 const version = '22.13.1'
@@ -101,4 +101,15 @@ it('preserves an existing complete x64 package using the classic node64.exe layo
   await rename(join(root, 'v' + version, 'node.exe'), join(root, 'v' + version, 'node64.exe'))
   expect(await inspectNodeZipInstallation(root, version)).toBe('complete')
   expect(await install(archive)).toBe('already-installed')
+})
+
+it('creates a missing modern version store under its checked parent and rejects a redirected ancestor', async () => {
+  const store = join(root, '한글 Node 저장소')
+  await expect(prepareNodeZipRoot(store, version, false)).rejects.toMatchObject({ code: 'ENOENT' })
+  await prepareNodeZipRoot(store, version, true)
+  expect(await readdir(store)).toEqual([])
+  const alias = join(root, 'alias')
+  await symlink(store, alias, 'junction')
+  await expect(prepareNodeZipRoot(join(alias, 'new'), version, true)).rejects.toThrow()
+  expect(await readdir(store)).toEqual([])
 })

@@ -1,6 +1,6 @@
 # TermRail SSH 터미널 설계
 
-2026-11-19 사용자가 네 번째 시안(커밋 `549d756`)의 화면과 사용자 동작을 승인했다. 공통 메뉴 크기, 서버 등록·수정·로그인, 탭과 별도 창, 분할 조절·닫기, 레이아웃 전체 저장·교체는 아래 표를 기준으로 한다. 현재 단계는 설계 확정이며 제품 구현은 미착수다. [승인 시안](mockups/termrail-v4.html) · [관련 ZIP 설치·아이콘 설계](windows-node-zip-all-versions.md)
+2026-11-19 사용자가 네 번째 시안(커밋 `549d756`)의 화면과 사용자 동작을 승인했다. 공통 메뉴 크기, 서버 등록·수정·로그인, 탭과 별도 창, 분할 조절·닫기, 레이아웃 전체 저장·교체는 아래 표를 기준으로 한다. 승인 이후 제품 구현과 인수 범위는 [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md)에서 확인한다. [승인 시안](mockups/termrail-v4.html) · [관련 ZIP 설치·아이콘 설계](windows-node-zip-all-versions.md)
 
 ## 사용자 요구
 
@@ -12,9 +12,9 @@
 
 ## 현재 구조와 설계 방향
 
-현재 Electron·React 앱에는 SSH·터미널 엔진 의존성이 없다. 메인 창은 sandbox·contextIsolation을 사용하며 renderer의 Node 접근은 꺼져 있다. 기존 공유 자격 정보에는 Electron safeStorage 기반 저장 기능이 있다. TermRail은 아이디와 비밀번호를 연결할 때마다 입력받는다. [현재 의존성](../../package.json) · [창 설정](../../src/main/window.ts) · [공유 비밀정보 저장](../../src/main/sharing/secrets.ts)
+설계 시작 시 Electron·React 앱에는 SSH·터미널 엔진 의존성이 없었다. 메인 창은 sandbox·contextIsolation을 사용하며 renderer의 Node 접근은 꺼져 있다. 기존 공유 자격 정보에는 Electron safeStorage 기반 저장 기능이 있다. TermRail은 아이디와 비밀번호를 연결할 때마다 입력받는다. [현재 의존성](../../package.json) · [창 설정](../../src/main/window.ts) · [공유 비밀정보 저장](../../src/main/sharing/secrets.ts)
 
-검토 방향은 앱 내부 터미널 화면과 메인 측 연결 관리를 결합하는 방식이다. 외부 PuTTY 창을 관리하는 방식, 내장 터미널에서 SSH 라이브러리를 사용하는 방식, OS의 SSH 실행 파일을 연결하는 방식의 기능·배포·인증·사내 보안 환경 차이를 조사한 뒤 구현 방식을 확정한다. 실제 라이브러리와 버전은 아직 선택하지 않았다.
+검토 방향은 앱 내부 터미널 화면과 메인 측 연결 관리를 결합하는 방식이다. 외부 PuTTY 창을 관리하는 방식, 내장 터미널에서 SSH 라이브러리를 사용하는 방식, OS의 SSH 실행 파일을 연결하는 방식의 기능·배포·인증·사내 보안 환경 차이를 조사한 뒤 구현 방식을 확정한다. 구현에서는 Electron 메인 프로세스에 ssh2를, 화면에 xterm.js를 적용했다. 호스트 키 확인과 운영체제 창의 수명은 [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md)에 기록한다.
 
 설계에서 아래 개념을 구분한다. 용어는 협의를 위한 초안이다.
 

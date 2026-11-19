@@ -16,6 +16,8 @@
   <rect width="256" height="256" rx="31" fill="url(#edge)"/>
   <rect x="1.6" y="1.6" width="252.8" height="252.8" rx="29.5" fill="url(#ink)"/>
   <rect x="1.6" y="1.6" width="252.8" height="252.8" rx="29.5" fill="url(#glass)"/>
-  <path fill="url(#silver)" d="M17 68h124l-33.5 39.5H17z M17 132.5h70l-33.5 39.5H17z"/>
-  <path fill="url(#sky)" d="M59 190.5 161 68h52L111 190.5z M130 190.5l69.5-83h39.5l-69.5 83z"/>
+  <g transform="translate(128 129.25) scale(.92) translate(-128 -129.25)">
+    <path fill="url(#silver)" d="M17 68h124l-33.5 39.5H17z M17 132.5h70l-33.5 39.5H17z"/>
+    <path fill="url(#sky)" d="M59 190.5 161 68h52L111 190.5z M130 190.5l69.5-83h39.5l-69.5 83z"/>
+  </g>
 </svg>

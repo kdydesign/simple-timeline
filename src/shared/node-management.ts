@@ -21,7 +21,7 @@ export type NodeManagementErrorCode =
   | 'confirmation-expired' | 'removal-unavailable' | 'reboot-required' | 'installer-busy'
   | 'zip-download' | 'zip-integrity' | 'zip-permission' | 'zip-incomplete' | 'zip-extraction' | 'zip-blocked'
   | 'download-failed' | 'integrity-failed' | 'verification-failed'
-  | 'nvm-install-failed' | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
+  | 'nvm-list-unsupported' | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
 
 export interface NodeManagementError {
   code: NodeManagementErrorCode
