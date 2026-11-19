@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| SSH 터미널 메뉴 확장 협의 | [요구사항·질문·화면 기준](../design/ssh-terminal-menu.md). 이름·인증·다중 터미널·레이아웃 저장을 협의 중이며 구현 전. |
 | Windows 전 버전 공식 ZIP 설치·내부 로고 축소 | [후속 설계 초안·시안](../design/windows-node-zip-all-versions.md). Windows 설치 방식 통일은 사용자 지정 사항이며 세부 절차 검토와 제품 구현은 별도 진행. |
 | Node 공식 ZIP 설치·실패 후 환경 다시 검사·Windows 셸 아이콘 | [설계](../design/noderail-zip-recovery-shell-icons.md) · [구현 및 검증](../implementation/2026-11-19-windows-node-zip.md). Windows nvm 1.1.10·1.1.11 직접 설치, 종료 확인 후 재검사, 시작 메뉴와 작업 표시줄 아이콘. |
 | NodeRail 사내 프록시와 설치·사용 진행 화면 | [확정 설계·시안 A·인수 기준](../design/noderail-proxy-and-loading.md). Windows 주소·포트 프록시, WSL2 배포판별 설정, 양쪽 목록 레이어, 두 헤더의 불투명도. [구현과 검증 범위](../implementation/2026-11-19-noderail-proxy-loading.md) |
