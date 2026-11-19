@@ -69,7 +69,7 @@ if ($AsStandardUser) {
   }
   $ancestor = Get-Item -LiteralPath $dataRoot -Force
   while ($ancestor) {
-    if (-not $ancestor.PSIsContainer -or ($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
+    if (-not ($ancestor.Attributes -band [IO.FileAttributes]::Directory) -or ($ancestor.Attributes -band [IO.FileAttributes]::ReparsePoint)) {
       throw 'Unexpected redirected nvm data root'
     }
     if ($ancestor.FullName -ieq $env:USERPROFILE) { break }
