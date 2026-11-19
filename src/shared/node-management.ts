@@ -20,7 +20,7 @@ export type NodeManagementErrorCode =
   | 'cancelled' | 'operation-failed' | 'operation-unknown' | 'operation-slow'
   | 'confirmation-expired' | 'removal-unavailable' | 'reboot-required' | 'installer-busy'
   | 'download-failed' | 'integrity-failed' | 'verification-failed'
-  | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
+  | 'nvm-install-failed' | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
 
 export interface NodeManagementError {
   code: NodeManagementErrorCode
@@ -28,7 +28,7 @@ export interface NodeManagementError {
 }
 
 export interface NodeConflict {
-  code: 'standalone-node' | 'path-priority' | 'link-occupied' | 'link-not-on-path' | 'mirror' | 'manager-configuration'
+  code: 'standalone-node' | 'path-priority' | 'link-occupied' | 'link-not-on-path' | 'mirror' | 'proxy' | 'manager-configuration'
   /** Display-only location of a detected conflict. It is never accepted as input. */
   path: string | null
   message: string

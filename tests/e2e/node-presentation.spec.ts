@@ -130,9 +130,13 @@ test('centers and sorts the Node catalog with aligned independently scrolling pa
   for (const theme of ['dark', 'light']) {
     await page.evaluate(theme => { document.documentElement.dataset.theme = theme }, theme)
     await catalogScroll.evaluate(element => { element.scrollTop = 0 })
-    await expect(table.locator('thead')).toHaveCSS('backdrop-filter', await installedHeading.evaluate(element => getComputedStyle(element).backdropFilter))
-    await expect(table.locator('thead')).toHaveCSS('background-color', await installedHeading.evaluate(element => getComputedStyle(element).backgroundColor))
+    const headerColor = await installedHeading.evaluate(element => getComputedStyle(element).backgroundColor)
+    expect(headerColor).toMatch(/^rgba\(.+, 0\.\d+\)$/)
+    await expect(table.locator('thead')).toHaveCSS('background-color', headerColor)
+    await expect(installedHeading).toHaveCSS('backdrop-filter', 'blur(12px)')
+    await expect(table.locator('thead')).toHaveCSS('backdrop-filter', 'blur(12px)')
     await catalogScroll.evaluate(element => { element.scrollTop = 240 })
+    await expect(table.locator('thead')).toHaveCSS('background-color', headerColor)
     await expect(table.locator('thead')).toHaveCSS('backdrop-filter', 'blur(12px)')
     for (const end of ['bottom', 'top']) {
       const scrollTop = await listScroll.evaluate((element, end) => {
@@ -158,7 +162,7 @@ test('centers and sorts the Node catalog with aligned independently scrolling pa
   }
 })
 
-test('matches the calendar header material and menu gap while retaining keyboard sorting', async ({ desktop }) => {
+test('preserves the calendar header and shared menu gap while retaining keyboard sorting', async ({ desktop }) => {
   const { page } = desktop
   await showWindowsNode(desktop)
   const menu = page.getByRole('navigation', { name: 'WorkRail 도구' })
@@ -169,16 +173,11 @@ test('matches the calendar header material and menu gap while retaining keyboard
     await page.getByRole('button', { name: '달력', exact: true }).click()
     const calendar = page.locator('.calendar-top')
     await expect(calendar).toBeVisible()
-    const calendarStyle = await calendar.evaluate(element => {
-      const style = getComputedStyle(element)
-      return { background: style.backgroundColor, blur: style.backdropFilter }
-    })
+    await expect(calendar).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
     const toolbarTop = (await box(page.locator('.toolbar'))).y
     await menu.getByRole('button', { name: 'NodeRail', exact: true }).click()
     const panelTop = (await box(page.getByRole('region', { name: '현재 사용 버전' }))).y
     expect(Math.abs(panelTop - toolbarTop)).toBeLessThanOrEqual(1)
-    await expect(table.locator('thead')).toHaveCSS('background-color', calendarStyle.background)
-    await expect(table.locator('thead')).toHaveCSS('backdrop-filter', calendarStyle.blur)
   }
   const sort = table.getByRole('button', { name: 'Node 버전 정렬' })
   const restingStyle = await sort.evaluate(element => {
@@ -508,4 +507,40 @@ test('covers the Node widget without moving its previous rows and keeps focus an
   await dock.getByRole('button', { name: 'Home' }).click()
   await expect(widget.getByRole('status')).toContainText('소스 컴파일 중')
   await expect(list.locator('li')).toHaveCount(3)
+})
+
+test('keeps both lists in place during a switch and returns focus to the list when the version becomes active', async ({ desktop }, info) => {
+  const { page } = desktop
+  await page.setViewportSize({ width: 1024, height: 720 })
+  const state = await showWindowsNode(desktop)
+  const menu = page.getByRole('navigation', { name: 'WorkRail 도구' })
+  await menu.getByRole('button', { name: 'NodeRail' }).click()
+  const main = page.getByRole('main', { name: 'NodeRail' })
+  const grid = main.locator('.workrail-node-grid')
+  const installed = grid.locator('.workrail-installed-scroll')
+  const catalog = grid.locator('.workrail-node-table-scroll')
+  const version = '22.19.0'
+  const trigger = installed.getByRole('button', { name: version + ' 사용', exact: true })
+  await trigger.focus()
+  await catalog.evaluate(element => { element.scrollTop = 110 })
+  const offsets = () => Promise.all([catalog, installed].map(list => list.evaluate(element => element.scrollTop)))
+  const before = await offsets()
+  expect(before.every(top => top > 0)).toBe(true)
+  const bounds = await box(grid)
+  await publishNode(desktop, { ...state, revision: 1001, installedVersions: [], activeVersion: null,
+    busy: { kind: 'use', version, phase: 'waiting', cancellable: false } })
+  const overlay = main.locator('.workrail-node-overlay')
+  await expect(overlay.getByRole('status')).toContainText('Windows 권한 확인')
+  await expect(overlay).toBeFocused()
+  await expect(grid).toHaveAttribute('inert', '')
+  expect(await offsets()).toEqual(before)
+  expect(await box(overlay)).toEqual(bounds)
+  const card = main.getByRole('region', { name: '현재 사용 버전' })
+  const current = await box(card)
+  expect(current.y + current.height).toBeLessThanOrEqual(bounds.y)
+  await page.screenshot({ path: info.outputPath('noderail-use-overlay.png') })
+  await publishNode(desktop, { ...state, revision: 1002, activeVersion: version })
+  await expect(overlay).toHaveCount(0)
+  await expect(grid.getByRole('heading', { name: '설치된 버전' })).toBeFocused()
+  expect(await offsets()).toEqual(before)
 })

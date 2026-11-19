@@ -1,4 +1,4 @@
-import type { NodeCapabilities } from '../../shared/node-management'
+import type { NodeCapabilities, NodeConflict } from '../../shared/node-management'
 
 // SHA-256 of installed files from the official nvm-windows/nvm release assets.
 // 1.x nvm-noinstall.zip and v2.0.1 nvm-2.0.1-x64-setup.exe.
@@ -20,4 +20,22 @@ export const modernHelpers = {
 export const availability = (reason: string | null) => ({ available: reason === null, reason })
 export function capabilities(reason: string | null): NodeCapabilities {
   return { list: availability(reason), install: availability(reason), use: availability(reason) }
+}
+
+/** Classify the setting locally. Only fixed diagnostics may enter discovery state. */
+export function proxyConflict(raw: unknown, family: 'classic' | 'modern', authenticated = false): NodeConflict | null {
+  const invalid: NodeConflict = { code: 'proxy', path: null, message: 'nvm 프록시 설정을 확인해 주세요. NodeRail은 HTTP(S) 서버 주소와 포트 방식을 지원합니다.' }
+  if (authenticated || (typeof raw === 'string' && /^(?:[a-z][a-z0-9+.-]*:\/\/)?[^/?#]*@/i.test(raw))) {
+    return { code: 'proxy', path: null, message: 'NodeRail은 인증 정보가 없는 HTTP(S) 프록시만 지원합니다. 사용 가능한 연결 방식을 사내 네트워크 관리자에게 확인해 주세요.' }
+  }
+  if (raw === undefined || raw === '' || (family === 'classic' && raw === 'none')) return null
+  if (typeof raw !== 'string') return invalid
+  const endpoint = /^(https?:\/\/)?(?:[\p{L}\p{N}_-]+(?:\.[\p{L}\p{N}_-]+)*\.?|\[[\da-f:.]+\])(?::(\d+))?\/?$/iu.exec(raw)
+  if (!endpoint) return invalid
+  const [, scheme, port] = endpoint
+  // Both CLIs prepend http:// to bare host:port. Classic checks the first
+  // four bytes for "http" before adding it, even for a scheme-less hostname.
+  if (!scheme && (!port || (family === 'classic' && (Buffer.byteLength(raw) < 4 || /^http/i.test(raw))))) return invalid
+  if (port && Number(port) === 0) return invalid
+  return URL.canParse(scheme ? raw : 'http://' + raw) ? null : invalid
 }

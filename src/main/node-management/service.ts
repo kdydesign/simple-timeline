@@ -43,6 +43,7 @@ const messages: Record<NodeManagementErrorCode, string> = {
   'version-unavailable': '공식 배포 목록에서 이 Windows x64 버전을 찾지 못했습니다. 목록을 새로고침해 주세요.',
   'version-not-installed': '이 Windows x64 버전이 nvm에 설치되어 있지 않습니다.',
   cancelled: 'Windows 권한 요청 또는 설치가 취소되었습니다.',
+  'nvm-install-failed': 'nvm이 Node 설치를 완료하지 못했습니다. 공식 배포 서버 연결, 사내 프록시의 응답 및 설치 폴더 권한을 확인한 뒤 다시 시도해 주세요.',
   'operation-failed': 'Node 작업에 실패했습니다. Windows 권한, 인터넷 연결 및 nvm 설정을 확인해 주세요.',
   'operation-unknown': 'Node 작업이 아직 실행 중일 수 있습니다. Windows 작업 관리자에서 설치 프로그램과 승격 작업이 끝났는지 확인해 주세요. 중복 변경은 차단됩니다. 작업이 끝난 뒤 Windows를 재부팅하고 복구 창에서 다시 검사해 주세요.',
   'operation-slow': '예상보다 오래 걸리고 있습니다. Windows 권한 확인 또는 설치 창을 확인해 주세요.',
@@ -233,6 +234,7 @@ export function createNodeManagementService(options: {
     }
     setPhase('verifying')
     const updated = await inspect()
+    if (kind === 'install' && outcome.status === 'failed') return 'nvm-install-failed'
     if (outcome.status !== 'success') return exitErrors[outcome.status]
     const preservedDefault = kind !== 'install' || (updated?.activeVersion === current.activeVersion && updated.activeSource === current.activeSource)
     const verified = preservedDefault && updated && updated.manager.status === 'ready' && (kind === 'install-manager' ? updated.conflicts.length === 0 : !operationBlocked(updated, kind)) && (
@@ -291,7 +293,10 @@ export function createNodeManagementService(options: {
         // Keep the shutdown reservation latched when its lifetime is unknown.
         await new Promise<never>(() => {})
       } else {
-        const reason = code === 'environment-conflict' && (kind === 'install' || kind === 'use') ? state.capabilities?.[kind].reason : null
+        let reason = code === 'environment-conflict' && (kind === 'install' || kind === 'use') ? state.capabilities?.[kind].reason : null
+        if (code === 'verification-failed' && kind === 'install') {
+          reason = 'nvm 설치 결과를 확인하지 못했습니다. 설치 목록과 기본 버전을 다시 검사해 주세요. 요청한 버전이 없다면 공식 배포 서버 연결과 프록시 응답을 확인해 주세요.'
+        }
         publish({ busy: null, error: code ? { code, message: reason ?? messages[code] } : null })
         resolveResult(state)
       }

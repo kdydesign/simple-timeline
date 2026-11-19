@@ -72,3 +72,102 @@ it('keeps release guidance available for selected stopped WSL without reporting 
   expect(panel.queryByText('nodenv 1.5.0 설치')).toBeNull()
   expect(panel.getByRole('link', { name: /최신 릴리스/ })).toHaveAccessibleDescription(/nodenv/)
 })
+
+const release = { version: '24.0.0', date: '2026-01-01', lts: null, npm: null, security: false }
+const beforeInstall: NodeManagementState = { ...snapshot, catalog: { ...snapshot.catalog, releases: [release] } }
+const installing: NodeManagementState = { ...snapshot, revision: 2, activeVersion: null, installedVersions: [],
+  busy: { kind: 'install', version: release.version, phase: 'waiting' } }
+
+it('covers both lists with one live stage and restores the focused action after an install', () => {
+  const { update } = showDetail()
+  update({ state: beforeInstall })
+  const catalog = screen.getByRole('region', { name: '공식 배포 목록' })
+  const installed = screen.getByRole('region', { name: '설치된 버전' })
+  const install = within(catalog).getByRole('button', { name: '24.0.0 설치' })
+  const currentVersion = within(installed).getByText('22.0.0')
+  const scroll = catalog.querySelector('.workrail-node-table-scroll')!
+  const installedScroll = installed.querySelector('.workrail-installed-scroll')!
+  scroll.scrollTop = 88
+  installedScroll.scrollTop = 112
+  install.focus()
+  update({ state: installing, operationBaseline: beforeInstall, busy: true })
+  expect(catalog.closest('[inert]')).not.toBeNull()
+  expect(installed.closest('[inert]')).toBe(catalog.closest('[inert]'))
+  expect(currentVersion).toBeInTheDocument()
+  expect(install).toBeInTheDocument()
+  const status = screen.getByText(/24\.0\.0 설치.*Windows 권한/)
+  expect(status).toHaveAttribute('role', 'status')
+  const overlay = status.closest('.workrail-node-overlay')!
+  expect(overlay).not.toBeNull()
+  expect(overlay.contains(document.activeElement)).toBe(true)
+  expect(overlay.closest('[inert]')).toBeNull()
+  expect(screen.queryByRole('button', { name: '작업 취소' })).toBeNull()
+  update({ state: { ...beforeInstall, installedVersions: ['22.0.0', '24.0.0'] } })
+  expect(install).toHaveAccessibleName('24.0.0 사용')
+  expect(install).toHaveFocus()
+  expect(scroll.scrollTop).toBe(88)
+  expect(installedScroll.scrollTop).toBe(112)
+})
+
+it('uses a nearby heading when the focused use action becomes disabled and respects focus moved elsewhere', () => {
+  const { update } = showDetail()
+  const initial = { ...beforeInstall, installedVersions: ['22.0.0', '24.0.0'] }
+  update({ state: initial })
+  const installed = within(screen.getByRole('region', { name: '설치된 버전' }))
+  const use = installed.getByRole('button', { name: '24.0.0 사용' })
+  const running = { state: { ...initial, busy: { kind: 'use', version: '24.0.0', phase: 'checking' } }, busy: true, operationBaseline: initial } as const
+  use.focus()
+  update(running)
+  update({ state: { ...initial, activeVersion: '24.0.0' } })
+  expect(installed.getByRole('heading')).toHaveFocus()
+  update({ state: initial })
+  use.focus()
+  update(running)
+  const outside = document.createElement('button')
+  document.body.append(outside)
+  try {
+    outside.focus()
+    update({ state: initial })
+    expect(outside).toHaveFocus()
+  } finally {
+    outside.remove()
+  }
+})
+
+it('keeps live WSL cancellation and logs available and exposes recheck when the environment becomes unavailable', () => {
+  const { update } = showDetail()
+  const wsl: NodeEnvironment = { id: 'wsl:12345678-1234-1234-1234-123456789abc', label: 'Ubuntu', kind: 'wsl2', running: true }
+  const active = { ...installing, busy: { kind: 'install', version: release.version, phase: 'compiling', cancellable: true },
+    operationLog: ['building'], environments: { status: 'ready', selectedId: wsl.id, items: [wsl], error: null } } satisfies NodeManagementState
+  const cancel = vi.fn(async () => {})
+  update({ state: active, busy: true, environment: wsl, cancelOperation: cancel })
+  const status = screen.getByText(/24\.0\.0 설치.*소스 컴파일/)
+  const scope = status.closest<HTMLElement>('.workrail-node-overlay')
+  expect(scope).not.toBeNull()
+  fireEvent.click(within(scope!).getByRole('button', { name: '작업 취소' }))
+  expect(cancel).toHaveBeenCalledOnce()
+  const logs = within(scope!).getByText('작업 로그')
+  logs.focus()
+  fireEvent.click(logs)
+  expect(within(scope!).getByText('building')).toBeVisible()
+  const stopped = { ...wsl, running: false }
+  update({ state: { ...active, environments: { ...active.environments, items: [stopped] },
+    error: { code: 'operation-unknown', message: '종료 상태를 확인해 주세요.' } }, busy: true, environment: stopped })
+  expect(screen.queryByRole('region', { name: '설치된 버전' })).toBeNull()
+  expect(screen.getByRole('alert')).toHaveTextContent('종료 상태를 확인해 주세요.')
+  expect(screen.getByRole('button', { name: '환경 다시 검사' })).toBeEnabled()
+  expect(screen.getByRole('heading', { name: '기본 버전' })).toHaveFocus()
+  expect(screen.queryByRole('button', { name: '작업 취소' })).toBeNull()
+})
+
+it('keeps focus in the overlay when WSL verification withdraws cancellation', () => {
+  const { update } = showDetail()
+  const wsl: NodeEnvironment = { id: 'wsl:12345678-1234-1234-1234-123456789abc', label: 'Ubuntu', kind: 'wsl2', running: true }
+  const operation = { kind: 'install', version: '24.0.0', phase: 'compiling', cancellable: true } as const
+  const active = { ...installing, busy: operation, environments: { status: 'ready', selectedId: wsl.id, items: [wsl], error: null } } satisfies NodeManagementState
+  update({ state: active, busy: true, environment: wsl })
+  screen.getByRole('button', { name: '작업 취소' }).focus()
+  update({ state: { ...active, busy: { ...operation, phase: 'verifying', cancellable: false } }, busy: true, environment: wsl })
+  expect(screen.queryByRole('button', { name: '작업 취소' })).toBeNull()
+  expect(screen.getByRole('group', { name: 'Node 작업 진행' })).toHaveFocus()
+})

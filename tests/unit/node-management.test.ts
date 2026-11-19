@@ -193,9 +193,48 @@ describe('Windows Node discovery', () => {
     expect(state.conflicts).toEqual([expect.objectContaining({ code: 'mirror', path: null })])
   })
 
-  it('does not interpret a non-default proxy as the unset value', async () => {
-    const state = await local({ settings: 'root: ' + home + '\npath: ' + symlink + '\nproxy: none/' })
-    expect(state.conflicts).toEqual([expect.objectContaining({ code: 'mirror', path: null })])
+  it.each([
+    ['1.1.11', 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791', 'gateway.example:8080'],
+    ['1.2.2', officialDigest, 'https://[2001:db8::1]:443/'],
+  ])('installs with the existing address/port proxy on %s', async (version, digest, proxy) => {
+    const bytes = settings.replace('proxy: none', 'proxy: ' + proxy)
+    const state = await local({ digest, settings: bytes })
+    expect(state).toMatchObject({
+      manager: { version }, conflicts: [], capabilities: { install: { available: true } },
+      installation: { useProxyEnvironment: true, settingsDigest: createHash('sha256').update(bytes).digest('hex') },
+    })
+    const invocation = buildNvmInvocation(state.installation!, 'install', '24.11.0')
+    expect(invocation).toMatchObject({ useProxyEnvironment: true })
+    expect(JSON.stringify([state, invocation])).not.toContain(proxy)
+  })
+
+  it.each([
+    ['http://user:example-pass@gateway.example:8080', '인증'],
+    ['user:example-pass@gateway.example:8080', '인증'],
+    ['socks5://gateway.example:1080', 'HTTP(S)'],
+    ['http://gateway.example:65536', 'HTTP(S)'],
+    ['http://gateway.example:0', 'HTTP(S)'],
+    ['http://gateway.example:8080/route', 'HTTP(S)'],
+    ['https://gateway.example/?token=example-pass', 'HTTP(S)'],
+    ['none/', 'HTTP(S)'],
+  ])('withholds only installation and identifies the proxy issue for %s', async (proxy, hint) => {
+    const current = await local({ settings: settings.replace('proxy: none', 'proxy: ' + proxy) })
+    const { service, changes } = makeService(adapter({ discover: async () => current }))
+    const state = await service.install('24.11.0')
+    expect(state).toMatchObject({
+      error: { code: 'environment-conflict', message: expect.stringContaining(hint) },
+      conflicts: [{ code: 'proxy', path: null }],
+      capabilities: { list: { available: true }, install: { available: false }, use: { available: true } },
+    })
+    expect((await service.use('22.9.0')).error).toBeNull()
+    expect(JSON.stringify(changes)).not.toMatch(/gateway\.example|example-pass|none\//)
+  })
+
+  it('retains the configuration integrity block while explaining credentials with unescaped expansion characters', async () => {
+    const state = await local({ settings: settings.replace('proxy: none', 'proxy: http://user:example$pass@gateway.example') })
+    expect(state.capabilities?.install).toMatchObject({ available: false, reason: expect.stringContaining('인증') })
+    expect(state.installation).toBeNull()
+    expect(JSON.stringify(state)).not.toMatch(/gateway\.example|example\$pass/)
   })
 
   it('does not prepare an elevated command for an unsafe shell path or a replaced settings file', async () => {
@@ -240,6 +279,14 @@ describe('elevated Windows commands', () => {
     const invocation = buildNvmInvocation(installation, 'use', '22.9.0')
     expect(invocation).toMatchObject({ legacyHelperRoot: directory })
     const args = createElevationCommand('C:\\Windows\\System32', invocation)
+    expect(args.join(' ').length + 100).toBeLessThan(32767)
+  })
+
+  it('fits the proxy-aware classic install in one CreateProcess command line for a long user directory', () => {
+    const directory = 'C:\\Users\\' + 'a'.repeat(165) + '\\AppData\\Local\\nvm'
+    const installation = { ...ready.installation!, family: 'classic' as const, version: '1.2.2' as const, home: directory, root: directory,
+      exe: directory + '\\nvm.exe', useProxyEnvironment: true as const, executableDigest: officialDigest }
+    const args = createElevationCommand('C:\\Windows\\System32', buildNvmInvocation(installation, 'install', '24.11.0'))
     expect(args.join(' ').length + 100).toBeLessThan(32767)
   })
 
@@ -332,12 +379,14 @@ describe('Node operations', () => {
 
   it.each([
     ['cancelled', 'cancelled'],
-    ['failed', 'operation-failed'],
+    ['failed', 'nvm-install-failed'],
     ['success', 'verification-failed'],
   ] as const)('reports %s when the requested version is still missing', async (status, code) => {
     const { service } = makeService(adapter({ changeVersion: async () => ({ status }) }))
     await service.refreshCatalog()
-    expect(await service.install('24.11.0')).toMatchObject({ error: { code }, busy: null, installedVersions: ['22.9.0'] })
+    const state = await service.install('24.11.0')
+    expect(state).toMatchObject({ error: { code }, busy: null, installedVersions: ['22.9.0'] })
+    if (status !== 'cancelled') expect(state.error?.message).toContain('배포 서버')
   })
 
   it('returns an unknown result while retaining the quit/update barrier even if the files later look changed', async () => {

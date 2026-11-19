@@ -1,12 +1,15 @@
 import { expect, it, vi } from 'vitest'
 import { mkdtemp, mkdir, writeFile, chmod, rm, readFile, access, symlink } from 'node:fs/promises'
 import { tmpdir, userInfo } from 'node:os'
+import { createServer } from 'node:http'
+import type { AddressInfo } from 'node:net'
 import { dirname, join } from 'node:path'
 import { execFile, spawn } from 'node:child_process'
 import { promisify } from 'node:util'
 import { parseNodeCatalog } from '../../src/main/node-management/catalog'
 import * as guest from '../../src/main/node-management/wsl-guest'
 import * as host from '../../src/main/node-management/wsl-host'
+import * as windows from '../../src/main/node-management/windows'
 
 const run = promisify(execFile)
 const id = 'wsl:12345678-1234-1234-1234-123456789abc'
@@ -119,7 +122,7 @@ import { capabilities } from '../../src/main/node-management/manager-support'
 import { createMutationBarrier } from '../../src/main/updates/installer'
 import type { NodeManagementState } from '../../src/shared/node-management'
 
-function setupService() {
+function setupService(openLog?: () => ReturnType<typeof services.openWslLog>) {
   let snapshot: guest.WslInspection = {
     user: 'tester', arch: 'x64', root: '/home/tester/.nodenv', builder: '/opt/node-build', definitions: ['22.1.0','18.0.0'], buildTools: false,
     global: '20.1.0', manager: { kind: 'nodenv', path: '/opt/nodenv', status: 'ready', version: '1.6.2' },
@@ -128,7 +131,7 @@ function setupService() {
   const loadCatalog = vi.fn(async () => ['22.1.0','20.1.0','18.0.0'].map(version => ({ version, lts: null, date: '2024-01-01', security: false, npm: null, sourceOnly: version === '18.0.0' })))
   const runner = { verifiedFolder: vi.fn(async () => null), isStopped: vi.fn(async () => false), defaultUser: vi.fn(async () => snapshot.user), probe: vi.fn(async () => snapshot), change: vi.fn<ReturnType<typeof host.createWslRunner>['change']>(async () => 'success') }
   const changed = vi.fn<(s: NodeManagementState, user?: string | null) => void>(), barrier = createMutationBarrier()
-  const service = services.createWslService({ environment: env, runner, loadCatalog, changed, barrier })
+  const service = services.createWslService({ environment: env, runner, loadCatalog, changed, barrier, openLog })
   return { service, runner, loadCatalog, changed, barrier, update: (patch: Partial<guest.WslInspection>) => { snapshot = { ...snapshot, ...patch } } }
 }
 
@@ -473,3 +476,145 @@ it.runIf(process.platform === 'linux')('opens the actual guest root only while i
     expect(call).not.toHaveBeenCalled()
   } finally { await rm(f.home, { recursive: true, force: true }) }
 })
+
+it('retains build diagnostics and removes downloader credentials from every published state and the saved log', async () => {
+  const profile = await mkdtemp(join(tmpdir(), 'workrail-proxy-log-'))
+  try {
+    const { service, runner, changed } = setupService(() => services.openWslLog(profile))
+    runner.change.mockImplementationOnce(async (_env, _info, _kind, _version, _signal, line) => {
+      for (const output of [
+        'Downloading node-v22.1.0.tar.gz...',
+        '-> http://fixture-account:fixture-password@fixture.invalid/node',
+        "* Proxy auth using Basic with user 'fixture-account'",
+        '> Proxy-Authorization: Basic Zml4dHVyZS10b2tlbg==',
+        'HTTP/1.1 407 Proxy Authentication Required',
+        'https_proxy=' + 'x'.repeat(1600) + 'fixture-password@fixture.invalid',
+        'curl -U "fixture-account:fixture-password" https://nodejs.org/',
+        'curl --user=fixture-account:fixture-password https://nodejs.org/',
+        'g++ -UDEBUG -x c++ -c node.cc',
+        'g++ -c node.cc',
+      ]) line(output)
+      return 'failed'
+    })
+    const state = await service.install('22.1.0')
+    const disk = await readFile(state.operationLogPath!, 'utf8')
+    for (const log of [disk, JSON.stringify(changed.mock.calls)]) {
+      expect(log).not.toMatch(/fixture-account|fixture-password|fixture\.invalid|Zml4dHVyZS10b2tlbg==/)
+      expect(log).toContain('g++ -c node.cc')
+      expect(log).toContain('407')
+      expect(log).toContain('g++ -UDEBUG -x c++ -c node.cc')
+    }
+  } finally { await rm(profile, { recursive: true, force: true }) }
+})
+
+it('reports a node-build download failure separately from catalog and compile errors', async () => {
+  const { service, runner } = setupService()
+  const installWith = (output: string[]) => {
+    runner.change.mockImplementationOnce(async (_env, _info, _kind, _version, _signal, line) => {
+      output.forEach(line)
+      return 'failed'
+    })
+    return service.install('22.1.0')
+  }
+  expect((await installWith(['error: failed to download node-v22.1.0.tar.gz'])).error)
+    .toMatchObject({ code: 'download-failed', message: expect.stringContaining('node-build') })
+  expect((await installWith(['Downloading node-v22.1.0.tar.gz...', 'curl: (5) Could not resolve proxy: fixture.invalid'])).error?.code)
+    .toBe('download-failed')
+  expect((await installWith(['error: failed to download node-v22.1.0.tar.gz', 'Installing node-v22.1.0...', 'make[1]: *** Error 1'])).error?.code)
+    .toBe('operation-failed')
+})
+
+it.runIf(process.platform === 'linux')('frames split and oversized WSL output without publishing credential fragments', async () => {
+  const profile = await mkdtemp(join(tmpdir(), 'workrail-wsl-stream-'))
+  const systemShell = vi.spyOn(windows, 'resolveSystemPowerShell')
+  try {
+    // The Linux executable stands in for wsl.exe at the OS boundary and writes
+    // bytes through the same stdout/stderr pipes as the Windows child.
+    const executable = join(profile, 'wsl.exe')
+    await writeFile(executable, `#!${process.execPath}
+process.stdout.write('Proxy-Authoriz')
+setTimeout(() => {
+  process.stdout.write('ation: Basic ' + 'x'.repeat(12000))
+  process.stderr.write('g++ -c node.cc\\n')
+  setTimeout(() => {
+    process.stdout.write('fixture-private-token\\r\\n\\tfixture-private-continuation\\r\\n')
+    process.stderr.write('WORKRAIL_JOB_EXIT 1\\n')
+    process.exitCode = 1
+  }, 20)
+}, 20)`, { mode: 0o755 })
+    const childEnv = { SystemRoot: '.', windir: '.', SystemDrive: '', Path: profile, PATH: profile, ComSpec: '', PSModulePath: '' }
+    systemShell.mockResolvedValue({ system: '.', powershell: '', options: { cwd: profile, shell: false, windowsHide: true, maxBuffer: 65536, env: childEnv } })
+    const { service, runner, changed } = setupService(() => services.openWslLog(profile))
+    runner.change.mockImplementationOnce((_env, _info, _kind, _version, signal, line) => host.runWslJob([], signal, line))
+    const result = await service.install('22.1.0')
+    expect(result.error?.code).toBe('operation-failed')
+    for (const log of [await readFile(result.operationLogPath!, 'utf8'), JSON.stringify(changed.mock.calls)]) {
+      expect(log).toContain('g++ -c node.cc')
+      expect(log).not.toContain('fixture-private')
+    }
+  } finally {
+    systemShell.mockRestore()
+    await rm(profile, { recursive: true, force: true })
+  }
+})
+
+it.runIf(process.platform === 'linux')('uses each selected login profile for proxied downloads and its own bypass list', async () => {
+  const releases = [await fixture(), await fixture()]
+  const distros = [env, { ...env, id: 'wsl:22345678-1234-1234-1234-123456789abc', distro: 'Second Linux' }]
+  const requests: string[][] = [[], [], []]
+  const servers = requests.map(seen => createServer((req, res) => {
+    seen.push(req.url!)
+    res.end('ok')
+  }).on('connect', (req, socket) => {
+    seen.push('CONNECT ' + req.url)
+    socket.end('HTTP/1.1 407 Proxy Authentication Required\r\nContent-Length: 0\r\n\r\n')
+  }))
+  try {
+    const addresses = await Promise.all(servers.map(async server => {
+      await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve))
+      return 'http://127.0.0.1:' + (server.address() as AddressInfo).port
+    }))
+    async function enter(args: string[]) {
+      const index = distros.findIndex(target => target.distro === args[1])
+      const guestArgs = args.slice(args.indexOf('--exec') + 1)
+      // No proxy or nodenv variables in the outer process. Only the selected
+      // guest's login profile can supply its routes and toolchain.
+      return (await run(guestArgs[0], guestArgs.slice(1), { env: { HOME: releases[index].home, PATH: '/usr/bin:/bin' } })).stdout
+    }
+    const runner = host.createWslRunner(async () => distros, async args => Buffer.from(await enter(args)), async args => {
+      await enter(args)
+      return 'success'
+    })
+    for (const [i, f] of releases.entries()) {
+      await installFixture(f)
+      const bypass = i === 0 ? 'NO_PROXY' : 'no_proxy'
+      const profile = [
+        'export NODENV_ROOT="$HOME/.nodenv"',
+        'export PATH="$NODENV_ROOT/shims:$NODENV_ROOT/bin:/usr/bin:/bin"',
+        `export http_proxy=${addresses[i]}`,
+        `export ${i === 0 ? 'HTTPS_PROXY' : 'https_proxy'}=${addresses[i]}`,
+        `export ${bypass}=127.0.0.1`,
+      ].join('\n')
+      await mkdir(join(f.home, '.config/fish'), { recursive: true })
+      for (const name of ['.bash_profile', '.profile', '.zprofile', '.config/fish/config.fish'])
+        await writeFile(join(f.home, name), profile)
+      const builder = join(f.plugin, 'node-build')
+      const download = `curl -qfsS --max-time 3 http://download.invalid/node-${i ? 'source' : 'binary'} >/dev/null || exit 1
+curl -qfsS --max-time 3 ${addresses[2]}/bypass-${i} >/dev/null || exit 1
+[ "$(curl -qs --max-time 3 -o /dev/null -w '%{http_connect}' https://download.invalid/)" = 407 ] || exit 1`
+      await writeFile(builder, (await readFile(builder, 'utf8')).replace('mkdir -p', download + '\nmkdir -p'))
+      const info = await runner.probe(distros[i])
+      expect(info.capabilities.install.available).toBe(true)
+      expect(await runner.change(distros[i], info, 'install', '22.1.0', new AbortController().signal, () => {})).toBe('success')
+      expect(await runner.probe(distros[i])).toMatchObject({ global: '20.1.0', installedVersions: ['20.1.0', '22.1.0'] })
+    }
+    expect(requests).toEqual([
+      ['http://download.invalid/node-binary', 'CONNECT download.invalid:443'],
+      ['http://download.invalid/node-source', 'CONNECT download.invalid:443'],
+      ['/bypass-0', '/bypass-1'],
+    ])
+  } finally {
+    await Promise.all(servers.map(server => new Promise(resolve => server.close(resolve))))
+    await Promise.all(releases.map(f => rm(f.home, { recursive: true, force: true })))
+  }
+}, 15000)

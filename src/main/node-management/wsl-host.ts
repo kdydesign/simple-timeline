@@ -58,7 +58,8 @@ const loginScript = `
 account=$(/usr/bin/getent passwd "$(/usr/bin/id -u)") || exit 71
 shell=$(printf '%s' "$account" | /usr/bin/cut -d: -f7)
 case "$shell" in
-  /bin/bash|/usr/bin/bash|/bin/zsh|/usr/bin/zsh|/bin/dash|/bin/sh) ;;
+  /bin/fish|/usr/bin/fish) exec "$shell" -lc 'exec /bin/sh -c $argv' -- "$@";;
+  /bin/bash|/usr/bin/bash|/bin/zsh|/usr/bin/zsh|/bin/dash|/usr/bin/dash|/bin/sh|/usr/bin/sh) ;;
   *) shell=/bin/sh;;
 esac
 exec "$shell" -lc 'exec /bin/sh -c "$@"' workrail "$@"
@@ -149,18 +150,33 @@ export async function runWslJob(args: string[], signal: AbortSignal, line: (valu
     signal.addEventListener('abort', cancel, { once: true })
     for (const stream of [child.stdout, child.stderr]) {
       const decoder = new StringDecoder('utf8')
-      let tail = ''
-      function consume(value: string) {
+      let tail: string | null = ''
+      let hideContinuation = false
+      function consume(value: string | null) {
+        // A suffix cannot be redacted reliably if the credential label was in
+        // the discarded prefix. Suppress the entire long line and any folds.
+        if (value === null) {
+          hideContinuation = true
+          line('길이 제한을 초과한 출력 한 줄을 숨겼습니다.')
+          return
+        }
+        if (!value || (hideContinuation && /^(?:[<>] )?[ \t]/.test(value))) return
+        hideContinuation = /authorization/i.test(value)
         if (value === 'WORKRAIL_CANCEL_ACK') ack = true
         else if (/^WORKRAIL_JOB_EXIT [0-9]+$/.test(value)) exit = Number(value.split(' ')[1])
-        else if (value) line(value.slice(-1500))
+        else line(value)
       }
       stream.on('data', (chunk: Buffer) => {
-        const lines = (tail + decoder.write(chunk)).split(/[\r\n]/)
-        tail = lines.pop()!.slice(-1500)
-        lines.forEach(consume)
+        const parts = decoder.write(chunk).split(/[\r\n]/)
+        for (const [i, part] of parts.entries()) {
+          if (tail !== null) tail = tail.length + part.length <= 8192 ? tail + part : null
+          if (i < parts.length - 1) {
+            consume(tail)
+            tail = ''
+          }
+        }
       })
-      stream.on('end', () => consume(tail + decoder.end()))
+      stream.on('end', () => consume(tail === null ? null : tail + decoder.end()))
     }
     child.once('error', () => { signal.removeEventListener('abort', cancel); resolve('failed') })
     child.once('close', code => {

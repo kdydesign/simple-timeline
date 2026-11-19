@@ -24,6 +24,7 @@
   --window-glass: rgba(239, 249, 244, .42);
   --window-border: #54776c80;
   --glass-blur: 2px;
+  --node-header-surface: rgba(124, 163, 148, .23);
   --control-sheen: linear-gradient(155deg, #ffffff35, transparent 65%);
   --selected-sheen: var(--control-sheen);
   --panel-shadow: 0 5px 12px #174b3820, inset 0 1px 0 #ffffffc9, inset 0 -1px 0 #237a5b24;
@@ -50,6 +51,7 @@
   --popup-glass: rgba(43, 46, 49, .5);
   --control: rgba(110, 115, 120, .3);
   --list-control: rgba(110, 115, 120, .6);
+  --node-header-surface: rgba(105, 128, 146, .23);
   --control-border: #b4bfc449;
   --selected-control: rgba(71, 127, 174, .3);
   --selected-border: #8bc1eb;
@@ -173,7 +175,11 @@ button.primary, button.primary:hover:enabled, .toolbar button.primary, .project-
 [data-theme="dark"] .gantt-bar, [data-theme="dark"] .calendar-bar { border-top-color:#dce4ed4d; background-image:linear-gradient(180deg,#171a2044,#171a2055 55%,#171a2066); }
 .gantt-bar:hover:enabled, .calendar-bar:hover:enabled { filter: brightness(1.04); }
 .calendar-top { border-radius: 0; }
-.calendar-top, .workrail-node-table thead, .workrail-node-installed h3 { background: transparent; backdrop-filter: blur(var(--glass-blur)); }
+.calendar-top { background: transparent; backdrop-filter: blur(var(--glass-blur)); }
+.workrail-node-table thead, .workrail-node-installed h3 {
+  background: var(--node-header-surface);
+  backdrop-filter: blur(12px);
+}
 .calendar-top .view-heading { padding: 16px 20px 12px; }
 .calendar-top h2 { font-size: 18px; font-weight: 700; }
 .weekdays { background: transparent; color: var(--text); border-top: 0; }

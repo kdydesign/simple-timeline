@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { mkdir, open } from 'node:fs/promises'
 import { join } from 'node:path'
 import { finished } from 'node:stream/promises'
+import { stripVTControlCharacters } from 'node:util'
 import { isNodeVersion, type NodeEnvironment, type NodeManagementError, type NodeManagementErrorCode, type NodeManagementState, type NodeOperation, type NodeRelease } from '../../shared/node-management'
 import type { MutationBarrier } from '../updates/installer'
 import { emptyNodeState, type EnvironmentChanged } from './environments'
@@ -48,6 +49,16 @@ function classifyLine(line: string): NodeOperation['phase'] | undefined {
   if (/(?:^|[\s/])(?:g\+\+|clang\+\+|CXX\(target\)|CC\(target\)|make\[\d+\]|\.\/configure)(?=[\s:]|$)/.test(line)) return 'compiling'
   if (/^Downloading |^-> https?:/.test(line)) return 'downloading'
   if (/^Installing |^Extracting |^tar\s+-/.test(line)) return 'extracting'
+}
+
+// Downloader traces may print URL userinfo, proxy environment assignments,
+// authentication headers or CLI credentials. Hide the whole diagnostic so
+// quoting, escaping and repeated values cannot leave part of a secret behind.
+function publicLogLine(line: string) {
+  if (/\b407\b.*proxy|proxy.*\b407\b/i.test(line)) return 'HTTP 407 · 프록시 인증이 필요합니다.'
+  if (/proxy|authorization|\b(?:Basic|Digest|Bearer|Negotiate|NTLM)\s+|\b(?:curl|wget|aria2c)\s+\S|\S@\S|^\s*[\da-f]{4,}:\s/i.test(line))
+    return '네트워크 인증 관련 출력을 숨겼습니다.'
+  return line.slice(-1500)
 }
 
 function annotate(rows: NodeRelease[], info: WslInspection) {
@@ -200,15 +211,20 @@ export function createWslService(options: {
       timer = undefined
       publish({ operationLog: [...lines] })
     }
+    let downloadFailed = false
     let outcome
     try {
       outcome = await options.runner.change(env, info, kind, version, signal, raw => {
-        const line = raw.replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '').trim().slice(-1500)
-        if (!line || !state.busy) return
+        const output = stripVTControlCharacters(raw).replace(/[\x00-\x08\x0b-\x1f\x7f]/g, '').trim()
+        if (!output || !state.busy) return
+        const phase = classifyLine(output)
+        if (phase) downloadFailed = false // A mirror retry or subsequent build can succeed.
+        if (/^error: failed to download\b/i.test(output) ||
+          (state.busy.phase === 'downloading' && /^(?:curl: \(\d+\)|wget: (?:unable|failed)|ERROR \d{3}:)/i.test(output))) downloadFailed = true
+        const line = publicLogLine(output)
         log?.line(line)
         if (lines.length === 100) lines.shift()
         lines.push(line)
-        const phase = classifyLine(line)
         if (phase && phase !== state.busy.phase) {
           flush()
           progress(phase, true)
@@ -230,6 +246,8 @@ export function createWslService(options: {
     const after = await inspect(token)
     if (outcome === 'unknown') return uncertain
     if (outcome === 'cancelled') return error('cancelled', after ? 'WSL 작업을 취소하고 현재 설치 목록과 기본 버전을 다시 확인했습니다.' : 'WSL 작업이 취소되었습니다. 현재 설치 상태를 다시 확인해 주세요.')
+    if (outcome === 'failed' && kind === 'install' && downloadFailed)
+      return error('download-failed', 'WSL node-build 다운로드에 실패했습니다. 선택한 배포판의 프록시·NO_PROXY 설정과 서버 응답을 확인해 주세요.')
     if (outcome === 'failed') return error('operation-failed', 'WSL Node 작업에 실패했습니다. 진행 로그와 기본 사용자, 빌드 도구 및 파일 권한을 확인해 주세요.')
     if (!after || identity(info) !== identity(after) || !after.capabilities.list.available || !after.installedVersions.includes(version)
       || (kind === 'install' ? after.global !== info.global : after.global !== version)) return nodeManagementError('verification-failed')

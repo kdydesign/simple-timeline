@@ -4,14 +4,14 @@ import { isNodeVersion } from '../../shared/node-management'
 import { compareStableVersions } from '../../shared/updates'
 import { isSafeNvmPath, samePath, verifiedFiles, type WindowsProbe } from './windows-probe'
 import type { WindowsDiscovery } from './discovery'
-import { availability, capabilities, modernDigest, modernHelpers } from './manager-support'
+import { availability, capabilities, modernDigest, modernHelpers, proxyConflict } from './manager-support'
 
 // Match the community CLI's preferences.ROOTS precedence. Read only settings
 // relevant to the operation, without expanding strings from the registry.
 export const modernRegistryRead = String.raw`
 $settings = [ordered]@{}
 $sources = [ordered]@{}
-$names = @('PreviousActiveVersion','InstallRoot','OperatingMode','ActiveVersion','Enabled','MirrorNode','MirrorNpm','Proxy','AllowInsecureDownloads','AutoInstallModuleList','LocalInstallDir','LocalInstallOnly','Aliases','AllowedSigners','AllowedThumbprints','AirGapped','AuthenticodeRevocation')
+$names = @('PreviousActiveVersion','InstallRoot','OperatingMode','ActiveVersion','Enabled','MirrorNode','MirrorNpm','Proxy','ProxyAuth','ProxyAuthType','AllowInsecureDownloads','AutoInstallModuleList','LocalInstallDir','LocalInstallOnly','Aliases','AllowedSigners','AllowedThumbprints','AirGapped','AuthenticodeRevocation')
 foreach ($spec in @(
   @('LocalMachine','Software\Policies\Author Software\nvm','machine-policy'),
   @('CurrentUser','Software\Policies\Author Software\nvm','user-policy'),
@@ -28,7 +28,11 @@ foreach ($spec in @(
           if (!$settings.Contains($name) -and $key.GetValueNames() -contains $name) {
             if ($key.GetValueNames() -cnotcontains $name) { throw 'Ambiguous nvm registry value name' }
             if ($name -in @('ActiveVersion','PreviousActiveVersion')) { $sources[$name] = $spec[2] }
-            $settings[$name] = $key.GetValue($name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+            $value = $key.GetValue($name, $null, [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames)
+            if ($name -in @('ProxyAuth','ProxyAuthType')) {
+              # Only the presence of separate proxy credentials matters for installation.
+              $settings[$name] = (@($value | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0)
+            } else { $settings[$name] = $value }
           }
         }
       } finally { $key.Dispose() }
@@ -44,6 +48,15 @@ function official(v: unknown, url: string) {
   if (v === undefined) return true
   const entries = Array.isArray(v) ? v : [v]
   return entries.length === 1 && (entries[0] === url || entries[0] === url + '/')
+}
+
+// String settings in legacy REG_MULTI_SZ values use the first non-empty entry.
+function registryProxy(value: unknown): unknown {
+  if (typeof value === 'string') return value.trim()
+  if (Array.isArray(value) && value.every(entry => typeof entry === 'string')) {
+    return value.map(entry => entry.trim()).find(Boolean)
+  }
+  return value
 }
 
 // The official parser maps unknown strings to the seed default (online).
@@ -107,8 +120,10 @@ export async function inspectModernManager(probe: WindowsProbe, home: string, re
   }
   if (!verifiedSigningPolicy(settings)) conflict('nvm 2.x의 인증서 폐지 검사와 허용된 공식 서명자 설정을 확인해 주세요.')
   if ((settings.Enabled !== undefined && settings.Enabled !== 1) || !empty(settings.Aliases)) conflict('nvm 사용 설정과 사용자 지정 버전 별칭을 확인해 주세요.')
+  const proxy = proxyConflict(registryProxy(settings.Proxy), 'modern', !!settings.ProxyAuth || !!settings.ProxyAuthType)
+  if (proxy) result.conflicts.push(proxy)
   if (!official(settings.MirrorNode, 'https://nodejs.org/dist') || !official(settings.MirrorNpm, 'https://registry.npmjs.org')
-    || !empty(settings.Proxy) || !empty(settings.LocalInstallDir) || !empty(settings.AutoInstallModuleList)
+    || !empty(settings.LocalInstallDir) || !empty(settings.AutoInstallModuleList)
     || (settings.LocalInstallOnly ?? 0) !== 0 || (settings.AllowInsecureDownloads ?? 0) !== 0) {
     result.conflicts.push({ code: 'mirror', path: null, message: '설치하려면 nvm 2.x의 공식 미러, TLS 검증 및 기본 설치 소스를 확인해 주세요.' })
   }

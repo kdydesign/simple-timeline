@@ -53,6 +53,31 @@ describe('nvm-windows 2.0.1', () => {
       expect((await inspect(settings)).capabilities).toMatchObject({ install: { available: false }, use: { available: true } })
     },
   )
+  it.each(['http://gateway.example:80', 'https://gateway.example:3128/', 'gateway.example:8080'])(
+    'permits installation through a configured registry proxy %s', async Proxy => {
+      const state = await inspect({ Proxy })
+      expect(state).toMatchObject({ conflicts: [], capabilities: { install: { available: true }, use: { available: true } } })
+      expect(JSON.stringify(state)).not.toContain('gateway.example')
+    },
+  )
+  it('uses the first non-empty address in a legacy registry multi-string', async () => {
+    const state = await inspect({ Proxy: ['', '  https://gateway.example:8080  '], ProxyAuth: false, ProxyAuthType: false })
+    expect(state).toMatchObject({ conflicts: [], capabilities: { install: { available: true } } })
+  })
+  it.each([
+    [{ Proxy: 'http://user:example-pass@gateway.example' }, '인증'],
+    [{ Proxy: 'http://gateway.example', ProxyAuth: true }, '인증'],
+    [{ Proxy: 'http://gateway.example', ProxyAuthType: true }, '인증'],
+    [{ Proxy: 'file://gateway.example' }, 'HTTP(S)'],
+    [{ Proxy: 42 }, 'HTTP(S)'],
+  ])('separates unsupported proxies from mirror conflicts without exposing settings', async (preferences, hint) => {
+    const state = await inspect(preferences)
+    expect(state).toMatchObject({
+      conflicts: [{ code: 'proxy', path: null, message: expect.stringContaining(hint) }],
+      capabilities: { install: { available: false }, use: { available: true } },
+    })
+    expect(JSON.stringify(state)).not.toMatch(/gateway\.example|example-pass/)
+  })
   it.each(['shim', 'link'] as const)('withholds runtime attribution when the %s proof fails', async broken => {
     expect(await inspect({}, broken)).toMatchObject({ activeSource: null, capabilities: { list: { available: true }, use: { available: false } } })
   })

@@ -6,10 +6,10 @@ import { join } from 'node:path'
 import { expect, it } from 'vitest'
 import { createElevationCommand, readElevatedExit } from '../../src/main/node-management/windows'
 
-function worker(legacyHelperRoot?: string) {
+function worker(legacyHelperRoot?: string, useProxyEnvironment = false) {
   const args = createElevationCommand('C:\\Windows\\System32', {
     executable: 'C:\\nvm\\nvm.exe', executableDigest: 'a'.repeat(64),
-    legacyHelperRoot, args: [legacyHelperRoot ? 'use' : 'install', '24.22.3', '64'], nvmHome: 'C:\\nvm', nvmSymlink: 'C:\\nodejs', settingsDigest: 'b'.repeat(64),
+    legacyHelperRoot, useProxyEnvironment, args: [legacyHelperRoot ? 'use' : 'install', '24.22.3', '64'], nvmHome: 'C:\\nvm', nvmSymlink: 'C:\\nodejs', settingsDigest: 'b'.repeat(64),
   })
   const outer = args.includes('-Command') ? args.at(-1)! : Buffer.from(args.at(-1)!, 'base64').toString('utf16le')
   return Buffer.from(outer.match(/-EncodedCommand ([A-Za-z0-9+/=]+)/)![1], 'base64').toString('utf16le')
@@ -104,3 +104,33 @@ Run-Fallback
     expect(output.trim().split(/\r?\n/)).toEqual(['False', 'True'])
   } finally { rmSync(directory, { recursive: true, force: true }) }
 }, 20_000)
+
+const testPowerShell = process.platform === 'win32' ? 'powershell.exe' : process.env.WORKRAIL_TEST_PWSH
+it.skipIf(!testPowerShell)('routes classic downloads through the verified proxy with a private proxy-free settings file', () => {
+  const script = worker(undefined, true)
+  const setup = script.slice(script.indexOf('$proxyReader ='), script.indexOf('$launching = $true'))
+  expect(setup.length).toBeGreaterThan(0)
+  const check = String.raw`
+$ErrorActionPreference = 'Stop'
+$stage = [IO.Directory]::CreateDirectory([IO.Path]::Combine([IO.Path]::GetTempPath(), [guid]::NewGuid())).FullName
+$original = "root: C:\nvm" + [char]13 + [char]10 + "  proxy: gateway.example:8080  " + [char]13 + [char]10 + "arch: 64"
+$settings = New-Object IO.MemoryStream(,([Text.Encoding]::UTF8.GetBytes($original)))
+$helpers = @()
+$env:NO_PROXY = '*'
+try {
+  ${setup}
+  # Go os.Open permits existing read/write handles on Windows.
+  $child = [IO.File]::Open([IO.Path]::Combine($env:NVM_HOME, 'settings.txt'), 'Open', 'Read', 'ReadWrite')
+  $reader = [IO.StreamReader]::new($child)
+  try { $childSettings = $reader.ReadToEnd() } finally { $reader.Dispose() }
+  @($env:HTTPS_PROXY, $env:HTTP_PROXY, [string]::IsNullOrEmpty($env:NO_PROXY), ($env:NVM_HOME -eq $stage),
+    ($childSettings -eq $original.Replace('  proxy: gateway.example:8080  ', 'proxy: none')),
+    ([Text.Encoding]::UTF8.GetString($settings.ToArray()) -eq $original))
+} finally {
+  foreach ($stream in $helpers) { $stream.Dispose() }
+  $settings.Dispose()
+  [IO.Directory]::Delete($stage, $true)
+}`
+  const output = execFileSync(testPowerShell!, ['-NoProfile', '-NonInteractive', '-EncodedCommand', Buffer.from(check, 'utf16le').toString('base64')], { encoding: 'utf8', timeout: 15_000, windowsHide: true })
+  expect(output.trim().split(/\r?\n/)).toEqual(['http://gateway.example:8080', 'http://gateway.example:8080', 'True', 'True', 'True', 'True'])
+})

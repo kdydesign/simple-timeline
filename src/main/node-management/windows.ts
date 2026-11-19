@@ -22,7 +22,7 @@ const GITHUB_ASSET_ORIGINS = new Set(['https://release-assets.githubusercontent.
 const exec = promisify(execFile)
 
 type ElevationInvocation = { executable: string; executableDigest: string } & (
-  | { args: ['install' | 'use', string, '64']; legacyHelperRoot?: string; nvmHome: string; nvmSymlink: string; settingsDigest: string }
+  | { args: ['install' | 'use', string, '64']; legacyHelperRoot?: string; useProxyEnvironment?: boolean; nvmHome: string; nvmSymlink: string; settingsDigest: string }
   | { args: [] }
 )
 
@@ -41,6 +41,7 @@ export function buildNvmInvocation(installation: NvmInstallation, command: 'inst
   return {
     executable: installation.exe, executableDigest: installation.executableDigest,
     ...(installation.version === '1.1.11' && command === 'use' ? { legacyHelperRoot: installation.root } : {}),
+    ...(installation.useProxyEnvironment && command === 'install' ? { useProxyEnvironment: true } : {}),
     args: [command, version, '64'], nvmHome: installation.home, nvmSymlink: installation.symlink,
     settingsDigest: installation.settingsDigest,
   }
@@ -75,6 +76,28 @@ $stream = Open-VerifiedFile ${psLiteral(win32.join(root, relative))} ${psLiteral
 if ($null -eq $stream) { ${onFailure} }
 $helpers += $stream`).join('\n')
 }
+
+// In 1.1.11 and 1.2.2 web.SetProxy passes verifyssl=true directly to
+// InsecureSkipVerify. Keep Go's default, certificate-validating transport
+// and use its HTTP(S)_PROXY support for this invocation only.
+const classicDownloadProxy = String.raw`
+$proxyReader = [IO.StreamReader]::new($settings, [Text.Encoding]::UTF8, $false, 1024, $true)
+try { $original = $proxyReader.ReadToEnd() } finally { $proxyReader.Dispose() }
+$proxyLine = [regex]::new('(?m)^[\t ]*proxy:([^\r\n]*)')
+$match = $proxyLine.Match($original)
+if (!$match.Success) { exit 1620 }
+$route = $match.Groups[1].Value.Trim()
+if ($route -notmatch '^https?://') { $route = 'http://' + $route }
+$env:HTTPS_PROXY = $route
+$env:HTTP_PROXY = $route
+$env:NO_PROXY = $null
+$env:NVM_HOME = $stage
+$bytes = [Text.Encoding]::UTF8.GetBytes($proxyLine.Replace($original, 'proxy: none', 1))
+$stagedSettings = [IO.File]::Open([IO.Path]::Combine($stage, 'settings.txt'), [IO.FileMode]::CreateNew, [IO.FileAccess]::ReadWrite, [IO.FileShare]::Read)
+$helpers += $stagedSettings
+$stagedSettings.Write($bytes, 0, $bytes.Length)
+$stagedSettings.Flush()
+`
 
 export function createElevationCommand(system: string, invocation: ElevationInvocation): string[] {
   let command = `
@@ -120,6 +143,7 @@ $fallback = [IO.File]::Open($fallbackPath, [IO.FileMode]::CreateNew, [IO.FileAcc
 $fallbackBytes = [Text.Encoding]::ASCII.GetBytes('@exit /b 1' + [char]13 + [char]10)
 $fallback.Write($fallbackBytes, 0, $fallbackBytes.Length)
 $fallback.Flush()
+${invocation.useProxyEnvironment && action === 'install' ? classicDownloadProxy : ''}
 $launching = $true
 & $stagedExe ${psLiteral(action)} ${psLiteral(version)} ${psLiteral(arch)}
 $launching = $false

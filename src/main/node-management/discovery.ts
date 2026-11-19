@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto'
 import { win32 } from 'node:path'
 import { isNodeVersion, type NodeConflict, type NodeManagementState } from '../../shared/node-management'
-import { availability, capabilities, classicDigests, legacyHelpers, modernDigest } from './manager-support'
+import { availability, capabilities, classicDigests, legacyHelpers, modernDigest, proxyConflict } from './manager-support'
 import { inspectModernManager } from './modern-manager'
 import { contains, isSafeNvmPath, readInstalled, samePath, verifiedFiles, type WindowsProbe } from './windows-probe'
 export { isSafeNvmPath, type WindowsProbe } from './windows-probe'
@@ -10,7 +10,7 @@ export const NVM_VERSION = '1.2.2'
 export const NVM_EXE_DIGEST = classicDigests[NVM_VERSION]
 
 export type NvmInstallation = InstallationPaths & (
-  | { family: 'classic'; version: keyof typeof classicDigests }
+  | { family: 'classic'; version: keyof typeof classicDigests; useProxyEnvironment?: true }
   | { family: 'modern'; existingVersion?: string; version: '2.0.1'; mode: 'shim' | 'link' }
 )
 interface InstallationPaths {
@@ -27,17 +27,24 @@ export interface WindowsDiscovery extends Pick<NodeManagementState, 'manager' | 
 }
 const localPath = (path: string) => /^[a-z]:[\\/]/i.test(path) && !/[\x00-\x1f|<>"*?]/.test(path)
 
+class AmbiguousProxySetting extends Error {}
+
 function parseSettings(bytes: Buffer): Map<string, string> {
   const text = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes)
   // The CLI expands environment variables before parsing keys. Reject
   // expansion or ambiguous markup anywhere in the original configuration.
-  if (/[$\x00\ufeff]/.test(text)) throw Error('Ambiguous nvm settings')
+  if (/[\x00\ufeff]/.test(text)) throw Error('Ambiguous nvm settings')
   const settings = new Map<string, string>()
   for (const line of text.split(/\r?\n/)) {
     if (!line.trim()) continue
     const match = /^[\t ]*([a-z_]+):([^\r]*?)[\t ]*$/.exec(line)
     if (!match) throw Error('Malformed nvm settings')
     const [, name, value] = match
+    if (value.includes('$')) {
+      const issue = name === 'proxy' && proxyConflict(value.trim(), 'classic')
+      if (issue) throw new AmbiguousProxySetting(issue.message)
+      throw Error('Ambiguous nvm settings')
+    }
     if (settings.has(name)) throw Error('Ambiguous nvm settings')
     settings.set(name, value.trim())
   }
@@ -112,11 +119,13 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
         if (classicVersion === '1.1.11' && !await verifiedFiles(probe, root, legacyHelpers)) {
           result.capabilities.use = availability('1.1.11 전환에 필요한 공식 elevate.cmd 및 elevate.vbs를 확인해 주세요.')
         }
-        const proxy = settings.get('proxy')
+        const configuredProxy = settings.get('proxy')
+        const proxy = proxyConflict(configuredProxy, 'classic')
+        if (proxy) conflicts.push(proxy)
+        else if (configuredProxy && configuredProxy !== 'none') result.installation.useProxyEnvironment = true
         if (!isDefaultSource(settings.get('node_mirror'), 'https://nodejs.org/dist')
-          || !isDefaultSource(settings.get('npm_mirror'), 'https://github.com/npm/cli/archive')
-          || (proxy && proxy !== 'none')) {
-          addConflict('mirror', null, 'nvm의 Node·npm 미러 및 프록시를 기본값으로 되돌린 뒤 설치를 다시 시도해 주세요.')
+          || !isDefaultSource(settings.get('npm_mirror'), 'https://github.com/npm/cli/archive')) {
+          addConflict('mirror', null, 'nvm의 Node·npm 미러를 공식 배포 주소로 설정한 뒤 설치를 다시 시도해 주세요.')
         }
         const linkKind = await probe.pathKind(symlink)
         if (linkKind === 'symlink') {
@@ -145,10 +154,11 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
           addConflict('link-not-on-path', symlink, 'Windows PATH에 nvm 링크 경로를 추가한 뒤 새 터미널에서 확인해 주세요.')
         }
       }
-    } catch {
+    } catch (error) {
       result.manager = { status: 'error', version, path: exe, ...(version ? { kind: 'nvm-windows' as const } : {}) }
       result.installation = null
-      addConflict('manager-configuration', home, version === '2.0.1'
+      if (error instanceof AmbiguousProxySetting) addConflict('proxy', null, error.message)
+      else addConflict('manager-configuration', home, version === '2.0.1'
         ? 'nvm 2.x 레지스트리 설정과 Node 저장소를 읽을 수 없습니다.'
         : 'nvm 설치 위치, settings.txt, NVM_HOME 및 NVM_SYMLINK 설정을 확인한 뒤 다시 검사해 주세요.')
     }
@@ -218,7 +228,7 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
     if (result.capabilities) {
       for (const conflict of conflicts) {
         result.capabilities.install = availability(conflict.message)
-        if (conflict.code !== 'mirror') result.capabilities.use = availability(conflict.message)
+        if (conflict.code !== 'mirror' && conflict.code !== 'proxy') result.capabilities.use = availability(conflict.message)
       }
     }
     return result

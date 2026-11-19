@@ -8,7 +8,7 @@ import type { NodeManagement } from './useNodeManagement'
 import { nodeActiveVersionLabel, nodeCanRecheck, nodeCapabilityReason, nodeDefaultVersion, nodeEnvironmentLabel, nodeEnvironmentReady, nodeInspectionStale,
   nodeInstalledVersions, nodeInventoryKnown, nodeOperationMessages, nodeProgress, platformScope, unknownInventory } from './nodePresentation'
 import { EnvironmentActions, ManagerBadge, type OpenEnvironment } from './NodeEnvironment'
-import { NodeOperationStatus, NodeTooltip, NodeVersionAction } from './NodeVersionControls'
+import { NodeOperationOverlay, NodeOperationStatus, NodeTooltip, NodeVersionAction } from './NodeVersionControls'
 import { SharingWidget } from './SharingWidget'
 import './home.css'
 
@@ -185,12 +185,7 @@ function HomeNodeWidget({ node, inventory, working, onNode }: { node: NodeManage
         </div>}
       </>}
     </div>
-    {working && <div className="workrail-node-overlay">
-      <div className="workrail-node-overlay-content">
-        <span className="workrail-node-spinner" aria-hidden="true" />
-        <NodeOperationStatus node={node} stackedProgress showLogs />
-      </div>
-    </div>}
+    {working && <NodeOperationOverlay node={node} />}
   </section>
 }
 

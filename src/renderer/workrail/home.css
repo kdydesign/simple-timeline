@@ -91,6 +91,18 @@
   margin: auto;
 }
 
+.workrail-node-lists .workrail-node-overlay {
+  overflow: clip;
+}
+
+.workrail-node-lists .workrail-node-overlay-content {
+  position: sticky;
+  inset-block: 8px;
+  max-height: min(100%, calc(100dvh - 100px));
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
 .workrail-node-overlay .workrail-operation {
   width: 100%;
   text-align: center;

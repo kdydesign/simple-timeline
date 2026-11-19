@@ -1,4 +1,4 @@
-import { useId, type ReactElement } from 'react'
+import { useId, type ReactElement, type Ref } from 'react'
 import { Archive, Circle, CircleCheck, TriangleAlert } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip'
 import type { NodeRelease } from '../../shared/node-management'
@@ -51,7 +51,7 @@ export function NodeOperationStatus({ node, showLogs = false, stackedProgress = 
   const progress = nodeProgress(node)
   const stacked = stackedProgress ? nodeMutationProgress(node) : null
   const messages = nodeOperationMessages(node)
-  const canCancel = !!state?.busy?.cancellable
+  const canCancel = !!state?.busy?.cancellable && state.error?.code !== 'operation-unknown'
   const log = state?.operationLog
   const logPath = state?.operationLogPath
   if (!progress && !messages.length && !(showLogs && (log?.length || logPath))) return null
@@ -67,5 +67,14 @@ export function NodeOperationStatus({ node, showLogs = false, stackedProgress = 
       {logPath && <p className="workrail-muted">{logPath}</p>}
       {!!log?.length && <pre>{log.join('\n')}</pre>}
     </details>}
+  </div>
+}
+
+export function NodeOperationOverlay({ node, overlayRef }: { node: NodeManagement; overlayRef?: Ref<HTMLDivElement> }) {
+  return <div className="workrail-node-overlay" ref={overlayRef} tabIndex={-1} role="group" aria-label="Node 작업 진행">
+    <div className="workrail-node-overlay-content">
+      <span className="workrail-node-spinner" aria-hidden="true" />
+      <NodeOperationStatus node={node} stackedProgress showLogs />
+    </div>
   </div>
 }
