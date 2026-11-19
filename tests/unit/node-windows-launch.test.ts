@@ -14,7 +14,7 @@ const namespace = String.raw`\\?\GLOBALROOT\SystemRoot\System32`
 const system = String.raw`D:\Installed Windows\System32`
 const powershell = String.raw`D:\Installed Windows\System32\WindowsPowerShell\v1.0\powershell.exe`
 const home = String.raw`D:\nvm`
-const installation = { exe: home + '\\nvm.exe', home, root: home, symlink: 'D:\\nodejs', settingsDigest: 'a'.repeat(64) }
+const installation = { family: 'classic' as const, version: '1.2.2' as const, executableDigest: '665b0b033e88098367381e929b71cfc96dc4058a3cb6fef760a0ccc9a883dd13', exe: home + '\\nvm.exe', home, root: home, symlink: 'D:\\nodejs', settingsDigest: 'a'.repeat(64) }
 const directory = { dev: 21n, ino: 94n, isDirectory: () => true }
 const decode = (arg: string) => Buffer.from(arg, 'base64').toString('utf16le')
 
@@ -71,3 +71,17 @@ it.each(['resolver unavailable', 'non-local result', 'different directory identi
     expect(io.exec).not.toHaveBeenCalled()
   },
 )
+
+it('launches 2.0.1 in the user account, with the registry snapshot and an offline exact-version switch', async () => {
+  const adapter = createWindowsNodeAdapter(vi.fn())
+  const modern = { ...installation, family: 'modern' as const, version: '2.0.1' as const, mode: 'shim' as const, executableDigest: '0a8b88433fde1cbf48a03b7589b744361b20b4401a3be167614f82c62d26b29e' }
+  expect(await adapter.changeVersion(modern, 'use', '22.9.0')).toEqual({ status: 'success' })
+  const [, args] = io.exec.mock.calls[0]
+  const worker = decode(args.at(-1))
+  expect(worker).toContain(modern.executableDigest)
+  expect(worker).toContain(modern.settingsDigest)
+  expect(worker).toContain("'use', '22.9.0', '--local'")
+  expect(worker).toContain('Registry64')
+  expect(worker).not.toContain('-Verb RunAs')
+  expect(await adapter.changeVersion({ ...modern, executableDigest: 'a'.repeat(64) }, 'install', '22.9.0')).toEqual({ status: 'integrity-failed' })
+})

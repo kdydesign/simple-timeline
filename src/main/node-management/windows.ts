@@ -1,12 +1,14 @@
 import { execFile } from 'node:child_process'
 import { createHash } from 'node:crypto'
-import { lstat, mkdtemp, open, readdir, realpath, rm, stat, writeFile } from 'node:fs/promises'
+import { lstat, mkdtemp, open, readdir, readlink, realpath, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { win32 } from 'node:path'
 import { promisify } from 'node:util'
 import { isNodeVersion } from '../../shared/node-management'
 import { fetchBoundedAsset, type NodeFetch } from './catalog'
-import { discoverWindowsNode, isSafeNvmPath, NVM_EXE_DIGEST, type NvmInstallation } from './discovery'
+import { discoverWindowsNode, isSafeNvmPath, type NvmInstallation } from './discovery'
+import { classicDigests, legacyHelpers, modernDigest, modernHelpers } from './manager-support'
+import { modernRegistryRead } from './modern-manager'
 import { createMachineMutationLock } from './mutation-lock'
 import { fetchOfficialNodeDigest, fetchOfficialMsiDigest, readMsiResult, type MsiEvidence } from './standalone'
 import { createOfficialMsiProofScript, createMsiRemovalCommand, createMsiRemovalWorker, MACHINE_LOCK_CONTEXT_SCRIPT, MSI_INSPECTION_SCRIPT } from './standalone-windows'
@@ -19,18 +21,25 @@ const GITHUB_ASSET_ORIGINS = new Set(['https://release-assets.githubusercontent.
 const exec = promisify(execFile)
 
 type ElevationInvocation = { executable: string; executableDigest: string } & (
-  | { args: ['install' | 'use', string, '64']; nvmHome: string; nvmSymlink: string; settingsDigest: string }
+  | { args: ['install' | 'use', string, '64']; legacyHelperRoot?: string; nvmHome: string; nvmSymlink: string; settingsDigest: string }
   | { args: [] }
 )
 
-export function buildNvmInvocation(installation: NvmInstallation, command: 'install' | 'use', version: string): ElevationInvocation {
+function validateInstallation(installation: NvmInstallation, command: 'install' | 'use', version: string) {
   for (const path of [installation.exe, installation.home, installation.root, installation.symlink]) {
     if (!isSafeNvmPath(path)) throw Error('Invalid nvm path')
   }
   if (win32.join(installation.home, 'nvm.exe').toLowerCase() !== installation.exe.toLowerCase()
     || (command !== 'install' && command !== 'use') || !isNodeVersion(version) || !/^[a-f0-9]{64}$/.test(installation.settingsDigest)) throw Error('Invalid nvm command')
+}
+
+export function buildNvmInvocation(installation: NvmInstallation, command: 'install' | 'use', version: string): ElevationInvocation {
+  validateInstallation(installation, command, version)
+  if (installation.family !== 'classic' || !Object.hasOwn(classicDigests, installation.version)
+    || installation.executableDigest !== classicDigests[installation.version]) throw Error('Unverified classic nvm')
   return {
-    executable: installation.exe, executableDigest: NVM_EXE_DIGEST,
+    executable: installation.exe, executableDigest: installation.executableDigest,
+    ...(installation.version === '1.1.11' && command === 'use' ? { legacyHelperRoot: installation.root } : {}),
     args: [command, version, '64'], nvmHome: installation.home, nvmSymlink: installation.symlink,
     settingsDigest: installation.settingsDigest,
   }
@@ -42,6 +51,29 @@ const psArgs = (script: string): string[] => [
 ]
 
 const powershellPath = (system: string) => win32.join(system, 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+
+const verifiedFileFunction = `
+function Open-VerifiedFile($path, $expected) {
+  $stream = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
+  try {
+    $hash = [Security.Cryptography.SHA256]::Create()
+    try { $digest = [BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
+    if ($digest -ne $expected) { $stream.Dispose(); return $null }
+    $stream.Position = 0
+    return $stream
+  } catch {
+    $stream.Dispose()
+    throw
+  }
+}
+`
+
+function lockHelpers(root: string, files: Record<string, string>, onFailure: string) {
+  return Object.entries(files).map(([relative, digest]) => `
+$stream = Open-VerifiedFile ${psLiteral(win32.join(root, relative))} ${psLiteral(digest)}
+if ($null -eq $stream) { ${onFailure} }
+$helpers += $stream`).join('\n')
+}
 
 export function createElevationCommand(system: string, invocation: ElevationInvocation): string[] {
   let command = `
@@ -69,6 +101,8 @@ foreach ($key in @('HKEY_CURRENT_USER\\Software\\Microsoft\\Command Processor', 
   $autoRun = [Microsoft.Win32.Registry]::GetValue($key, 'AutoRun', $null)
   if ($null -ne $autoRun -and !($autoRun -is [string] -and $autoRun.Length -eq 0)) { exit 1622 }
 }
+$failure = 1610
+${invocation.legacyHelperRoot ? lockHelpers(invocation.legacyHelperRoot, legacyHelpers, 'exit 1610') : ''}
 $failure = 1623
 $stage = [IO.Path]::Combine([IO.Path]::GetTempPath(), ('workrail-nvm-run-' + [Guid]::NewGuid().ToString('N')))
 [void][IO.Directory]::CreateDirectory($stage)
@@ -91,21 +125,10 @@ exit $LASTEXITCODE
   }
   const worker = `
 $ErrorActionPreference = 'Stop'
-function Open-VerifiedFile($path, $expected) {
-  $stream = [IO.File]::Open($path, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::Read)
-  try {
-    $hash = [Security.Cryptography.SHA256]::Create()
-    try { $digest = [BitConverter]::ToString($hash.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
-    if ($digest -ne $expected) { $stream.Dispose(); return $null }
-    $stream.Position = 0
-    return $stream
-  } catch {
-    $stream.Dispose()
-    throw
-  }
-}
+${verifiedFileFunction}
 $launching = $false
 $failure = 1610
+$helpers = @()
 try {
   if ([Environment]::SystemDirectory -ine ${psLiteral(system)}) { exit 1610 }
   $env:SystemRoot = ${psLiteral(win32.dirname(system))}
@@ -121,7 +144,7 @@ try {
   if ($launching) { exit 1611 }
   exit $failure
 } finally {
-  foreach ($stream in @($fallback, $verifiedExe, $settings, $source)) {
+  foreach ($stream in (@($fallback, $verifiedExe, $settings, $source) + $helpers)) {
     if ($null -ne $stream) { $stream.Dispose() }
   }
   if ($stage -and !$launching) {
@@ -130,7 +153,7 @@ try {
 }
 `
   const argumentsOption = psLiteral(psArgs(worker).join(' '))
-  return psArgs(`
+  const launcher = `
 $ErrorActionPreference = 'Stop'
 try {
   if ([Environment]::SystemDirectory -ine ${psLiteral(system)}) { [Console]::WriteLine('WORKRAIL_EXIT:1610'); exit 0 }
@@ -148,6 +171,48 @@ try {
   }
   exit 1
 }
+`
+  const encoded = psArgs(launcher)
+  // Double UTF-16 base64 encoding can exceed CreateProcess's 32K command line
+  // for long install paths. The outer launcher contains just the system path
+  // and the encoded worker, and is passed as a single execFile argument.
+  return encoded.at(-1)!.length < 30_000 ? encoded : ['-NoProfile', '-NonInteractive', '-Command', launcher]
+}
+
+function modernCommand(installation: Extract<NvmInstallation, { family: 'modern' }>, action: 'install' | 'use', version: string) {
+  validateInstallation(installation, action, version)
+  if (installation.version !== '2.0.1' || installation.executableDigest !== modernDigest) throw Error('Unverified modern nvm')
+  const args = action === 'use' ? ['use', version, '--local'] : ['install', version]
+  return psArgs(`
+$ErrorActionPreference = 'Stop'
+${verifiedFileFunction}
+$helpers = @()
+$failure = 1610
+try {
+  $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+  $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+  if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'User context required' }
+  ${lockHelpers(installation.home, { 'nvm.exe': modernDigest, ...modernHelpers }, "throw 'Unverified file'")}
+  $failure = 1620
+  ${modernRegistryRead}
+  $hash = [Security.Cryptography.SHA256]::Create()
+  try { $actual = [BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($snapshot))).Replace('-', '').ToLowerInvariant() } finally { $hash.Dispose() }
+  if ($actual -ne ${psLiteral(installation.settingsDigest)}) { throw 'Registry preferences changed' }
+  $env:LOCALAPPDATA = [Environment]::GetFolderPath('LocalApplicationData')
+  $env:APPDATA = [Environment]::GetFolderPath('ApplicationData')
+  $env:USERPROFILE = [Environment]::GetFolderPath('UserProfile')
+  $env:TEMP = [IO.Path]::Combine($env:LOCALAPPDATA, 'Temp')
+  $env:TMP = $env:TEMP
+  $env:NVM_HOME = ${psLiteral(installation.home)}
+  $env:NoDefaultCurrentDirectoryInExePath = '1'
+  $failure = 1611
+  $child = Start-Process -FilePath ${psLiteral(installation.exe)} -WorkingDirectory ([Environment]::SystemDirectory) -ArgumentList @(${args.map(psLiteral).join(', ')}) -Wait -PassThru -WindowStyle Hidden
+  if ($null -eq $child.ExitCode) { throw 'Unknown completion' }
+  $failure = if ($child.ExitCode -eq 0) { 0 } else { 1 }
+} catch { } finally {
+  foreach ($stream in $helpers) { $stream.Dispose() }
+}
+[Console]::WriteLine('WORKRAIL_EXIT:' + $failure)
 `)
 }
 
@@ -360,6 +425,11 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
       return result
     },
     discover: () => discoverWindowsNode({
+      readModernSettings: () => runPowerShell(`
+$ErrorActionPreference = 'Stop'
+[Console]::OutputEncoding = New-Object Text.UTF8Encoding $false
+${modernRegistryRead}
+[Console]::WriteLine($snapshot)`),
       async readEnvironment() {
         const data = JSON.parse(await runPowerShell(registryEnvironmentScript))
         return mergeWindowsEnvironment(data.machine, data.user, process.env)
@@ -376,9 +446,10 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
         return 'other'
       },
       resolvePath: realpath,
+      readLink: readlink,
       listDirectories: async path => (await readdir(path, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name),
       readSettings: path => readBoundedFile(path, 64 * 1024),
-      getManagerDigest: async path => createHash('sha256').update(await readBoundedFile(path, MAX_INSTALLER_BYTES)).digest('hex'),
+      getManagerDigest: async path => createHash('sha256').update(await readBoundedFile(path, 32 * 1024 * 1024)).digest('hex'),
       async getNodeVersion(path) {
       if (!/\\node(?:64)?\.exe$/i.test(path)) return null
         // File metadata is sufficient for a diagnostic and avoids executing a
@@ -389,6 +460,18 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
       isX64Node,
     }),
     async changeVersion(installation, command, version) {
+      if (installation.family === 'modern') {
+        let shell: Awaited<ReturnType<typeof resolveSystemPowerShell>>
+        let args: string[]
+        try {
+          args = modernCommand(installation, command, version)
+          shell = await resolveSystemPowerShell()
+        } catch { return { status: 'integrity-failed' } }
+        try {
+          const { stdout } = await exec(shell.powershell, args, shell.options)
+          return readElevatedExit(stdout, 0)
+        } catch { return { status: 'unknown' } }
+      }
       let invocation: ElevationInvocation
       try {
         invocation = buildNvmInvocation(installation, command, version)

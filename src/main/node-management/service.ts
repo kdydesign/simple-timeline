@@ -4,6 +4,7 @@ import { selectStandaloneTarget, targetFingerprint, type MsiEvidence, type MsiRe
 import type { MachineMutationLease } from './mutation-lock'
 import { isNodeVersion, type NodeManagementError, type NodeManagementErrorCode, type NodeManagementState, type NodeOperation, type NodeRelease } from '../../shared/node-management'
 import type { MutationBarrier } from '../updates/installer'
+import { capabilities } from './manager-support'
 import type { NvmInstallation, WindowsDiscovery } from './discovery'
 
 export interface ElevatedResult {
@@ -44,8 +45,8 @@ const messages: Record<NodeManagementErrorCode, string> = {
   'operation-unknown': 'Node 작업이 아직 실행 중일 수 있습니다. Windows 작업 관리자에서 설치 프로그램과 승격 작업이 끝났는지 확인해 주세요. 중복 변경은 차단됩니다. 작업이 끝난 뒤 Windows를 재부팅하고 복구 창에서 다시 검사해 주세요.',
   'operation-slow': '예상보다 오래 걸리고 있습니다. Windows 권한 확인 또는 설치 창을 확인해 주세요.',
   'download-failed': '공식 nvm-windows 설치 파일을 내려받지 못했습니다. 시스템 프록시가 필요한 환경에서는 브라우저로 공식 nvm-windows 1.2.2 설치 파일을 받아 설치한 뒤 다시 검사해 주세요.',
-  'integrity-failed': 'nvm 실행 파일이나 설정의 무결성을 확인하지 못해 작업을 중단했습니다. 공식 nvm-windows 1.2.2 설치와 설정을 확인해 주세요.',
-  'nvm-settings-check': '관리자 권한으로 nvm의 settings.txt를 읽거나 다시 검증하지 못했습니다. 파일 접근 권한을 확인하고 환경을 다시 검사해 주세요.',
+  'integrity-failed': 'nvm 실행 파일이나 설정의 무결성을 확인하지 못해 작업을 중단했습니다. 공식 nvm-windows 배포본과 해당 버전의 설정을 확인해 주세요.',
+  'nvm-settings-check': 'nvm 설정을 변경 직전에 다시 검증하지 못했습니다. 설정 및 읽기 권한을 확인한 뒤 다시 검사해 주세요.',
   'command-processor-check': 'Windows 명령 처리기의 AutoRun 설정을 읽을 수 없습니다. 관리자 계정의 레지스트리 읽기 권한을 확인해 주세요.',
   'command-autorun': 'Windows 명령 처리기에 AutoRun이 설정되어 있어 nvm 실행을 중단했습니다. 사용자 또는 시스템의 Command Processor 설정을 관리자와 확인해 주세요.',
   'nvm-staging-failed': '관리자 권한으로 임시 폴더에 nvm 실행 파일을 준비하지 못했습니다. 임시 폴더의 여유 공간과 쓰기 권한을 확인해 주세요.',
@@ -112,11 +113,14 @@ export function createNodeManagementService(options: {
         const { installation, activeX64, ...discovery } = await windows.discover()
         publish({
           ...discovery,
+          ...(discovery.capabilities?.list.available === false && discovery.manager.path && discovery.manager.path === state.manager.path && discovery.manager.version === state.manager.version
+            ? { installedVersions: state.installedVersions } : {}),
           checkedAt: new Date().toISOString(),
           ...(state.error?.code === 'inspection-failed' ? { error: null } : {}),
         })
         const current = { installation, activeX64, ...discovery }
         const entries = windows.inspectStandalone && current.manager.status === 'missing' ? await windows.inspectStandalone() : []
+        const manualRemoval = current.manager.status === 'missing' && (discovery.conflicts.length > 0 || entries.length > 0)
         const target = selectStandaloneTarget(entries, current)
         const fingerprint = target ? targetFingerprint(target) : null
         if (!target || confirmation?.fingerprint !== fingerprint) {
@@ -125,10 +129,10 @@ export function createNodeManagementService(options: {
         const mutation = activeLease ? 'clear' : await windows.mutationStatus?.()
         if (mutation === 'reboot-required') rebootRequired = true
         publish({ removal: {
-          status: target && !rebootRequired ? 'available' : discovery.conflicts.length || entries.length ? 'manual' : 'unavailable',
+          status: target && !rebootRequired ? 'available' : manualRemoval ? 'manual' : 'unavailable',
           target: target ? { version: target.version, path: target.nodePath } : null,
           confirmationId: rebootRequired ? null : confirmation?.id ?? null,
-          reason: target ? null : discovery.conflicts.length || entries.length ? messages['removal-unavailable'] : null,
+          reason: manualRemoval && !target ? messages['removal-unavailable'] : null,
           rebootRequired, msiExitCode,
         }, ...(mutation && mutation !== 'clear' ? { error: nodeManagementError(mutation) } : mutation === 'clear' && !state.busy && ['busy', 'operation-unknown'].includes(state.error?.code ?? '') ? { error: null } : {}) })
         return current
@@ -136,6 +140,7 @@ export function createNodeManagementService(options: {
         confirmation = null
         publish({
           removal: { status: 'manual', target: null, confirmationId: null, reason: messages['inspection-failed'], rebootRequired, msiExitCode },
+          capabilities: capabilities(messages['inspection-failed']),
           manager: { status: 'error', version: null },
           activeVersion: null,
           activeSource: null,
@@ -162,6 +167,10 @@ export function createNodeManagementService(options: {
 
   function setPhase(phase: NodeOperation['phase']) {
     if (state.busy) publish({ busy: { ...state.busy, phase } })
+  }
+
+  function operationBlocked(current: WindowsDiscovery, operation: 'install' | 'use') {
+    return current.capabilities ? !current.capabilities[operation].available : current.conflicts.length > 0
   }
 
   async function perform(kind: NodeOperation['kind'], version: string | null, removal?: { fingerprint: string; target: MsiEvidence }): Promise<NodeManagementErrorCode | null> {
@@ -192,7 +201,7 @@ export function createNodeManagementService(options: {
       if (!current.installation || current.manager.status !== 'ready') {
         return current.manager.status === 'missing' ? 'manager-missing' : 'environment-conflict'
       }
-      if (current.conflicts.length) return 'environment-conflict'
+      if (operationBlocked(current, kind)) return 'environment-conflict'
       if (!isNodeVersion(version)) return 'invalid-request'
       if (kind === 'install') {
         if (current.installedVersions.includes(version)) return null
@@ -200,7 +209,7 @@ export function createNodeManagementService(options: {
           await fetchCatalog()
           current = await inspect()
           if (!current) return 'inspection-failed'
-          if (!current.installation || current.manager.status !== 'ready' || current.conflicts.length) return 'environment-conflict'
+          if (!current.installation || current.manager.status !== 'ready' || operationBlocked(current, 'install')) return 'environment-conflict'
           if (current.installedVersions.includes(version)) return null
         }
         if (state.catalog.status !== 'ready') return 'catalog-unavailable'
@@ -215,7 +224,7 @@ export function createNodeManagementService(options: {
     setPhase('verifying')
     const updated = await inspect()
     if (outcome.status !== 'success') return exitErrors[outcome.status]
-    const verified = updated && updated.manager.status === 'ready' && updated.conflicts.length === 0 && (
+    const verified = updated && updated.manager.status === 'ready' && (kind === 'install-manager' ? updated.conflicts.length === 0 : !operationBlocked(updated, kind)) && (
       kind === 'install-manager' ? updated.installation !== null
         : kind === 'install' ? version !== null && updated.installedVersions.includes(version)
         : updated.activeSource === 'nvm' && updated.activeVersion === version && updated.activeX64 !== false
@@ -266,7 +275,8 @@ export function createNodeManagementService(options: {
         // Keep the shutdown reservation latched when its lifetime is unknown.
         await new Promise<never>(() => {})
       } else {
-        publish({ busy: null, error: code ? nodeManagementError(code) : null })
+        const reason = code === 'environment-conflict' && (kind === 'install' || kind === 'use') ? state.capabilities?.[kind].reason : null
+        publish({ busy: null, error: code ? { code, message: reason ?? messages[code] } : null })
         resolveResult(state)
       }
     }

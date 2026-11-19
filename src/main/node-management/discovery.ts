@@ -1,47 +1,30 @@
 import { createHash } from 'node:crypto'
 import { win32 } from 'node:path'
 import { isNodeVersion, type NodeConflict, type NodeManagementState } from '../../shared/node-management'
-import { compareStableVersions } from '../../shared/updates'
+import { availability, capabilities, classicDigests, legacyHelpers, modernDigest } from './manager-support'
+import { inspectModernManager } from './modern-manager'
+import { contains, isSafeNvmPath, readInstalled, samePath, verifiedFiles, type WindowsProbe } from './windows-probe'
+export { isSafeNvmPath, type WindowsProbe } from './windows-probe'
 
-type PathKind = 'file' | 'directory' | 'symlink' | 'missing' | 'other'
 export const NVM_VERSION = '1.2.2'
-// nvm.exe from the official 1.2.2 nvm-noinstall.zip release asset.
-export const NVM_EXE_DIGEST = '665b0b033e88098367381e929b71cfc96dc4058a3cb6fef760a0ccc9a883dd13'
+export const NVM_EXE_DIGEST = classicDigests[NVM_VERSION]
 
-export interface NvmInstallation {
+export type NvmInstallation = InstallationPaths & (
+  | { family: 'classic'; version: keyof typeof classicDigests }
+  | { family: 'modern'; version: '2.0.1'; mode: 'shim' | 'link' }
+)
+interface InstallationPaths {
+  executableDigest: string
   exe: string
   home: string
   root: string
   symlink: string
   settingsDigest: string
 }
-export interface WindowsDiscovery extends Pick<NodeManagementState, 'manager' | 'activeVersion' | 'activeSource' | 'installedVersions' | 'conflicts'> {
+export interface WindowsDiscovery extends Pick<NodeManagementState, 'manager' | 'activeVersion' | 'activeSource' | 'installedVersions' | 'conflicts' | 'capabilities'> {
   installation: NvmInstallation | null
   activeX64?: false
 }
-export interface WindowsProbe {
-  readEnvironment(): Promise<Record<string, string>>
-  pathKind(path: string): Promise<PathKind>
-  resolvePath(path: string): Promise<string>
-  listDirectories(path: string): Promise<string[]>
-  readSettings(path: string): Promise<Buffer>
-  getManagerDigest(path: string): Promise<string>
-  getNodeVersion(path: string): Promise<string | null>
-  isX64Node(path: string): Promise<boolean>
-}
-
-/** Restrict paths passed to nvm 1.x, which invokes cmd internally for link operations. */
-export function isSafeNvmPath(value: unknown): value is string {
-  if (typeof value !== 'string' || !/^[a-z]:\\[^\\]/i.test(value)) return false
-  if (/[\x00-\x1f\x7f"&|<>^%!`;$()\/]/.test(value)) return false
-  return value.slice(3).split('\\').every(segment => !segment || (
-    !/[ .]$|[?:*]/.test(segment) && !/^(AUX|CON|NUL|PRN|COM[1-9]|LPT[1-9])(?:\.|$)/i.test(segment)
-  ))
-}
-
-const keyPath = (path: string) => win32.normalize(path).replace(/\\+$/, '').toLowerCase()
-const samePath = (a: string, b: string) => keyPath(a) === keyPath(b)
-const contains = (parent: string, child: string) => keyPath(child).startsWith(keyPath(parent) + '\\')
 const localPath = (path: string) => /^[a-z]:[\\/]/i.test(path) && !/[\x00-\x1f|<>"*?]/.test(path)
 
 function parseSettings(bytes: Buffer): Map<string, string> {
@@ -65,19 +48,6 @@ function isDefaultSource(value: string | undefined, official: string): boolean {
   return !value || value === 'none' || value === official || value === official + '/'
 }
 
-async function readInstalled(root: string, probe: WindowsProbe): Promise<string[]> {
-  const versions = await Promise.all((await probe.listDirectories(root)).map(async name => {
-    const version = name.slice(1)
-    if (!name.startsWith('v') || !isNodeVersion(version)) return null
-    for (const filename of ['node.exe', 'node64.exe']) {
-      const path = win32.join(root, name, filename)
-      if (await probe.pathKind(path) === 'file' && await probe.isX64Node(path) && await probe.getNodeVersion(path) === version) return version
-    }
-    return null
-  }))
-  return [...new Set(versions.filter(version => version !== null))].sort((a, b) => compareStableVersions(b, a))
-}
-
 export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsDiscovery> {
   const env = await probe.readEnvironment()
   const pathEntries = (env.Path ?? '').split(';')
@@ -93,6 +63,7 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
     activeSource: null,
     installedVersions: [],
     conflicts,
+    capabilities: capabilities('nvm 설치를 확인해 주세요.'),
     installation: null,
   }
   const addConflict = (code: NodeConflict['code'], path: string | null, message: string) => conflicts.push({ code, path, message })
@@ -110,11 +81,16 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
       if (!samePath(await probe.resolvePath(exe), exe) || (env.NVM_HOME && !samePath(env.NVM_HOME, home))) {
         throw Error('Nvm executable and configured home do not match')
       }
-      if (await probe.getManagerDigest(exe) !== NVM_EXE_DIGEST) {
-        addConflict('manager-configuration', exe, '기존 nvm 실행 파일을 확인했습니다. WorkRail에서 관리하려면 공식 nvm-windows 1.2.2 실행 파일이 필요합니다.')
-        result.manager = { status: 'error', version }
+      const executableDigest = await probe.getManagerDigest(exe)
+      if (executableDigest === modernDigest) {
+        version = '2.0.1'
+        linkedNode = await inspectModernManager(probe, home, result, searchPath)
+      } else if (executableDigest !== classicDigests['1.1.11'] && executableDigest !== NVM_EXE_DIGEST) {
+        addConflict('manager-configuration', exe, '기존 nvm 실행 파일을 공식 배포본과 대조할 수 없습니다.')
+        result.manager = { status: 'error', version, path: exe }
       } else {
-        version = NVM_VERSION
+        const classicVersion = executableDigest === NVM_EXE_DIGEST ? NVM_VERSION : '1.1.11'
+        version = classicVersion
         const configPath = win32.join(home, 'settings.txt')
         if (await probe.pathKind(configPath) !== 'file') throw Error('Missing or redirected nvm settings')
         const settingsBytes = await probe.readSettings(configPath)
@@ -130,8 +106,12 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
           throw Error('Unsafe or mismatched nvm root or link')
         }
         result.installedVersions = await readInstalled(root, probe)
-        result.manager = { status: 'ready', version }
-        result.installation = { exe, home, root, symlink, settingsDigest: createHash('sha256').update(settingsBytes).digest('hex') }
+        result.manager = { status: 'ready', version, kind: 'nvm-windows', path: exe }
+        result.capabilities = capabilities(null)
+        result.installation = { family: 'classic', version: classicVersion, executableDigest, exe, home, root, symlink, settingsDigest: createHash('sha256').update(settingsBytes).digest('hex') }
+        if (classicVersion === '1.1.11' && !await verifiedFiles(probe, root, legacyHelpers)) {
+          result.capabilities.use = availability('1.1.11 전환에 필요한 공식 elevate.cmd 및 elevate.vbs를 확인해 주세요.')
+        }
         const proxy = settings.get('proxy')
         if (!isDefaultSource(settings.get('node_mirror'), 'https://nodejs.org/dist')
           || !isDefaultSource(settings.get('npm_mirror'), 'https://github.com/npm/cli/archive')
@@ -166,9 +146,11 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
         }
       }
     } catch {
-      result.manager = { status: 'error', version }
+      result.manager = { status: 'error', version, path: exe, ...(version ? { kind: 'nvm-windows' as const } : {}) }
       result.installation = null
-      addConflict('manager-configuration', home, 'nvm 설치 위치, settings.txt, NVM_HOME 및 NVM_SYMLINK 설정을 확인한 뒤 다시 검사해 주세요.')
+      addConflict('manager-configuration', home, version === '2.0.1'
+        ? 'nvm 2.x 레지스트리 설정과 Node 저장소를 읽을 수 없습니다.'
+        : 'nvm 설치 위치, settings.txt, NVM_HOME 및 NVM_SYMLINK 설정을 확인한 뒤 다시 검사해 주세요.')
     }
   } else if (env.NVM_HOME || env.NVM_SYMLINK) {
     result.manager.status = 'error'
@@ -192,7 +174,7 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
   const precedesNode = uncertainIndex >= 0 && (nodeIndex < 0 || uncertainIndex < nodeIndex)
   if (badExtensions || precedesNode || (uncertainIndex >= 0 && linkIndex > uncertainIndex)) {
     addConflict('path-priority', badExtensions ? null : pathEntries[uncertainIndex], '로컬 절대 경로와 Windows PATHEXT 설정을 확인해 주세요. 현재 PATH의 Node 우선순위를 확정할 수 없습니다.')
-    return result
+    return finish()
   }
   if (link && !extensions.includes('.exe')) {
     addConflict('path-priority', link, 'Windows PATHEXT에 .EXE를 추가한 뒤 다시 검사해 주세요.')
@@ -204,6 +186,12 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
       result.activeSource = 'nvm'
       if (!linkedNode.x64) result.activeX64 = false
     } else {
+      const directory = win32.dirname(path)
+      if (result.manager.status === 'error' && home && (samePath(directory, home) || contains(home, directory) || (env.NVM_SYMLINK && samePath(directory, env.NVM_SYMLINK)))) return finish()
+      if (result.installation?.family === 'modern' && linkIndex === nodeIndex) {
+        if (win32.basename(path).toLowerCase() !== 'node.exe') addConflict('path-priority', path, 'nvm 2.x의 .nodejs 경로에서 다른 명령이 node.exe보다 우선합니다.')
+        return finish()
+      }
       result.activeSource = 'standalone'
       const version = await probe.getNodeVersion(path).catch(() => null)
       result.activeVersion = isNodeVersion(version) ? version : null
@@ -214,5 +202,16 @@ export async function discoverWindowsNode(probe: WindowsProbe): Promise<WindowsD
       }
     }
   }
-  return result
+  return finish()
+
+  function finish(): WindowsDiscovery {
+    if (result.manager.status === 'error') result.capabilities = capabilities(conflicts[0]?.message ?? 'nvm 설정을 확인해 주세요.')
+    if (result.capabilities) {
+      for (const conflict of conflicts) {
+        result.capabilities.install = availability(conflict.message)
+        if (conflict.code !== 'mirror') result.capabilities.use = availability(conflict.message)
+      }
+    }
+    return result
+  }
 }

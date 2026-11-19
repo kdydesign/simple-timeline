@@ -28,7 +28,7 @@ const ready: WindowsDiscovery = {
   activeSource: 'nvm',
   installedVersions: ['22.9.0'],
   conflicts: [],
-  installation: { exe, home, root: home, symlink, settingsDigest },
+  installation: { family: 'classic', version: '1.2.2', executableDigest: officialDigest, exe, home, root: home, symlink, settingsDigest },
 }
 const standalone = 'C:\\Program Files\\nodejs'
 const files = new Map([
@@ -39,7 +39,7 @@ const files = new Map([
   [(symlink + '\\node.exe').toLowerCase(), 'file'],
   [symlink.toLowerCase(), 'symlink'],
 ])
-function local(overrides: { settings?: string; path?: string[]; changes?: [string, string][]; env?: Record<string,string>; linkedVersion?: string; diskVersion?: string; digest?: string; onExecute?: () => void } = {}) {
+function local(overrides: { settings?: string; path?: string[]; changes?: [string, string][]; env?: Record<string,string>; linkedVersion?: string; diskVersion?: string; digest?: string; helperDigests?: Record<string, string>; onExecute?: () => void } = {}) {
   const entries = new Map([...files, ...(overrides.changes ?? []).map(([path, kind]) => [path.toLowerCase(), kind] as const)])
   const probe = {
     readEnvironment: async () => overrides.env ?? { Path: [home, ...(overrides.path ?? []), symlink].join(';'), NVM_HOME: home, NVM_SYMLINK: symlink },
@@ -47,7 +47,7 @@ function local(overrides: { settings?: string; path?: string[]; changes?: [strin
     resolvePath: async path => path.toLowerCase() === symlink.toLowerCase() ? home + '\\v22.9.0' : path,
     listDirectories: async () => ['v22.9.0', 'v24.11.0', 'external'],
     readSettings: async () => Buffer.from(overrides.settings ?? settings),
-    getManagerDigest: async () => overrides.digest ?? officialDigest,
+    getManagerDigest: async (path: string) => overrides.helperDigests?.[path] ?? overrides.digest ?? officialDigest,
     getManagerVersion: async () => { overrides.onExecute?.(); return '1.2.2' },
     getNodeVersion: async (path: string) => path.toLowerCase().startsWith(home.toLowerCase())
       ? overrides.diskVersion ?? '22.9.0'
@@ -93,7 +93,41 @@ describe('Windows Node discovery', () => {
     let executions = 0
     const state = await local({ digest: '0'.repeat(64), onExecute: () => { executions++ } })
     expect({ executions, installation: state.installation, status: state.manager.status }).toEqual({ executions: 0, installation: null, status: 'error' })
-    expect(state.conflicts[0]?.message).toContain('1.2.2')
+    expect(state.capabilities?.use.available).toBe(false)
+    expect(state.activeSource).toBeNull()
+  })
+
+  it('recognizes 1.1.11 and refuses use when its link helpers are missing', async () => {
+    const digest = 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791'
+    const state = await local({ digest })
+    expect(state).toMatchObject({
+      manager: { status: 'ready', kind: 'nvm-windows', version: '1.1.11', path: exe },
+      installation: { family: 'classic', executableDigest: digest },
+      capabilities: { list: { available: true }, install: { available: true }, use: { available: false } },
+    })
+    expect(buildNvmInvocation(state.installation!, 'install', '22.9.0').executableDigest).toBe(digest)
+  })
+
+  it('enables 1.1.11 switching only with both original elevation helpers', async () => {
+    const cmd = home + '\\elevate.cmd'
+    const vbs = home + '\\elevate.vbs'
+    const digest = 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791'
+    const helperDigests = {
+      [cmd]: '792d6a485d26b3ae1c926d1d4915e5eaf9a40113afd623212d1a9591e56bb1d5',
+      [vbs]: '3219b67d6c49d02b832026d13ece959c85d64690326d6b3f10923790c8a5f130',
+    }
+    const original = await local({ digest, changes: [[cmd, 'file'], [vbs, 'file']], helperDigests })
+    expect(original.capabilities?.use.available).toBe(true)
+    const changed = await local({ digest, changes: [[cmd, 'file'], [vbs, 'file']], helperDigests: { ...helperDigests, [vbs]: '0'.repeat(64) } })
+    expect(changed.capabilities?.use.available).toBe(false)
+  })
+
+  it('allows local use with a custom mirror but refuses downloads with a precise reason', async () => {
+    const current = await local({ settings: settings + 'node_mirror: https://custom.example/dist/' })
+    const { service } = makeService(adapter({ discover: async () => current }))
+    expect((await service.install('24.11.0')).error?.message).toContain('미러')
+    expect((await service.use('22.9.0')).error).toBeNull()
+    expect((await service.getState()).removal?.status).toBe('unavailable')
   })
 
   it.each(['${MIRROR_FIELD}: https://evil.test/', 'root : C:\\mismatch'])('rejects an ambiguous raw settings line %s', async line => {
@@ -115,11 +149,11 @@ describe('Windows Node discovery', () => {
     expect(state.conflicts).toEqual([expect.objectContaining({ code: 'path-priority', path: symlink + '\\node.com' })])
   })
   it('resolves nvm installation, complete local versions, and the effective version from the link', async () => {
-    expect(await local()).toEqual(ready)
+    expect(await local()).toMatchObject(ready)
   })
 
   it('finds a PATH installation with a safe settings-defined link when nvm variables are absent', async () => {
-    expect(await local({ env: { Path: home + ';' + symlink } })).toEqual(ready)
+    expect(await local({ env: { Path: home + ';' + symlink } })).toMatchObject(ready)
   })
 
   it('reports the executable version if the contents of a version directory disagree with its name', async () => {
@@ -187,6 +221,16 @@ describe('elevated Windows commands', () => {
     expect(() => buildNvmInvocation(ready.installation!, 'uninstall' as 'install', '24.11.0')).toThrow()
   })
 
+  it('keeps a 1.1.11 helper-verified use within the Windows process argument limit', () => {
+    const directory = 'C:\\Users\\' + 'a'.repeat(170) + '\\AppData\\Local\\nvm'
+    const installation = { ...ready.installation!, family: 'classic' as const, version: '1.1.11' as const, home: directory, root: directory,
+      exe: directory + '\\nvm.exe', executableDigest: 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791' }
+    const invocation = buildNvmInvocation(installation, 'use', '22.9.0')
+    expect(invocation).toMatchObject({ legacyHelperRoot: directory })
+    const args = createElevationCommand('C:\\Windows\\System32', invocation)
+    expect(args.join(' ').length + 100).toBeLessThan(32767)
+  })
+
   it('keeps trusted commands encoded and distinguishes unknown completion from a cancelled UAC prompt', () => {
     const args = createElevationCommand('C:\\Windows\\System32', buildNvmInvocation(ready.installation!, 'install', '24.11.0'))
     expect(args.slice(0, -1)).toEqual(['-NoProfile', '-NonInteractive', '-EncodedCommand'])
@@ -219,6 +263,18 @@ describe('Node operations', () => {
     const state = await service.refreshCatalog()
     expect(state.installedVersions).toEqual(['22.9.0'])
     expect(state.catalog).toMatchObject({ status: 'error', releases: [expect.objectContaining({ version: '24.11.0' }), expect.objectContaining({ version: '22.9.0' })] })
+  })
+
+  it('retains the last inventory from the same manager when the storage read fails', async () => {
+    const current = await local()
+    let readable = true
+    const { service } = makeService(adapter({ discover: async () => readable ? current : {
+      ...current, manager: { ...current.manager, status: 'error' },
+      installedVersions: [], installation: null, capabilities: { ...current.capabilities!, list: { available: false, reason: '읽기 실패' } },
+    } }))
+    await service.getState()
+    readable = false
+    expect(await service.getState()).toMatchObject({ installedVersions: ['22.9.0'], capabilities: { list: { available: false } } })
   })
 
   it('never elevates an install absent from the official list or with a custom download source', async () => {

@@ -46,13 +46,15 @@ export interface StandaloneRemovalState {
   rebootRequired: boolean
   msiExitCode: number | null
 }
+export type NodeCapabilities = Record<'list' | 'install' | 'use', { available: boolean; reason: string | null }>
 export interface NodeManagementState {
+  capabilities?: NodeCapabilities
   removal?: StandaloneRemovalState
   maintenance?: { required: boolean; active: boolean; status?: 'idle' | 'preparing' | 'ready' | 'error'; error?: string | null; recoveryShortcut?: string }
   revision: number
   platform: string
   supported: boolean
-  manager: { status: 'checking' | 'missing' | 'ready' | 'error'; version: string | null }
+  manager: { kind?: 'nvm-windows' | 'nodenv'; path?: string; status: 'checking' | 'missing' | 'ready' | 'error'; version: string | null }
   activeVersion: string | null
   activeSource: 'nvm' | 'standalone' | null
   installedVersions: string[]
