@@ -2,6 +2,8 @@ import { readFile, stat, mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { NtExecutable, NtExecutableResource, Resource } from "resedit";
+import { shellIconName } from "../release/shell-icon-name.mjs";
 const require = createRequire(import.meta.url),
   asar = require("@electron/asar");
 async function requireX64(path, label) {
@@ -20,6 +22,28 @@ async function requireX64(path, label) {
     bytes.readUInt16LE(header + 4) !== 0x8664
   )
     throw Error(`${label} architecture must be x64`);
+}
+async function inspectIcons(directory, exe) {
+  const source = await readFile(new URL("../../resources/icon.ico", import.meta.url));
+  const external = await readFile(join(directory, "resources", shellIconName));
+  if (!source.equals(external)) throw Error("Installed shell icon differs from source ICO");
+  const binary = NtExecutable.from(await readFile(exe), {ignoreCert: true});
+  const {entries} = NtExecutableResource.from(binary);
+  const [group] = Resource.IconGroupEntry.fromEntries(entries);
+  const count = source.readUInt16LE(4);
+  if (group?.icons.length !== count) throw Error("First executable icon group frame count mismatch");
+  const sizes = [];
+  for (let i = 0; i < count; i++) {
+    const offset = 6 + i * 16;
+    const icon = group.icons.find(item => item.width === source[offset] && item.height === source[offset + 1]);
+    const data = icon && entries.find(item => item.type === 3 && item.id === icon.iconID && item.lang === group.lang);
+    const start = source.readUInt32LE(offset + 12);
+    const size = source.readUInt32LE(offset + 8);
+    if (!data || icon.dataSize !== size || !source.subarray(start, start + size).equals(Buffer.from(data.bin)))
+      throw Error(`Executable icon frame differs from source at ${source[offset] || 256}px`);
+    sizes.push(source[offset] || 256);
+  }
+  return {file: shellIconName, sizes};
 }
 export const normalizeArchivePath = (value) =>
   value.replaceAll("\\", "/").replace(/^\/+/, "");
@@ -78,6 +102,7 @@ export async function inspectPackage(directory, { sourceSha, version } = {}) {
     sourceSha: pkg.sourceSha ?? null,
     main: pkg.main,
     executable: exe,
+    shellIcon: await inspectIcons(root, exe),
     nativeBinding: native,
     archive,
     files: files.length,

@@ -22,6 +22,8 @@ import { createEnvironmentCoordinator, environmentSelectionStore } from './node-
 import { windowsWslHost } from './node-management/wsl-host'
 import { createWslService, openWslLog } from './node-management/wsl'
 import { createNodeManagementService } from './node-management/service'
+import { getDownloadProxy } from './node-management/discovery'
+import { officialNodeTransport } from './node-management/zip-transport'
 import { createWindowsNodeAdapter } from './node-management/windows'
 import { appMutationBarrier } from './ipc-core'
 import { readFile } from 'node:fs/promises'
@@ -52,6 +54,7 @@ import { installCloseGuard, type CloseChoice } from './close'
 import { createTray, updateSharingTray } from './tray'
 import { toPublicError } from './errors'
 import type { Result } from '../shared/types'
+declare const __WORKRAIL_SHELL_ICON_NAME__: string
 const desktopIcon = process.platform === 'win32' ? windowsIcon : icon
 
 export interface BootstrapOptions {
@@ -115,7 +118,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     start: wsl.start, opener: shell,
     createWindows: changed => createNodeManagementService({
       platform: process.platform, arch: process.arch,
-      windows: createWindowsNodeAdapter(globalThis.fetch), loadCatalog: () => loadNodeCatalog(nodeFetch),
+      windows: createWindowsNodeAdapter(globalThis.fetch, officialNodeTransport), loadCatalog: async manager => loadNodeCatalog(await officialNodeTransport(getDownloadProxy(manager))),
       changed, barrier: appMutationBarrier,
     }),
     createWsl: (environment, changed) => createWslService({
@@ -183,7 +186,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
   nodeIpc = registerNodeManagementIpc(window, rendererUrl, nodeManagement,nodeRouting)
-  configureTaskbarDetails(window,{platform:process.platform,packaged:app.isPackaged,exePath:process.execPath})
+  configureTaskbarDetails(window,{platform:process.platform,packaged:app.isPackaged,exePath:process.execPath,shellIconName:__WORKRAIL_SHELL_ICON_NAME__})
   let help:ReturnType<typeof createHelpWindow>|undefined
   freezeInputs = () => { window.setEnabled(false); window.hide();help?.hideWithMain();releases.hideWithMain() }
   let exiting = false, shutdownComplete = false, finishingShutdown = false

@@ -156,7 +156,7 @@ export function createWslService(options: {
     return request.finally(() => { if (catalogRequest === request) catalogRequest = undefined })
   }
 
-  async function read(refresh: boolean) {
+  async function read(refresh: boolean, intent?: 'recheck') {
     if (state.busy) {
       const release = releaseUnknown
       if (release && await options.runner.isStopped(env).catch(() => false) && release === releaseUnknown) {
@@ -170,9 +170,12 @@ export function createWslService(options: {
       return state
     }
     const token = generation
+    const previous = state.error
     const request = readInspection ??= inspect(token)
     const info = await request
     if (request === readInspection) readInspection = undefined
+    if (intent === 'recheck' && info?.capabilities.list.available && token === generation && !state.busy
+      && previous && state.error === previous) publish({ error: null })
     if (refresh && info && token === generation && current && identity(info) === identity(current)) await catalog(info, token)
     return state
   }
@@ -288,7 +291,7 @@ export function createWslService(options: {
   const unsupported = async () => ({ ...state, error: nodeManagementError('invalid-request') })
   return {
     verifiedManagerFolder: () => current && !state.busy ? options.runner.verifiedFolder(env, current) : Promise.resolve(null),
-    getState: () => read(false), refreshCatalog: () => read(true),
+    getState: (intent?: 'recheck') => read(false, intent), refreshCatalog: () => read(true),
     install: (version: string) => operate('install', version), use: (version: string) => operate('use', version),
     installManager: unsupported, removeStandalone: unsupported, isBusy: () => state.busy !== null,
     async cancelOperation() {

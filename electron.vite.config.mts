@@ -6,8 +6,10 @@ import {existsSync,readFileSync} from 'node:fs'
 import {helpArticles,validateHelpContent} from './src/shared/help-content.ts'
 import {releaseNotes,validateReleaseNotes} from './src/shared/release-content.ts'
 import {helpTopicIds} from './src/shared/help.ts'
+import {shellIconName} from './scripts/release/shell-icon-name.mjs'
 export default defineConfig({
   main: {
+    define: { __WORKRAIL_SHELL_ICON_NAME__: JSON.stringify(shellIconName) },
     plugins: [{name:'static-node-maintenance', buildStart() {
       for (const name of ['index.html','app.js','style.css']) {
         const path=resolve('src/renderer/node-maintenance',name)
@@ -16,6 +18,8 @@ export default defineConfig({
       }
     }}],
     build: {
+      // The detached recovery window must also load its verifier and ZIP reader offline.
+      externalizeDeps: { exclude: ['openpgp', 'yauzl'] },
       outDir: 'out/main',
       rollupOptions: {
         input: {index:resolve('src/main/index.ts'),'node-maintenance':resolve('src/main/node-maintenance/main.ts')},

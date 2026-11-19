@@ -5,6 +5,8 @@ import { pathToFileURL } from 'node:url'
 import { loadNodeCatalog } from '../node-management/catalog'
 import { dispatchNodeManagement } from '../node-management/ipc-core'
 import { createNodeManagementService, nodeManagementError } from '../node-management/service'
+import { getDownloadProxy } from '../node-management/discovery'
+import { officialNodeTransport } from '../node-management/zip-transport'
 import { createWindowsNodeAdapter } from '../node-management/windows'
 import { verifyMaintenance } from './runtime'
 import { prepareMaintenanceProfile } from './profile'
@@ -27,8 +29,8 @@ let recoveryShortcut = ''
 const localUrl = pathToFileURL(join(__dirname, 'maintenance-ui', 'index.html')).href
 const service = createNodeManagementService({
   platform: process.platform, arch: process.arch,
-  windows: createWindowsNodeAdapter(globalThis.fetch),
-  loadCatalog: () => loadNodeCatalog(globalThis.fetch),
+  windows: createWindowsNodeAdapter(globalThis.fetch, officialNodeTransport),
+  loadCatalog: async manager => loadNodeCatalog(await officialNodeTransport(getDownloadProxy(manager))),
   changed(state) {
     if (ready && process.connected && process.send) process.send({type:'state',session,artifactId,pid:process.pid,busy:state.busy !== null}, () => {})
     if (ready && window && !window.isDestroyed() && window.webContents.getURL() === localUrl) window.webContents.send('node-maintenance:changed', state)
@@ -96,7 +98,7 @@ async function start() {
       return { ok: true, recoveryShortcut, accepted, ready }
     }
     if (args.length === 1 && method === 'openRecoveryLocation') { shell.showItemInFolder(recoveryShortcut); return { ok: true } }
-    if (!ready || (!accepted && method !== 'getState' && method !== 'refreshCatalog')) return { ok: false, error: nodeManagementError('busy') }
+    if (!ready || (!accepted && method !== 'getState' && method !== 'recheck' && method !== 'refreshCatalog')) return { ok: false, error: nodeManagementError('busy') }
     if (method === 'removeStandalone') {
       const current = await service.getState()
       const target = current.removal?.target

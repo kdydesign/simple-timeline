@@ -35,7 +35,7 @@ async function publishNode(desktop: Desktop, state: NodeManagementState) {
   await desktop.app.evaluate(({ ipcMain, BrowserWindow }, { channel, changed, state }) => {
     ipcMain.removeHandler(channel)
     ipcMain.handle(channel, (_event, command: unknown) => {
-      if (command !== 'getState' && command !== 'refreshCatalog') {
+      if (command !== 'getState' && command !== 'recheck' && command !== 'refreshCatalog') {
         return { ok: false, error: { code: 'forbidden', message: 'Presentation fixture permits reads only.' } }
       }
       return { ok: true, data: state }
@@ -230,7 +230,7 @@ test('keeps the current panel in place during a manual inspection and exposes ke
   await desktop.app.evaluate(({ ipcMain }, { channel, state }) => {
     ipcMain.removeHandler(channel)
     ipcMain.handle(channel, async (_event, command) => {
-      if (command === 'getState') await new Promise<void>(resolve => ipcMain.once('presentation-finish-recheck', () => resolve()))
+      if (command === 'recheck') await new Promise<void>(resolve => ipcMain.once('presentation-finish-recheck', () => resolve()))
       return { ok: true, data: state }
     })
   }, { channel: nodeManagementChannel, state })

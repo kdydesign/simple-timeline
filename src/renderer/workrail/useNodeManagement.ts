@@ -132,7 +132,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     setRecheckPending(true)
     setControlError(null)
     try {
-      return await run(() => api.getState(), 'recheck')
+      return await run(() => api.getState('recheck'), 'recheck')
     } finally {
       if (connection.current === current && current.recheck === token) {
         current.recheck = null

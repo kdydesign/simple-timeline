@@ -1,3 +1,4 @@
+import { shellIconName } from './shell-icon-name.mjs'
 import { spawnSync } from "node:child_process";
 import { readFile, readdir, writeFile, copyFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
@@ -32,6 +33,7 @@ const result = spawnSync(process.execPath, args, {
   stdio: "inherit",
   env: {
     ...process.env,
+    ST_SHELL_ICON_NAME: shellIconName,
     ST_SOURCE_SHA: sha,
     CSC_IDENTITY_AUTO_DISCOVERY: "false",
   },

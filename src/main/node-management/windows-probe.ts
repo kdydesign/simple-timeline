@@ -9,6 +9,7 @@ export interface WindowsProbe {
   readLink?(path: string): Promise<string>
   resolvePath(path: string): Promise<string>
   listDirectories(path: string): Promise<string[]>
+  completeNodePackage?(root: string, version: string): Promise<boolean>
   readModernSettings?(): Promise<string>
   readSettings(path: string): Promise<Buffer>
   getManagerDigest(path: string): Promise<string>

@@ -4,6 +4,8 @@ import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { createRequire } from "node:module";
+import { NtExecutable, NtExecutableResource } from 'resedit';
+import { shellIconName } from '../../scripts/release/shell-icon-name.mjs';
 import { finished } from "node:stream/promises";
 import {
   inspectPackage,
@@ -22,6 +24,7 @@ function pe(machine = 0x8664) {
 async function fixture(
   t,
   {
+    staleIcon = false,
     addon = true,
     machine = 0x8664,
     testEntry = false,
@@ -82,7 +85,21 @@ async function fixture(
   );
   // ASAR returns the ended stream before its pending writes have finished.
   await finished(archiveStream);
-  await writeFile(join(unpacked, "Planrail.exe"), pe());
+  const ico = await readFile("resources/icon.ico");
+  await writeFile(join(unpacked, "resources", shellIconName), ico);
+  const exe = join(unpacked, "Planrail.exe");
+  await writeFile(exe, Buffer.from(NtExecutable.createEmpty(false, false).generate()));
+  const {editWindowsResources} = require("app-builder-lib/out/util/resEdit.js");
+  await editWindowsResources({file: exe, iconPath: "resources/icon.ico", versionStrings: {},
+    fileVersion: "0.1.0", productVersion: "0.1.0"});
+  if (staleIcon) {
+    const binary = NtExecutable.from(await readFile(exe));
+    const resources = NtExecutableResource.from(binary);
+    const frame = resources.entries.filter(entry => entry.type === 3).at(-1);
+    new Uint8Array(frame.bin)[0] ^= 1;
+    resources.outputResource(binary);
+    await writeFile(exe, Buffer.from(binary.generate()));
+  }
   return unpacked;
 }
 test("recognizes an x64 native addon outside ASAR and the production entry", async (t) => {
@@ -153,4 +170,8 @@ test("rejects a selected native binding that is still packed inside ASAR", async
     () => fixture(t, { unpack: false }).then(inspectPackage),
     /native/i,
   );
+});
+
+test("rejects one stale frame in the first executable icon group", async (t) => {
+  await assert.rejects(() => fixture(t, {staleIcon: true}).then(inspectPackage), /icon frame/i);
 });

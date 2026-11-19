@@ -6,8 +6,11 @@ import { win32 } from 'node:path'
 import { promisify } from 'node:util'
 import { isNodeVersion } from '../../shared/node-management'
 import { fetchBoundedAsset, type NodeFetch } from './catalog'
-import { discoverWindowsNode, isSafeNvmPath, type NvmInstallation } from './discovery'
-import { classicDigests, legacyHelpers, modernDigest, modernHelpers } from './manager-support'
+import { discoverWindowsNode, getDownloadProxy, isSafeNvmPath, type NvmInstallation } from './discovery'
+import { recognizesClassicVersion } from './classic-list'
+import { downloadNodeZip, NodeZipDownloadError } from './zip-download'
+import { IncompleteNodeInstallationError, installVerifiedNodeZip, inspectNodeZipInstallation } from './zip-install'
+import { classicDigests, legacyHelpers, modernDigest, modernHelpers, usesOfficialNodeZip } from './manager-support'
 import { isExplorerComponent, samePath } from './windows-probe'
 import { modernRegistryRead } from './modern-manager'
 import { createMachineMutationLock } from './mutation-lock'
@@ -40,7 +43,7 @@ export function buildNvmInvocation(installation: NvmInstallation, command: 'inst
     || installation.executableDigest !== classicDigests[installation.version]) throw Error('Unverified classic nvm')
   return {
     executable: installation.exe, executableDigest: installation.executableDigest,
-    ...(installation.version === '1.1.11' && command === 'use' ? { legacyHelperRoot: installation.root } : {}),
+    ...(installation.version !== '1.2.2' && command === 'use' ? { legacyHelperRoot: installation.root } : {}),
     ...(installation.useProxyEnvironment && command === 'install' ? { useProxyEnvironment: true } : {}),
     args: [command, version, '64'], nvmHome: installation.home, nvmSymlink: installation.symlink,
     settingsDigest: installation.settingsDigest,
@@ -373,7 +376,7 @@ export async function resolveSystemPowerShell() {
   return { system, powershell, options }
 }
 
-export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter {
+export function createWindowsNodeAdapter(request: NodeFetch, zipTransport?: (proxy?: string) => Promise<NodeFetch>): WindowsNodeAdapter {
   const officialDigests = new Map<string, string>()
   const officialPackages = new Set<string>()
   let machineLock: Promise<ReturnType<typeof createMachineMutationLock>> | null = null
@@ -411,6 +414,10 @@ export function createWindowsNodeAdapter(request: NodeFetch): WindowsNodeAdapter
   }
 
   return {
+    async recognizesVersion(installation, version) {
+      const { system } = await resolveSystemPowerShell()
+      return recognizesClassicVersion(installation, version, system, readBoundedFile)
+    },
     async verifiedDirectory(root) {
       return isSafeNvmPath(root) && win32.normalize(root).replace(/\\$/, '').slice(3).split('\\').every(isExplorerComponent)
         && (await lstat(root)).isDirectory() && samePath(root, await realpath(root))
@@ -487,6 +494,7 @@ ${modernRegistryRead}
         if (item.isDirectory()) return 'directory'
         return 'other'
       },
+      completeNodePackage: async (root, version) => await inspectNodeZipInstallation(root, version) === 'complete',
       resolvePath: realpath,
       readLink: readlink,
       listDirectories: async path => (await readdir(path, { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name),
@@ -501,7 +509,41 @@ ${modernRegistryRead}
       },
       isX64Node,
     }),
-    async changeVersion(installation, command, version) {
+    async changeVersion(installation, command, version, phase = () => {}) {
+      if (command === 'install' && installation.family === 'classic' && usesOfficialNodeZip(installation.version)) {
+        const validate = async () => {
+          const current = await this.discover()
+          const fresh = current.installation
+          if (!current.capabilities?.install.available || !fresh || fresh.family !== 'classic'
+            || fresh.executableDigest !== installation.executableDigest || fresh.settingsDigest !== installation.settingsDigest
+            || !samePath(fresh.exe, installation.exe) || !samePath(fresh.root, installation.root)
+            || !samePath(fresh.symlink, installation.symlink)) throw Error('nvm-settings-check')
+          return current
+        }
+        try {
+          validateInstallation(installation, command, version)
+          const discovered = await validate()
+          const existing = await inspectNodeZipInstallation(installation.root, version)
+          if (existing === 'incomplete') return { status: 'zip-incomplete' }
+          if (existing === 'complete') return { status: discovered.installedVersions.includes(version) ? 'success' : 'zip-incomplete' }
+          if (!zipTransport) return { status: 'zip-download' }
+          let transport: NodeFetch
+          try { transport = await zipTransport(getDownloadProxy(installation)) }
+          catch { return { status: 'zip-download' } }
+          const archive = await downloadNodeZip(version, transport, phase)
+          phase('extracting')
+          await installVerifiedNodeZip({ root: installation.root, version, archive, beforePublish: async () => { await validate() } })
+          return { status: 'success' }
+        } catch (error) {
+          if (error instanceof IncompleteNodeInstallationError) return { status: 'zip-incomplete' }
+          if (error instanceof NodeZipDownloadError) return { status: error.code }
+          if (error instanceof Error && error.message === 'nvm-settings-check') return { status: 'nvm-settings-check' }
+          const systemError = error as NodeJS.ErrnoException
+          if (['EACCES', 'EPERM'].includes(systemError.code ?? '')) return { status: 'zip-permission' }
+          if (systemError.code === 'ERROR_VIRUS_INFECTED' || systemError.code === 'ERROR_VIRUS_DELETED') return { status: 'zip-blocked' }
+          return { status: 'zip-extraction' }
+        }
+      }
       if (installation.family === 'modern') {
         let shell: Awaited<ReturnType<typeof resolveSystemPowerShell>>
         let args: string[]

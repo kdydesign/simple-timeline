@@ -271,3 +271,17 @@ it('holds the selection while opening the verified root and reports Explorer fai
   expect(f.opener.openPath).toHaveBeenCalledWith('C:\\node versions')
   expect(f.service.currentState().error).toBeNull()
 })
+
+it('completes a passive discovery before dispatching use to the same selected environment', async () => {
+  const f = setup([windows])
+  const state = await f.service.getState()
+  const pending = deferred<NodeEnvironment[]>()
+  f.discover.mockReturnValueOnce(pending.promise)
+  const use = vi.spyOn(f.win, 'use').mockResolvedValue(state)
+  const scan = f.service.getState()
+  const change = f.service.use('22.9.0')
+  pending.resolve([windows])
+  await scan
+  expect((await change).error).toBeNull()
+  expect(use).toHaveBeenCalledOnce()
+})

@@ -20,7 +20,7 @@ function render() {
   element('catalog').disabled = pending || Boolean(state?.busy)
   element('remove').disabled = blocked || state.removal?.status !== 'available' || state.removal?.rebootRequired
   element('manager').disabled = blocked || state.manager.status !== 'missing' || state.conflicts.length > 0 || state.removal?.rebootRequired
-  element('status').textContent = !accepted ? '복구 창의 준비와 작업 인계를 확인하고 있습니다…' : state?.busy ? 'Windows 작업이 진행 중입니다. 창을 닫으면 숨겨지며 작업은 계속됩니다.' : pending ? '환경을 확인하고 있습니다…' : '각 단계의 버튼을 눌러 진행해 주세요.'
+  element('status').textContent = !accepted ? '복구 창의 준비와 작업 인계를 확인하고 있습니다…' : state?.busy ? ({downloading: '공식 배포 파일 다운로드 중', authenticating: '공식 ZIP 무결성 확인 중', extracting: '압축 해제 및 설치 중', verifying: '설치·전환 결과 확인 중', checking: '환경 검사 중', waiting: 'Windows 작업 완료 대기 중'}[state.busy.phase] || 'Windows 작업 진행 중') : pending ? '환경을 확인하고 있습니다…' : '각 단계의 버튼을 눌러 진행해 주세요.'
   if (!state) return
   element('environment').textContent = state.activeVersion ? `현재 Node ${state.activeVersion} · ${state.activeSource === 'nvm' ? 'nvm 관리' : '기존 설치'}` : state.checkedAt ? '현재 사용할 수 있는 Node를 확인하지 못했습니다.' : '환경을 검사하고 있습니다.'
   element('target').textContent = state.removal?.target ? `제거 대상: Node.js ${state.removal.target.version} · ${state.removal.target.path}` : ''
@@ -38,12 +38,12 @@ function render() {
     for (const text of [`${version}${release?.lts ? ' · LTS' : ''}`, release?.npm || '—', active ? '사용 중' : installed ? '설치됨' : '미설치']) { const cell = document.createElement('td'); cell.textContent = text; row.append(cell) }
     const cell = document.createElement('td'), button = document.createElement('button')
     button.textContent = active ? '사용 중' : installed ? '사용' : '설치'
-    button.disabled = blocked || state.manager.status !== 'ready' || state.conflicts.length > 0 || active || state.removal?.rebootRequired
+    button.disabled = blocked || state.manager.status !== 'ready' || (state.capabilities ? !state.capabilities[installed ? 'use' : 'install'].available : state.conflicts.length > 0) || active || state.removal?.rebootRequired
     button.addEventListener('click', () => run(() => installed ? api.use(version) : api.install(version)))
     cell.append(button); row.append(cell); return row
   }))
 }
-element('refresh').addEventListener('click', () => run(() => api.getState()))
+element('refresh').addEventListener('click', () => run(() => api.recheck()))
 element('catalog').addEventListener('click', () => run(() => api.refreshCatalog()))
 element('remove').addEventListener('click', () => { const identity = state?.removal?.confirmationId; if (identity) void run(() => api.removeStandalone(identity)) })
 element('manager').addEventListener('click', () => run(() => api.installManager()))

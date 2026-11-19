@@ -24,7 +24,7 @@ export function createNodeRouting(service:NodeCommandService & {currentState():N
    return result.ok?{ok:true,data:decorate()}:result
   }
   if(command==='removeStandalone'&&maintenance.required)return {ok:false,error:nodeManagementError('forbidden')}
-  if(maintenance.isActive()&&!['getState','refreshCatalog'].includes(String(command)))return {ok:false,error:nodeManagementError('busy')}
+  if(maintenance.isActive()&&!['getState','recheck','refreshCatalog'].includes(String(command)))return {ok:false,error:nodeManagementError('busy')}
   const result=await dispatchNodeManagement(service,args,true)
   if(!result.ok)return result
   const error=environmentCommandError(result.data)

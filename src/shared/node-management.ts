@@ -19,6 +19,7 @@ export type NodeManagementErrorCode =
   | 'version-unavailable' | 'version-not-installed'
   | 'cancelled' | 'operation-failed' | 'operation-unknown' | 'operation-slow'
   | 'confirmation-expired' | 'removal-unavailable' | 'reboot-required' | 'installer-busy'
+  | 'zip-download' | 'zip-integrity' | 'zip-permission' | 'zip-incomplete' | 'zip-extraction' | 'zip-blocked'
   | 'download-failed' | 'integrity-failed' | 'verification-failed'
   | 'nvm-install-failed' | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
 
@@ -51,7 +52,7 @@ export interface NodeOperation {
   kind: 'install' | 'use' | 'install-manager' | 'remove-standalone'
   version: string | null
   cancellable?: boolean
-  phase: 'checking' | 'downloading' | 'extracting' | 'compiling' | 'waiting' | 'verifying'
+  phase: 'checking' | 'downloading' | 'authenticating' | 'extracting' | 'compiling' | 'waiting' | 'verifying'
 }
 
 export interface StandaloneRemovalConfirmation { confirmed: true; confirmationId: string }
@@ -99,7 +100,7 @@ export interface NodeManagementApi {
   selectEnvironment(id: string): Promise<NodeManagementResult>
   startEnvironment(): Promise<NodeManagementResult>
   cancelOperation(): Promise<NodeManagementResult>
-  getState(): Promise<NodeManagementResult>
+  getState(intent?: 'recheck'): Promise<NodeManagementResult>
   refreshCatalog(): Promise<NodeManagementResult>
   install(version: string): Promise<NodeManagementResult>
   use(version: string): Promise<NodeManagementResult>

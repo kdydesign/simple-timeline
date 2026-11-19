@@ -24,6 +24,7 @@ export async function dispatchNodeManagement(
     if (args.length === 1 && (command === 'startEnvironment' || command === 'cancelOperation') && service[command]) {
       return { ok: true, data: await service[command]() }
     }
+    if (args.length === 1 && command === 'recheck') return { ok: true, data: await service.getState('recheck') }
     if (args.length === 1 && (command === 'getState' || command === 'refreshCatalog' || command === 'installManager')) {
       return { ok: true, data: await service[command]() }
     }

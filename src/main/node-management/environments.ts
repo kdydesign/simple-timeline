@@ -133,7 +133,7 @@ export function createEnvironmentCoordinator(options: {
     return request.finally(() => { if (discovery === request) discovery = null })
   }
 
-  async function read(method: 'getState' | 'refreshCatalog') {
+  async function read(method: 'getState' | 'refreshCatalog', intent?: 'recheck') {
     if (writing || mutating) return state
     if (state.busy) {
       if (active?.kind !== 'wsl2' || state.error?.code !== 'operation-unknown') return state
@@ -144,13 +144,13 @@ export function createEnvironmentCoordinator(options: {
       return state
     }
     await detect()
-    return inspect(method)
+    return inspect(method, intent)
   }
 
-  async function inspect(method: 'getState' | 'refreshCatalog') {
+  async function inspect(method: 'getState' | 'refreshCatalog', intent?: 'recheck') {
     const target = backend, command = commandGeneration
     if (target && !mutating && !writing) {
-      const request = target[method]()
+      const request = method === 'getState' && intent ? target.getState(intent) : target[method]()
       inspections.add(request)
       try {
         const snapshot = await request
@@ -161,7 +161,12 @@ export function createEnvironmentCoordinator(options: {
   }
 
   async function mutate(run: (target: Backend) => Promise<NodeManagementState>, windowsOnly = false) {
-    if (busy() || discovery) return denied(nodeManagementError('busy'))
+    if (discovery && !busy()) {
+      const expected = backend
+      await discovery
+      if (!expected || expected !== backend) return denied(invalid('선택한 환경이 바뀌었습니다. 다시 확인해 주세요.'))
+    }
+    if (busy()) return denied(nodeManagementError('busy'))
     if (!backend || !targetSelected() || (windowsOnly && active?.kind !== 'windows')) return denied(invalid('실행 중인 관리 환경을 선택해 주세요.'))
     if (options.barrier?.blocked()) return denied(nodeManagementError('shutdown'))
     ++scan
@@ -210,7 +215,7 @@ export function createEnvironmentCoordinator(options: {
     currentState: () => state,
     openManagerFolder: (expectedId: string) => openManager(expectedId, 'folder'),
     openManagerRelease: (expectedId: string) => openManager(expectedId, 'release'),
-    getState: () => read('getState'),
+    getState: (intent?: 'recheck') => read('getState', intent),
     refreshCatalog: () => read('refreshCatalog'),
     async selectEnvironment(id: string) {
       if (busy() || discovery) return denied(nodeManagementError('busy'))

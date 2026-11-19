@@ -9,6 +9,8 @@ files:
   - resources/licenses/**/*
   - package.json
 extraResources:
+  - from: resources/icon.ico
+    to: ${env.ST_SHELL_ICON_NAME}
   - from: resources/windows/login-startup.ps1
     to: windows/login-startup.ps1
 asar: true

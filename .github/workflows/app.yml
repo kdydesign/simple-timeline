@@ -26,6 +26,9 @@ jobs:
         run: xvfb-run -a npm run verify:app
       - if: runner.os == 'Windows'
         run: npm run verify:app
+      - name: Verify official Windows Node ZIP with nvm 1.1.10 and 1.1.11
+        if: runner.os == 'Windows'
+        run: ./scripts/testing/verify-classic-nvm.ps1
       - name: Build unsigned current-user Windows installer
         if: runner.os == 'Windows'
         run: npm run dist:win

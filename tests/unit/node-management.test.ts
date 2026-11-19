@@ -42,12 +42,13 @@ const files = new Map([
   [(symlink + '\\node.exe').toLowerCase(), 'file'],
   [symlink.toLowerCase(), 'symlink'],
 ])
-function local(overrides: { settings?: string; path?: string[]; changes?: [string, string][]; env?: Record<string,string>; linkedVersion?: string; diskVersion?: string; digest?: string; helperDigests?: Record<string, string>; onExecute?: () => void } = {}) {
+function local(overrides: { completePackage?: boolean; settings?: string; path?: string[]; changes?: [string, string][]; env?: Record<string,string>; linkedVersion?: string; diskVersion?: string; digest?: string; helperDigests?: Record<string, string>; onExecute?: () => void } = {}) {
   const entries = new Map([...files, ...(overrides.changes ?? []).map(([path, kind]) => [path.toLowerCase(), kind] as const)])
   const probe = {
     readEnvironment: async () => overrides.env ?? { Path: [home, ...(overrides.path ?? []), symlink].join(';'), NVM_HOME: home, NVM_SYMLINK: symlink },
     pathKind: async path => entries.get(path.toLowerCase()) as 'file' | 'directory' | 'symlink' ?? 'missing',
     resolvePath: async path => path.toLowerCase() === symlink.toLowerCase() ? home + '\\v22.9.0' : path,
+    completeNodePackage: async () => overrides.completePackage ?? false,
     listDirectories: async () => ['v22.9.0', 'v24.11.0', 'external'],
     readSettings: async () => Buffer.from(overrides.settings ?? settings),
     getManagerDigest: async (path: string) => overrides.helperDigests?.[path] ?? overrides.digest ?? officialDigest,
@@ -597,4 +598,89 @@ it.runIf(process.platform === 'win32')('accepts an existing local Windows folder
     expect(await verify(join(temp, 'plain.txt'))).toBe(false)
     expect(await verify(join(temp, 'link', 'versions'))).toBe(false)
   } finally { await rm(temp, { recursive: true, force: true }) }
+})
+
+it('dismisses a finished install failure only on an explicit successful recheck', async () => {
+  const { service } = makeService(adapter({ changeVersion: async () => ({ status: 'failed' }), mutationStatus: async () => 'clear' }))
+  expect((await service.install('24.11.0')).error?.code).toBe('nvm-install-failed')
+  expect((await service.getState()).error?.code).toBe('nvm-install-failed')
+  expect((await service.getState('recheck')).error).toBeNull()
+  expect((await service.use('22.9.0')).error).toBeNull()
+})
+
+it('recognizes the official 1.1.10 binary and checks both legacy helpers for switching', async () => {
+  const current = await local({ digest: '6eef8b67aeefcb060c98b1e4925e5b23e6097546b73f564c5839f8dcb2dfbc3b' })
+  expect(current.manager.version).toBe('1.1.10')
+  expect(current.capabilities?.install.available).toBe(true)
+  expect(current.capabilities?.use.available).toBe(false)
+})
+
+it('excludes a direct-install version with missing npm from install discovery', async () => {
+  const digest = 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791'
+  expect((await local({ digest })).installedVersions).not.toContain('22.9.0')
+  const dualArch = await local({ digest, completePackage: true, changes: [
+    [home + '\\v22.9.0\\node.exe', 'missing'], [home + '\\v22.9.0\\node64.exe', 'file'],
+  ] })
+  expect(dualArch.installedVersions).toContain('22.9.0')
+})
+
+it('retains a post-publication verification failure until the same manager lists the exact version', async () => {
+  let listed = false, installed = false, reads = 0
+  const installation = { ...ready.installation!, family: 'classic' as const, version: '1.1.11' as const, executableDigest: 'a49764cb5cae51d0a31f7bbeda22bc6eab4b2952f2638d543bb38877a6670791' }
+  const { service } = makeService(adapter({
+    discover: async () => ({ ...ready, installation, installedVersions: installed ? ['24.11.0'] : [] }),
+    changeVersion: async () => { installed = true; return { status: 'success' } },
+    recognizesVersion: async (_installation, version) => { reads++; return listed && version === '24.11.0' },
+  }))
+  expect((await service.install('24.11.0')).error?.code).toBe('verification-failed')
+  expect((await service.getState('recheck')).error?.code).toBe('verification-failed')
+  listed = true
+  expect((await service.getState('recheck')).error).toBeNull()
+  expect(reads).toBe(3)
+})
+
+it('reports the full preserved version directory for a partial direct install', async () => {
+  const installation = { ...ready.installation!, family: 'classic' as const, version: '1.1.10' as const }
+  const { service } = makeService(adapter({
+    discover: async () => ({ ...ready, installation }),
+    changeVersion: async () => ({ status: 'zip-incomplete' }),
+  }))
+  expect((await service.install('24.11.0')).error?.message).toContain(home + '\\v24.11.0')
+})
+
+it('settles the previous machine-lock inspection before acquiring the install lease', async () => {
+  const { createMachineMutationLock } = await import('../../src/main/node-management/mutation-lock')
+  const directory = await mkdtemp(join(tmpdir(), 'workrail-recheck-'))
+  let reading!: () => void, resume!: () => void
+  const started = new Promise<void>(resolve => { reading = resolve })
+  const released = new Promise<void>(resolve => { resume = resolve })
+  const lock = createMachineMutationLock(directory, 'boot')
+  let firstRead = true
+  try {
+    const { service } = makeService(adapter({
+      mutationStatus: async () => {
+        if (firstRead) {
+          firstRead = false
+          reading()
+          await released
+        }
+        return lock.status()
+      },
+      acquireMutation: lock.acquire,
+      changeVersion: async () => ({ status: 'failed' }),
+    }))
+    const automaticRead = service.getState()
+    await started
+    const failedInstall = service.install('24.11.0')
+    resume()
+    await automaticRead
+    expect((await failedInstall).error?.code).toBe('nvm-install-failed')
+    expect(await lock.status()).toBe('clear')
+    expect(service.isBusy()).toBe(false)
+    expect((await service.getState('recheck')).error).toBeNull()
+    expect((await service.use('22.9.0')).error).toBeNull()
+  } finally {
+    resume()
+    await rm(directory, { recursive: true, force: true })
+  }
 })

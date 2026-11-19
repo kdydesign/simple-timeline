@@ -1,3 +1,4 @@
+import { win32 } from 'node:path'
 import { randomBytes } from 'node:crypto'
 import { isRemovalConfirmation, type StandaloneRemovalConfirmation } from '../../shared/node-management'
 import { selectStandaloneTarget, targetFingerprint, type MsiEvidence, type MsiRemovalResult } from './standalone'
@@ -5,22 +6,24 @@ import type { MachineMutationLease } from './mutation-lock'
 import { isNodeVersion, type NodeManagementError, type NodeManagementErrorCode, type NodeManagementState, type NodeOperation, type NodeRelease } from '../../shared/node-management'
 import type { MutationBarrier } from '../updates/installer'
 import { samePath } from './windows-probe'
-import { capabilities } from './manager-support'
+import { capabilities, usesOfficialNodeZip } from './manager-support'
 import type { NvmInstallation, WindowsDiscovery } from './discovery'
 
 export interface ElevatedResult {
   status: 'success' | 'cancelled' | 'failed' | 'unknown' | 'download-failed' | 'integrity-failed'
+    | 'zip-download' | 'zip-integrity' | 'zip-permission' | 'zip-incomplete' | 'zip-extraction' | 'zip-blocked'
     | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
 }
 
 export interface WindowsNodeAdapter {
   discover(): Promise<WindowsDiscovery>
+  recognizesVersion?(installation: NvmInstallation, version: string): Promise<boolean>
   verifiedDirectory?(root: string): Promise<boolean>
   inspectStandalone?(): Promise<MsiEvidence[]>
   removeStandalone?(target: MsiEvidence): Promise<MsiRemovalResult>
   acquireMutation?(kind: NodeOperation['kind']): Promise<MachineMutationLease>
   mutationStatus?(): Promise<'clear' | 'busy' | 'reboot-required' | 'operation-unknown'>
-  changeVersion(installation: NvmInstallation, command: 'install' | 'use', version: string): Promise<ElevatedResult>
+  changeVersion(installation: NvmInstallation, command: 'install' | 'use', version: string, phase?: (phase: NodeOperation['phase']) => void): Promise<ElevatedResult>
   installManager(phase: (phase: NodeOperation['phase']) => void): Promise<ElevatedResult>
 }
 
@@ -43,6 +46,12 @@ const messages: Record<NodeManagementErrorCode, string> = {
   'version-unavailable': '공식 배포 목록에서 이 Windows x64 버전을 찾지 못했습니다. 목록을 새로고침해 주세요.',
   'version-not-installed': '이 Windows x64 버전이 nvm에 설치되어 있지 않습니다.',
   cancelled: 'Windows 권한 요청 또는 설치가 취소되었습니다.',
+  'zip-download': '공식 Node 배포 파일을 받지 못했습니다. 사내 프록시와 배포 서버 연결을 확인해 주세요.',
+  'zip-integrity': '공식 릴리스 서명 또는 ZIP의 SHA-256을 확인하지 못해 설치를 중단했습니다.',
+  'zip-permission': 'nvm 버전 폴더에 쓸 수 없습니다. 해당 폴더의 접근 권한을 확인해 주세요.',
+  'zip-incomplete': '같은 버전의 불완전한 설치 폴더가 있습니다. 관리자 폴더에서 해당 버전을 확인해 주세요.',
+  'zip-extraction': '공식 ZIP을 설치 폴더에 준비하지 못했습니다. 디스크 여유 공간과 파일 상태를 확인해 주세요.',
+  'zip-blocked': 'Windows 보안 정책이 설치 파일을 차단했습니다. 사내 보안 담당자에게 차단 기록을 확인해 주세요.',
   'nvm-install-failed': 'nvm이 Node 설치를 완료하지 못했습니다. 공식 배포 서버 연결, 사내 프록시의 응답 및 설치 폴더 권한을 확인한 뒤 다시 시도해 주세요.',
   'operation-failed': 'Node 작업에 실패했습니다. Windows 권한, 인터넷 연결 및 nvm 설정을 확인해 주세요.',
   'operation-unknown': 'Node 작업이 아직 실행 중일 수 있습니다. Windows 작업 관리자에서 설치 프로그램과 승격 작업이 끝났는지 확인해 주세요. 중복 변경은 차단됩니다. 작업이 끝난 뒤 Windows를 재부팅하고 복구 창에서 다시 검사해 주세요.',
@@ -66,6 +75,8 @@ const exitErrors = {
   unknown: 'operation-unknown',
   'download-failed': 'download-failed',
   'integrity-failed': 'integrity-failed',
+  'zip-download': 'zip-download', 'zip-integrity': 'zip-integrity', 'zip-permission': 'zip-permission',
+  'zip-incomplete': 'zip-incomplete', 'zip-extraction': 'zip-extraction', 'zip-blocked': 'zip-blocked',
   'nvm-settings-check': 'nvm-settings-check',
   'command-processor-check': 'command-processor-check',
   'command-autorun': 'command-autorun',
@@ -76,7 +87,7 @@ export function createNodeManagementService(options: {
   platform: string
   arch: string
   windows: WindowsNodeAdapter
-  loadCatalog: () => Promise<NodeRelease[]>
+  loadCatalog: (installation: NvmInstallation | null) => Promise<NodeRelease[]>
   changed: (state: NodeManagementState) => void
   barrier?: MutationBarrier
   slowAfterMs?: number
@@ -102,6 +113,8 @@ export function createNodeManagementService(options: {
   let rebootRequired = false
   let msiExitCode: number | null = null
   let machineReservation: 'busy' | 'operation-unknown' | null = null
+  let pendingZip: { before: WindowsDiscovery; version: string } | null = null
+  let incompleteFolder: string | null = null
   let activeLease: MachineMutationLease | undefined
   let inspection: Promise<WindowsDiscovery | null> | null = null
   let catalogRequest: Promise<void> | null = null
@@ -167,7 +180,7 @@ export function createNodeManagementService(options: {
     catalogRequest ??= (async () => {
       publish({ catalog: { ...state.catalog, status: 'loading', error: null } })
       try {
-        const releases = await options.loadCatalog()
+        const releases = await options.loadCatalog(inspectedInstallation)
         publish({ catalog: { releases, status: 'ready', error: null, checkedAt: new Date().toISOString() } })
       } catch {
         publish({ catalog: { ...state.catalog, status: 'error', error: nodeManagementError('catalog-unavailable') } })
@@ -182,6 +195,25 @@ export function createNodeManagementService(options: {
 
   function operationBlocked(current: WindowsDiscovery, operation: 'install' | 'use') {
     return current.capabilities ? !current.capabilities[operation].available : current.conflicts.length > 0
+  }
+
+  async function verifyZip(check: NonNullable<typeof pendingZip>, fresh: WindowsDiscovery | null) {
+    const original = check.before.installation
+    const current = fresh?.installation
+    if (!fresh || !original || !current || fresh.manager.status !== 'ready'
+      || original.executableDigest !== current.executableDigest || original.settingsDigest !== current.settingsDigest
+      || !samePath(original.exe, current.exe) || !samePath(original.root, current.root) || !samePath(original.symlink, current.symlink)
+      || fresh.activeVersion !== check.before.activeVersion || fresh.activeSource !== check.before.activeSource
+      || fresh.activeX64 !== check.before.activeX64 || !fresh.installedVersions.includes(check.version)) return false
+    return await windows.recognizesVersion?.(current, check.version).catch(() => false) === true
+  }
+
+  async function confirmZip(before: WindowsDiscovery, fresh: WindowsDiscovery | null, version: string) {
+    const check = { before, version }
+    pendingZip = check
+    if (!await verifyZip(check, fresh)) return 'verification-failed'
+    if (pendingZip === check) pendingZip = null
+    return null
   }
 
   async function perform(kind: NodeOperation['kind'], version: string | null, removal?: { fingerprint: string; target: MsiEvidence }): Promise<NodeManagementErrorCode | null> {
@@ -215,13 +247,14 @@ export function createNodeManagementService(options: {
       if (operationBlocked(current, kind)) return 'environment-conflict'
       if (!isNodeVersion(version)) return 'invalid-request'
       if (kind === 'install') {
-        if (current.installedVersions.includes(version)) return null
-        if (state.catalog.status !== 'ready') {
+        if (!current.installedVersions.includes(version) && state.catalog.status !== 'ready') {
           await fetchCatalog()
           current = await inspect()
           if (!current) return 'inspection-failed'
           if (!current.installation || current.manager.status !== 'ready' || operationBlocked(current, 'install')) return 'environment-conflict'
-          if (current.installedVersions.includes(version)) return null
+        }
+        if (current.installedVersions.includes(version)) {
+          return usesOfficialNodeZip(current.installation.version) ? confirmZip(current, current, version) : null
         }
         if (state.catalog.status !== 'ready') return 'catalog-unavailable'
         if (!state.catalog.releases.some(release => release.version === version)) return 'version-unavailable'
@@ -229,13 +262,15 @@ export function createNodeManagementService(options: {
         if (!current.installedVersions.includes(version)) return 'version-not-installed'
         if (current.activeVersion === version && current.activeSource === 'nvm' && current.activeX64 !== false) return null
       }
-      setPhase('waiting')
-      outcome = await windows.changeVersion(current.installation, kind, version)
+      setPhase(kind === 'install' && usesOfficialNodeZip(current.installation.version) ? 'checking' : 'waiting')
+      outcome = await windows.changeVersion(current.installation, kind, version, setPhase)
     }
     setPhase('verifying')
     const updated = await inspect()
     if (kind === 'install' && outcome.status === 'failed') return 'nvm-install-failed'
+    if (outcome.status === 'zip-incomplete' && current.installation && version) incompleteFolder = win32.join(current.installation.root, 'v' + version)
     if (outcome.status !== 'success') return exitErrors[outcome.status]
+    if (kind === 'install' && current.installation && usesOfficialNodeZip(current.installation.version) && version) return confirmZip(current, updated, version)
     const preservedDefault = kind !== 'install' || (updated?.activeVersion === current.activeVersion && updated.activeSource === current.activeSource)
     const verified = preservedDefault && updated && updated.manager.status === 'ready' && (kind === 'install-manager' ? updated.conflicts.length === 0 : !operationBlocked(updated, kind)) && (
       kind === 'install-manager' ? updated.installation !== null
@@ -266,6 +301,8 @@ export function createNodeManagementService(options: {
       let lease: MachineMutationLease | undefined
       let acquired = false
       try {
+        // Finish any passive observation of the machine lock before acquiring our own.
+        if (inspection) await inspection
         lease = await windows.acquireMutation?.(kind)
         acquired = true
         activeLease = lease
@@ -294,14 +331,19 @@ export function createNodeManagementService(options: {
         await new Promise<never>(() => {})
       } else {
         let reason = code === 'environment-conflict' && (kind === 'install' || kind === 'use') ? state.capabilities?.[kind].reason : null
+        if (code === 'zip-incomplete' && incompleteFolder) reason = messages[code] + ' ' + incompleteFolder
+        incompleteFolder = null
         if (code === 'verification-failed' && kind === 'install') {
           reason = 'nvm 설치 결과를 확인하지 못했습니다. 설치 목록과 기본 버전을 다시 검사해 주세요. 요청한 버전이 없다면 공식 배포 서버 연결과 프록시 응답을 확인해 주세요.'
         }
-        publish({ busy: null, error: code ? { code, message: reason ?? messages[code] } : null })
+        const error = code ? { code, message: reason ?? messages[code] } : null
+        const operationLog = error ? [...(state.operationLog ?? []).slice(-19), [kind, version, error.code].filter(Boolean).join(' · ')] : state.operationLog
+        publish({ busy: null, error, operationLog })
         resolveResult(state)
       }
     }
     // Reserve the barrier and the operation synchronously, before another IPC request can start.
+    pendingZip = null
     const scheduled = barrier?.run(() => run())
     publish({ busy: { kind, version, phase: 'checking' }, error: null })
     void (scheduled ?? run()).catch(rejectResult)
@@ -319,12 +361,29 @@ export function createNodeManagementService(options: {
         || !samePath(before.root, after.root) || !await windows.verifiedDirectory?.(after.root)) return null
       return after.root
     },
-    async getState() {
-      if (supported && !state.busy) await inspect()
+    async getState(intent?: 'recheck') {
+      if (supported && !state.busy) {
+        const previous = state.error
+        const fresh = await inspect()
+        if (intent === 'recheck' && fresh && fresh.capabilities?.list.available !== false
+          && !state.busy && !machineReservation && !rebootRequired) {
+          const check = pendingZip
+          if (check) {
+            const matches = await verifyZip(check, fresh)
+            if (pendingZip === check && !state.busy && !machineReservation && !rebootRequired) {
+              if (matches) pendingZip = null
+              publish({ error: matches ? null : nodeManagementError('verification-failed') })
+            }
+          } else if (previous && previous === state.error) publish({ error: null })
+        }
+      }
       return state
     },
     async refreshCatalog() {
-      if (supported && !state.busy) await Promise.all([inspect(), fetchCatalog()])
+      if (supported && !state.busy) {
+        await inspect()
+        if (!state.busy) await fetchCatalog()
+      }
       return state
     },
     install: (version: string) => operate('install', version),

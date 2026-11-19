@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| Node 공식 ZIP 설치·실패 후 환경 다시 검사·Windows 셸 아이콘 | [설계](../design/noderail-zip-recovery-shell-icons.md) · [구현 및 검증](../implementation/2026-11-19-windows-node-zip.md). Windows nvm 1.1.10·1.1.11 직접 설치, 종료 확인 후 재검사, 시작 메뉴와 작업 표시줄 아이콘. |
 | NodeRail 사내 프록시와 설치·사용 진행 화면 | [확정 설계·시안 A·인수 기준](../design/noderail-proxy-and-loading.md). Windows 주소·포트 프록시, WSL2 배포판별 설정, 양쪽 목록 레이어, 두 헤더의 불투명도. [구현과 검증 범위](../implementation/2026-11-19-noderail-proxy-loading.md) |
 | NodeRail 상세·Home 작업 레이어 및 마감 일수 | [설계 협의와 시안](../design/workrail-node-detail.md). [제품 반영 및 검증 범위](../implementation/2026-11-19-node-detail.md) |
 | 환경별 Node 연동·Home 개선 협의 | [통합 설계·요구별 수용 기준·시안](../design/workrail-environments-and-home.md). 기존 nvm 기능별 연동, WSL 기본 사용자·필요 시 소스 빌드·도구 수동 설치 안내, 자동 환경 선택, Home/도움말/footer 및 실제 배포 파일 이름까지 포함. Q12에서 수정 시안·세부안을 포함한 통합 설계 확정 후 별도 요청으로 구현·로컬 전체 검증·독립 검토 완료. 원격 패키지와 Windows/WSL 실기는 실행 기록의 범위를 구분한다. 현재 상태는 [구현·검증 기록](../implementation/2026-11-19-workrail-environments.md)과 [계획](../superpowers/plans/2026-11-19-workrail-environments.md)을 따른다 |

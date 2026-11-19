@@ -1,3 +1,4 @@
+import {inspectPackage} from '../../scripts/testing/packaged-smoke.mjs'
 import {openPackagedPlanrail} from './packaged-navigation'
 import { probeNetwork } from "./network-probe";
 import { migrations } from "../../src/main/db/migrations";
@@ -206,14 +207,22 @@ test("real production package installs, works offline, updates and retains DB af
     await waitUntil(async () => !existsSync(legacyInstalled));
     evidence.legacyUpgradeWithChangedDirectory = true;
     evidence.installed = true;
-    const system = JSON.parse(
-      ps([
-        "-File",
-        resolve("scripts/testing/windows-release-info.ps1"),
-        "-Installer",
-        resolve("release", base.installer),
-      ]),
-    );
+    const releaseInfo = (installer: string) => JSON.parse(ps([
+      "-File", resolve("scripts/testing/windows-release-info.ps1"), "-Installer", installer,
+    ]));
+    const system = releaseInfo(resolve("release", base.installer));
+    const verifyStartIcon = async (manifest: typeof base, shortcuts: {startMenu: boolean; appId: string; iconLocation: string; target: string}[]) => {
+      const inspection = await inspectPackage(installDir, {sourceSha: manifest.sourceSha, version: manifest.version});
+      const starts = shortcuts.filter(link => link.startMenu);
+      expect(starts).toHaveLength(1);
+      expect(starts[0].appId).toBe("com.kdydesign.simpletimeline");
+      expect(starts[0].target.toLowerCase()).toBe(installed.toLowerCase());
+      expect(starts[0].iconLocation.replace(/,\s*0$/, "").replace(/^"|"$/g, "").toLowerCase())
+        .toBe(join(installDir, "resources", inspection.shellIcon.file).toLowerCase());
+      expect(starts[0].iconLocation).toMatch(/,\s*0$/);
+      return inspection.shellIcon;
+    };
+    evidence.installedIcon = await verifyStartIcon(base, system.shortcuts);
     expect(system.installerSignature).toBe("NotSigned");
     expect(system.userInstalls).toHaveLength(1);
     expect(system.userInstalls[0].DisplayVersion).toBe(base.version);
@@ -223,7 +232,7 @@ test("real production package installs, works offline, updates and retains DB af
       expect(shortcut.name).toBe('WorkRail');
       expect(shortcut.target.toLowerCase()).toBe(installed.toLowerCase());
       // An empty icon location means the shortcut uses its target executable.
-      if(shortcut.iconLocation)expect(shortcut.iconLocation.replace(/,\s*0$/, '').replace(/^"|"$/g,'').toLowerCase()).toBe(installed.toLowerCase());
+      if(!shortcut.startMenu && shortcut.iconLocation)expect(shortcut.iconLocation.replace(/,\s*0$/, '').replace(/^"|"$/g,'').toLowerCase()).toBe(installed.toLowerCase());
     }
     evidence.system = system;
     console.log("Packaged Windows environment: "+JSON.stringify(system));
@@ -267,10 +276,22 @@ test("real production package installs, works offline, updates and retains DB af
     expect(await snapshot(page)).toEqual(persisted);
     expect(await canConnect()).toBe(false);
     await close();
+    // Seed the retained Start link with the previous icon reference and a user description.
+    ps(["-Command", [
+      "$path=Join-Path ([Environment]::GetFolderPath('Programs')) 'WorkRail.lnk'",
+      "$shell=New-Object -ComObject WScript.Shell",
+      "$link=$shell.CreateShortcut($path)",
+      "$link.IconLocation=$link.TargetPath+',0'",
+      "$link.Description='WorkRail upgrade fixture'",
+      "$link.Save()",
+    ].join(";")]);
     run(resolve("artifacts/windows-update", update.installer), [
       "/S",
       "/D=" + installDir,
     ]);
+    const upgraded = releaseInfo(resolve("artifacts/windows-update", update.installer));
+    evidence.upgradedIcon = await verifyStartIcon(update, upgraded.shortcuts);
+    expect(upgraded.shortcuts.find((link: {startMenu: boolean}) => link.startMenu).description).toBe("WorkRail upgrade fixture");
     page = await launch(installed, update.version);
     expect(await page.evaluate(async () => (await window.timelineWindow!.command("state")).runtimeVersion)).toBe(update.version);
     expect(await snapshot(page)).toEqual(persisted);

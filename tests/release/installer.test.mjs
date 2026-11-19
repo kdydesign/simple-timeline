@@ -76,3 +76,12 @@ test('updater HTTP redaction uses the external runtime registry shared with elec
  const {default:config}=await import('../../electron.vite.config.mts')
  assert.ok(config.main.build.rollupOptions.external?.includes('builder-util-runtime/out/httpExecutor'), 'Bundling this module would create a second redaction registry and leave updater debug logging unprotected')
 })
+
+test('Start icon repair uses the native Shell Link and stays best effort', () => {
+  const script = readFileSync('scripts/release/installer.nsh', 'utf8')
+  const repair = script.match(/Function WorkRailRepairStartIcon\r?\n([\s\S]*?)FunctionEnd/)?.[1]
+  assert.ok(repair)
+  for (const property of ['IShellLink::GetPath', 'PKEY_AppUserModel_ID', 'IShellLink::SetIconLocation', 'IPersistFile::Save', 'SHChangeNotify'])
+    assert.ok(repair.includes(property), property)
+  assert.doesNotMatch(repair, /Exec|powershell|ScriptBlock|SetErrorLevel|Quit|Abort/i)
+})

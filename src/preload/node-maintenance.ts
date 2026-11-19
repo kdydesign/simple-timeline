@@ -6,6 +6,7 @@ const command = (method: string, ...args: unknown[]) => ipcRenderer.invoke('node
 contextBridge.exposeInMainWorld('nodeMaintenance', {
   ready: () => command('ready'),
   getState: () => command('getState'),
+  recheck: () => command('recheck'),
   refreshCatalog: () => command('refreshCatalog'),
   removeStandalone: (confirmationId: string) => command('removeStandalone', { confirmed: true, confirmationId }),
   installManager: () => command('installManager'),
