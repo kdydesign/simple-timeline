@@ -20,7 +20,7 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:clamp(88px,10vw,128p
 <section class="work"><div id="tabs"></div><div id="stage"></div></section></main>
 <div id="menu" role="menu" hidden></div>
 <dialog><form><label>레이아웃 이름<input required maxlength="40" id="layoutName"></label><footer><button type="button" id="cancel">취소</button><button>저장</button></footer></form></dialog>
-<dialog id="serverDialog"><form id="serverForm"><h3 id="serverTitle"></h3><label>서버 이름<input id="profileName" required maxlength="60"></label><label>호스트<input id="host" required></label><label>포트<input id="port" required type="number" min="1" max="65535" value="22"></label><footer><button type="button" id="cancelServer">취소</button><button>저장</button></footer></form></dialog>
+<dialog id="serverDialog"><form id="serverForm"><h3 id="serverTitle"></h3><label>서버 이름<input id="profileName" required maxlength="60"></label><label>호스트<input id="host" required></label><label>포트<input id="port" required type="number" min="1" max="65535" value="22"></label><footer><button type="button" id="cancelServer">취소</button><button id="submitServer">저장</button></footer></form></dialog>
 <script>
 const $ = s => document.querySelector(s);
 const stored = JSON.parse(localStorage.getItem('termrail-preview-v4') || '{}');
@@ -44,10 +44,13 @@ const tabTitle=tab=>tab.profileId ? profileName(tab.profileId) : tab.name;
 const connect=id=>addTab(profileName(id),leaf(id),id);
 function button(name, action){const b=document.createElement('button');b.textContent=name;b.onclick=action;return b}
 let editingId=null;
-function editServer(id){
+let openAfterSave=false;
+function editServer(id,openTerminal=false){
+  openAfterSave=openTerminal;
   editingId=id;
   const profile=profiles.get(id);
-  $('#serverTitle').textContent=profile?'서버 수정':'서버 추가';
+  $('#serverTitle').textContent=openTerminal?'새 터미널':(profile?'서버 수정':'서버 추가');
+  $('#submitServer').textContent=openTerminal?'저장하고 연결':'저장';
   $('#profileName').value=profile?.name||'';
   $('#host').value=profile?.host||'';
   $('#port').value=profile?.port||22;
@@ -74,10 +77,12 @@ $('#serverForm').onsubmit=e=>{
     $('#profileName').setCustomValidity('사용할 새 이름을 입력해 주세요.');$('#profileName').reportValidity();return
   }
   if(!host){$('#host').focus();return}
-  profiles.set(editingId||crypto.randomUUID(),{name,host,port:Number($('#port').value)});
+  const id=editingId||crypto.randomUUID();
+  profiles.set(id,{name,host,port:Number($('#port').value)});
   persist();paintServers();render();
   for(const [w,tab] of floating){w.document.title='TermRail · '+tabTitle(tab);w.refreshPreview()}
   $('#serverDialog').close();
+  if(openAfterSave)connect(id);
 };
 function side(e,box){
   const r=box.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
@@ -158,7 +163,8 @@ function render(){
   }
   const add=button('＋',()=>{
     const r=add.getBoundingClientRect();
-    popup([...profiles].map(([id,p])=>[p.name,()=>connect(id)]),r.left,r.bottom);
+    const savedServers=[...profiles].map(([id,p])=>[p.name,()=>connect(id)]);
+    popup([['새 터미널…',()=>editServer(null,true)],...savedServers],r.left,r.bottom);
   });
   add.className='add';add.ariaLabel='서버 선택';add.setAttribute('aria-haspopup','menu');$('#tabs').append(add);
   $('#stage').replaceChildren(subtree(active?.tree,n=>{
