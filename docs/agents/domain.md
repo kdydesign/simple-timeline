@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| 설치본 NodeRail·TermRail 피드백 | [ZIP 권한 진단, 터미널 표시와 작업 탭 협의안](../design/noderail-termrail-installed-feedback.md) |
 | TermRail SSH 터미널 | [승인된 화면·동작과 후속 검토 항목](../design/ssh-terminal-menu.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |
 | Windows 전 버전 공식 ZIP 설치·내부 로고 축소 | [후속 설계 초안·시안](../design/windows-node-zip-all-versions.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |
 | Node 공식 ZIP 설치·실패 후 환경 다시 검사·Windows 셸 아이콘 | [설계](../design/noderail-zip-recovery-shell-icons.md) · [구현 및 검증](../implementation/2026-11-19-windows-node-zip.md). Windows nvm 1.1.10·1.1.11 직접 설치, 종료 확인 후 재검사, 시작 메뉴와 작업 표시줄 아이콘. |
