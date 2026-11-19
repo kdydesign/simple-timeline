@@ -5,6 +5,9 @@ export interface NodeRelease {
   version: string
   date: string
   lts: string | null
+  ltsKnown?: boolean
+  sourceOnly?: boolean
+  installReason?: string | null
   npm: string | null
   security: boolean
 }
@@ -31,10 +34,24 @@ export interface NodeConflict {
   message: string
 }
 
+export interface NodeEnvironment {
+  id: string
+  label: string
+  kind: 'windows' | 'wsl2'
+  distro?: string
+  user?: string
+  running: boolean
+}
+
+export function isEnvironmentId(value: unknown): value is string {
+  return value === 'windows' || (typeof value === 'string' && /^wsl:[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}(?![\s\S])/.test(value))
+}
+
 export interface NodeOperation {
   kind: 'install' | 'use' | 'install-manager' | 'remove-standalone'
   version: string | null
-  phase: 'checking' | 'downloading' | 'waiting' | 'verifying'
+  cancellable?: boolean
+  phase: 'checking' | 'downloading' | 'extracting' | 'compiling' | 'waiting' | 'verifying'
 }
 
 export interface StandaloneRemovalConfirmation { confirmed: true; confirmationId: string }
@@ -48,6 +65,9 @@ export interface StandaloneRemovalState {
 }
 export type NodeCapabilities = Record<'list' | 'install' | 'use', { available: boolean; reason: string | null }>
 export interface NodeManagementState {
+  environments?: { status: 'loading' | 'ready' | 'error'; items: NodeEnvironment[]; selectedId: string | null; error: NodeManagementError | null }
+  operationLogPath?: string
+  operationLog?: string[]
   capabilities?: NodeCapabilities
   removal?: StandaloneRemovalState
   maintenance?: { required: boolean; active: boolean; status?: 'idle' | 'preparing' | 'ready' | 'error'; error?: string | null; recoveryShortcut?: string }
@@ -56,7 +76,7 @@ export interface NodeManagementState {
   supported: boolean
   manager: { kind?: 'nvm-windows' | 'nodenv'; path?: string; status: 'checking' | 'missing' | 'ready' | 'error'; version: string | null }
   activeVersion: string | null
-  activeSource: 'nvm' | 'standalone' | null
+  activeSource: 'nvm' | 'nodenv' | 'standalone' | null
   installedVersions: string[]
   catalog: {
     releases: NodeRelease[]
@@ -75,6 +95,9 @@ export type NodeManagementResult =
   | { ok: false; error: NodeManagementError }
 
 export interface NodeManagementApi {
+  selectEnvironment(id: string): Promise<NodeManagementResult>
+  startEnvironment(): Promise<NodeManagementResult>
+  cancelOperation(): Promise<NodeManagementResult>
   getState(): Promise<NodeManagementResult>
   refreshCatalog(): Promise<NodeManagementResult>
   install(version: string): Promise<NodeManagementResult>

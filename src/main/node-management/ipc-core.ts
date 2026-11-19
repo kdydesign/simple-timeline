@@ -1,14 +1,27 @@
-import { isRemovalConfirmation, isNodeVersion, type NodeManagementResult } from '../../shared/node-management'
+import { isEnvironmentId, isRemovalConfirmation, isNodeVersion, type NodeManagementResult } from '../../shared/node-management'
 import { nodeManagementError, type NodeManagementService } from './service'
 
+export type NodeCommandService = NodeManagementService & Partial<{
+  selectEnvironment(id: string): ReturnType<NodeManagementService['getState']>
+  startEnvironment(): ReturnType<NodeManagementService['getState']>
+  cancelOperation(): ReturnType<NodeManagementService['getState']>
+  windowsSelected(): boolean
+}>
+
 export async function dispatchNodeManagement(
-  service: NodeManagementService,
+  service: NodeCommandService,
   args: unknown[],
   trusted: boolean,
 ): Promise<NodeManagementResult> {
   if (!trusted) return { ok: false, error: nodeManagementError('forbidden') }
   const [command, version] = args
   try {
+    if (args.length === 2 && command === 'selectEnvironment' && isEnvironmentId(version) && service.selectEnvironment) {
+      return { ok: true, data: await service.selectEnvironment(version) }
+    }
+    if (args.length === 1 && (command === 'startEnvironment' || command === 'cancelOperation') && service[command]) {
+      return { ok: true, data: await service[command]() }
+    }
     if (args.length === 1 && (command === 'getState' || command === 'refreshCatalog' || command === 'installManager')) {
       return { ok: true, data: await service[command]() }
     }

@@ -8,6 +8,8 @@ const phases: Record<NodeOperation['phase'], string> = {
   checking: '환경 검사 중',
   downloading: '공식 설치 파일 다운로드 및 검증 중',
   waiting: 'Windows 권한 확인 또는 작업 완료 대기 중',
+  compiling: '소스 컴파일 중',
+  extracting: '압축 해제 및 설치 중',
   verifying: '변경 결과 검증 중',
 }
 export function nodeProgress({ state, mutation }: NodeManagement) {

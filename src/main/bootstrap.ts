@@ -17,6 +17,9 @@ import { loadNodeCatalog } from './node-management/catalog'
 import { registerNodeManagementIpc } from './node-management/ipc'
 import {createNodeMaintenanceController} from './node-maintenance/controller'
 import {createNodeRouting} from './node-management-routing'
+import { createEnvironmentCoordinator, environmentSelectionStore } from './node-management/environments'
+import { windowsWslHost } from './node-management/wsl-host'
+import { createWslService, openWslLog } from './node-management/wsl'
 import { createNodeManagementService } from './node-management/service'
 import { createWindowsNodeAdapter } from './node-management/windows'
 import { appMutationBarrier } from './ipc-core'
@@ -104,14 +107,21 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const installExit = createInstallExit(appMutationBarrier)
   let nodeIpc: ReturnType<typeof registerNodeManagementIpc> | undefined
   const nodeFetch: Parameters<typeof loadNodeCatalog>[0] = (url, init) => net.fetch(url, init)
-  const nodeManagement = createNodeManagementService({
-    platform: process.platform,
-    arch: process.arch,
-    // Node fetch exposes the redirect response for the installer allowlist.
-    windows: createWindowsNodeAdapter(globalThis.fetch),
-    loadCatalog: () => loadNodeCatalog(nodeFetch),
-    changed: state => nodeIpc?.changed(state),
-    barrier: appMutationBarrier,
+  const wsl = windowsWslHost()
+  const nodeManagement = createEnvironmentCoordinator({
+    platform: process.platform, arch: process.arch, store: environmentSelectionStore(profile),
+    discover: async () => [{ id: 'windows', label: 'Windows', kind: 'windows', running: true }, ...await wsl.discover()],
+    start: wsl.start,
+    createWindows: changed => createNodeManagementService({
+      platform: process.platform, arch: process.arch,
+      windows: createWindowsNodeAdapter(globalThis.fetch), loadCatalog: () => loadNodeCatalog(nodeFetch),
+      changed, barrier: appMutationBarrier,
+    }),
+    createWsl: (environment, changed) => createWslService({
+      environment, runner: wsl, openLog: () => openWslLog(profile), loadCatalog: linuxArch => loadNodeCatalog(nodeFetch, { linuxArch }),
+      changed, barrier: appMutationBarrier,
+    }),
+    changed: state => nodeIpc?.changed(state), barrier: appMutationBarrier,
   })
   const nodeMaintenance=createNodeMaintenanceController({runtimeDirectory:dirname(process.execPath),buildDirectory:dirname(__dirname),maintenanceRoot:join(app.getPath('appData'),'WorkRail','node-maintenance'),version:app.isPackaged?app.getVersion():await readFile(join(app.getAppPath(),'package.json'),'utf8').then(value=>String(JSON.parse(value).version)).catch(()=>''),changed:()=>{void nodeManagement.getState().then(state=>nodeIpc?.changed(state)).catch(()=>{})}})
   const nodeRouting=createNodeRouting(nodeManagement,{required:!app.isPackaged,isActive:()=>nodeMaintenance.isActive(),open:()=>nodeMaintenance.open(),getState:nodeMaintenance.getState})

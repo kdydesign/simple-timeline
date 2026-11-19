@@ -324,7 +324,7 @@ async function readBoundedFile(path: string, maxBytes: number) {
 // path for the handle. Check the drive path identifies that same directory.
 const kernelSystemDirectory = String.raw`\\?\GLOBALROOT\SystemRoot\System32`
 
-async function resolveSystemPowerShell() {
+export async function resolveSystemPowerShell() {
   const system = await realpath(kernelSystemDirectory)
   if (!isSafeNvmPath(system) || win32.normalize(system) !== system || win32.basename(system).toLowerCase() !== 'system32') {
     throw Error('Invalid Windows system directory')

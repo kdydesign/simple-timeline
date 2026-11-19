@@ -36,6 +36,7 @@ function nodeFixture(initial: Partial<NodeManagementState> = {}) {
   const getState = async (): Promise<NodeManagementResult> => ({ ok: true, data: state })
   const dispose = vi.fn(() => { listener = undefined })
   const api = {
+    selectEnvironment: vi.fn(getState), startEnvironment: vi.fn(getState), cancelOperation: vi.fn(getState),
     getState: vi.fn(getState), refreshCatalog: vi.fn(getState),
     install: vi.fn(getState), use: vi.fn(getState), installManager: vi.fn(getState), removeStandalone: vi.fn(getState), openMaintenance: vi.fn(getState),
     onChange: (callback: (value: NodeManagementState) => void) => {

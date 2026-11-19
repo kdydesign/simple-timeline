@@ -1,19 +1,20 @@
 import type {NodeManagementState,NodeManagementResult} from '../shared/node-management'
-import {dispatchNodeManagement} from './node-management/ipc-core'
-import {nodeManagementError,type NodeManagementService} from './node-management/service'
+import {dispatchNodeManagement,type NodeCommandService} from './node-management/ipc-core'
+import {nodeManagementError} from './node-management/service'
 import {MaintenanceOpenError,type MaintenanceStatus} from './node-maintenance/controller'
 
-export function createNodeRouting(service:NodeManagementService,maintenance:{required:boolean;isActive:()=>boolean;open:()=>Promise<unknown>;getState:()=>Pick<MaintenanceStatus,'status'|'error'|'recoveryShortcut'>}){
+export function createNodeRouting(service:NodeCommandService,maintenance:{required:boolean;isActive:()=>boolean;open:()=>Promise<unknown>;getState:()=>Pick<MaintenanceStatus,'status'|'error'|'recoveryShortcut'>}){
  let revision=0
+ const windowsSelected=()=>service.windowsSelected?.()??true
  const decorate=(state:NodeManagementState):NodeManagementState=>{
   const {status,error,recoveryShortcut}=maintenance.getState()
-  return {...state,revision:++revision,maintenance:{required:maintenance.required,active:maintenance.isActive(),status,error,recoveryShortcut:recoveryShortcut??undefined}}
+  return {...state,revision:++revision,maintenance:{required:maintenance.required&&(windowsSelected()||maintenance.isActive()),active:maintenance.isActive(),status,error,recoveryShortcut:recoveryShortcut??undefined}}
  }
  return {decorate,async dispatch(args:unknown[],trusted:boolean):Promise<NodeManagementResult>{
   if(!trusted)return {ok:false,error:nodeManagementError('forbidden')}
   const command=args[0]
   if(command==='openMaintenance'){
-   if(args.length!==1||!maintenance.required)return {ok:false,error:nodeManagementError('invalid-request')}
+   if(args.length!==1||!maintenance.required||(!windowsSelected()&&!maintenance.isActive()))return {ok:false,error:nodeManagementError('invalid-request')}
    if(service.isBusy?.()&&!maintenance.isActive())return {ok:false,error:nodeManagementError('busy')}
    try{await maintenance.open()}
    catch(error){return {ok:false,error:{code:'operation-failed',message:error instanceof MaintenanceOpenError?error.message:'관리 창을 열지 못했습니다. 열린 복구 창을 확인한 뒤 다시 시도해 주세요.'}}}

@@ -1,10 +1,9 @@
 import { ipcMain, type BrowserWindow } from 'electron'
 import { nodeManagementChanged, nodeManagementChannel, type NodeManagementState,type NodeManagementResult } from '../../shared/node-management'
 import { isTrustedSender } from '../ipc-core'
-import { dispatchNodeManagement } from './ipc-core'
-import type { NodeManagementService } from './service'
+import { dispatchNodeManagement, type NodeCommandService } from './ipc-core'
 
-export function registerNodeManagementIpc(window: BrowserWindow, url: string, service: NodeManagementService,route?:{dispatch(args:unknown[],trusted:boolean):Promise<NodeManagementResult>;decorate(state:NodeManagementState):NodeManagementState}) {
+export function registerNodeManagementIpc(window: BrowserWindow, url: string, service: NodeCommandService,route?:{dispatch(args:unknown[],trusted:boolean):Promise<NodeManagementResult>;decorate(state:NodeManagementState):NodeManagementState}) {
   ipcMain.handle(nodeManagementChannel, (event, ...args: unknown[]) =>
     route?route.dispatch(args,isTrustedSender(event,window,url)):dispatchNodeManagement(service, args, isTrustedSender(event, window, url)),
   )

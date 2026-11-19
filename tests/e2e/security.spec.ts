@@ -12,7 +12,7 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
   expect(shape.keys.sort()).toEqual(['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort())
   expect(shape.keys).not.toContain('invoke')
   expect(shape.sharingKeys.sort()).toEqual(['switchRole','getDormantData','savePersonalHolidays','saveHolidays','getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','deleteDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','setChangeNotifications','retryChangeNotifications','acknowledgeChange','onChange'].sort())
-  expect(shape.nodeKeys.sort()).toEqual(['getState','refreshCatalog','installManager','install','use','removeStandalone','openMaintenance','onChange'].sort())
+  expect(shape.nodeKeys.sort()).toEqual(['selectEnvironment','startEnvironment','cancelOperation','getState','refreshCatalog','installManager','install','use','removeStandalone','openMaintenance','onChange'].sort())
   const unconfirmed=await d.page.evaluate(()=>window.timelineSharing!.switchRole({role:'host',confirmed:false} as never))
   expect(unconfirmed).toMatchObject({ok:false,error:{code:'VALIDATION_ERROR'}})
   const sandbox = await d.app.evaluate(({app,BrowserWindow})=>({disabled:app.commandLine.hasSwitch('no-sandbox'),renderer:(BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.webContents as unknown as {getLastWebPreferences():{sandbox?:boolean}}).getLastWebPreferences().sandbox}))

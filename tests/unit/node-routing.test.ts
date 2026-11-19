@@ -34,3 +34,13 @@ it('reports the recovery process exiting before readiness without exposing inter
  expect(raw).toMatchObject({ok:false})
  expect(JSON.stringify(raw)).not.toContain('private-path-and-token')
 })
+
+it('restricts Windows maintenance to the selected Windows target in development', async () => {
+  const open = vi.fn(async () => {})
+  const service = { windowsSelected: () => false, getState: async () => ({ revision: 1 }) } as unknown as NodeManagementService
+  const routing = createNodeRouting(service, { required: true, isActive: () => false, open, getState: () => ({ status: 'idle', error: null, recoveryShortcut: null }) })
+  expect(await routing.dispatch(['openMaintenance'], true)).toMatchObject({ ok: false })
+  expect(open).not.toHaveBeenCalled()
+  const snapshot = await routing.dispatch(['getState'], true)
+  expect(snapshot).toMatchObject({ ok: true, data: { maintenance: { required: false } } })
+})

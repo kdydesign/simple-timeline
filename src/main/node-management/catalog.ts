@@ -6,13 +6,18 @@ const CATALOG_URL = 'https://nodejs.org/dist/index.json'
 const MAX_CATALOG_BYTES = 4 * 1024 * 1024
 export type NodeFetch = (url: string, init?: RequestInit) => Promise<Response>
 
-export function parseNodeCatalog(value: unknown): NodeRelease[] {
+export type CatalogTarget = 'windows' | { linuxArch: string }
+
+export function parseNodeCatalog(value: unknown, target: CatalogTarget = 'windows'): NodeRelease[] {
   if (!Array.isArray(value)) throw Error('Invalid Node release index')
   const releases = new Map<string, NodeRelease>()
   for (const row of value) {
     if (!row || typeof row !== 'object' || typeof row.version !== 'string' || !row.version.startsWith('v')) continue
     const version = row.version.slice(1)
-    if (!isNodeVersion(version) || !Array.isArray(row.files) || !row.files.includes('win-x64-zip') || releases.has(version)) continue
+    if (!isNodeVersion(version) || !Array.isArray(row.files) || releases.has(version)) continue
+    const binary = row.files.includes(target === 'windows' ? 'win-x64-zip' : 'linux-' + target.linuxArch)
+    if (!binary && (target === 'windows' || !row.files.includes('src'))) continue
+    const lts = typeof row.lts === 'string' && /^[A-Za-z][A-Za-z0-9 -]{0,31}$/.test(row.lts) ? row.lts : null
     let date: string
     try {
       date = parseBusinessDate(row.date)
@@ -22,12 +27,14 @@ export function parseNodeCatalog(value: unknown): NodeRelease[] {
     releases.set(version, {
       version,
       date,
-      lts: typeof row.lts === 'string' && /^[A-Za-z][A-Za-z0-9 -]{0,31}$/.test(row.lts) ? row.lts : null,
+      lts,
+      ...(lts === null && row.lts !== false ? { ltsKnown: false } : {}),
+      ...(!binary ? { sourceOnly: true } : {}),
       npm: isNodeVersion(row.npm) ? row.npm : null,
       security: row.security === true,
     })
   }
-  if (!releases.size) throw Error('The Node release index contains no Windows x64 releases')
+  if (!releases.size) throw Error('The Node release index contains no releases for this target')
   return [...releases.values()].sort((a, b) => compareStableVersions(b.version, a.version))
 }
 
@@ -55,10 +62,10 @@ export async function readDownload(response: Response, maxBytes: number): Promis
   return Buffer.concat(chunks, size)
 }
 
-export async function loadNodeCatalog(request: NodeFetch): Promise<NodeRelease[]> {
+export async function loadNodeCatalog(request: NodeFetch, target: CatalogTarget = 'windows'): Promise<NodeRelease[]> {
   const response = await request(CATALOG_URL, { redirect: 'error', signal: AbortSignal.timeout(15_000) })
   const bytes = await readDownload(response, MAX_CATALOG_BYTES)
-  return parseNodeCatalog(JSON.parse(bytes.toString('utf8')))
+  return parseNodeCatalog(JSON.parse(bytes.toString('utf8')), target)
 }
 
 export async function fetchBoundedAsset(request: NodeFetch, source: string, allowedOrigins: ReadonlySet<string>, maxBytes: number) {

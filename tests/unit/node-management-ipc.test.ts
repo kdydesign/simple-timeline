@@ -31,3 +31,15 @@ it('dispatches only the validated version to the service', async () => {
     ok: true, data: { installedVersions: ['24.11.0'] },
   })
 })
+
+it('exposes only opaque environment selection, argument-free start and cancellation', async () => {
+  const service = {
+    selectEnvironment: async (id: string) => id, startEnvironment: async () => 'started', cancelOperation: async () => 'cancelled',
+  } as never
+  for (const [args, data] of [[['selectEnvironment', 'windows'], 'windows'], [['startEnvironment'], 'started'], [['cancelOperation'], 'cancelled']] as const) {
+    expect(await dispatchNodeManagement(service, [...args], true)).toEqual({ ok: true, data })
+  }
+  for (const args of [['selectEnvironment', '/bin/sh'], ['startEnvironment', 'Ubuntu'], ['cancelOperation', 42]]) {
+    expect(await dispatchNodeManagement(service, args, true)).toMatchObject({ ok: false, error: { code: 'invalid-request' } })
+  }
+})
