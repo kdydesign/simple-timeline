@@ -181,8 +181,26 @@ it.skipIf(!modernRunner)('installs the first ZIP on official nvm 2.0.1 and activ
   if (installed.error) {
     const lock = await windows.mutationStatus!().catch(error => describeFailure(error))
     const folder = await inspectNodeZipInstallation(manager.root, version).catch(error => describeFailure(error))
+    const details: string[] = []
+    if (folder === 'complete') {
+      try {
+        const after = await windows.discover()
+        details.push('WorkRail discovery: ' + JSON.stringify({
+          manager: after.manager.status, versions: after.installedVersions,
+          active: after.activeVersion, source: after.activeSource, conflicts: after.conflicts.map(conflict => conflict.code),
+          sameSettings: after.installation?.settingsDigest === manager.settingsDigest,
+          sameActivation: after.activationDigest === initial.activationDigest,
+          samePath: userPath() === originalPath,
+          sameLinks: JSON.stringify(await linkTargets()) === JSON.stringify(originalTargets),
+        }))
+      } catch (error) { details.push('WorkRail discovery: ' + describeFailure(error)) }
+      try { details.push('WorkRail manager versions: ' + JSON.stringify(await windows.managerVersions!(manager))) }
+      catch (error) { details.push('WorkRail manager versions: ' + describeFailure(error)) }
+      try { details.push('nvm list installed: ' + run(manager.exe, ['list', 'installed'])) }
+      catch (error) { details.push('nvm list installed: ' + describeFailure(error)) }
+    }
     throw new Error(['WorkRail install failed: ' + installed.error.code, 'Observed phases: ' + [...phases].join(', '),
-      ...leaseFailures, 'Machine lock after failure: ' + lock, 'Node directory after failure: ' + folder].join('\n'))
+      ...leaseFailures, 'Machine lock after failure: ' + lock, 'Node directory after failure: ' + folder, ...details].join('\n'))
   }
   expect(installed).toMatchObject({ installedVersions: [version], activeVersion: null, error: null })
   for (const phase of ['downloading', 'authenticating', 'extracting', 'verifying']) expect(phases.has(phase)).toBe(true)
