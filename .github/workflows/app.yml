@@ -19,7 +19,8 @@ jobs:
         with:
           node-version: "24.22.1"
           cache: npm
-      - run: npm ci
+      # This service-level check runs under Node. The app jobs install Electron and rebuild its native modules.
+      - run: npm ci --ignore-scripts
       - name: Verify first install and explicit activation as a standard Windows user
         run: ./scripts/testing/verify-modern-nvm.ps1 -Mode ${{ matrix.mode }}
   app:

@@ -36,7 +36,11 @@ if ($AsStandardUser) {
   $installer = Join-Path $env:TEMP 'nvm-2.0.1-x64-setup.exe'
   $url = 'https://github.com/nvm-windows/nvm/releases/download/v2.0.1/nvm-2.0.1-x64-setup.exe'
   Invoke-WebRequest -UseBasicParsing $url -OutFile $installer
-  if ((Get-FileHash $installer).Hash -ne '2ba6ab6290fdc7d1e608e76c97577ca6e1df772b2d59ab8ebc01e10788de8e57') {
+  $sha256 = [Security.Cryptography.SHA256]::Create()
+  $stream = [IO.File]::OpenRead($installer)
+  try { $digest = [BitConverter]::ToString($sha256.ComputeHash($stream)).Replace('-', '') }
+  finally { $stream.Dispose(); $sha256.Dispose() }
+  if ($digest -ne '2ba6ab6290fdc7d1e608e76c97577ca6e1df772b2d59ab8ebc01e10788de8e57') {
     throw 'Unexpected nvm 2.0.1 installer'
   }
   $setupLog = Join-Path $env:TEMP 'workrail-nvm-setup.log'
@@ -88,6 +92,8 @@ try {
   $out = Join-Path $env:RUNNER_TEMP 'modern-nvm-test.log'
   $err = Join-Path $env:RUNNER_TEMP 'modern-nvm-test.err'
   $workerEnvironment = @{
+    # The worker and nvm installer use Windows PowerShell 5.1, not the runner's pwsh modules.
+    PSModulePath = "$system\WindowsPowerShell\v1.0\Modules"
     GITHUB_ACTIONS = $env:GITHUB_ACTIONS
     RUNNER_OS = $env:RUNNER_OS
     RUNNER_ENVIRONMENT = $env:RUNNER_ENVIRONMENT
