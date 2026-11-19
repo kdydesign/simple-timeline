@@ -529,12 +529,21 @@
 .workrail-widget-members { display: grid; gap: 4px; }
 .workrail-widget-members .workrail-member-more { justify-self: end; }
 .workrail-member-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
-.workrail-member-name:focus-visible, .workrail-version-status:focus-visible, .planrail-policy:focus-visible, .planrail-connection:focus-visible {
+.workrail-member-name:focus-visible, .workrail-member-version:focus-visible, .workrail-version-status:focus-visible,
+.planrail-policy:focus-visible, .planrail-connection:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
   border-radius: 2px;
 }
-.workrail-member-version { margin-inline-start: auto; flex: none; }
+.workrail-member-version {
+  margin-inline-start: auto;
+  min-width: 0;
+  max-width: 65%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-tooltip.workrail-member-tooltip { white-space: normal; overflow-wrap: anywhere; }
 .workrail-member-connected { flex: none; color: var(--workrail-status-green); }
 
 .workrail-manager-line, .workrail-environment-actions, .workrail-home-environment-actions, .workrail-operation-progress {

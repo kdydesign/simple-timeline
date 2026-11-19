@@ -17,7 +17,7 @@ interface MutationFailure {
 }
 
 interface Connection {
-  revision: number
+  snapshot: NodeManagementState | null
   request: number
   acceptedRequest: number
   mutation: NodeMutation | null
@@ -25,6 +25,14 @@ interface Connection {
   openingMaintenance: boolean
   environmentPending: EnvironmentRequest | null
   cancelPending: boolean
+}
+
+function isOperationUnknown(state: NodeManagementState | null) {
+  return state?.error?.code === 'operation-unknown'
+}
+
+function workLocked(state: NodeManagementState | null) {
+  return !!state?.busy || !!state?.maintenance?.active || isOperationUnknown(state)
 }
 
 export function useNodeManagement(active: boolean, api: NodeManagementApi | undefined = window.workrailNodeManagement) {
@@ -43,7 +51,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   const run = useCallback(async (command: () => Promise<NodeManagementResult>, kind: RequestKind = 'read') => {
     const current = connection.current
     if (!current) return
-    const startRevision = current.revision
+    const startRevision = current.snapshot?.revision ?? -1
     const request = ++current.request
     let result: NodeManagementResult
     try {
@@ -52,10 +60,18 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       result = { ok: false, error: unavailable }
     }
     if (connection.current !== current) return
+    const currentRevision = current.snapshot?.revision ?? -1
     if (result.ok) {
-      const { revision } = result.data
-      if (revision < current.revision || (revision === current.revision && request < current.acceptedRequest)) return
-      current.revision = revision
+      const { revision, error } = result.data
+      if (revision < currentRevision || (revision === currentRevision && request < current.acceptedRequest)) return
+      const confirmedError = current.snapshot?.error
+      // A denied change can echo the current snapshot with a command-local error.
+      if ((kind === 'control' || kind === 'mutation') && revision === currentRevision && error
+        && (error.code !== confirmedError?.code || error.message !== confirmedError.message)) {
+        setControlError(error)
+        return { ok: false as const, error }
+      }
+      current.snapshot = result.data
       current.acceptedRequest = request
       setState(result.data)
       setReadError(null)
@@ -66,7 +82,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
       setMutationFailure({ request, error: result.error })
     } else if (kind === 'control') {
       setControlError(result.error)
-    } else if (startRevision === current.revision && request === current.request) {
+    } else if (startRevision === currentRevision && request === current.request) {
       setReadError(result.error)
     } else {
       return
@@ -118,12 +134,12 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     setCancelPending(false)
     setControlError(null)
     if (!api) return
-    const current: Connection = { revision: -1, request: 0, acceptedRequest: 0, mutation: null, catalogPending: false,
+    const current: Connection = { snapshot: null, request: 0, acceptedRequest: 0, mutation: null, catalogPending: false,
       openingMaintenance: false, environmentPending: null, cancelPending: false }
     connection.current = current
     const off = api.onChange(next => {
-      if (connection.current !== current || next.revision <= current.revision) return
-      current.revision = next.revision
+      if (connection.current !== current || next.revision <= (current.snapshot?.revision ?? -1)) return
+      current.snapshot = next
       setState(next)
       setReadError(null)
     })
@@ -140,7 +156,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   }, [api, run])
 
   const catalogRequested = useRef<string | null>(null)
-  const busy = openingMaintenance || !!environmentPending || cancelPending || !!mutation || !!state?.busy || !!state?.maintenance?.active
+  const busy = openingMaintenance || !!environmentPending || cancelPending || !!mutation || workLocked(state)
   const environment = state?.environments?.items.find(item => item.id === state.environments?.selectedId)
   const catalogTarget = !state?.supported ? null : !state.environments ? 'windows'
     : state.environments.status === 'ready' && environment?.running ? environment.id : null
@@ -156,7 +172,8 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
 
   async function mutate(operation: NodeMutation) {
     const current = connection.current
-    if (!api || !current || !state?.supported || busy || current.mutation || current.environmentPending || current.openingMaintenance) return
+    if (!api || !current || !state?.supported || busy || workLocked(current.snapshot)
+      || current.mutation || current.environmentPending || current.openingMaintenance) return
     const command = operation.kind === 'remove-standalone' ? () => api.removeStandalone({confirmed:true,confirmationId:operation.confirmationId})
       : operation.kind === 'install-manager' ? () => api.installManager()
       : operation.kind === 'install' ? () => api.install(operation.version)
@@ -176,7 +193,8 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
 
   async function changeEnvironment(request: { kind: 'select'; id: string } | { kind: 'start' }) {
     const current = connection.current
-    if (!api || !current || busy || current.mutation || current.environmentPending || current.openingMaintenance || current.catalogPending) return false
+    if (!api || !current || busy || workLocked(current.snapshot) || current.mutation || current.environmentPending
+      || current.openingMaintenance || current.catalogPending) return false
     if (state?.environments?.status !== 'ready') return false
     current.environmentPending = request.kind
     setEnvironmentPending(request.kind)
@@ -215,6 +233,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   async function openMaintenance() {
     const current = connection.current
     if (!api || !current || current.openingMaintenance || current.environmentPending || current.mutation) return
+    if (isOperationUnknown(current.snapshot) && !current.snapshot?.maintenance?.active) return
     current.openingMaintenance = true
     setOpeningMaintenance(true)
     setMaintenanceError(null)

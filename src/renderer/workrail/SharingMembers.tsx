@@ -16,12 +16,22 @@ type ConnectedMember = ReturnType<typeof connectedMembers>[number]
 function MemberName({ name }: { name: string }) {
   return <Tooltip>
     <TooltipTrigger asChild><span className="workrail-member-name" tabIndex={0}>{name}</span></TooltipTrigger>
-    <TooltipContent className="app-tooltip" collisionPadding={8}>{name}</TooltipContent>
+    <TooltipContent className="app-tooltip workrail-member-tooltip" collisionPadding={8}>{name}</TooltipContent>
   </Tooltip>
 }
 
-function VersionLabel({ version }: { version: string | null }) {
-  return <span>{version ? '버전 ' + version : '버전 확인 불가'}</span>
+function versionLabel(version: string | null) {
+  return version ? '버전 ' + version : '버전 확인 불가'
+}
+
+function MemberVersion({ version, footer }: { version: string | null; footer: boolean }) {
+  const label = versionLabel(version)
+  return <Tooltip>
+    <TooltipTrigger asChild><span className="workrail-member-version" tabIndex={0}>
+      {footer && '('}<span>{label}</span>{footer && ')'}
+    </span></TooltipTrigger>
+    <TooltipContent className="app-tooltip workrail-member-tooltip" collisionPadding={8}>{label}</TooltipContent>
+  </Tooltip>
 }
 
 export function SharingMembers({ members, footer = false }: { members: ConnectedMember[]; footer?: boolean }) {
@@ -45,7 +55,7 @@ export function SharingMembers({ members, footer = false }: { members: Connected
     {!!members.length && limit > 0 && <ul aria-label="연결된 참여자">
       {members.slice(0, limit).map(member => <li key={member.id}>
         <MemberName name={member.name} />
-        <span className="workrail-member-version">{footer && '('}<VersionLabel version={member.version} />{footer && ')'}</span>
+        <MemberVersion version={member.version} footer={footer} />
         {!footer && <span className="workrail-member-connected">연결됨</span>}
       </li>)}
     </ul>}
@@ -56,7 +66,7 @@ export function SharingMembers({ members, footer = false }: { members: Connected
           align="end" sideOffset={6} collisionPadding={8}>
           <strong>연결된 참여자</strong>
           <ul>{members.map(member => <li key={member.id}>
-            <span>{member.name}</span><VersionLabel version={member.version} /><span className="workrail-member-connected">연결됨</span>
+            <span>{member.name}</span><span>{versionLabel(member.version)}</span><span className="workrail-member-connected">연결됨</span>
           </li>)}</ul>
           <Popover.Close type="button" className="workrail-control">닫기</Popover.Close>
         </Popover.Content>

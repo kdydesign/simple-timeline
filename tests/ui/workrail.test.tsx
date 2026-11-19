@@ -525,7 +525,7 @@ it('keeps the actual sharing failure visible when the Home connection badge beco
   expect(within(widget).getByRole('alert')).toHaveTextContent(message)
 })
 
-it('shows a pending handoff immediately and allows retry after the recovery window fails to open', async () => {
+it('shows a pending handoff and accepts recovery-window status on retry at the same revision', async () => {
   const fixture = nodeFixture({
     manager: { status: 'missing', version: null },
     activeSource: 'standalone',
@@ -544,10 +544,16 @@ it('shows a pending handoff immediately and allows retry after the recovery wind
   expect(within(node()).getByRole('alert')).toHaveTextContent(message)
   const retry = within(node()).getByRole('button', { name: 'Node.js 제거' })
   expect(retry).toBeEnabled()
+  const current = await fixture.api.getState.getMockImplementation()!()
+  if (!current.ok) throw Error('Node fixture unavailable')
+  fixture.api.openMaintenance.mockResolvedValueOnce({ ok: true, data: {
+    ...current.data, maintenance: { required: true, active: true, status: 'ready' },
+  } })
   await act(async () => fireEvent.click(retry))
   expect(fixture.api.openMaintenance).toHaveBeenCalledTimes(2)
   expect(fixture.api.removeStandalone).not.toHaveBeenCalled()
   expect(within(node()).queryByText(message)).toBeNull()
+  expect(within(node()).getByRole('button', { name: '관리 창 열기' })).toBeEnabled()
 })
 
 const windows = { id: 'windows', label: 'Windows', kind: 'windows', running: true } as const
@@ -733,4 +739,67 @@ it('keeps quick Use available when only the configured download mirror blocks in
   expect(fixture.api.use).toHaveBeenCalledExactlyOnceWith('22.20.0')
   fireEvent.click(dock('NodeRail'))
   expect(await within(node()).findByRole('button', { name: '25.2.0 설치' })).toBeDisabled()
+})
+
+it('locks both tools when a persisted Windows operation is unknown without a running task', async () => {
+  const environments = { status: 'ready' as const, items: [windows, ubuntu], selectedId: windows.id, error: null }
+  const unknown = { code: 'operation-unknown', message: 'Windows 작업의 완료를 확인하지 못했습니다.' } as const
+  const fixture = nodeFixture({ environments, busy: null, error: unknown })
+  render(<App initialTool="home" api={memoryApi().api} />)
+  expect(await within(home()).findByRole('alert')).toHaveTextContent(unknown.message)
+  const change = within(home()).getByRole('button', { name: '환경 변경' })
+  expect(change).toBeDisabled()
+  fireEvent.click(change)
+  expect(within(home()).queryByRole('button', { name: '22.20.0 사용' })).toBeNull()
+  expect(fixture.api.selectEnvironment).not.toHaveBeenCalled()
+
+  fireEvent.click(dock('NodeRail'))
+  const recheck = within(node()).getByRole('button', { name: '환경 다시 검사' })
+  expect(within(node()).getByRole('button', { name: '환경 변경' })).toBeDisabled()
+  expect(within(node()).queryByRole('button', { name: '25.2.0 설치' })).toBeNull()
+  expect(within(installed()).getByRole('button', { name: '22.20.0 다시 확인' })).toBeEnabled()
+  expect(recheck).toBeEnabled()
+  expect(fixture.api.refreshCatalog).not.toHaveBeenCalled()
+  fixture.api.getState.mockImplementationOnce(async () => {
+    fixture.emit({ error: null })
+    return fixture.api.getState.getMockImplementation()!()
+  })
+  fireEvent.click(recheck)
+  await waitFor(() => expect(within(installed()).getByRole('button', { name: '22.20.0 사용' })).toBeEnabled())
+  expect(within(node()).getByRole('button', { name: '환경 변경' })).toBeEnabled()
+  expect(fixture.api.getState).toHaveBeenCalledTimes(2)
+})
+
+it.each(['select', 'use'] as const)('keeps the published unknown operation after a same-revision %s denial', async command => {
+  const environments = { status: 'ready' as const, items: [windows, ubuntu], selectedId: windows.id, error: null }
+  const unknown = { code: 'operation-unknown', message: '이전에 시작한 작업의 결과를 확인해야 합니다.' } as const
+  const denied = { code: 'busy', message: '진행 중인 작업이 있습니다.' } as const
+  const fixture = nodeFixture({ environments })
+  let finish!: (value: NodeManagementResult) => void
+  const request = () => new Promise<NodeManagementResult>(resolve => { finish = resolve })
+  fixture.api.selectEnvironment.mockImplementationOnce(request)
+  fixture.api.use.mockImplementationOnce(request)
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const change = await within(home()).findByRole('button', { name: '환경 변경' })
+  if (command === 'select') {
+    fireEvent.click(change)
+    const dialog = await screen.findByRole('dialog', { name: '관리 환경 선택' })
+    fireEvent.click(within(dialog).getByRole('button', { name: /Ubuntu/ }))
+  } else {
+    fireEvent.click(within(home()).getByRole('button', { name: '22.20.0 사용' }))
+  }
+  act(() => fixture.emit({ error: unknown, busy: null }))
+  await act(async () => finish({ ok: true, data: { ...nodeState, environments, revision: 2, error: denied, busy: null } }))
+  if (command === 'select') {
+    const dialog = screen.getByRole('dialog', { name: '관리 환경 선택' })
+    expect(within(dialog).getByText(denied.message)).toBeVisible()
+    await userEvent.keyboard('{Escape}')
+  }
+  expect(within(home()).getByText(unknown.message)).toBeVisible()
+  expect(within(home()).getByText(denied.message)).toBeVisible()
+  expect(change).toBeDisabled()
+  fireEvent.click(dock('NodeRail'))
+  expect(within(node()).getByText(unknown.message)).toBeVisible()
+  expect(within(node()).getByRole('button', { name: '환경 변경' })).toBeDisabled()
+  expect(within(node()).getByRole('button', { name: '환경 다시 검사' })).toBeEnabled()
 })

@@ -620,7 +620,7 @@ export function App({
   </>);
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={0} disableHoverableContent>
-      <Titlebar onSettings={sharing.state&&sharing.api?sharing.openSettings:undefined} sharing={null} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
+      <Titlebar onSettings={sharing.state&&sharing.api?()=>sharing.openSettings():undefined} sharing={null} installBlocked={saving||saveShieldActive||timeline.phase!=='ready'||sharing.writeOutcomeUnknown}/>
       {updates.frozen&&<div className="update-blocked update-ui" role="alert">{updates.editingBlocked?'앱을 종료한 뒤 다시 열어 주세요. 종료 준비 실패로 편집을 잠시 중지했습니다.':'업데이트 설치 준비 중입니다. 저장을 마칠 때까지 기다려 주세요.'}</div>}
       <div className="saving-content" inert={updates.frozen||saveShieldActive} onKeyDownCapture={event => {
         if (event.key !== "F6" || dockBlocked) return;

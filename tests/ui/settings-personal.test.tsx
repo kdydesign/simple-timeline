@@ -71,3 +71,13 @@ it('separates repeat and dated holidays into named regions and hides member comm
  expect(within(common).getByText('호스트 제공 · 조회 전용')).toBeInTheDocument()
  expect(within(common).queryByRole('button')).not.toBeInTheDocument()
 })
+
+it('opens the sharing tab from the Home settings shortcut', async () => {
+ sharingFixture({role:'host'})
+ render(<App initialTool="home" api={memoryApi(hotfix).api}/>)
+ const widget=screen.getByRole('region',{name:'PlanRail 상태'})
+ fireEvent.click(await within(widget).findByRole('button',{name:'공유 설정에서 관리'}))
+ const dialog=await screen.findByRole('dialog',{name:'설정'})
+ expect(within(dialog).getByRole('tab',{name:'공유 설정'})).toHaveAttribute('aria-selected','true')
+ expect(within(dialog).getByRole('tab',{name:'기본 설정'})).toHaveAttribute('aria-selected','false')
+})

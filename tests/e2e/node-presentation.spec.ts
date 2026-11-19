@@ -1,6 +1,7 @@
 import type { Locator } from 'playwright'
 import type { TestInfo } from '@playwright/test'
 import { test, expect, type Desktop } from './fixture'
+import { reportedVersion } from '../../src/domain/holidays'
 import { channels } from '../../src/shared/api'
 import { sharingChannel, sharingChanged, type SharingState } from '../../src/shared/sharing'
 import { nodeManagementChannel, nodeManagementChanged, type NodeManagementState } from '../../src/shared/node-management'
@@ -282,12 +283,31 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
   await page.setViewportSize({ width: 500, height: 750 })
   await expect(footer.getByRole('button', { name: '외 2명' })).toBeVisible()
   await expect(footer.getByRole('listitem')).toHaveCount(1)
+  const longVersion = '1.0.0-' + 'W'.repeat(58)
+  expect(reportedVersion(longVersion)).toBe(longVersion)
+  await publishSharing(desktop, { ...host, snapshotRevision: 191, deviceVersions: { '0': { version: longVersion, checkedAt: lastCheckedAt } } })
+  const footerVersion = footer.locator('.workrail-member-version').filter({ hasText: longVersion })
+  await expect(footerVersion).toBeVisible()
+  const [versionBounds, expansionBounds, policyBounds] = await Promise.all([
+    box(footerVersion), box(footer.getByRole('button', { name: '외 2명' })), box(footer.getByTestId('notification-policy')),
+  ])
+  await info.attach('long-version-footer-bounds', { body: JSON.stringify({ versionBounds, expansionBounds, policyBounds }), contentType: 'application/json' })
+  expect(versionBounds.x + versionBounds.width).toBeLessThanOrEqual(expansionBounds.x)
+  expect(expansionBounds.x + expansionBounds.width).toBeLessThanOrEqual(policyBounds.x)
+  expect(policyBounds.x + policyBounds.width).toBeLessThanOrEqual(500)
+  await footerVersion.focus()
+  await expect(page.getByRole('tooltip')).toHaveText('버전 ' + longVersion)
+  await page.keyboard.press('Escape')
+  await page.screenshot({ path: info.outputPath('long-version-footer.png') })
   await page.setViewportSize({ width: 430, height: 750 })
   await expect(footer.getByRole('button', { name: '외 3명' })).toBeVisible()
   await expect(footer.getByTestId('notification-policy')).toBeVisible()
   const allMembers = footer.getByRole('button', { name: '외 3명' })
   await allMembers.click()
-  await expect(page.getByRole('dialog', { name: '연결된 참여자' }).getByText('민수의 이름이 긴 사무실 PC')).toBeVisible()
+  const members = page.getByRole('dialog', { name: '연결된 참여자' })
+  await expect(members.getByText('민수의 이름이 긴 사무실 PC')).toBeVisible()
+  await expect(members.getByText('버전 ' + longVersion, { exact: true })).toBeVisible()
+  expect(await members.evaluate(element => element.scrollWidth <= element.clientWidth)).toBe(true)
   await page.screenshot({ path: info.outputPath('compact-footer-narrow.png') })
   await page.keyboard.press('Escape')
   await expect(allMembers).toBeFocused()
@@ -295,7 +315,7 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
 
   // The app currently defaults to dark. Set the theme attribute in this temporary-profile renderer to check Forest Crystal tokens.
   await page.evaluate(() => { delete document.documentElement.dataset.theme })
-  await publishSharing(desktop, { ...host, snapshotRevision: 191, role: 'member', devices: [], memberPresence: undefined, deviceVersions: undefined })
+  await publishSharing(desktop, { ...host, snapshotRevision: 192, role: 'member', devices: [], memberPresence: undefined, deviceVersions: undefined })
   await showWindowsNode(desktop, { revision: 1001, environments: { status: 'ready', items: [windows, ubuntu], selectedId: ubuntu.id, error: null },
     manager: { kind: 'nodenv', status: 'ready', version: '1.5.0' }, activeSource: 'nodenv', activeVersion: '24.22.3',
     installedVersions: ['24.22.3', '22.16.0', '20.19.0'],
