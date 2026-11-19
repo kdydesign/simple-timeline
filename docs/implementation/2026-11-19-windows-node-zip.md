@@ -22,3 +22,5 @@ Linux에서 실제 Node 24.22.1 Windows x64 ZIP 37,748,064바이트를 SHA-256�
 Windows Actions에는 두 nvm 버전의 일회성 실물 설치·전환 검사와 동일 경로 WorkRail 업그레이드 후 EXE 및 바로가기 아이콘 리소스 검사가 있다. 실제 사내 프록시·보안 제품의 동작과 사용자가 보는 Windows 검색 결과·우클릭 메뉴의 그림은 해당 PC에서 확인할 항목이다. [실물 nvm 검사](../../scripts/testing/verify-classic-nvm.ps1) · [Windows 패키지 검사](../../tests/e2e/packaged.spec.ts)
 
 Linux 앱 검사에서 타입·배포·단위(세 시간대)·UI·제품 빌드·native가 통과했다. Electron 통합 검사의 첫 실행은 118/119였다. 수동 검사 진행선을 검증하는 테스트의 IPC 대상을 새 `recheck` 요청으로 맞췄고 해당 사례를 독립 실행해 통과했다. 전체 실행 결과는 실행 SHA에 해당하는 앱 보고서에서 확인한다.
+
+커밋 `6fbd747`의 Windows CI에서 nvm 1.1.10·1.1.11 실물 검사, EXE 제작 및 아이콘 9개 프레임 대조가 통과했다. 패키지 E2E는 테스트 수집 중 CommonJS에서 ESM 검사기를 정적 로드해 중단됐다. E2E에서 검사기를 동적으로 가져오도록 수정했다. 배포 검사에서도 패키지 시나리오를 수집해 같은 오류를 설치본 제작 전에 발견할 수 있다. [실패 실행](https://github.com/kdydesign/simple-timeline/actions/runs/44489541949)

@@ -1,4 +1,3 @@
-import {inspectPackage} from '../../scripts/testing/packaged-smoke.mjs'
 import {openPackagedPlanrail} from './packaged-navigation'
 import { probeNetwork } from "./network-probe";
 import { migrations } from "../../src/main/db/migrations";
@@ -212,6 +211,8 @@ test("real production package installs, works offline, updates and retains DB af
     ]));
     const system = releaseInfo(resolve("release", base.installer));
     const verifyStartIcon = async (manifest: typeof base, shortcuts: {startMenu: boolean; appId: string; iconLocation: string; target: string}[]) => {
+      // Load the ESM inspector with Node's native loader from this CommonJS Playwright suite.
+      const { inspectPackage } = await import("../../scripts/testing/packaged-smoke.mjs");
       const inspection = await inspectPackage(installDir, {sourceSha: manifest.sourceSha, version: manifest.version});
       const starts = shortcuts.filter(link => link.startMenu);
       expect(starts).toHaveLength(1);

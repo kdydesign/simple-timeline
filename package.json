@@ -20,7 +20,7 @@
     "build:test": "electron-vite build --config electron.vite.test.config.mts",
     "test:e2e": "npm run build:test && playwright test --config playwright.config.mts",
     "verify:app": "node scripts/testing/verify-app.mjs",
-    "test:release": "node --test tests/release/*.test.mjs",
+    "test:release": "node --test tests/release/*.test.mjs && playwright test --config playwright.packaged.config.mts --list --reporter=list",
     "dist:win": "npm run build && node scripts/release/build-windows.mjs",
     "dist:win:test-update": "node scripts/release/build-windows.mjs --validation-update",
     "test:packaged": "node scripts/testing/build-update-harness.mjs && node scripts/testing/packaged-smoke.mjs && playwright test --config playwright.packaged.config.mts",
