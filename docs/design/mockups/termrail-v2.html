@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TermRail · 터미널 배치 시안</title>
+<style>
+*{box-sizing:border-box}html,body{height:100%;margin:0}body{display:flex;flex-direction:column;background:#22262b;color:#edf1f4;font:13px "Segoe UI","Malgun Gothic",sans-serif}button,input{font:inherit;color:inherit}button{cursor:pointer;background:transparent;border:0;text-align:left}button:focus-visible,input:focus-visible{outline:2px solid #8bc1eb;outline-offset:-2px}
+header,nav{display:flex;align-items:center;padding:0 14px;background:linear-gradient(120deg,#283946,#2e3036)}header{height:31px;gap:8px;font-weight:650}header img{height:20px}nav{height:35px;gap:6px;border-bottom:1px solid #46505b}nav span{padding:4px 9px;color:#c5cfd6}.current{border-radius:4px;border:1px solid #77a8ce;background:#38546b;color:#fff}
+main{flex:1;min-height:0;display:grid;grid-template-columns:clamp(88px,10vw,128px) minmax(0,1fr);gap:6px;padding:14px}aside,.work{min-width:0;min-height:0;border:1px solid #3d464f;border-radius:4px;overflow:hidden}aside{display:flex;flex-direction:column;background:#272d33}.side-head,.saved-head{margin:0;padding:5px 7px;font-size:11px;font-weight:600;color:#c1ccd4}.side-head{display:flex;justify-content:space-between;align-items:center}.side-head button{font-size:15px;padding:0 4px}.servers{flex:1;overflow:auto}.servers button,#saved button{display:block;width:100%;font-size:12px;line-height:20px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;padding:0 8px}.servers button:hover,#saved button:hover,.servers button:focus{background:#334451}.saved-head{border-top:1px solid #434b53}#saved{max-height:28%;overflow:auto}
+.work{display:flex;flex-direction:column;background:#191e23}#tabs{display:flex;overflow:auto;height:23px;flex:none;background:#272e34;border-bottom:1px solid #47535d}#tabs button{flex:none;padding:0 9px;font-size:11px;color:#adc0ca;border-right:1px solid #404950}#tabs .active{background:#3b4d5b;color:white;box-shadow:inset 0 2px #8bc1eb}#tabs .add{width:23px;padding:0;text-align:center;font-size:14px}
+#stage,.split,.pane{flex:1;min-width:0;min-height:0;display:flex}#stage{position:relative}.split{gap:3px;background:#404951}.column,.pane{flex-direction:column}.pane{position:relative;background:#171d22;overflow:hidden}.caption{height:19px;flex:none;padding:1px 7px;background:#283139;color:#bfccd4;font-size:10.5px;line-height:17px;display:flex;align-items:center;gap:6px}.caption::before{content:'';width:5px;height:5px;border-radius:50%;background:#89bca3}.pending .caption::before{background:#d8b578}.pane pre{margin:0;padding:10px 12px;overflow:auto;color:#cbd5db;font:13px/1.5 Consolas,"Liberation Mono",monospace;white-space:pre-wrap}.prompt{color:#9cc5b2}.muted{color:#95a3ae}.cursor{display:inline-block;background:#bdd9ea;width:7px;height:14px;vertical-align:middle}.empty{margin:auto;font-size:12px;color:#a4b4c1}.hint{pointer-events:none;position:absolute;background:#5685ae5c;border:1px solid #92c3e8;inset:0}.hint.left{right:50%}.hint.right{left:50%}.hint.top{bottom:50%}.hint.bottom{top:50%}
+#menu,dialog{background:#29343d;color:#edf1f4;border:1px solid #677986;border-radius:5px;box-shadow:0 5px 16px #0007}#menu{position:fixed;z-index:5;padding:3px;min-width:125px}#menu button{display:block;width:100%;padding:4px 7px;font-size:12px}#menu button:hover{background:#3b5265}dialog{width:270px;padding:14px}label{display:grid;gap:5px;font-size:12px}input{background:#20272c;border:1px solid #617582;border-radius:3px;padding:4px}dialog footer{display:flex;justify-content:flex-end;gap:6px;margin-top:12px}dialog footer button{border:1px solid #586b78;border-radius:3px;padding:3px 8px}
+</style>
+<header><img src="../../../resources/icon.png" alt="">WorkRail</header>
+<nav aria-label="메뉴"><span>Home</span><span>PlanRail</span><span>NodeRail</span><span class="current">TermRail</span></nav>
+<main><aside><div class="side-head">서버</div><div class="servers"></div><div class="saved-head">레이아웃</div><div id="saved"></div></aside>
+<section class="work"><div id="tabs"></div><div id="stage"></div></section></main>
+<div id="menu" hidden><button id="detach">별도 창으로 열기</button><button id="save">레이아웃 저장…</button></div>
+<dialog><form><label>레이아웃 이름<input required maxlength="40" id="layoutName"></label><footer><button type="button" id="cancel">취소</button><button>저장</button></footer></form></dialog>
+<script>
+const $ = s => document.querySelector(s);
+const servers = ['dev-api','dev-web','dev-db','staging-api','staging-web'];
+const examples = {
+  'dev-api':'$ systemctl status api\n● api.service — Application API\n   Active: active (running)\n\n$ tail -f /var/log/api.log\n09:15:01 INFO  Listening on port 3000\n09:15:04 INFO  GET /health 200 2ms\n09:15:09 INFO  GET /projects 200 18ms',
+  'dev-web':'$ df -h /srv\nFilesystem      Size  Used Avail Use%\n/dev/sdb1        80G   24G   56G  30%',
+};
+const leaf = (name,online=false) => ({name,online});
+const group = (vertical,a,b) => ({vertical,children:[a,b]});
+let tabs = [{name:'개발 점검',tree:group(false,leaf('dev-api',true),group(true,leaf('dev-web',true),leaf('staging-api')))}, {name:'서버 점검',tree:leaf('dev-db')}];
+let active=tabs[0], target=active;
+const layouts=new Map();
+const cloneForLogin = n => n?.children ? group(n.vertical,...n.children.map(cloneForLogin)) : n ? leaf(n.name) : null;
+function addTab(name,tree){active={name,tree};tabs.push(active);render()}
+function button(name, action){const b=document.createElement('button');b.textContent=name;b.onclick=action;return b}
+for(const name of servers){
+  const b=button(name,()=>b.focus());b.draggable=true;b.title=name;b.ondblclick=()=>addTab(name,leaf(name));
+  b.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();addTab(name,leaf(name))}};
+  b.ondragstart=e=>{e.dataTransfer.setData('application/x-termrail-server',name);e.dataTransfer.effectAllowed='copy'};
+  $('.servers').append(b);
+}
+function side(e,box){
+  const r=box.getBoundingClientRect(),x=(e.clientX-r.left)/r.width,y=(e.clientY-r.top)/r.height;
+  const positions=[['left',x],['right',1-x],['top',y],['bottom',1-y]];
+  return positions.sort((a,b)=>a[1]-b[1])[0][0];
+}
+function subtree(node,replace,refresh){
+  const el=document.createElement('div');
+  if(node?.children){
+    el.className='split'+(node.vertical?' column':'');
+    node.children.forEach((child,i)=>el.append(subtree(child,n=>node.children[i]=n,refresh)));
+    return el;
+  }
+  el.className='pane'+(node?.online?'':' pending');
+  if(node){
+    const cap=document.createElement('div');cap.className='caption';cap.textContent=node.name;
+    const pre=document.createElement('pre');
+    if(node.online){const p=document.createElement('span');p.className='prompt';p.textContent='developer@'+node.name+' ~\n';pre.append(p,examples[node.name]||'$ ')}
+    else pre.append('login as: ');
+    const cursor=document.createElement('span');cursor.className='cursor';pre.append(cursor);el.append(cap,pre);
+  }else{const msg=document.createElement('span');msg.className='empty';msg.textContent='서버를 여기에 놓으세요';el.append(msg)}
+  function clear(){el.querySelector('.hint')?.remove()}
+  el.ondragover=e=>{if(!e.dataTransfer.types.includes('application/x-termrail-server'))return;e.preventDefault();e.dataTransfer.dropEffect='copy';let hint=el.querySelector('.hint');if(!hint){hint=document.createElement('div');el.append(hint)}hint.className='hint '+(node?side(e,el):'')};
+  el.ondragleave=e=>{if(!el.contains(e.relatedTarget))clear()};
+  el.ondrop=e=>{e.preventDefault();clear();const name=e.dataTransfer.getData('application/x-termrail-server');if(!servers.includes(name))return;const dir=side(e,el),fresh=leaf(name);replace(node?group(['top','bottom'].includes(dir),...(['top','left'].includes(dir)?[fresh,node]:[node,fresh])):fresh);refresh()};
+  return el;
+}
+function showMenu(tab,x,y){target=tab;const m=$('#menu');m.hidden=false;m.style.left=Math.min(x,innerWidth-m.offsetWidth)+'px';m.style.top=Math.min(y,innerHeight-m.offsetHeight)+'px';m.querySelector('button').focus()}
+function render(){
+  $('#tabs').replaceChildren();for(const tab of tabs){
+    const b=button(tab.name,()=>{active=tab;render()});b.classList.toggle('active',active===tab);
+    b.oncontextmenu=e=>{e.preventDefault();showMenu(tab,e.clientX,e.clientY)};
+    b.onkeydown=e=>{if(e.key==='ContextMenu'||(e.shiftKey&&e.key==='F10')){e.preventDefault();const r=b.getBoundingClientRect();showMenu(tab,r.left,r.bottom)}};
+    $('#tabs').append(b);
+  }
+  const add=button('＋',()=>addTab('새 탭',null));add.className='add';add.ariaLabel='작업 탭 추가';$('#tabs').append(add);
+  $('#stage').replaceChildren(subtree(active?.tree,n=>{if(active)active.tree=n;else addTab('새 탭',n)},render));
+}
+function paintSaved(){ $('#saved').replaceChildren();for(const [name,tree] of layouts)$('#saved').append(button(name,()=>addTab(name,cloneForLogin(tree)))) }
+layouts.set(active.name,cloneForLogin(active.tree));paintSaved();render();
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('#menu'))$('#menu').hidden=true});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('#menu').hidden=true});
+$('#save').onclick=()=>{$('#menu').hidden=true;$('#layoutName').value=target.name;$('dialog').showModal();$('#layoutName').select()};
+$('#cancel').onclick=()=>$('dialog').close();
+$('form').onsubmit=e=>{e.preventDefault();const name=$('#layoutName').value.trim();if(!name)return;layouts.set(name,cloneForLogin(target.tree));paintSaved();$('dialog').close()};
+$('#detach').onclick=()=>{
+  $('#menu').hidden=true;const tab=target,w=window.open('','_blank','popup,width=850,height=580');if(!w)return;
+  w.document.title='TermRail · '+tab.name;w.document.head.append(document.querySelector('style').cloneNode(true));
+  function redraw(){w.document.body.replaceChildren(subtree(tab.tree,n=>tab.tree=n,redraw))}
+  redraw();tabs=tabs.filter(t=>t!==tab);if(active===tab)active=tabs[0];render();
+  w.addEventListener('pagehide',()=>{if(!window.closed){tabs.push(tab);active=tab;render()}},{once:true});
+};
+</script>
+</html>
