@@ -4,6 +4,10 @@
 
 Node 관리 명령이 실행되는 운영체제·사용자 범위. [환경 확장 설계 초안](docs/design/workrail-environments-and-home.md)에서는 Windows 또는 WSL 배포판과 Linux 사용자 조합을 뜻한다. 관리 도구와 설치 버전 목록은 이 환경에 속하며 서로 다른 환경의 목록을 합치지 않는다. 현재 제품의 WSL 지원 완료를 뜻하지 않는다.
 
+## 선택한 Node 환경 / Selected Node Environment
+
+사용자가 현재 Node 정보를 조회하고 설치·전환 작업을 수행할 대상 환경. WorkRail이 실행되는 운영체제와 다를 수 있다. 환경 선택 자체는 Node 버전 변경이나 WSL 시작을 뜻하지 않는다.
+
 ## 기본 Node 버전 / Default Node Version
 
 선택한 관리 도구가 사용자 기본값으로 지정한 Node 버전. 프로젝트 파일이나 셸 설정이 우선하면 실제 프로젝트에서 실행되는 버전과 다를 수 있다. nodenv의 global 변경과 프로젝트 .node-version 변경은 별도 작업이다.
