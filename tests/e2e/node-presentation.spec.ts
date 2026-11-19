@@ -1,4 +1,5 @@
 import type { Locator } from 'playwright'
+import type { TestInfo } from '@playwright/test'
 import { test, expect, type Desktop } from './fixture'
 import { channels } from '../../src/shared/api'
 import { sharingChannel, sharingChanged, type SharingState } from '../../src/shared/sharing'
@@ -53,6 +54,38 @@ async function expectMatchingEdges(left: Locator, right: Locator) {
   expect(Math.abs(a.y + a.height - b.y - b.height)).toBeLessThanOrEqual(1)
 }
 
+async function expectCenteredColumns(table: Locator, info: TestInfo, attachment: string) {
+  const centering = await table.evaluate(element => {
+    const headers = [...element.querySelectorAll('thead th')]
+    const cells = [...element.querySelectorAll('tbody tr:first-child > *')]
+    const measurements = [...headers, ...cells].map(cell => {
+      const textNode = cell.querySelector('.workrail-sort > span:first-child, .workrail-tag') ?? cell
+      const control = cell.querySelector('.workrail-version-status svg, .workrail-version-action button')
+      const range = document.createRange()
+      range.selectNodeContents(textNode)
+      const content = control?.getBoundingClientRect() ?? range.getBoundingClientRect()
+      const bounds = cell.getBoundingClientRect()
+      const style = getComputedStyle(cell)
+      const contentCenter = content.x + content.width / 2
+      const cellCenter = bounds.x + bounds.width / 2
+      return { text: textNode.textContent, align: style.textAlign, vertical: style.verticalAlign, contentCenter, cellCenter }
+    })
+    return { headers: measurements.slice(0, headers.length), row: measurements.slice(headers.length) }
+  })
+  expect(centering.headers).toHaveLength(5)
+  expect(centering.row).toHaveLength(5)
+  for (const [index, header] of centering.headers.entries()) {
+    const cell = centering.row[index]
+    for (const measurement of [header, cell]) {
+      expect(measurement.align).toBe('center')
+      expect(measurement.vertical).toBe('middle')
+      expect(Math.abs(measurement.contentCenter - measurement.cellCenter), measurement.text ?? undefined).toBeLessThanOrEqual(1)
+    }
+    expect(Math.abs(header.contentCenter - cell.contentCenter), header.text ?? undefined).toBeLessThanOrEqual(1)
+  }
+  await info.attach(attachment, { body: JSON.stringify(centering, null, 2), contentType: 'application/json' })
+}
+
 test('centers and sorts the Node catalog with aligned independently scrolling panels', async ({ desktop }, info) => {
   const { page } = desktop
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -64,25 +97,7 @@ test('centers and sorts the Node catalog with aligned independently scrolling pa
   const firstVersion = table.getByRole('rowheader').first()
   await expect(firstVersion).toHaveText('22.45.0')
   await expectMatchingEdges(main.locator('.workrail-node-table'), main.getByRole('region', { name: '설치된 버전' }))
-  const centering = await table.evaluate(element => {
-    const headers = [...element.querySelectorAll('thead th')]
-    const cells = [...element.querySelectorAll('tbody tr:first-child > *')]
-    return [...headers, ...cells].map(cell => {
-      const label = cell.querySelector('.workrail-sort > span:first-child') ?? cell.querySelector('button, .workrail-tag, .workrail-version-status')
-      const range = document.createRange()
-      range.selectNodeContents(cell)
-      const text = label?.getBoundingClientRect() ?? range.getBoundingClientRect()
-      const bounds = cell.getBoundingClientRect()
-      const style = getComputedStyle(cell)
-      return { align: style.textAlign, vertical: style.verticalAlign, offset: Math.abs(text.x + text.width / 2 - bounds.x - bounds.width / 2) }
-    })
-  })
-  expect(centering).toHaveLength(10)
-  for (const cell of centering) {
-    expect(cell.align).toBe('center')
-    expect(cell.vertical).toBe('middle')
-    expect(cell.offset).toBeLessThanOrEqual(1)
-  }
+  await expectCenteredColumns(table, info, 'column-centers-dark')
   await page.screenshot({ path: info.outputPath('node-presentation.png') })
 
   await table.getByRole('button', { name: 'Node 버전 정렬', exact: true }).click()
@@ -310,6 +325,7 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
   await expect(node.getByText('이 환경의 node-build 설치 정의가 없습니다.')).toBeVisible()
   await expect(node.getByText('소스 컴파일')).toBeVisible()
   await expectMatchingEdges(node.locator('.workrail-node-table'), node.getByRole('region', { name: '설치된 버전' }))
+  await expectCenteredColumns(node.getByRole('table', { name: '공식 배포 버전' }), info, 'column-centers-light')
   await page.screenshot({ path: info.outputPath('compact-node-wsl-light.png') })
   await node.getByRole('button', { name: '환경 변경' }).click()
   await expect(page.getByRole('dialog', { name: '관리 환경 선택' }).getByRole('button', { name: /Ubuntu/ })).toHaveAttribute('aria-current', 'true')
