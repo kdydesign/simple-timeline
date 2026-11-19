@@ -13,7 +13,7 @@ const digests = new Map([
   [path('utils', 'proxy.exe'), 'fb4256ea5f2f7a3cfceeed9f7bf889a031ad04e594f6e4c5a9851824f561af90'],
   [path('utils', 'sync.exe'), '26a564b61887676e55023e4f8476750988d425968c953bcc7126a14f035daf78'],
 ])
-function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim' | 'link' | 'command' | 'helper-read' | 'empty') {
+function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim' | 'link' | 'command' | 'helper-read' | 'empty' | 'x86' | 'redirected-node') {
   const linkedTarget = settings.OperatingMode === 'link' ? path('installs', 'v22.9.0') : path('.shim')
   const probe: WindowsProbe = {
     readEnvironment: async () => ({ Path: home + ';' + path('.nodejs'), NVM_HOME: home }),
@@ -24,6 +24,7 @@ function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim
       : p === root || p === home ? 'directory' : 'missing',
     resolvePath: async p => {
       if (p === path('.nodejs') && settings.ActiveVersion === '') throw Error('no active target')
+      if (broken === 'redirected-node' && p === path('installs', 'v22.9.0', 'node.exe')) return 'D:\\other\\node.exe'
       return p === path('.nodejs') ? (broken === 'link' ? 'D:\\other' : linkedTarget) : p
     },
     listDirectories: async () => { if (broken === 'list') throw Error('unreadable'); return broken === 'empty' ? [] : ['v22.9.0'] },
@@ -33,7 +34,7 @@ function inspect(settings: Record<string, unknown> = {}, broken?: 'list' | 'shim
       return broken === 'shim' && p.endsWith('node.exe') ? 'bad' : digests.get(p) ?? ''
     },
     getNodeVersion: async p => p === path('installs', 'v22.9.0', 'node.exe') ? '22.9.0' : null,
-    isX64Node: async () => true,
+    isX64Node: async () => broken !== 'x86',
   }
   return discoverWindowsNode(probe)
 }
@@ -63,6 +64,17 @@ describe('nvm-windows 2.0.1', () => {
   it('permits installation with an existing version and a cleared link-mode default', async () => {
     expect(await inspect({ OperatingMode: 'link', ActiveVersion: '' })).toMatchObject({
       activeVersion: null, activeSource: null, capabilities: { install: { available: true } },
+    })
+  })
+  it('uses a local x86 installation as evidence of a prior install without offering it for x64 use', async () => {
+    expect(await inspect({ OperatingMode: 'link', ActiveVersion: '' }, 'x86')).toMatchObject({
+      installation: { existingVersion: '22.9.0' }, installedVersions: [], activeVersion: null,
+      capabilities: { list: { available: true }, install: { available: true } },
+    })
+  })
+  it('does not use a redirected executable as prior-install evidence', async () => {
+    expect(await inspect({ OperatingMode: 'link', ActiveVersion: '' }, 'redirected-node')).toMatchObject({
+      installedVersions: [], capabilities: { install: { available: false } },
     })
   })
   it.each(['disabled', '  DiSABLED  ', 'NONE', ' off', '0'])('blocks install and link use when revocation is %j', async AuthenticodeRevocation => {

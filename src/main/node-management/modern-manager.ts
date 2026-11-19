@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
 import { win32 } from 'node:path'
 import { isNodeVersion } from '../../shared/node-management'
-import { isSafeNvmPath, readInstalled, samePath, verifiedFiles, type WindowsProbe } from './windows-probe'
+import { compareStableVersions } from '../../shared/updates'
+import { isSafeNvmPath, samePath, verifiedFiles, type WindowsProbe } from './windows-probe'
 import type { WindowsDiscovery } from './discovery'
 import { availability, capabilities, modernDigest, modernHelpers } from './manager-support'
 
@@ -58,6 +59,24 @@ function verifiedSigningPolicy(settings: Record<string, unknown>) {
   return Array.isArray(values) && values.every(value => typeof value === 'string' && approved.includes(value.trim().toLowerCase()))
 }
 
+async function readModernInventory(root: string, probe: WindowsProbe) {
+  const names = await probe.listDirectories(root)
+  const entries = await Promise.all(names.map(async name => {
+    const version = name.slice(1)
+    if (!name.toLowerCase().startsWith('v') || !isNodeVersion(version)) return null
+    const node = win32.join(root, name, 'node.exe')
+    if (await probe.pathKind(node) !== 'file' || !samePath(await probe.resolvePath(node), node)) return null
+    // ScanInstalled counts a version's node.exe regardless of architecture.
+    // Only a matching x64 executable may be selected for activation.
+    const selectable = await probe.isX64Node(node) && await probe.getNodeVersion(node) === version
+    return { version, selectable }
+  }))
+  const present = entries.filter(entry => entry !== null)
+  const installedVersions = present.filter(entry => entry.selectable).map(entry => entry.version)
+    .sort((a, b) => compareStableVersions(b, a))
+  return { installedVersions, existingVersion: present[0]?.version }
+}
+
 export async function inspectModernManager(probe: WindowsProbe, home: string, result: WindowsDiscovery, searchPath: (string | null)[]) {
   const exe = win32.join(home, 'nvm.exe')
   const snapshot = await probe.readModernSettings?.()
@@ -73,16 +92,17 @@ export async function inspectModernManager(probe: WindowsProbe, home: string, re
   const symlink = win32.join(base, '.nodejs')
   const active = settings.ActiveVersion === '' || settings.ActiveVersion === undefined ? null : settings.ActiveVersion
   if (active !== null && !isNodeVersion(active)) throw Error('Invalid active version')
-  result.installedVersions = rootKind === 'missing' ? [] : await readInstalled(root, probe, ['node.exe'])
+  const inventory = rootKind === 'missing' ? { installedVersions: [], existingVersion: undefined } : await readModernInventory(root, probe)
+  result.installedVersions = inventory.installedVersions
   result.manager = { status: 'ready', kind: 'nvm-windows', version: '2.0.1', path: exe }
-  result.installation = { family: 'modern', existingVersion: result.installedVersions[0], version: '2.0.1', mode, executableDigest: modernDigest, exe, home, root, symlink, settingsDigest: createHash('sha256').update(snapshot).digest('hex') }
+  result.installation = { family: 'modern', existingVersion: inventory.existingVersion, version: '2.0.1', mode, executableDigest: modernDigest, exe, home, root, symlink, settingsDigest: createHash('sha256').update(snapshot).digest('hex') }
   result.capabilities = capabilities(null)
   const conflict = (message: string) => result.conflicts.push({ code: 'manager-configuration', path: home, message })
   const writes = settings.WriteSources
   if (!writes || typeof writes !== 'object' || Array.isArray(writes)) throw Error('Missing registry source evidence')
   const locked = ['ActiveVersion', 'PreviousActiveVersion'].find(key => writes[key] !== undefined && writes[key] !== 'user-preference')
   if (locked) result.capabilities.use = availability('Windows 정책 또는 컴퓨터 기본 설정이 ' + locked + ' 값을 관리하므로 기본 버전을 전환할 수 없습니다.')
-  if (!active && result.installedVersions.length === 0) {
+  if (!active && !inventory.existingVersion) {
     result.capabilities.install = availability('nvm 2.0.1은 첫 설치를 기본 버전으로 자동 설정합니다. 첫 버전은 Windows 터미널에서 직접 선택해 설치해 주세요.')
   }
   if (!verifiedSigningPolicy(settings)) conflict('nvm 2.x의 인증서 폐지 검사와 허용된 공식 서명자 설정을 확인해 주세요.')
