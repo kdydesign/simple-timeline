@@ -7,18 +7,19 @@ const maxOutput = 1024 * 1024
 
 function asksForInput(line: string): boolean {
   // user@host: can be the first packet of a conventional PS1.
-  return /[?？]\s*$/.test(line)
+  return /[?？](?:\s*(?:\[[^\]]*\]|\([^)]*\)))?\s*$/.test(line)
     || (/[:：]\s*$/.test(line) && !/^[\w.-]+@[\w.-]+:$/.test(line))
     || /(?:\[(?:y\/n|yes\/no)\]|\((?:y\/n|yes\/no)\))\s*$/i.test(line)
     || /^\s*(?:[\w-]*>|\.\.\.)\s*$|--more--\s*$/i.test(line)
-    || /\bpress (?:any key|enter|return)\b/i.test(line)
+    || /\bpress\s+\[?(?:any key|enter|return)\b/i.test(line)
+    || /\b(?:select|choose)\s+.*\[[^\]]+\]\s*$/i.test(line)
 }
 
 type Phase = 'output' | 'readline' | 'semantic' | 'ready'
 type Control = 'text' | 'escape' | 'csi' | 'osc' | 'osc-escape'
 
 export class StartupPrompt {
-  private decoder = new TextDecoder('utf-8', {fatal: true})
+  private readonly decoder = new TextDecoder('utf-8', {fatal: true})
   private phase: Phase = 'output'
   private control: Control = 'text'
   private sequence = ''
@@ -26,14 +27,13 @@ export class StartupPrompt {
   private bytes = 0
   private manual = false
 
-  reset(): void {
-    this.decoder = new TextDecoder('utf-8', {fatal: true})
-    this.phase = 'output'
-    this.control = 'text'
-    this.sequence = ''
-    this.line = ''
-    this.bytes = 0
-    this.manual = false
+  private submitted: boolean
+  private expectedEcho?: string
+  private echoAwaitingLf = false
+
+  constructor(previousLine?: string) {
+    this.submitted = previousLine === undefined
+    if (previousLine?.trim()) this.expectedEcho = previousLine
   }
 
   push(chunk: Buffer): 'prompt' | 'manual' | undefined {
@@ -60,12 +60,17 @@ export class StartupPrompt {
         else this.phase = 'ready'
       }
     }
+    if (this.phase === 'ready' && !this.submitted) this.manual = true
     if (this.manual) return 'manual'
     // A partial UTF-8 character after a candidate can still become extra input.
     if (this.phase === 'ready' && chunk[chunk.length - 1] < 0x80) return 'prompt'
   }
 
   private consume(char: string): void {
+    if (this.echoAwaitingLf) {
+      if (char === '\n') this.submitted = true
+      this.echoAwaitingLf = false
+    }
     switch (this.control) {
       case 'escape':
         if (char === '[') this.control = 'csi'
@@ -92,7 +97,12 @@ export class StartupPrompt {
       case 'text':
         if (char === '\x1b') this.control = 'escape'
         else if (char === '\r' || char === '\n') {
-          if (this.phase !== 'output' || asksForInput(this.line)) this.manual = true
+          if (this.phase === 'output' && this.line === this.expectedEcho) {
+            if (char === '\n') this.submitted = true
+            else this.echoAwaitingLf = true
+          } else if (this.phase !== 'output' || asksForInput(this.line)) this.manual = true
+          // Only the first output line can be the command echo.
+          this.expectedEcho = undefined
           this.line = ''
         } else if (char === '\x07') return
         else if (this.phase === 'ready' || this.line.length >= maxLine || /[\x00-\x08\x0a-\x1f\x7f-\x9f]/.test(char)) {
@@ -107,7 +117,7 @@ export class StartupPrompt {
       if (this.phase === 'output' && !this.line) this.phase = 'readline'
       else if (this.phase === 'output') this.manual = true
     } else if (sequence === '?2004l' && this.phase === 'output') {
-      return
+      this.submitted = true
     } else this.manual = true
   }
 
@@ -136,7 +146,8 @@ export class StartupPrompt {
         break
       case 'C':
       case 'D':
-        if (this.phase !== 'output') this.manual = true
+        if (this.phase === 'output') this.submitted = true
+        else this.manual = true
         break
       default:
         this.manual = true

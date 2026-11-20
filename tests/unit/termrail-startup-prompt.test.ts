@@ -34,6 +34,8 @@ it.each([
   'Continue (yes/no)? ', '[sudo] password for alice: ', 'Overwrite [y/N] ',
   start + 'Enter a value: ' + end, start + 'Input:' + end, 'Press ENTER to continue',
   'Password:\r\n' + start + '$ ' + end,
+  '계속하시겠습니까? [예/아니요] ', 'Continue? (default yes) ',
+  'Press [Enter] to continue', 'Select option [1-3] ',
   paste + 'alice@dev:~$ already typed',
   start + '$ ' + end + 'already typed',
   paste + 'alice@dev:~$ \r\nother output',
@@ -46,12 +48,37 @@ it.each([
   expect(prompt.push(Buffer.from(start + '$ ' + end))).toBe('manual')
 })
 
-it('requires fresh evidence after each command and discards the preceding echo', () => {
-  const prompt = new StartupPrompt()
-  expect(prompt.push(Buffer.from(paste + 'alice@dev:~$ '))).toBe('prompt')
-  prompt.reset()
-  expect(prompt.push(Buffer.from('pwd\r\n\x1b[?2004l\r/tmp\r\nalice@dev:~$ '))).toBeUndefined()
-  expect(prompt.push(Buffer.from('\r\n' + paste + 'alice@dev:/tmp$ '))).toBe('prompt')
+it.each([
+  ['', start + '$ ' + end],
+  ['', paste + 'alice@dev:~$ '],
+  ['\r\nordinary output\r\n', start + '$ ' + end],
+  ['ls\r', paste + 'alice@dev:~$ '],
+  ['listing mentions ls\r\n', paste + 'alice@dev:~$ '],
+  ['other output\r\nls\r\n', start + '$ ' + end],
+])('hands over on a redraw without evidence that the previous line was submitted', (output, redraw) => {
+  const prompt = new StartupPrompt('ls')
+  expect(prompt.push(Buffer.from(output))).toBeUndefined()
+  const bytes = Buffer.from(redraw)
+  expect(prompt.push(bytes.subarray(0, -1))).toBeUndefined()
+  expect(prompt.push(bytes.subarray(-1))).toBe('manual')
+  expect(prompt.push(Buffer.from('ls\r\n' + start + '$ ' + end))).toBe('manual')
+})
+
+it.each([
+  ['ls\r', '\nlisting.txt\r\n', start + '$ ' + end],
+  ['ls', '\nlisting.txt\r\n', start + '$ ' + end],
+  ['\x1b]133;C', '\x07', start + '$ ' + end],
+  ['\x1b]133;D;', '0\x1b\\', start + '$ ' + end],
+  ['\x1b[?2004', 'l\r\nlisting.txt\r\n', paste + 'alice@dev:~$ '],
+])('accepts the next prompt after the shell acknowledges submission', (before, after, next) => {
+  const prompt = new StartupPrompt('ls')
+  expect(prompt.push(Buffer.from(before))).toBeUndefined()
+  expect(prompt.push(Buffer.from(after))).toBeUndefined()
+  expect(prompt.push(Buffer.from(next))).toBe('prompt')
+})
+
+it('keeps a blank line from turning ordinary newlines into submission evidence', () => {
+  expect(new StartupPrompt('').push(Buffer.from('\r\n' + start + '$ ' + end))).toBe('manual')
 })
 
 it('recognizes the returning prompt after normal tabulated terminal output', () => {

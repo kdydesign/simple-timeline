@@ -171,9 +171,9 @@ class SshSession {
     this.client.shell(pty, opened)
   }
 
-  private waitForPrompt() {
+  private waitForPrompt(previousLine?: string) {
     this.startupInput = 'waiting'
-    this.startupPrompt = new StartupPrompt()
+    this.startupPrompt = new StartupPrompt(previousLine)
     this.clearDeadline()
     // Expiry hands control to the user; it never sends input or closes an open shell.
     this.deadline = setTimeout(() => this.stopStartup('manual'), 10_000)
@@ -196,7 +196,7 @@ class SshSession {
     const line = this.startupLines?.pop()
     // Control characters in a PTY can edit/submit input (including tab completion).
     if (!line || /[\x00-\x1f\x7f-\x9f]/u.test(line)) return this.stopStartup('manual')
-    if (this.startupLines?.length) this.waitForPrompt()
+    if (this.startupLines?.length) this.waitForPrompt(line)
     else this.stopStartup()
     try {
       this.channel.write(line + '\r', (error?: Error | null) => {

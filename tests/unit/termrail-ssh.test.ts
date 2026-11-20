@@ -352,6 +352,46 @@ it.each(['question', 'continuation prompt', 'user keystroke'])('stops queued inp
   })
 })
 
+it.each(['a prompt redraw', 'the prompt wait expires'])('keeps the shell interactive after %s', async reason => {
+  await withStartupShell(async fixture => {
+    const { service, id, target, input, transcript } = fixture
+    let shell!: ServerChannel
+    fixture.openShell = permit => { shell = permit() }
+    service.open(id, target, { username, password, body: 'pwd\nls' })
+    await vi.waitFor(() => expect(service.read(id, 0).phase).toBe('host-key'))
+    service.trust(id, service.read(id, 0).fingerprint!)
+    await vi.waitFor(() => expect(service.read(id, 0).startupInput).toBe('waiting'))
+
+    if (reason === 'the prompt wait expires') {
+      // Only virtualize the second prompt's deadline. SSH uses a real loopback socket.
+      vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'], shouldClearNativeTimers: true })
+      try {
+        const firstInput = once(shell, 'data')
+        shell.write(shellPrompt)
+        await firstInput
+        expect(input()).toBe('pwd\r')
+        vi.advanceTimersByTime(9_999)
+        expect(service.read(id, 0).startupInput).toBe('waiting')
+        vi.advanceTimersByTime(1)
+      } finally {
+        vi.useRealTimers()
+      }
+    } else {
+      shell.write(shellPrompt)
+      await vi.waitFor(() => expect(input()).toBe('pwd\r'))
+      // A separate packet redraws the prompt before the server echoes or executes pwd.
+      shell.write(shellPrompt)
+    }
+    await vi.waitFor(() => expect(service.read(id, 0)).toMatchObject({phase: 'connected', startupInput: 'manual'}))
+    expect(input()).toBe('pwd\r')
+    const result = 'pwd\r\n/fixture/work\r\n' + shellPrompt
+    shell.write(result)
+    await vi.waitFor(() => expect(transcript()).toContain(result))
+    await service.write(id, 'echo manual\r')
+    await vi.waitFor(() => expect(input()).toBe('pwd\recho manual\r'))
+  })
+})
+
 it('reports shell-open failure separately from password authentication', async () => {
   await withStartupShell(async fixture => {
     const { id, target, service, input, requests } = fixture
