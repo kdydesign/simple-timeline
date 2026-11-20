@@ -3,8 +3,9 @@ import { once } from 'node:events'
 import { writeFile } from 'node:fs/promises'
 import type { AddressInfo } from 'node:net'
 import { join } from 'node:path'
-import { Server, utils, type Connection } from 'ssh2'
+import { Server, type Connection } from 'ssh2'
 import { expect, test } from './fixture'
+import { createTestSshHostKey } from '../fixtures/ssh-host-key'
 
 test.use({ initialTool: 'home' })
 
@@ -16,7 +17,7 @@ test('imports a startup file through the native picker and authenticates only af
   const clients = new Set<Connection>()
   let authentications = 0
   let transports = 0
-  const server = new Server({ hostKeys: [utils.generateKeyPairSync('ed25519').private] }, client => {
+  const server = new Server({ hostKeys: [createTestSshHostKey()] }, client => {
     transports++
     clients.add(client)
     client.on('error', () => {}).on('close', () => clients.delete(client))

@@ -1,7 +1,8 @@
 import type {AddressInfo} from 'node:net'
 import {once} from 'node:events'
-import {Server, utils, type Connection, type ServerChannel} from 'ssh2'
+import {Server, type Connection, type ServerChannel} from 'ssh2'
 import {expect, test} from './fixture'
+import { createTestSshHostKey } from '../fixtures/ssh-host-key'
 
 test.use({initialTool:'home'})
 
@@ -12,7 +13,7 @@ test('TermRail authenticates, renders remote output, and retains its PTY while h
   const widths: number[] = []
   let shell: ServerChannel | undefined
   let logins = 0
-  const server = new Server({hostKeys:[utils.generateKeyPairSync('ed25519').private]}, client => {
+  const server = new Server({hostKeys:[createTestSshHostKey()]}, client => {
     clients.add(client)
     client.on('error', () => {}).on('close', () => clients.delete(client))
     client.on('authentication', auth => {

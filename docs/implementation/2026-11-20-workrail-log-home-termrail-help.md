@@ -16,3 +16,7 @@
 일회성 Electron 프로필에서 정상 크기와 좁은 창의 TermRail 팝업·키보드 포커스 복귀, Node 상태의 두 테마 대비, Home의 참여자·설치 버전 표시와 Windows 예시 진단 복사를 확인했다. 기존 안내 그림 2장과 추가한 Home·작업 로그·서버 추가 그림 3장은 같은 방식으로 촬영했다. Windows·WSL 작업 결과의 경계와 시작 파일의 저장·취소·대상 결합은 별도 단위·UI 검사에서 확인한다.
 
 전체 로컬 검사의 커밋·작업 트리 상태·플랫폼·단계별 결과는 `artifacts/app/latest.json`에 기록된다. 실제 Windows 설치·업데이트 검사는 해당 커밋 GitHub Actions의 Application Windows 작업과 설치본 artifact에서 확인한다. 사내 PC의 폴더 최종 이동 EPERM은 이 화면 작업과 별도인 실기 진단 항목이다.
+
+### Windows CI의 SSH 테스트 키 생성 실패
+
+`371119a`의 Windows 앱 빌드와 네이티브 검사는 통과했고, E2E 125개 중 1개가 일회성 SSH 서버 생성에서 멈췄다. ssh2 1.17의 생성기는 Ed25519 공개키 앞의 0바이트까지 제거해 일부 키를 31바이트로 기록했고, 같은 라이브러리의 파서는 32바이트를 요구했다. 로컬 생성 2,048건 중 같은 오류가 13건 발생했다. TermRail 단위·E2E 서버 모두 새 키를 OpenSSH로 한 번 생성해 기존 ssh2 서버에 전달한다. 테스트가 키를 읽은 뒤 임시 디렉터리를 정리한다. 수정 후 1,024개 모두 파싱됐고 그중 5개의 공개키가 0바이트로 시작했다. 로컬 관련 단위 6개, Electron E2E 2개가 통과했다. [원래 실패한 실행](https://github.com/kdydesign/simple-timeline/actions/runs/44656882225)

@@ -4,6 +4,7 @@
 
 명령은 저장소 루트에서 실행한다. 앱 개발은 [.node-version](../../.node-version)과
 [package.json](../../package.json)의 Node·npm을 사용한다. 하네스만 실행할 때는 Node 24 이상과 Git이면 된다.
+TermRail 단위·E2E 검사는 PATH의 OpenSSH `ssh-keygen`으로 일회성 Ed25519 호스트 키를 만든다. Windows에서는 OpenSSH 클라이언트에 포함되어 있다. [테스트 키 생성](../../tests/fixtures/ssh-host-key.ts)
 
 | 변경·확인 대상 | 실행할 검사 | 통과가 뜻하는 범위 |
 | --- | --- | --- |

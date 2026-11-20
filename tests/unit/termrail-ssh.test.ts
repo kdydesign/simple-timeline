@@ -4,9 +4,10 @@ import { randomBytes, randomUUID } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { Server, utils, type ServerChannel } from 'ssh2'
+import { Server, type ServerChannel } from 'ssh2'
 import { expect, it, vi } from 'vitest'
 import { TermRailSshService } from '../../src/main/termrail/ssh-service'
+import { createTestSshHostKey } from '../fixtures/ssh-host-key'
 
 function endpoint(server: Server) {
   const address = server.address()
@@ -18,7 +19,7 @@ it('verifies the host before login and keeps PTY output, dimensions, and pins ac
   const directory = mkdtempSync(join(tmpdir(), 'termrail-ssh-'))
   const pinFile = join(directory, 'hosts.json')
   const service = new TermRailSshService(pinFile)
-  const key = utils.generateKeyPairSync('ed25519').private
+  const key = createTestSshHostKey()
   const logins: string[] = []
   const dimensions: string[] = []
   let shell: ServerChannel | undefined
@@ -111,7 +112,7 @@ it('requires approval of a changed host key at the same endpoint and cancels a p
   const service = new TermRailSshService(join(directory, 'pins'))
   const attempts: string[] = []
   function startServer(port: number) {
-    const key = utils.generateKeyPairSync('ed25519').private
+    const key = createTestSshHostKey()
     const server = new Server({ hostKeys: [key] }, connection => {
       connection.on('error', () => {}).on('authentication', auth => {
         attempts.push(auth.username)
@@ -165,7 +166,7 @@ it('sends a stored login once after host approval and opens no shell after rejec
   const startup = { username: 'fixture-user', password: 'fixture-password', body: 'pwd' }
   const users: string[] = []
   let sessions = 0
-  const server = new Server({ hostKeys: [utils.generateKeyPairSync('ed25519').private] }, connection => {
+  const server = new Server({ hostKeys: [createTestSshHostKey()] }, connection => {
     connection.on('error', () => {}).on('authentication', auth => {
       users.push(auth.username)
       auth.reject(['password'])
@@ -224,7 +225,7 @@ it.skipIf(process.platform !== 'linux').each(['new tab', 'restored pane'])(
   const remoteRequests: string[] = []
   const input: Buffer[] = []
   let terminals = 0
-  const server = new Server({ hostKeys: [utils.generateKeyPairSync('ed25519').private] }, connection => {
+  const server = new Server({ hostKeys: [createTestSshHostKey()] }, connection => {
     connection.on('error', () => {}).on('authentication', auth => {
       users.push(auth.username)
       if (auth.method === 'password' && auth.username === startup.username && auth.password === startup.password)
@@ -298,7 +299,7 @@ it('reports an unavailable remote Bash and sends no file to an unprepared shell'
   const directory = mkdtempSync(join(tmpdir(), 'termrail-bash-missing-'))
   const service = new TermRailSshService(join(directory, 'pins'))
   const input: Buffer[] = []
-  const server = new Server({ hostKeys: [utils.generateKeyPairSync('ed25519').private] }, connection => {
+  const server = new Server({ hostKeys: [createTestSshHostKey()] }, connection => {
     connection.on('error', () => {}).on('authentication', auth => auth.accept()).on('ready', () => {
       connection.on('session', accept => {
         accept().on('pty', permit => permit?.()).on('exec', permit => {
