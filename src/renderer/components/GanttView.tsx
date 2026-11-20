@@ -23,6 +23,7 @@ import {
 import { viewportWindow, visibleRows } from "../../visualization/viewport";
 import {
   indexSnapshot,
+  type SnapshotIndex,
   scheduleDescription,
 } from "../../visualization/presentation";
 import {HolidayDateTooltip} from "./HolidayDateTooltip";
@@ -49,6 +50,7 @@ export interface GanttProps extends DragActions {
   onToggleProject?: (id:string) => void;
   todayRequest?: {date:string;token:number} | null;
   snapshot: TimelineSnapshot;
+  snapshotIndex?: SnapshotIndex;
   selectedMonth: YearMonth;
   onEditProject: (p: Project) => void;
   onEditSchedule: (s: Schedule) => void;
@@ -67,7 +69,7 @@ type Row = {
   height: number;
 };
 export function GanttView({
-  snapshot, holidays, holidaySources, holidayNotice,
+  snapshot, snapshotIndex, holidays, holidaySources, holidayNotice,
   onAddDate, collapsed = EXPANDED, onToggleProject, todayRequest,
   onDragStart, onDragCommit, onDragEnd,
   selectedMonth, selectedDate, dayWidth: P = 28, onDayWidth,
@@ -99,7 +101,7 @@ export function GanttView({
       hi = Math.max(toOrdinal(original.end),toOrdinal(visitedEnd),extension?.end ?? 0);
     return {start:fromOrdinal(lo),end:fromOrdinal(hi)};
   }, [snapshot,selectedMonth,visitedStart,visitedEnd,extension]),
-    index = useMemo(() => indexSnapshot(snapshot), [snapshot]);
+    index = useMemo(() => snapshotIndex ?? indexSnapshot(snapshot), [snapshotIndex, snapshot]);
   const rows = useMemo(
     () =>
       index.projects.flatMap((p) => [

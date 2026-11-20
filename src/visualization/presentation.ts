@@ -8,7 +8,13 @@ export const compareSchedules = (a: Schedule, b: Schedule) =>
   a.endDate.localeCompare(b.endDate) ||
   compareIds(a.projectId, b.projectId) ||
   compareIds(a.id, b.id);
-export function indexSnapshot(snapshot: TimelineSnapshot) {
+export interface SnapshotIndex {
+  readonly projects: readonly Project[];
+  readonly byProject: ReadonlyMap<string, readonly Schedule[]>;
+  readonly projectLabel: (project: Project) => string;
+  readonly scheduleLabel: (schedule: Schedule) => string;
+}
+export function indexSnapshot(snapshot: TimelineSnapshot): SnapshotIndex {
   const projects = [...snapshot.projects].sort((a, b) =>
       compareIds(a.id, b.id),
     ),

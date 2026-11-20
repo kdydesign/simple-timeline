@@ -22,7 +22,7 @@ import type { YearMonth } from "../../shared/types";
 import { useScheduleDrag } from "../state/useScheduleDrag";
 import { DayScheduleList } from "./DayScheduleList";
 export function CalendarView({
-  snapshot, holidays, holidaySources, holidayNotice,
+  snapshot, snapshotIndex, holidays, holidaySources, holidayNotice,
   onAddDate, onDragStart, onDragCommit, onDragEnd, onMonth,
   selectedMonth, selectedDate,
   onEditSchedule,
@@ -63,7 +63,7 @@ export function CalendarView({
   const now = new Date(), today = `${String(now.getFullYear()).padStart(4,"0")}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")}`;
   const bounds = monthBounds(selectedMonth);
   const grid = useMemo(() => calendarGrid(selectedMonth), [selectedMonth]),
-    index = useMemo(() => indexSnapshot(snapshot), [snapshot]),
+    index = useMemo(() => snapshotIndex ?? indexSnapshot(snapshot), [snapshotIndex, snapshot]),
     projectMap = useMemo(
       () => new Map(snapshot.projects.map((p) => [p.id, p])),
       [snapshot],

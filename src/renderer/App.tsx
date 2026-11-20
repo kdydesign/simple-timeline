@@ -14,7 +14,7 @@ import {IconButton} from './components/Icon';
 import {restoreFocus} from './state/restoreFocus';
 import {normalizeReminder} from '../domain/reminder';
 import {useReminders} from './state/useReminders';
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, useLayoutEffect } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, useLayoutEffect } from "react";
 import type { HelpSection } from "../shared/help";
 import type { TimelineApi } from "../shared/api";
 import type { ApiError, YearMonth, Result, Id, Schedule, Project, ReminderSettings } from "../shared/types";
@@ -34,6 +34,7 @@ import {Titlebar} from "./components/Titlebar";
 import {TooltipProvider} from "./components/ui/tooltip";
 import { Toolbar } from "./components/Toolbar";
 import { ProjectList } from "./components/ProjectList";
+import { indexSnapshot } from "../visualization/presentation";
 import { GanttView, type GanttHandle } from "./components/GanttView";
 import { CalendarView } from "./components/CalendarView";
 import { EditorPanel } from "./components/EditorPanel";
@@ -98,6 +99,10 @@ export function App({
   const [filter,setFilter]=useState<'all'|'personal'|'shared'>('all');
   const sharingView=useSharingView(timeline.snapshot,filter);
   const {editableProjects,snapshot:visibleSnapshot}=sharingView;
+  const snapshotIndex = useMemo(
+    () => visibleSnapshot ? indexSnapshot(visibleSnapshot) : undefined,
+    [visibleSnapshot],
+  );
   useEffect(()=>{if(sharingView.dragInvalidated)setNotice('공유 항목이 변경되어 드래그를 취소했습니다.')},[sharingView.dragInvalidated]);
   const openProject=(project?:import('../shared/types').Project,caller?:HTMLElement|null)=>{
     const mapping=sharing.state?.projects.find(p=>p.id===project?.id);
@@ -708,7 +713,7 @@ export function App({
           inert={settingsVisible || !!quickReminder || !!confirmation || (narrow && !!model)}
           aria-label="프로젝트와 일정"
         >
-          {timeline.snapshot ? (
+          {visibleSnapshot ? (
             <>
               <GanttView
                 holidays={effectiveHolidayCalendar(localHolidaySources(sharing.state))} holidaySources={localHolidaySources(sharing.state)} holidayNotice={holidayStatusDescription(sharing.state?.holidays)}
@@ -719,8 +724,9 @@ export function App({
                 dayWidth={preferences.dayWidth} onDayWidth={preferences.setDayWidth}
                 active={mode === "gantt"}
                 interactive={planrailActive}
-                snapshot={visibleSnapshot!}
-                hideEmptyChrome={filter==='shared'&&!visibleSnapshot?.projects.length}
+                snapshot={visibleSnapshot}
+                snapshotIndex={snapshotIndex}
+                hideEmptyChrome={filter==='shared'&&!visibleSnapshot.projects.length}
                 selectedMonth={month}
                 selectedDate={selectedDate}
                 disabled={!planrailActive || !canEdit || sharingView.dragInvalidated}
@@ -743,7 +749,8 @@ export function App({
                 holidays={effectiveHolidayCalendar(localHolidaySources(sharing.state))} holidaySources={localHolidaySources(sharing.state)} holidayNotice={holidayStatusDescription(sharing.state?.holidays)}
                 {...dragActions} onMonth={navigateMonth}
                 onAddDate={addDate}
-                snapshot={visibleSnapshot!}
+                snapshot={visibleSnapshot}
+                snapshotIndex={snapshotIndex}
                 selectedMonth={month}
                 selectedDate={selectedDate}
                 active={mode === "calendar"}
