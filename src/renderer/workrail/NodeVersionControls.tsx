@@ -1,4 +1,4 @@
-import { useId, type ReactElement, type Ref } from 'react'
+import { useId, useRef, useState, type ReactElement, type Ref } from 'react'
 import { Archive, Circle, CircleCheck, TriangleAlert } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip'
 import type { NodeRelease } from '../../shared/node-management'
@@ -36,7 +36,7 @@ export function NodeVersionAction({ node, version, release }: { node: NodeManage
     : status === 'installed' ? !canChange || node.state?.capabilities?.use.available === false
     : !canChange || !!nodeInstallReason(node.state, release) || node.catalogPending || node.state?.catalog.status !== 'ready')
   return <div className="workrail-version-action">
-    <button type="button" className="workrail-control" data-active-version={status === 'active' || undefined}
+    <button type="button" className="workrail-control" data-version-state={status ?? 'unknown'}
       aria-label={version + ' ' + action} aria-describedby={reason || build ? description : undefined}
       disabled={disabled} onClick={() => {
         if (status === 'installed' || status === 'missing') void node.mutate({ kind: status === 'installed' ? 'use' : 'install', version })
@@ -44,6 +44,36 @@ export function NodeVersionAction({ node, version, release }: { node: NodeManage
       }}>{action}</button>
     {(reason || build) && <span id={description} className="workrail-action-reason">{reason ?? '소스 컴파일'}</span>}
   </div>
+}
+
+function WindowsDiagnosticLog({ lines }: { lines: string[] }) {
+  const log = useRef<HTMLPreElement>(null)
+  const [feedback, setFeedback] = useState('')
+  function copy(button: HTMLButtonElement) {
+    const selection = window.getSelection()
+    if (!selection || !log.current) return
+    log.current.focus()
+    const range = document.createRange()
+    range.selectNodeContents(log.current)
+    selection.removeAllRanges()
+    selection.addRange(range)
+    let copied = false
+    try { copied = document.execCommand?.('copy') } catch { /* Keep the selection for Ctrl+C. */ }
+    if (copied) {
+      selection.removeAllRanges()
+      button.focus()
+    }
+    setFeedback(copied ? '진단 이력을 복사했습니다.' : '선택된 이력을 Ctrl+C로 복사해 주세요.')
+  }
+  return <>
+    <pre ref={log} tabIndex={-1} onCopy={event => {
+      // HTML clipboard formats may include a source URL containing the user's installation path.
+      event.preventDefault()
+      event.clipboardData.setData('text/plain', window.getSelection()?.toString() ?? '')
+    }}>{lines.join('\n')}</pre>
+    <button type="button" className="workrail-control" onClick={event => copy(event.currentTarget)}>진단 복사</button>
+    {feedback && <span role="status">{feedback}</span>}
+  </>
 }
 
 export function NodeOperationStatus({ node, showLogs = false, stackedProgress = false }: { node: NodeManagement; showLogs?: boolean; stackedProgress?: boolean }) {
@@ -54,6 +84,8 @@ export function NodeOperationStatus({ node, showLogs = false, stackedProgress = 
   const canCancel = !!state?.busy?.cancellable && state.error?.code !== 'operation-unknown'
   const log = state?.operationLog
   const logPath = state?.operationLogPath
+  const windowsLog = node.environment?.kind === 'windows'
+    || (state?.platform === 'win32' && !state.environments && state.manager.kind !== 'nodenv')
   if (!progress && !messages.length && !(showLogs && (log?.length || logPath))) return null
   return <div className="workrail-operation">
     {progress && <div className="workrail-operation-progress">
@@ -65,7 +97,8 @@ export function NodeOperationStatus({ node, showLogs = false, stackedProgress = 
     {showLogs && (logPath || !!log?.length) && <details className="workrail-node-details">
       <summary>작업 로그</summary>
       {logPath && <p className="workrail-muted">{logPath}</p>}
-      {!!log?.length && <pre>{log.join('\n')}</pre>}
+      {!!log?.length && (windowsLog
+        ? <WindowsDiagnosticLog key={log.at(-1)} lines={log} /> : <pre>{log.join('\n')}</pre>)}
     </details>}
   </div>
 }

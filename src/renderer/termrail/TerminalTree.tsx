@@ -10,6 +10,7 @@ type StageProps = {
   active: boolean
   errors: ReadonlySet<string>
   onFocus: (id: string) => void
+  onEnded: (id: string) => void
   onClose: (path: Branch, id: string) => void
   onDrop: (path: Branch, profileId: string, side: Side) => void
   onResize: (path: Branch, ratio: number) => void
@@ -25,7 +26,10 @@ function dropSide(event: DragEvent<HTMLElement>): Side {
 
 function Pane({node, path, stage}: {node: Session | null; path: Branch; stage: StageProps}) {
   const [hint, setHint] = useState<Side | 'all' | null>(null)
-  const title = node && (stage.profiles.find(p => p.id === node.profile.id)?.name || node.profile.name)
+  const savedProfile = node && stage.profiles.find(profile => profile.id === node.profile.id)
+  const title = savedProfile?.name ?? node?.profile.name
+  const startupId = node?.restored && savedProfile?.host === node.profile.host && savedProfile.port === node.profile.port
+    ? savedProfile.startup?.id : undefined
   const close = () => {if (node) stage.onClose(path, node.id)}
   return <div className="termrail-leaf" data-focused={stage.active && node?.id === stage.focused}
     onFocusCapture={() => node && stage.onFocus(node.id)}
@@ -53,7 +57,7 @@ function Pane({node, path, stage}: {node: Session | null; path: Branch; stage: S
       </div>
       {stage.errors.has(node.id)
         ? <p className="termrail-session-error" role="alert">SSH 연결을 시작할 수 없습니다.</p>
-        : <TerminalPane key={node.id} sessionId={node.id} active={stage.active && node.id === stage.focused} onClose={close}/>}
+        : <TerminalPane key={node.id} sessionId={node.id} startupId={startupId} active={stage.active && node.id === stage.focused} onClose={close} onEnded={() => stage.onEnded(node.id)}/>}
     </> : <span className="termrail-empty">서버를 여기에 놓으세요</span>}
     {hint && <div aria-hidden="true" className={'termrail-drop ' + hint}/>}
   </div>

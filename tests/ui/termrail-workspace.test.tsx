@@ -5,13 +5,17 @@ import {libraryKey, type Library, type Profile, type SavedLayout} from '../../sr
 import {openTermWindow} from '../../src/renderer/termrail/detach'
 
 vi.mock('../../src/renderer/termrail/TerminalPane', () => ({
-  TerminalPane: ({sessionId}: {sessionId: string}) => <span data-testid="session">{sessionId}</span>,
+  TerminalPane: ({sessionId, startupId}: {sessionId: string; startupId?: string}) =>
+    <span data-testid="session" data-startup-id={startupId}>{sessionId}</span>,
 }))
 vi.mock('../../src/renderer/termrail/detach', () => ({openTermWindow: vi.fn()}))
 // JSDOM does not implement the native dialog methods used in Electron.
 HTMLDialogElement.prototype.showModal ??= function () { this.open = true }
 HTMLDialogElement.prototype.close ??= function () { this.open = false }
-const ssh = {open: vi.fn().mockResolvedValue(undefined), close: vi.fn().mockResolvedValue(undefined)}
+const ssh = {
+  open: vi.fn().mockResolvedValue(undefined), close: vi.fn().mockResolvedValue(undefined),
+  discardStartup: vi.fn().mockResolvedValue(undefined),
+}
 const profiles: Profile[] = [
   {id: 'a', name: '개발', host: 'dev.test', port: 22}, {id: 'b', name: '검증', host: 'qa.test', port: 2222},
 ]
@@ -41,6 +45,19 @@ afterEach(() => {
 })
 const button = (name: string) => screen.getByRole('button', {name})
 const openDev = () => fireEvent.doubleClick(button('개발'))
+function drop(server: string, target: HTMLElement, x: number, y: number) {
+  const data = new Map<string, string>()
+  const dataTransfer = {
+    types: ['application/x-termrail-server'], setData: (key: string, value: string) => data.set(key, value),
+    getData: (key: string) => data.get(key) ?? '',
+  }
+  vi.spyOn(target, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 100))
+  fireEvent.dragStart(button(server), {dataTransfer})
+  // JSDOM's synthetic DragEvent omits client coordinates. Supply the browser values.
+  const event = new Event('drop', {bubbles:true,cancelable:true})
+  Object.assign(event, {dataTransfer, clientX:x, clientY:y})
+  fireEvent(target,event)
+}
 function detachDev() {
   fireEvent.contextMenu(screen.getByRole('tab', {name:'개발'}))
   fireEvent.click(screen.getByRole('menuitem', {name:'별도 창으로 열기'}))
@@ -142,19 +159,6 @@ it('updates a saved profile by ID and applies its edited endpoint on the next co
 
 it('drops a saved server onto the empty workspace and a pane edge while keeping the original connection', () => {
   render(<TermRail active/>)
-  function drop(server: string, target: HTMLElement, x: number, y: number) {
-    const data = new Map<string, string>()
-    const dataTransfer = {
-      types: ['application/x-termrail-server'], setData: (key: string, value: string) => data.set(key, value),
-      getData: (key: string) => data.get(key) ?? '',
-    }
-    vi.spyOn(target, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 200, 100))
-    fireEvent.dragStart(button(server), {dataTransfer})
-    // JSDOM's synthetic DragEvent omits client coordinates. Supply the browser values.
-    const event = new Event('drop', {bubbles:true,cancelable:true})
-    Object.assign(event, {dataTransfer, clientX:x, clientY:y})
-    fireEvent(target,event)
-  }
   drop('개발', screen.getByText('서버를 여기에 놓으세요').parentElement!, 100, 50)
   const dev = screen.getByTestId('session')
   const id = dev.textContent!
@@ -185,4 +189,107 @@ it('replaces all windows even when reopening the selected layout and isolates a 
   expect(screen.getByRole('tab', {name:'검증'})).toHaveAttribute('aria-selected','true')
   expect(screen.queryByRole('alert')).toBeNull()
   act(() => w2.close())
+})
+
+function tabCommand(name: string, action: string) {
+  fireEvent.keyDown(screen.getByRole('tab', {name}), {key:'F10', shiftKey:true})
+  fireEvent.click(screen.getByRole('menuitem', {name:action}))
+}
+
+it('keeps the work name through collapse, save, restore, split, and window moves', () => {
+  const win = popup()
+  vi.mocked(openTermWindow).mockReturnValue(win)
+  render(<TermRail active/>)
+  openDev()
+  drop('검증', screen.getByTestId('session').closest('.termrail-leaf')!, 195, 50)
+  tabCommand('작업 1 · 2', '작업 이름 변경…')
+  fireEvent.change(screen.getByRole('textbox', {name:'작업 이름'}), {target:{value:'개발 점검'}})
+  fireEvent.click(button('저장'))
+  fireEvent.click(button('개발 터미널 닫기'))
+  tabCommand('검증', '전체 작업 배치 저장…')
+  fireEvent.change(screen.getByRole('textbox', {name:'레이아웃 이름'}), {target:{value:'점검 배치'}})
+  fireEvent.click(button('저장'))
+  fireEvent.click(button('점검 배치'))
+  drop('개발', screen.getByTestId('session').closest('.termrail-leaf')!, 195, 50)
+  tabCommand('개발 점검 · 2', '별도 창으로 열기')
+  expect(win.document.title).toContain('개발 점검 · 2')
+  act(() => win.close())
+  expect(screen.getByRole('tab', {name:'개발 점검 · 2'})).toBeInTheDocument()
+})
+
+it('confirms closing only the selected work tab and focuses the surviving tab or opener', () => {
+  const win = popup()
+  vi.mocked(openTermWindow).mockReturnValue(win)
+  render(<TermRail active/>)
+  openDev()
+  detachDev()
+  const detachedId = within(win.document.body).getByTestId('session').textContent
+  openDev()
+  fireEvent.doubleClick(button('검증'))
+  drop('개발', within(screen.getByRole('tabpanel')).getByTestId('session').closest('.termrail-leaf')!, 195, 50)
+  const ids = within(screen.getByRole('tabpanel')).getAllByTestId('session').map(el => el.textContent)
+  tabCommand('작업 3 · 2', '작업 탭 닫기')
+  expect(screen.getByRole('dialog')).toHaveTextContent('작업 3의 터미널 2개를 종료할까요?')
+  fireEvent.click(button('취소'))
+  expect(ssh.close).not.toHaveBeenCalled()
+  tabCommand('작업 3 · 2', '작업 탭 닫기')
+  fireEvent.click(within(screen.getByRole('dialog')).getByRole('button',{name:'닫기'}))
+  expect(ssh.close.mock.calls.map(([id]) => id)).toEqual(ids)
+  expect(screen.getByRole('tab',{name:'개발'})).toHaveFocus()
+  tabCommand('개발', '작업 탭 닫기')
+  expect(screen.queryByRole('tab')).toBeNull()
+  expect(button('서버 선택')).toHaveFocus()
+  expect(within(win.document.body).getByTestId('session')).toHaveTextContent(detachedId!)
+  act(() => win.close())
+})
+
+it('counts only live connections when closing a split and preserves the saved layout', async () => {
+  const tab = {titleProfileId:'a', title:'개발', tree:{kind:'split', direction:'row', ratio:.5,
+    first:{kind:'pane', pane:'a'}, second:{kind:'pane', pane:'b'}}}
+  seed([{name:'배치',layout:{tabs:[tab],selected:0,windows:[]}}])
+  ssh.open.mockRejectedValueOnce(Error('실패'))
+  render(<TermRail active/>)
+  fireEvent.click(button('배치'))
+  expect(await screen.findByRole('alert')).toHaveTextContent('SSH 연결을 시작할 수 없습니다.')
+  tabCommand('작업 1 · 2', '작업 탭 닫기')
+  expect(screen.queryByRole('dialog')).toBeNull()
+  expect(screen.queryByRole('tab')).toBeNull()
+  expect(ssh.close).toHaveBeenCalledTimes(2)
+  fireEvent.click(button('배치'))
+  expect(screen.getByRole('tab', {name:'작업 1 · 2'})).toBeVisible()
+})
+
+it('discards the registered file only after deletion is persisted', () => {
+  const profile = {...profiles[0], startup:{id:'old-file', name:'check.sh'}}
+  localStorage.setItem(libraryKey, JSON.stringify({profiles:[profile], layouts:[]}))
+  render(<TermRail active/>)
+  fireEvent.contextMenu(button('개발'))
+  fireEvent.click(screen.getByRole('menuitem', {name:'서버 삭제…'}))
+  const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {throw Error('저장 실패')})
+  try {
+    fireEvent.click(button('삭제'))
+    expect(screen.getByRole('alert')).toHaveTextContent('저장할 수 없습니다')
+    expect(ssh.discardStartup).not.toHaveBeenCalled()
+    fireEvent.click(button('삭제'))
+    expect(screen.queryByRole('button', {name:'개발'})).toBeNull()
+    expect(ssh.discardStartup).toHaveBeenCalledExactlyOnceWith('old-file')
+  } finally {write.mockRestore()}
+})
+
+it('opens every saved transport with manual authentication and gives each scripted pane its login option', () => {
+  const scripted = {...profiles[0], startup:{id:'3c857bcf-976b-46e6-b362-362f2f3810ba',name:'check.sh'}}
+  const tab = (pane: string) => ({titleProfileId:pane,title:'서버',tree:{kind:'pane',pane}})
+  localStorage.setItem(libraryKey,JSON.stringify({profiles:[scripted,profiles[1]],layouts:[
+    {name:'전체',layout:{tabs:[tab('a'),tab('b'),tab('a')],selected:0,windows:[]}},
+  ]}))
+  render(<TermRail active/>)
+  fireEvent.click(button('전체'))
+  expect(ssh.open.mock.calls.map(([, endpoint]) => endpoint)).toEqual([
+    {host:'dev.test',port:22}, {host:'qa.test',port:2222}, {host:'dev.test',port:22},
+  ])
+  expect(screen.getAllByTestId('session').map(pane => pane.dataset.startupId)).toEqual([
+    scripted.startup.id, undefined, scripted.startup.id,
+  ])
+  fireEvent.doubleClick(button('개발'))
+  expect(ssh.open.mock.calls[3][1]).toEqual({host:'dev.test',port:22,startupId:scripted.startup.id})
 })

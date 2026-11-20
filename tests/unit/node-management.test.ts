@@ -628,9 +628,12 @@ it('reports the full preserved version directory for a partial direct install', 
   const installation = { ...ready.installation!, family: 'classic' as const, version: '1.1.10' as const }
   const { service } = makeService(adapter({
     discover: async () => ({ ...ready, installation }),
-    changeVersion: async () => ({ status: 'zip-incomplete' }),
+    changeVersion: async () => ({ status: 'zip-incomplete', detail: { stage: 'publish', role: 'target', osCode: 'EPERM' } }),
   }))
-  expect((await service.install('24.11.0')).error?.message).toContain(home + '\\v24.11.0')
+  const failed = await service.install('24.11.0')
+  expect(failed.error?.message).toContain(home + '\\v24.11.0')
+  expect(failed.operationLog?.join(' ')).toContain('zip-incomplete · 대상 폴더 · 최종 이동 · EPERM')
+  expect(failed.operationLog?.join(' ')).not.toContain(home)
 })
 
 it('settles the previous machine-lock inspection before acquiring the install lease', async () => {
@@ -677,4 +680,28 @@ it('compares a fresh service inventory with its manager on explicit recheck afte
   expect((await service.getState('recheck')).error?.code).toBe('verification-failed')
   listed = ['22.9.0']
   expect((await service.getState('recheck')).error).toBeNull()
+})
+
+it('keeps the failed ZIP stage and cleanup separate from a later verified install after rechecking', async () => {
+  let installed = false
+  let attempted = false
+  const { service } = makeService(adapter({
+    discover: async () => ({ ...ready, installedVersions: installed ? ['24.11.0'] : [] }),
+    changeVersion: async () => {
+      if (attempted) { installed = true; return { status: 'success' } }
+      attempted = true
+      return { status: 'zip-permission', detail: { stage: 'publish', role: 'target', osCode: 'EPERM' },
+        cleanup: { stage: 'cleanup', role: 'staging', osCode: 'EBUSY' } }
+    },
+  }))
+  const failed = await service.install('24.11.0')
+  expect(failed.error?.message).toMatch(/옮길 수 없습니다/)
+  expect(failed.error?.message).not.toContain(home)
+  const line = failed.operationLog?.[0]
+  expect(line).toMatch(/^\d{4}-\d{2}-\d{2}T.*24\.11\.0.*nvm 1\.x.*zip-permission.*대상.*최종 이동.*EPERM.*임시.*정리.*EBUSY/)
+  expect((await service.getState('recheck')).error).toBeNull()
+  const retried = await service.install('24.11.0')
+  expect(retried.error).toBeNull()
+  expect(retried.operationLog).toEqual([line, expect.stringMatching(/24\.11\.0.*nvm 1\.x.*성공/)])
+  expect(retried.operationLog?.join(' ')).not.toContain(home)
 })

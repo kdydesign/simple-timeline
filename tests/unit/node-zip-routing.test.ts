@@ -5,6 +5,7 @@ import { beforeEach, expect, it, vi } from 'vitest'
 import { capabilities, classicDigests, modernReleases } from '../../src/main/node-management/manager-support'
 import { setDownloadProxy, type NvmInstallation } from '../../src/main/node-management/discovery'
 import { nodeSigningPolicy, allowedNodeSigner } from '../../src/main/node-management/node-signing'
+import { ZipStepError } from '../../src/main/node-management/zip-diagnostics'
 import { createWindowsNodeAdapter } from '../../src/main/node-management/windows'
 
 const io = vi.hoisted(() => ({ exec: vi.fn(), endInput: vi.fn(), download: vi.fn(), stage: vi.fn(), prepare: vi.fn() }))
@@ -75,4 +76,42 @@ it('rejects a staged modern binary when its signer fails the effective pin', asy
   expect(await adapter.changeVersion(manager, 'install', version)).toEqual({ status: 'zip-integrity' })
   expect(allowedNodeSigner(leaf.raw.toString('base64'), { ...signingPolicy, signers: ['Other Publisher'] })).toBe(false)
   expect(nodeSigningPolicy({ AllowedThumbprints: ['bad'] })).toBeNull()
+})
+
+it.each([
+  ['POLICY', 'acl-policy', undefined],
+  ['READ_ERROR:5', 'acl-read', 'WIN32_5'],
+  ['private account path', 'acl-read', undefined],
+])('distinguishes the modern storage verdict %s before downloading', async (stdout, stage, osCode) => {
+  const manager = managers.at(-1)!
+  io.exec.mockResolvedValue({ stdout })
+  const adapter = createWindowsNodeAdapter(vi.fn(), async () => fetch)
+  adapter.discover = vi.fn().mockResolvedValue({ installation: manager, capabilities: capabilities(null), installedVersions: [] })
+  const failed = await adapter.changeVersion(manager, 'install', version)
+  expect(failed).toEqual({ status: 'zip-permission', detail: { stage, role: 'root', ...(osCode ? { osCode } : {}) } })
+  expect(io.download).not.toHaveBeenCalled()
+})
+
+it('omits command lines, account paths and proxy credentials when the staged ACL reader fails to run', async () => {
+  const manager = managers.at(-1)!
+  const secret = 'https://user:password@proxy.test'
+  io.exec.mockResolvedValueOnce({ stdout: 'VERIFIED' }).mockRejectedValueOnce(
+    Object.assign(new Error(secret + home), { code: 1, stderr: home, cmd: secret }))
+  const adapter = createWindowsNodeAdapter(vi.fn(), async () => fetch)
+  adapter.discover = vi.fn().mockResolvedValue({ installation: manager, capabilities: capabilities(null), installedVersions: [] })
+  expect(await adapter.changeVersion(manager, 'install', version)).toEqual({
+    status: 'zip-permission', detail: { stage: 'acl-read', role: 'staging' },
+  })
+})
+
+it('reports a confirmed partial destination after rename while passing only the original stage and OS evidence', async () => {
+  const manager = managers[0]
+  const failure = Object.assign(new ZipStepError('publish', 'target', Object.assign(new Error(home), { code: 'EPERM' })),
+    { incompleteTarget: true })
+  io.stage.mockRejectedValueOnce(failure)
+  const adapter = createWindowsNodeAdapter(vi.fn(), async () => fetch)
+  adapter.discover = vi.fn().mockResolvedValue({ installation: manager, capabilities: capabilities(null), installedVersions: [] })
+  expect(await adapter.changeVersion(manager, 'install', version)).toEqual({
+    status: 'zip-incomplete', detail: { stage: 'publish', role: 'target', osCode: 'EPERM' },
+  })
 })

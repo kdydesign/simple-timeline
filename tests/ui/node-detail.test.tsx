@@ -171,3 +171,41 @@ it('keeps focus in the overlay when WSL verification withdraws cancellation', ()
   expect(screen.queryByRole('button', { name: '작업 취소' })).toBeNull()
   expect(screen.getByRole('group', { name: 'Node 작업 진행' })).toHaveFocus()
 })
+
+it('copies only Windows operation history when the screen includes private manager and account paths', () => {
+  const { update } = showDetail()
+  const operationLog = ['2026-11-19T10:00:00Z · install · 24.0.0 · nvm 1.x · zip-permission · 대상 폴더 · 최종 이동 · EPERM']
+  update({ state: { ...snapshot, operationLog, manager: { ...snapshot.manager, path: 'C:\\Users\\private\\nvm' },
+    error: { code: 'zip-incomplete', message: '계정 폴더 C:\\Users\\private' } } })
+  const descriptor = Object.getOwnPropertyDescriptor(document, 'execCommand')
+  let copied = ''
+  Object.defineProperty(document, 'execCommand', { configurable: true, value: (command: string) => {
+    expect(command).toBe('copy')
+    const event = new Event('copy', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'clipboardData', { value: { setData(type: string, value: string) {
+      expect(type).toBe('text/plain')
+      copied = value
+    } } })
+    document.activeElement!.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
+    return true
+  } })
+  try {
+    fireEvent.click(screen.getByText('작업 로그'))
+    fireEvent.click(screen.getByRole('button', { name: '진단 복사' }))
+    expect(copied).toBe(operationLog[0])
+    expect(screen.getByText('진단 이력을 복사했습니다.')).toBeVisible()
+
+    Object.defineProperty(document, 'execCommand', { configurable: true, value: () => false })
+    fireEvent.click(screen.getByRole('button', { name: '진단 복사' }))
+    const log = screen.getByText(operationLog[0])
+    expect(log).toHaveFocus()
+    expect(screen.getByText('선택된 이력을 Ctrl+C로 복사해 주세요.')).toBeVisible()
+    const setData = vi.fn()
+    expect(fireEvent.copy(log, { clipboardData: { setData } })).toBe(false)
+    expect(setData.mock.calls).toEqual([['text/plain', operationLog[0]]])
+  } finally {
+    if (descriptor) Object.defineProperty(document, 'execCommand', descriptor)
+    else Reflect.deleteProperty(document, 'execCommand')
+  }
+})

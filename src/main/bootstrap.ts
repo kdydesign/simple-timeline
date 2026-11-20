@@ -36,7 +36,7 @@ import {createReminderStore} from './db/reminders'
 import {createReminderEngine,type ReminderSender} from './reminders/engine'
 import {createNativeReminderSender} from './reminders/native'
 import {registerReminderIpc} from './reminders/ipc'
-import { app, dialog, net, powerMonitor, shell } from 'electron'
+import { app, dialog, net, powerMonitor, safeStorage, shell } from 'electron'
 import icon from '../../resources/icon.png?asset'
 import windowsIcon from '../../resources/icon.ico?asset'
 import { startupRecorder, rendererStartupProbe, observeStartupRequests } from './startup'
@@ -50,6 +50,7 @@ import { registerTimelineIpc } from './ipc'
 import { registerWindowIpc } from './window-ipc'
 import { TermRailSshService } from './termrail/ssh-service'
 import { registerTermRailSshIpc } from './termrail/ssh-ipc'
+import { TermRailStartupFiles } from './termrail/startup-files'
 import { isTrustedSender, resolveRendererUrl } from './ipc-core'
 import { createAbout } from './about'
 import { installCloseGuard, type CloseChoice } from './close'
@@ -188,13 +189,19 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
   const termRailSsh = new TermRailSshService(join(profile, 'termrail-known-hosts.json'))
-  const unregisterTermRail = registerTermRailSshIpc(termRailSsh, (event, _id, method) =>
-    isTrustedSender(event, window, rendererUrl) &&
-    (method === 'read' || method === 'close' || (!installPending && !appMutationBarrier.blocked())))
+  const termRailIpc = registerTermRailSshIpc(termRailSsh,
+    (event, method) => isTrustedSender(event, window, rendererUrl) &&
+      (method === 'read' || method === 'close' || (!installPending && !appMutationBarrier.blocked())),
+    new TermRailStartupFiles(profile, safeStorage),
+    async () => {
+      const choice = await dialog.showOpenDialog(window, {title: 'Bash 시작 파일 가져오기', properties: ['openFile']})
+      return choice.canceled ? undefined : choice.filePaths[0]
+    },
+  )
   // A new renderer cannot own sessions opened by the previous document.
-  window.webContents.on('render-process-gone', () => termRailSsh.dispose())
+  window.webContents.on('render-process-gone', termRailIpc.disposeSessions)
   window.webContents.on('did-start-navigation', (details) => {
-    if (details.isMainFrame && !details.isSameDocument) termRailSsh.dispose()
+    if (details.isMainFrame && !details.isSameDocument) termRailIpc.disposeSessions()
   })
   nodeIpc = registerNodeManagementIpc(window, rendererUrl, nodeManagement,nodeRouting)
   configureTaskbarDetails(window,{platform:process.platform,packaged:app.isPackaged,exePath:process.execPath,shellIconName:__WORKRAIL_SHELL_ICON_NAME__})
@@ -375,7 +382,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
   async function finishShutdown(){
-    unregisterTermRail();termRailSsh.dispose()
+    termRailIpc.unregister()
     help?.dispose();releases.dispose()
     powerMonitor.removeListener('resume',resume);powerMonitor.removeListener('suspend',suspend)
     nativeReminders.dispose()

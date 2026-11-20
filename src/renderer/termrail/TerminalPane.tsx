@@ -6,20 +6,24 @@ import './terminal-pane.css'
 
 interface PaneProps {
   sessionId: string
+  startupId?: string
   active?: boolean
   onClose(): void
+  onEnded?(): void
 }
 
-function LoginPrompt({onLogin}: {onLogin: (username: string, password: string) => Promise<void>}) {
+function LoginPrompt({active, onLogin, onStartup}: {
+  active?: boolean; onLogin: (username: string, password: string) => Promise<void>; onStartup?: () => Promise<void>
+}) {
   const [username, setUsername] = useState<string | null>(null)
   const [submitted, setSubmitted] = useState(false)
+  const [fileError, setFileError] = useState(false)
   const input = useRef<HTMLInputElement>(null)
-  const focusNext = useRef(false)
 
   useLayoutEffect(() => {
-    if (focusNext.current) input.current?.focus()
-    focusNext.current = false
-  }, [username])
+    const field = input.current
+    if (active && field && !field.ownerDocument.activeElement?.closest('[role="menu"], dialog[open]')) field.focus()
+  }, [active, username, submitted])
 
   function submit(event: FormEvent) {
     event.preventDefault()
@@ -29,7 +33,6 @@ function LoginPrompt({onLogin}: {onLogin: (username: string, password: string) =
     field.value = ''
     if (username === null) {
       if (!value.trim()) return
-      focusNext.current = true
       setUsername(value)
       return
     }
@@ -50,6 +53,12 @@ function LoginPrompt({onLogin}: {onLogin: (username: string, password: string) =
         onCut={password ? event => event.preventDefault() : undefined}
         onDragStart={password ? event => event.preventDefault() : undefined} />
     </label>
+    {onStartup && !password && <button type="button" onClick={() => {
+      setSubmitted(true)
+      setFileError(false)
+      void onStartup().catch(() => {setSubmitted(false); setFileError(true)})
+    }}>시작 파일로 로그인</button>}
+    {fileError && <p role="alert">시작 파일로 로그인할 수 없습니다. 직접 로그인하거나 서버의 시작 파일을 확인하세요.</p>}
   </form>
 }
 
@@ -71,7 +80,7 @@ function HostKeyPrompt({status, trust, onClose}: {status: TerminalStatus; trust(
   </section>
 }
 
-function SessionPane({sessionId, active, onClose}: PaneProps) {
+function SessionPane({sessionId, startupId, active, onClose, onEnded}: PaneProps) {
   const mount = useRef<HTMLDivElement>(null)
   const root = useRef<HTMLDivElement>(null)
   const terminal = useRef<Terminal | null>(null)
@@ -103,13 +112,14 @@ function SessionPane({sessionId, active, onClose}: PaneProps) {
     const doc = el.ownerDocument
     const shouldFocus = active && (!wasActive.current || doc.activeElement === doc.body || el.contains(doc.activeElement))
     wasActive.current = !!active
-    if (!shouldFocus) return
+    if (!shouldFocus || status.phase === 'login') return
     if (status.phase === 'connected') terminal.current?.focus()
-    else (el.querySelector<HTMLElement>('.termrail-login input, .termrail-host-key button') ?? el).focus()
+    else (el.querySelector<HTMLElement>('.termrail-host-key button') ?? el).focus()
   }, [active, status.phase])
 
   const connected = !error && status.phase === 'connected'
   const ended = status.phase === 'closed' || status.phase === 'failed' || !!error
+  useEffect(() => {if (ended) onEnded?.()}, [ended, onEnded])
   const handleActionError = () => setError('SSH 연결 요청을 처리할 수 없습니다.')
   return <div ref={root} className="termrail-console" data-state={error ? 'failed' : status.phase}
     data-terminal-input={connected ? '' : undefined} tabIndex={-1}>
@@ -119,7 +129,8 @@ function SessionPane({sessionId, active, onClose}: PaneProps) {
       {error || status.message || (status.phase === 'closed' ? '연결이 종료되었습니다.' : '서버에 연결하지 못했습니다.')}
     </div> : !connected && <div className="termrail-console-prompt">
       {status.phase === 'login'
-        ? <LoginPrompt onLogin={(username, password) => api!.login(sessionId, username, password).catch(handleActionError)} />
+        ? <LoginPrompt active={active} onStartup={startupId ? () => api!.startProfile(sessionId, startupId) : undefined}
+            onLogin={(username, password) => api!.login(sessionId, username, password).catch(handleActionError)} />
         : status.phase === 'host-key'
           ? <HostKeyPrompt key={status.fingerprint} status={status} onClose={onClose}
               trust={() => api!.trust(sessionId, status.fingerprint!).catch(handleActionError)} />

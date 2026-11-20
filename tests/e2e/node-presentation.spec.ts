@@ -88,6 +88,52 @@ async function expectCenteredColumns(table: Locator, info: TestInfo, attachment:
   await info.attach(attachment, { body: JSON.stringify(centering, null, 2), contentType: 'application/json' })
 }
 
+test('keeps release actions and status icons distinguishable in both themes', async ({ desktop }, info) => {
+  const { page, app } = desktop
+  const state = await showWindowsNode(desktop, {
+    installedVersions: ['22.1.0', '22.2.0'],
+    catalog: { status: 'ready', checkedAt: '2026-11-18T10:00:00Z', error: null,
+      releases: ['22.1.0', '22.2.0', '22.3.0'].map(version => ({ version, date: '2026-11-18', lts: null, npm: null, security: false })) },
+  })
+  await page.getByRole('navigation', { name: 'WorkRail 도구' }).getByRole('button', { name: 'NodeRail' }).click()
+  const table = page.getByRole('table', { name: '공식 배포 버전' })
+  const luminance = (rgb: number[]) => rgb.reduce((sum, channel, i) => {
+    const value = channel / 255
+    return sum + [.2126, .7152, .0722][i] * (value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+  }, 0)
+  const measurements: object[] = []
+  async function contrast(control: Locator, statusIcon: boolean) {
+    const foreground = await control.evaluate(el => getComputedStyle(el).color.match(/\d+/g)!.map(Number))
+    const bounds = await box(control)
+    // Sample the composited background beside the icon or just inside the button's padding.
+    const x = Math.floor(bounds.x + (statusIcon ? -2 : 4))
+    const y = Math.floor(bounds.y + bounds.height / 2)
+    const png = await page.screenshot({ clip: { x, y, width: 1, height: 1 } })
+    const background = await app.evaluate(({ nativeImage }, bytes) =>
+      Array.from(nativeImage.createFromBuffer(Buffer.from(bytes)).toBitmap().subarray(0, 3)).reverse(), Array.from(png))
+    const [low, high] = [luminance(foreground), luminance(background)].sort((a, b) => a - b)
+    const ratio = (high + .05) / (low + .05)
+    measurements.push({ label: await control.getAttribute('aria-label'), foreground, background, ratio })
+    expect(ratio).toBeGreaterThanOrEqual(statusIcon ? 3 : 4.5)
+    return foreground.join(',')
+  }
+  let revision = state.revision
+  for (const theme of ['dark', 'light']) {
+    await page.evaluate(theme => { document.documentElement.dataset.theme = theme }, theme)
+    await publishNode(desktop, { ...state, revision: ++revision })
+    const colors = new Set<string>()
+    for (const [status, action] of [['미설치', '22.3.0 설치'], ['설치됨', '22.1.0 사용'], ['사용 중', '22.2.0 사용 중']]) {
+      colors.add(await contrast(table.getByRole('img', { name: status, exact: true }), true))
+      await contrast(table.getByRole('button', { name: action, exact: true }), false)
+    }
+    await publishNode(desktop, { ...state, checkedAt: null, revision: ++revision })
+    colors.add(await contrast(table.getByRole('img', { name: '확인 불가' }).first(), true))
+    await contrast(table.getByRole('button', { name: '22.3.0 다시 확인' }), false)
+    expect(colors.size).toBe(4)
+  }
+  await info.attach('version-contrast', { body: JSON.stringify(measurements), contentType: 'application/json' })
+})
+
 test('centers and sorts the Node catalog with aligned independently scrolling panels', async ({ desktop }, info) => {
   const { page } = desktop
   await page.setViewportSize({ width: 1440, height: 900 })
@@ -543,4 +589,29 @@ test('keeps both lists in place during a switch and returns focus to the list wh
   await expect(overlay).toHaveCount(0)
   await expect(grid.getByRole('heading', { name: '설치된 버전' })).toBeFocused()
   expect(await offsets()).toEqual(before)
+})
+
+test('copies the Windows install history without diagnostic screen paths', async ({ desktop }) => {
+  const history = [
+    '2026-11-19T01:02:03Z · install · 24.0.0 · nvm 1.x · zip-permission · 대상 폴더 · 최종 이동 · EPERM',
+    '2026-11-19T01:05:00Z · install · 24.0.0 · nvm 1.x · 성공',
+  ]
+  await showWindowsNode(desktop, { operationLog: history,
+    manager: { status: 'ready', version: '1.2.2', path: 'C:\\Users\\example\\nvm\\nvm.exe' } })
+  await desktop.page.getByRole('navigation', { name: 'WorkRail 도구' }).getByRole('button', { name: 'NodeRail', exact: true }).click()
+  const node = desktop.page.getByRole('main', { name: 'NodeRail' })
+  await node.getByText('작업 로그', { exact: true }).click()
+  await node.getByRole('button', { name: '진단 복사' }).click()
+  await expect(node.getByText('진단 이력을 복사했습니다.')).toBeVisible()
+  const readCopy = () => desktop.app.evaluate(async ({ clipboard }) => ({ text: await clipboard.readText(), html: await clipboard.has('text/html') }))
+  const copied = await readCopy()
+  expect(copied.text.replaceAll('\r\n', '\n')).toBe(history.join('\n'))
+  expect(copied.html).toBe(false)
+
+  await desktop.page.evaluate(() => { document.execCommand = () => false })
+  await desktop.app.evaluate(({ clipboard }) => clipboard.writeText('manual-copy-test'))
+  await node.getByRole('button', { name: '진단 복사' }).click()
+  await expect(node.getByText('선택된 이력을 Ctrl+C로 복사해 주세요.')).toBeVisible()
+  await desktop.page.keyboard.press('Control+c')
+  await expect.poll(readCopy).toEqual(copied)
 })

@@ -45,7 +45,7 @@ const frame = (phase: Frame['phase'], extra: Partial<Frame> = {}): Frame => ({
 })
 function bridge(read: TermRailSshApi['read']) {
   const api = {read, open: vi.fn(), close: vi.fn(), trust: vi.fn().mockResolvedValue(undefined),
-    login: vi.fn().mockResolvedValue(undefined), write: vi.fn().mockResolvedValue(undefined),
+    login: vi.fn().mockResolvedValue(undefined), startProfile: vi.fn().mockResolvedValue(undefined), write: vi.fn().mockResolvedValue(undefined),
     resize: vi.fn().mockResolvedValue(undefined)}
   vi.stubGlobal('termRailSsh', api)
   return api
@@ -70,6 +70,24 @@ it('submits credentials only to the pane receiving input and clears its password
   expect(password).toHaveValue('')
   expect(api.write).not.toHaveBeenCalled()
   expect(emulator.output.join('')).not.toContain('session-secret')
+})
+
+it('focuses the selected login when other panes receive their prompts later', async () => {
+  let showSecond!: (value: Frame) => void
+  const waiting = new Promise<Frame>(resolve => {showSecond = resolve})
+  bridge(async id => id === 'slow' ? waiting : frame('login'))
+  const panes = (first: boolean) => <>
+    <TerminalPane sessionId="fast" active={first} onClose={vi.fn()} />
+    <TerminalPane sessionId="slow" active={!first} onClose={vi.fn()} />
+  </>
+  const view = render(panes(true))
+  const first = await screen.findByLabelText('login as:')
+  expect(first).toHaveFocus()
+  await act(async () => {showSecond(frame('login'))})
+  const second = screen.getAllByLabelText('login as:')[1]
+  expect(first).toHaveFocus()
+  view.rerender(panes(false))
+  expect(second).toHaveFocus()
 })
 
 it('identifies a changed server key and trusts only the displayed fingerprint on explicit acceptance', async () => {
@@ -127,4 +145,28 @@ it('drains remaining PTY output when the remote error arrives before its final o
     : {data:new TextEncoder().encode('last'), nextCursor:9}))
   render(<TerminalPane sessionId="drain-error" onClose={vi.fn()} />)
   await waitFor(() => expect(emulator.output).toEqual(['first', 'last']))
+})
+
+it('offers stored login only after host verification and applies it to one existing session on click', async () => {
+  let phase: Frame['phase'] = 'host-key'
+  const api = bridge(async () => frame(phase, {fingerprint:'SHA256:restored'}))
+  render(<><TerminalPane sessionId="left" startupId="left-file" onClose={vi.fn()}/>
+    <TerminalPane sessionId="right" startupId="right-file" onClose={vi.fn()}/></>)
+  await screen.findAllByText(/SHA256:restored/)
+  expect(screen.queryByRole('button', {name:'시작 파일로 로그인'})).toBeNull()
+  phase = 'login'
+  const buttons = await screen.findAllByRole('button', {name:'시작 파일로 로그인'})
+  expect(api.startProfile).not.toHaveBeenCalled()
+  fireEvent.click(buttons[1])
+  expect(api.startProfile).toHaveBeenCalledExactlyOnceWith('right', 'right-file')
+  expect(api.open).not.toHaveBeenCalled()
+})
+
+it('leaves the login prompt available when the registered file cannot be loaded', async () => {
+  const api = bridge(async () => frame('login'))
+  api.startProfile.mockRejectedValueOnce(Error('unavailable'))
+  render(<TerminalPane sessionId="recovery" startupId="missing-file" onClose={vi.fn()}/>)
+  fireEvent.click(await screen.findByRole('button', {name:'시작 파일로 로그인'}))
+  expect(await screen.findByRole('alert')).toHaveTextContent('시작 파일')
+  expect(screen.getByLabelText('login as:')).toBeEnabled()
 })

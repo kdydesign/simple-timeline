@@ -1,16 +1,16 @@
-import {termRailSessionLimit} from '../../shared/termrail-ssh'
+import {termRailSessionLimit, type TermRailStartupRef} from '../../shared/termrail-ssh'
 import type {TermWindowBounds} from '../../shared/term-window'
 
-export type Profile = {id: string; name: string; host: string; port: number}
+export type Profile = {id: string; name: string; host: string; port: number; startup?: TermRailStartupRef}
 export type Bounds = TermWindowBounds
 export type Tree<T> = {kind: 'pane'; pane: T} | {
   kind: 'split'; direction: 'row' | 'column'; ratio: number; first: Tree<T>; second: Tree<T>
 }
-export type SavedTab = {titleProfileId: string; title: string; tree: Tree<string>}
+export type SavedTab = {titleProfileId: string; title: string; workName?: string; tree: Tree<string>}
 export type SavedLayout = {tabs: SavedTab[]; selected: number; windows: {tab: SavedTab; bounds: Bounds}[]}
 export type Library = {profiles: Profile[]; layouts: {name: string; layout: unknown}[]}
-export type Session = {id: string; profile: Profile}
-export type Tab = {id: string; titleProfileId: string; title: string; tree: Tree<Session>; focused: string}
+export type Session = {id: string; profile: Profile; restored?: boolean}
+export type Tab = {id: string; workName: string; tree: Tree<Session>; focused: string}
 export const libraryKey = 'workrail.termrail.v1'
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -22,12 +22,11 @@ function nonempty(value: unknown): value is string {
 function integer(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value)
 }
-export function validHost(value: string) {
-  return value.length > 0 && value.length <= 253 && !/[\s\x00-\x1f\x7f/@?#\\]/u.test(value)
-}
+// Keep legacy host strings editable. Validate the endpoint when saving or opening a session.
 function profile(value: unknown): value is Profile {
   return record(value) && nonempty(value.id) && nonempty(value.name) && typeof value.host === 'string'
-    && validHost(value.host) && integer(value.port) && value.port > 0 && value.port <= 65535
+    && integer(value.port) && value.port > 0 && value.port <= 65535
+    && (value.startup === undefined || (record(value.startup) && nonempty(value.startup.id) && nonempty(value.startup.name)))
 }
 export function readLibrary(raw: string | null): Library {
   if (raw === null) return {profiles: [], layouts: []}
@@ -57,7 +56,8 @@ export function checkLayout(value: unknown, profiles: Profile[]): asserts value 
       && typeof node.ratio === 'number' && node.ratio >= .05 && node.ratio <= .95
       && tree(node.first) && tree(node.second)
   }
-  const tab = (item: unknown) => record(item) && nonempty(item.titleProfileId) && nonempty(item.title) && tree(item.tree)
+  const tab = (item: unknown) => record(item) && nonempty(item.titleProfileId) && nonempty(item.title)
+    && (item.workName === undefined || nonempty(item.workName)) && tree(item.tree)
   if (!record(value) || !Array.isArray(value.tabs) || !value.tabs.every(tab)
     || !integer(value.selected) || (value.tabs.length ? value.selected < 0 || value.selected >= value.tabs.length : value.selected !== -1)
     || !Array.isArray(value.windows) || !value.windows.every(w => record(w) && validBounds(w.bounds) && tab(w.tab)))
@@ -77,18 +77,22 @@ export function paneList<T>(tree: Tree<T>): T[] {
   return tree.kind === 'pane' ? [tree.pane] : [...paneList(tree.first), ...paneList(tree.second)]
 }
 
-export function newTab(tree: Tree<Session>): Tab {
-  const first = firstPane(tree)
-  return {id: crypto.randomUUID(), titleProfileId: first.profile.id, title: first.profile.name, tree, focused: first.id}
+export function newTab(tree: Tree<Session>, workName: string): Tab {
+  return {id: crypto.randomUUID(), workName, tree, focused: firstPane(tree).id}
 }
 
-export function restoreTab(saved: SavedTab, profiles: Profile[]): Tab {
-  const tree = mapTree(saved.tree, id => ({id: crypto.randomUUID(), profile: profiles.find(p => p.id === id)!}))
-  return {...newTab(tree), titleProfileId: saved.titleProfileId, title: saved.title}
+export function restoreTab(saved: SavedTab, profiles: Profile[], workName: string): Tab {
+  const tree = mapTree(saved.tree, id => {
+    const profile = profiles.find(p => p.id === id)!
+    return {id: crypto.randomUUID(), profile, restored: true}
+  })
+  return newTab(tree, workName)
 }
 
 export function saveTab(tab: Tab): SavedTab {
-  return {titleProfileId: tab.titleProfileId, title: tab.title, tree: mapTree(tab.tree, session => session.profile.id)}
+  const {profile} = firstPane(tab.tree)
+  return {titleProfileId: profile.id, title: profile.name, workName: tab.workName,
+    tree: mapTree(tab.tree, session => session.profile.id)}
 }
 
 export type Branch = ('first' | 'second')[]

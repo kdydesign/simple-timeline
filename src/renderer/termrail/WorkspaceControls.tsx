@@ -1,5 +1,8 @@
 import {useLayoutEffect, useRef, useState, type FormEvent} from 'react'
-import {validHost, type Profile} from './layout'
+import {hostError, portError} from '../../shared/termrail-endpoint'
+import type {Profile} from './layout'
+import {useStartupFile} from './useStartupFile'
+import './workspace-dialog.css'
 
 export type CommandMenu = {anchor: HTMLElement; x: number; y: number; items: [string, () => void][]}
 export function Menu({menu, dismiss}: {menu: CommandMenu; dismiss: () => void}) {
@@ -34,59 +37,102 @@ export type Editor =
   | {kind: 'edit' | 'delete'; profile: Profile; anchor: HTMLElement}
   | {kind: 'layout'; name: string; anchor: HTMLElement}
 
-export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayout, removeProfile}: {
+type Field = 'name' | 'host' | 'port'
+
+export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayout, removeProfile, report}: {
   editor: Editor; profiles: Profile[]; close: () => void
   saveProfile: (profile: Profile, connect: boolean) => void; saveLayout: (name: string) => void
-  removeProfile: (profile: Profile) => void
+  removeProfile: (profile: Profile) => void; report?: (message: string) => void
 }) {
   const source = 'profile' in editor ? editor.profile : undefined
-  const [name, setName] = useState(editor.kind === 'layout' ? editor.name : source?.name ?? '')
+  const layout = editor.kind === 'layout'
+  const server = !layout && editor.kind !== 'delete'
+  const [name, setName] = useState(layout ? editor.name : source?.name ?? '')
   const [host, setHost] = useState(source?.host ?? '')
   const [port, setPort] = useState(String(source?.port ?? 22))
+  const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
   const [error, setError] = useState('')
   const ref = useRef<HTMLDialogElement>(null)
-  const heading = editor.kind === 'layout' ? '레이아웃 저장' : editor.kind === 'edit' ? '서버 수정'
+  const heading = layout ? '레이아웃 저장' : editor.kind === 'edit' ? '서버 수정'
     : editor.kind === 'delete' ? '서버 삭제' : editor.kind === 'connect' ? '새 터미널' : '서버 추가'
+  const endpoint = {host: host.trim(), port: Number(port)}
+  const startup = useStartupFile(source, endpoint, report ?? setError)
+
   useLayoutEffect(() => {
     const dialog = ref.current!
     dialog.showModal()
-    const first = dialog.querySelector('input')
-    first?.select()
+    dialog.querySelector('input')?.select()
     return () => dialog.close()
   }, [])
+
   function dismiss() {close(); editor.anchor.focus()}
+  function fieldError(field: Field) {
+    if (field === 'host') return hostError(endpoint.host)
+    if (field === 'port') return portError(port)
+    const trimmed = name.trim()
+    if (!trimmed) return '이름을 입력하세요.'
+    return server && profiles.some(p => p.id !== source?.id && p.name === trimmed) ? '이미 사용 중인 서버 이름입니다.' : ''
+  }
+  function validate(fields: Field[]) {
+    const next = Object.fromEntries(fields.map(field => [field, fieldError(field)]))
+    setErrors(old => ({...old, ...next}))
+    const first = fields.find(field => next[field])
+    if (first) ref.current?.querySelector<HTMLInputElement>('input[name="' + first + '"]')?.focus()
+    return !first
+  }
+  function input(field: Field, label: string, value: string, update: (value: string) => void, maxLength?: number) {
+    const id = 'termrail-field-' + field
+    return <div className="termrail-field">
+      <label htmlFor={id}>{label}</label>
+      <input id={id} name={field} required disabled={startup.picking} value={value} maxLength={maxLength}
+        autoFocus={field === 'name'} inputMode={field === 'port' ? 'numeric' : undefined}
+        aria-invalid={errors[field] ? true : undefined} aria-describedby={errors[field] ? id + '-error' : undefined}
+        onChange={e => {update(e.target.value); setErrors(old => ({...old, [field]: ''}))}}
+        onBlur={() => setErrors(old => ({...old, [field]: fieldError(field)}))}/>
+      {errors[field] && <span id={id + '-error'} role="alert">{errors[field]}</span>}
+    </div>
+  }
   function submit(event: FormEvent) {
     event.preventDefault()
+    if (startup.picking) return
     try {
-      const trimmed = name.trim()
       if (editor.kind === 'delete') removeProfile(editor.profile)
-      else if (!trimmed) throw Error('이름을 입력하세요.')
-      else if (editor.kind === 'layout') saveLayout(trimmed)
-      else {
-        if (profiles.some(p => p.id !== source?.id && p.name === trimmed)) throw Error('이미 사용 중인 서버 이름입니다.')
-        if (!validHost(host.trim())) throw Error('호스트 이름 또는 IP 주소를 입력하세요.')
-        const number = Number(port)
-        if (!Number.isInteger(number) || number < 1 || number > 65535) throw Error('포트는 1부터 65535 사이의 정수로 입력하세요.')
-        saveProfile({id: source?.id ?? crypto.randomUUID(), name: trimmed, host: host.trim(), port: number}, editor.kind === 'connect')
+      else if (layout) {
+        if (!validate(['name'])) return
+        saveLayout(name.trim())
+      } else {
+        if (!validate(['name', 'host', 'port'])) return
+        saveProfile({id: source?.id ?? crypto.randomUUID(), name: name.trim(), ...endpoint,
+          ...(startup.file ? {startup: startup.file} : {})}, editor.kind === 'connect')
+        startup.saved()
       }
       dismiss()
     } catch (cause) {setError(cause instanceof Error ? cause.message : '저장할 수 없습니다.')}
   }
-  return <dialog ref={ref} aria-label={heading} className="termrail-dialog" onCancel={e => {e.preventDefault(); dismiss()}}>
-    <form onSubmit={submit}>
+  return <dialog ref={ref} aria-label={heading} className="termrail-dialog termrail-workspace-dialog" onCancel={e => {e.preventDefault(); dismiss()}}>
+    <form noValidate onSubmit={submit}>
       <h3>{heading}</h3>
-      {editor.kind === 'delete'
-        ? <p>‘{editor.profile.name}’ 서버를 삭제할까요? 이 서버를 사용하는 저장된 레이아웃은 열 수 없게 됩니다.</p>
-        : <label>{editor.kind === 'layout' ? '레이아웃 이름' : '서버 이름'}
-          <input autoFocus required maxLength={editor.kind === 'layout' ? 40 : 60} value={name} onChange={e => setName(e.target.value)}/>
-        </label>}
-      {editor.kind !== 'layout' && editor.kind !== 'delete' && <>
-        <label>호스트<input required maxLength={253} value={host} onChange={e => setHost(e.target.value)}/></label>
-        <label>포트<input required type="number" min={1} max={65535} value={port} onChange={e => setPort(e.target.value)}/></label>
+      {editor.kind === 'delete' ? <p>‘{editor.profile.name}’ 서버를 삭제할까요? 이 서버를 사용하는 저장된 레이아웃은 열 수 없게 됩니다.</p>
+        : input('name', layout ? '레이아웃 이름' : '서버 이름', name, setName, layout ? 40 : 60)}
+      {server && <>
+        <div className="termrail-endpoint">
+          {input('host', '호스트', host, setHost)}
+          {input('port', '포트', port, setPort)}
+        </div>
+        <div className="termrail-startup" role="group" aria-label="시작 파일">
+          <span className="termrail-startup-label">시작 파일 <small>(선택)</small></span>
+          <span className="termrail-file-name" title={startup.file?.name}>{startup.file?.name ?? '선택한 파일 없음'}</span>
+          <button type="button" aria-label="시작 파일 가져오기" disabled={startup.picking}
+            title="UTF-8 파일의 첫 두 줄에 # workrail-user: 아이디와 # workrail-password: 비밀번호를 적고 다음 줄부터 Bash 명령을 적으세요."
+            onClick={() => {if (validate(['host', 'port'])) void startup.pick()}}>가져오기</button>
+          {startup.file && <button type="button" aria-label="시작 파일 제거" disabled={startup.picking} onClick={startup.remove}>×</button>}
+        </div>
+        {startup.endpointChanged && <p role="status">주소나 포트가 바뀌었습니다. 시작 파일을 사용하려면 다시 가져오세요.</p>}
+        {startup.pickError && <p role="alert">{startup.pickError}</p>}
       </>}
       {error && <p role="alert">{error}</p>}
       <div className="termrail-actions"><button type="button" onClick={dismiss}>취소</button>
-        <button type="submit">{editor.kind === 'connect' ? '저장하고 연결' : editor.kind === 'delete' ? '삭제' : '저장'}</button></div>
+        <button type="submit" disabled={startup.picking}>{editor.kind === 'connect' ? '저장하고 연결' : editor.kind === 'delete' ? '삭제' : '저장'}</button></div>
     </form>
   </dialog>
 }

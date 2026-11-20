@@ -21,6 +21,7 @@ WorkRail — PlanRail 일정·사내 LAN 공유, NodeRail 버전 관리와 TermR
 - 설계·계획·구현 시 Superpowers, 스테이지 결정·인수인계 시 Wayfinder를 적용한다.
   플러그인을 사용할 수 없으면 그 사실을 밝히고 저장소의 절차로 이어간다.
 - 설계·문서만 요청받으면 제품 코드·의존성·배포 설정을 변경하지 않는다.
+- TermRail의 시작 파일·자격 정보는 메인 프로세스에서 다룬다. 테스트에는 일회성 SSH 서버와 테스트 전용 계정을 사용한다. [시작 파일 설계](docs/design/noderail-termrail-installed-feedback.md#5-서버별-bash-시작-스크립트)
 - 날짜는 시간대 없는 `YYYY-MM-DD`, 0001~9999년, 양 끝 포함이다. renderer에 Node·파일·DB 권한을 노출하지 않는다.
 - 저장 commit 전 성공 표시, 실패 DB의 삭제·빈 DB 대체, 운영 DB를 사용하는 자동 테스트를 금지한다.
 - 사용자 요청과 이 저장소의 승인 범위·문서 관례를 외부 스킬의 일반 템플릿보다 우선한다.

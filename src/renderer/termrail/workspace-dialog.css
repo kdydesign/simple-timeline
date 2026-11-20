@@ -1,0 +1,35 @@
+.termrail-workspace-dialog.termrail-dialog {
+  border-color: var(--rim, var(--border));
+  border-radius: 8px;
+  background: var(--control-sheen), color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(12px);
+}
+.termrail-workspace-dialog form { display: grid; gap: 8px; }
+.termrail-workspace-dialog p { margin: 0; }
+.termrail-workspace-dialog form > h3 { margin: 0; padding-bottom: 6px; border-bottom: 1px solid var(--border); }
+.termrail-field { display: grid; align-content: start; gap: 3px; min-width: 0; }
+.termrail-workspace-dialog .termrail-field label { display: block; margin: 0; }
+.termrail-workspace-dialog input { width: 100%; min-width: 0; box-sizing: border-box; }
+.termrail-workspace-dialog input[aria-invalid="true"] { border-color: var(--danger-border); }
+.termrail-workspace-dialog .termrail-field [role="alert"] { color: var(--workrail-status-error); font-size: 11px; }
+.termrail-endpoint { display: grid; grid-template-columns: minmax(0, 1fr) 66px; gap: 8px; }
+.termrail-startup { display: flex; flex-wrap: wrap; align-items: center; gap: 3px 5px; min-width: 0; }
+.termrail-startup-label { flex-basis: 100%; font-size: 12px; }
+.termrail-startup-label small, .termrail-file-name, .termrail-workspace-dialog [role="status"] { color: var(--muted); }
+.termrail-file-name { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.termrail-startup button { padding: 2px 6px; font-size: 11px; }
+.termrail-workspace-dialog .termrail-actions { margin: 0; padding-top: 6px; border-top: 1px solid var(--border); }
+.termrail-workspace-dialog .termrail-actions button[type="submit"] {
+  background: var(--control-sheen), #205d91; color: white; border: 1px solid #306b9f;
+}
+.termrail-workspace-dialog [role="status"] { font-size: 11px; }
+.termrail .termrail-servers button {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+.termrail .termrail-servers button:focus {
+  outline: 1px solid #478ac0;
+  outline-offset: -1px;
+  background: color-mix(in srgb, #478ac0 12%, transparent);
+}

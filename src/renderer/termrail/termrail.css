@@ -10,7 +10,7 @@
   color: var(--text);
   font-size: 13px;
 }
-.termrail[inert] { visibility: hidden; pointer-events: none; }
+.termrail[inert] { display: none; }
 .termrail-sidebar, .termrail-work {
   min-width: 0;
   min-height: 0;

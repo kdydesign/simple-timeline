@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 설치본 피드백 후속 작업으로 NodeRail ZIP 진단·상태 색상과 TermRail 시작 파일·작업 탭·보이기·입력 검증을 반영했다. [구현과 검사 범위](../implementation/2026-11-20-installed-feedback.md)
+
 2026-11-19 TermRail SSH 터미널, Windows 공식 Node ZIP 설치 통합과 크기별 아이콘을 제품에 반영했다. 플랫폼별 인수 범위는 [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md)에서 확인한다.
 
 2026-11-19 후속 개선은 설계 단계다. Windows x64 ZIP 설치 통일의 관리자별 검증 항목과 크기별 아이콘 기준은 [NodeRail·아이콘 설계](../design/windows-node-zip-all-versions.md)에, 트레이 숨김과 별도 창 닫기의 연결 유지 동작은 [TermRail 설계](../design/ssh-terminal-menu.md#전체-개선-재검토에서-확인한-세션-동작)에 기록했다. [통합 검토 기록](../harness/review.md)

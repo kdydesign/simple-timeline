@@ -8,8 +8,18 @@ import type { MutationBarrier } from '../updates/installer'
 import { samePath } from './windows-probe'
 import { capabilities } from './manager-support'
 import type { NvmInstallation, WindowsDiscovery } from './discovery'
+import { zipIssueMessage, zipIssueText, type ZipIssue } from './zip-diagnostics'
+
+interface InstallAttempt {
+  family?: NvmInstallation['family']
+  detail?: ZipIssue
+  cleanup?: ZipIssue
+  incompleteFolder?: string
+}
 
 export interface ElevatedResult {
+  detail?: ZipIssue
+  cleanup?: ZipIssue
   status: 'success' | 'cancelled' | 'failed' | 'unknown' | 'download-failed' | 'integrity-failed'
     | 'zip-download' | 'zip-integrity' | 'zip-permission' | 'zip-incomplete' | 'zip-extraction' | 'zip-blocked'
     | 'nvm-list-unsupported' | 'nvm-settings-check' | 'command-processor-check' | 'command-autorun' | 'nvm-staging-failed'
@@ -116,7 +126,6 @@ export function createNodeManagementService(options: {
   let msiExitCode: number | null = null
   let machineReservation: 'busy' | 'operation-unknown' | null = null
   let pendingZip: { before: WindowsDiscovery; version: string } | null = null
-  let incompleteFolder: string | null = null
   let activeLease: MachineMutationLease | undefined
   let inspection: Promise<WindowsDiscovery | null> | null = null
   let rechecking: Promise<NodeManagementState> | undefined
@@ -226,7 +235,7 @@ export function createNodeManagementService(options: {
     return null
   }
 
-  async function perform(kind: NodeOperation['kind'], version: string | null, removal?: { fingerprint: string; target: MsiEvidence }): Promise<NodeManagementErrorCode | null> {
+  async function perform(kind: NodeOperation['kind'], version: string | null, attempt: InstallAttempt, removal?: { fingerprint: string; target: MsiEvidence }): Promise<NodeManagementErrorCode | null> {
     let current = await inspect()
     if (!current) return 'inspection-failed'
     if (kind === 'remove-standalone') {
@@ -263,6 +272,7 @@ export function createNodeManagementService(options: {
           if (!current) return 'inspection-failed'
           if (!current.installation || current.manager.status !== 'ready' || operationBlocked(current, 'install')) return 'environment-conflict'
         }
+        attempt.family = current.installation.family
         if (current.installedVersions.includes(version)) {
           setPhase('verifying')
           return confirmZip(current, current, version)
@@ -275,11 +285,13 @@ export function createNodeManagementService(options: {
       }
       setPhase(kind === 'install' ? 'checking' : 'waiting')
       outcome = await windows.changeVersion(current.installation, kind, version, setPhase)
+      attempt.detail = outcome.detail
+      attempt.cleanup = outcome.cleanup
     }
     setPhase('verifying')
     const updated = await inspect()
     if (kind === 'install' && outcome.status === 'failed') return 'zip-extraction'
-    if (outcome.status === 'zip-incomplete' && current.installation && version) incompleteFolder = win32.join(current.installation.root, 'v' + version)
+    if (outcome.status === 'zip-incomplete' && current.installation && version) attempt.incompleteFolder = win32.join(current.installation.root, 'v' + version)
     if (outcome.status !== 'success') return exitErrors[outcome.status]
     if (kind === 'install') return version ? confirmZip(current, updated, version) : 'invalid-request'
     const verified = updated && updated.manager.status === 'ready' && (kind === 'install-manager' ? updated.conflicts.length === 0 : !operationBlocked(updated, kind)) && (
@@ -306,6 +318,8 @@ export function createNodeManagementService(options: {
     const run = async () => {
       const timer = setTimeout(() => publish({ error: nodeManagementError('operation-slow') }), options.slowAfterMs ?? 300_000)
       timer.unref()
+      const startedAt = new Date().toISOString()
+      const attempt: InstallAttempt = {}
       let code: NodeManagementErrorCode | null
       let lease: MachineMutationLease | undefined
       let acquired = false
@@ -316,7 +330,7 @@ export function createNodeManagementService(options: {
         lease = await windows.acquireMutation?.(kind)
         acquired = true
         activeLease = lease
-        code = await perform(kind, version, removal)
+        code = await perform(kind, version, attempt, removal)
       } catch (error) {
         setPhase('verifying')
         code = error instanceof Error && ['busy', 'reboot-required', 'operation-unknown'].includes(error.message) ? error.message as NodeManagementErrorCode : 'operation-unknown'
@@ -341,14 +355,20 @@ export function createNodeManagementService(options: {
         await new Promise<never>(() => {})
       } else {
         let reason = code === 'environment-conflict' && (kind === 'install' || kind === 'use') ? state.capabilities?.[kind].reason : null
-        if (code === 'zip-permission' && inspectedInstallation) reason = messages[code] + ' ' + inspectedInstallation.root
-        if (code === 'zip-incomplete' && incompleteFolder) reason = messages[code] + ' ' + incompleteFolder
-        incompleteFolder = null
+        if ((code === 'zip-permission' || code === 'zip-extraction') && attempt.detail) reason = zipIssueMessage(attempt.detail)
+        if (code === 'zip-incomplete' && attempt.incompleteFolder) reason = messages[code] + ' ' + attempt.incompleteFolder
         if (code === 'verification-failed' && kind === 'install') {
           reason = '설치 폴더와 nvm 설치 목록 또는 기본 버전이 일치하지 않습니다. 환경 다시 검사로 설치 상태를 확인해 주세요.'
         }
         const error = code ? { code, message: reason ?? messages[code] } : null
-        const operationLog = error ? [...(state.operationLog ?? []).slice(-19), [kind, version, error.code].filter(Boolean).join(' · ')] : state.operationLog
+        let entry: string | undefined
+        if (kind === 'install' && attempt.family) {
+          const fields = [startedAt, kind, version, attempt.family === 'modern' ? 'nvm 2.x' : 'nvm 1.x', code ?? '성공']
+          if (attempt.detail) fields.push(zipIssueText(attempt.detail))
+          if (attempt.cleanup) fields.push('추가 정리 실패', zipIssueText(attempt.cleanup))
+          entry = fields.join(' · ')
+        } else if (error) entry = [kind, version, error.code].filter(Boolean).join(' · ')
+        const operationLog = entry ? [...(state.operationLog ?? []).slice(-19), entry] : state.operationLog
         publish({ busy: null, error, operationLog })
         resolveResult(state)
       }

@@ -1,10 +1,36 @@
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createRequire } from 'node:module'
 import { buffer } from 'node:stream/consumers'
 import { IncompleteNodeInstallationError, installVerifiedNodeZip, inspectNodeZipInstallation, prepareNodeZipRoot } from '../../src/main/node-management/zip-install'
+
+const faults = vi.hoisted(() => ({ create: '', publish: '', cleanup: '', failReinspection: false, renameAttempted: false, createPartialTarget: false }))
+vi.mock('node:fs/promises', async importOriginal => {
+  const fs = await importOriginal<typeof import('node:fs/promises')>()
+  const fail = (code: string) => { if (code) throw Object.assign(new Error('private account path'), { code }) }
+  return { ...fs,
+    mkdtemp: (prefix: string) => { if (prefix.includes('.workrail-node-')) fail(faults.create); return fs.mkdtemp(prefix) },
+    rename: async (source: string, destination: string) => {
+      faults.renameAttempted = true
+      if (faults.createPartialTarget) {
+        await fs.mkdir(destination)
+        await fs.writeFile(join(destination, 'partial.txt'), 'preserve')
+      }
+      fail(faults.publish)
+      return fs.rename(source, destination)
+    },
+    lstat: (path: string) => {
+      if (faults.failReinspection && faults.renameAttempted && path.endsWith('v22.13.1')) fail('EACCES')
+      return fs.lstat(path)
+    },
+    rm: (path: string, options: Parameters<typeof fs.rm>[1]) => {
+      if (path.includes('.workrail-node-')) fail(faults.cleanup)
+      return fs.rm(path, options)
+    },
+  }
+})
 
 const { ZipFile } = createRequire(import.meta.url)('yazl')
 const version = '22.13.1'
@@ -112,4 +138,52 @@ it('creates a missing modern version store under its checked parent and rejects 
   await symlink(store, alias, 'junction')
   await expect(prepareNodeZipRoot(join(alias, 'new'), version, true)).rejects.toThrow()
   expect(await readdir(store)).toEqual([])
+})
+
+it('identifies staging creation and preserves the publish error when cleanup also fails', async () => {
+  const archive = await fixture()
+  try {
+    faults.create = 'EACCES'
+    await expect(install(archive)).rejects.toMatchObject({ detail: { stage: 'create-staging', role: 'staging', osCode: 'EACCES' } })
+    faults.create = ''
+    faults.publish = 'EPERM'
+    faults.cleanup = 'EBUSY'
+    await expect(install(archive)).rejects.toMatchObject({
+      detail: { stage: 'publish', role: 'target', osCode: 'EPERM' },
+      cleanup: { stage: 'cleanup', role: 'staging', osCode: 'EBUSY' },
+    })
+    expect(await inspectNodeZipInstallation(root, version)).toBe('absent')
+    faults.publish = faults.cleanup = ''
+    expect(await install(archive)).toBe('installed')
+  } finally { faults.create = faults.publish = faults.cleanup = '' }
+})
+
+it('keeps the original rename error when the race check cannot read the destination', async () => {
+  const archive = await fixture()
+  try {
+    faults.renameAttempted = false
+    faults.failReinspection = true
+    faults.publish = 'EPERM'
+    await expect(install(archive)).rejects.toMatchObject({ detail: { stage: 'publish', osCode: 'EPERM' } })
+    expect(await readdir(root)).toEqual([])
+  } finally {
+    faults.failReinspection = false
+    faults.publish = ''
+  }
+})
+
+it('identifies a preserved partial destination created during rename without losing the original OS code', async () => {
+  const archive = await fixture()
+  try {
+    faults.createPartialTarget = true
+    faults.publish = 'EPERM'
+    await expect(install(archive)).rejects.toMatchObject({
+      incompleteTarget: true, detail: { stage: 'publish', role: 'target', osCode: 'EPERM' },
+    })
+    expect(await readFile(join(root, 'v' + version, 'partial.txt'), 'utf8')).toBe('preserve')
+    expect(await readdir(root)).toEqual(['v' + version])
+  } finally {
+    faults.createPartialTarget = false
+    faults.publish = ''
+  }
 })

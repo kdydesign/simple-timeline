@@ -1,13 +1,31 @@
 import {useEffect, useRef, useState} from 'react'
 import {termRailSessionLimit} from '../../shared/termrail-ssh'
+import {hostError, portError} from '../../shared/termrail-endpoint'
 import {openTermWindow} from './detach'
 import {
   checkLayout, editBranch, firstPane, newTab, paneList, restoreTab, saveTab, splitPane,
-  type Bounds, type Branch, type Profile, type SavedLayout, type Session, type Side, type Tab,
+  type Bounds, type Branch, type Profile, type SavedLayout, type SavedTab, type Session, type Side, type Tab,
 } from './layout'
 
 type Floating = {tab: Tab; win: Window; mount: HTMLElement}
 type Workspace = {tabs: Tab[]; selected: string | null; windows: Floating[]}
+
+function workspaceTabs(state: Workspace) {
+  return [...state.tabs, ...state.windows.map(entry => entry.tab)]
+}
+
+function nextName(used: Set<string>) {
+  let n = 1
+  while (used.has('작업 ' + n)) n++
+  const name = '작업 ' + n
+  used.add(name)
+  return name
+}
+
+function endpointError(profile: Profile) {
+  const error = hostError(profile.host) || portError(String(profile.port))
+  return error && profile.name + ' · ' + error
+}
 
 function windowBounds(win: Window): Bounds {
   return {x: win.screenX, y: win.screenY, width: win.outerWidth, height: win.outerHeight}
@@ -40,6 +58,7 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
   const current = useRef(workspace)
   const [errors, setErrors] = useState<Set<string>>(new Set())
   const live = useRef(new Set<string>())
+  const ended = useRef(new Set<string>())
   function update(next: Workspace) {
     current.current = next
     render(next)
@@ -47,14 +66,18 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
   function start(session: Session) {
     live.current.add(session.id)
     const failed = () => {
-      if (live.current.has(session.id)) setErrors(previous => new Set(previous).add(session.id))
+      if (!live.current.has(session.id)) return
+      ended.current.add(session.id)
+      setErrors(previous => new Set(previous).add(session.id))
     }
     const api = window.termRailSsh
     if (!api) { failed(); return }
-    void api.open(session.id, {host: session.profile.host, port: session.profile.port}).catch(failed)
+    const {host, port, startup} = session.profile
+    void api.open(session.id, {host, port, ...(!session.restored && startup && {startupId: startup.id})}).catch(failed)
   }
   function stop(id: string) {
-    live.current.delete(id)
+    if (!live.current.delete(id)) return
+    ended.current.delete(id)
     void window.termRailSsh?.close(id).catch(() => report('SSH 세션을 종료할 수 없습니다.'))
     setErrors(previous => {
       if (!previous.has(id)) return previous
@@ -108,9 +131,12 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
     return false
   }
   function connect(profile: Profile) {
+    const error = endpointError(profile)
+    if (error) {report(error); return}
     if (!hasCapacity()) return
     const pane = {id: crypto.randomUUID(), profile}
-    const tab = newTab({kind: 'pane', pane})
+    const usedNames = new Set(workspaceTabs(current.current).map(tab => tab.workName))
+    const tab = newTab({kind: 'pane', pane}, nextName(usedNames))
     start(pane)
     const state = current.current
     update({...state, tabs: [...state.tabs, tab], selected: tab.id})
@@ -130,12 +156,24 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
     const profile = profiles.find(p => p.id === profileId)
     if (!profile) return
     if (!id) {connect(profile); return}
+    const error = endpointError(profile)
+    if (error) {report(error); return}
     const tab = find(id)
     if (!tab || !hasCapacity()) return
     const pane = {id: crypto.randomUUID(), profile}
     const tree = editBranch(tab.tree, path, n => splitPane(n, pane, side))!
     start(pane)
     change({...tab, tree, focused: pane.id})
+  }
+  function sessionEnded(id: string) {
+    if (live.current.has(id)) ended.current.add(id)
+  }
+  function liveCount(tab: Tab) {
+    return paneList(tab.tree).filter(pane => live.current.has(pane.id) && !ended.current.has(pane.id)).length
+  }
+  function rename(id: string, workName: string) {
+    const tab = find(id)
+    if (tab && workName.trim()) change({...tab, workName: workName.trim()})
   }
   function closePane(id: string, path: Branch, session: string) {
     const tab = find(id)
@@ -147,6 +185,15 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
       change({...tab, tree, focused: tab.focused === session ? firstPane(tree).id : tab.focused})
       return
     }
+    removeTab(id)
+  }
+  function closeTab(id: string) {
+    const tab = find(id)
+    if (!tab) return
+    for (const pane of paneList(tab.tree)) stop(pane.id)
+    removeTab(id)
+  }
+  function removeTab(id: string) {
     const state = current.current
     const index = state.tabs.findIndex(t => t.id === id)
     const tabs = state.tabs.filter(t => t.id !== id)
@@ -169,9 +216,8 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
   }
   function snapshot(): SavedLayout {
     const state = current.current
-    const saved = (tab: Tab) => ({...saveTab(tab), title: title(tab)})
-    const layout = {tabs: state.tabs.map(saved), selected: state.tabs.findIndex(t => t.id === state.selected),
-      windows: state.windows.map(w => ({tab: saved(w.tab), bounds: windowBounds(w.win)}))}
+    const layout = {tabs: state.tabs.map(saveTab), selected: state.tabs.findIndex(t => t.id === state.selected),
+      windows: state.windows.map(w => ({tab: saveTab(w.tab), bounds: windowBounds(w.win)}))}
     checkLayout(layout, profiles)
     return layout
   }
@@ -180,8 +226,17 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
     let next: Workspace
     try {
       checkLayout(layout, profiles)
-      const tabs = layout.tabs.map(saved => restoreTab(saved, profiles))
-      for (const item of layout.windows) windows.push(prepareWindow(restoreTab(item.tab, profiles), item.bounds))
+      const savedTabs = [...layout.tabs, ...layout.windows.map(entry => entry.tab)]
+      const used = new Set(savedTabs.flatMap(tab => tab.workName ? [tab.workName] : []))
+      for (const saved of savedTabs) {
+        for (const id of paneList(saved.tree)) {
+          const error = endpointError(profiles.find(p => p.id === id)!)
+          if (error) throw Error(error)
+        }
+      }
+      const restore = (saved: SavedTab) => restoreTab(saved, profiles, saved.workName ?? nextName(used))
+      const tabs = layout.tabs.map(restore)
+      for (const item of layout.windows) windows.push(prepareWindow(restore(item.tab), item.bounds))
       next = {tabs, selected: tabs[layout.selected]?.id ?? null, windows}
     } catch (error) {
       for (const entry of windows) entry.win.close()
@@ -193,17 +248,19 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
     update(next)
     for (const entry of previous.windows) entry.win.close()
     for (const id of [...live.current]) stop(id)
-    for (const tab of [...next.tabs, ...windows.map(w => w.tab)]) {
+    for (const tab of workspaceTabs(next)) {
       for (const pane of paneList(tab.tree)) start(pane)
     }
     windows.forEach(watch)
   }
 
   function title(tab: Tab) {
-    return profiles.find(p => p.id === tab.titleProfileId)?.name ?? tab.title
+    if (tab.tree.kind === 'split') return tab.workName + ' · ' + paneList(tab.tree).length
+    const {profile} = tab.tree.pane
+    return profiles.find(p => p.id === profile.id)?.name ?? profile.name
   }
   useEffect(() => {
     for (const entry of workspace.windows) entry.mount.ownerDocument.title = 'TermRail · ' + title(entry.tab)
   }, [profiles, workspace.windows])
-  return {workspace, errors, selected, title, focus, connect, detach, resize, drop, closePane, snapshot, replace}
+  return {workspace, errors, selected, title, focus, connect, detach, resize, drop, closePane, closeTab, liveCount, sessionEnded, rename, snapshot, replace}
 }

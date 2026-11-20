@@ -1,10 +1,24 @@
 import { createHash } from 'node:crypto'
-import { Client, type ClientChannel, type NextAuthHandler } from 'ssh2'
-import { termRailSessionLimit, type TermRailEndpoint, type TermRailSshPhase, type TermRailSshRead } from '../../shared/termrail-ssh'
+import { Client, type ClientCallback, type ClientChannel, type NextAuthHandler } from 'ssh2'
+import { isTermRailEndpoint, termRailSessionLimit, type TermRailEndpoint, type TermRailSshPhase, type TermRailSshRead } from '../../shared/termrail-ssh'
 import { SshHostKeys } from './ssh-host-keys'
 import { SshOutput } from './ssh-output'
+import type { TermRailStartup } from './startup-files'
 
 const invalid = () => new Error('잘못된 터미널 요청입니다.')
+
+// Read the literal UTF-8 script without terminal line limits or control-key processing.
+// NUL is excluded by the file format. The first NUL announces raw mode; the second
+// ends the file, leaving subsequent keyboard input for the same interactive Bash.
+const startupShell = `exec bash -c '
+termrail_tty=$(stty -g) && stty raw -echo || exit 1
+printf "\\0"
+LC_ALL=C IFS= read -r -d "" termrail_body || exit 1
+stty "$termrail_tty" || exit 1
+exec bash --rcfile <(
+  printf "%s\\n" "if [[ -r ~/.bashrc ]]; then . ~/.bashrc; fi"
+  printf "%s" "$termrail_body"
+) -i'`
 
 class SshSession {
   private readonly client = new Client()
@@ -16,13 +30,18 @@ class SshSession {
   private previousFingerprint?: string
   private verifiedFingerprint?: string
   private verifyKey?: (trusted: boolean) => void
+  private startupBody?: string
   private authenticate?: NextAuthHandler
   private pendingWrite?: (error?: Error | null) => void
   private deadline?: ReturnType<typeof setTimeout>
   private cols = 80
   private rows = 24
 
-  constructor(private readonly endpoint: TermRailEndpoint, private readonly keys: SshHostKeys) {}
+  constructor(
+    private readonly endpoint: TermRailEndpoint,
+    private readonly keys: SshHostKeys,
+    private startup?: TermRailStartup,
+  ) {}
 
   start() {
     this.armDeadline()
@@ -74,6 +93,11 @@ class SshSession {
           this.clearDeadline()
           this.phase = 'login'
           this.authenticate = next
+          if (this.startup) {
+            const { username, password, body } = this.startup
+            this.startup = undefined
+            this.login(username, password, body)
+          }
         },
       })
     } catch {
@@ -107,12 +131,18 @@ class SshSession {
     verify(true)
   }
 
-  login(username: string, password: string) {
+  get loginEndpoint() {
+    if (this.phase !== 'login' || !this.verifiedFingerprint) throw invalid()
+    return { ...this.endpoint }
+  }
+
+  login(username: string, password: string, startupBody?: string) {
     if (this.phase !== 'login' || !this.authenticate || typeof username !== 'string' || !username.length ||
         username.length > 256 || /[\x00-\x1f\x7f]/.test(username) || typeof password !== 'string' || password.length > 4096)
       throw invalid()
     const next = this.authenticate
     this.authenticate = undefined
+    this.startupBody = startupBody
     this.phase = 'authenticating'
     this.armDeadline()
     // ssh2 copies the Buffer into its auth packet synchronously, retaining a reference in curAuth.
@@ -130,19 +160,27 @@ class SshSession {
   private startShell() {
     if (this.phase !== 'authenticating') return this.finish('SSH 인증 상태를 확인할 수 없습니다.')
     const { cols, rows } = this
-    this.client.shell({ term: 'xterm-256color', cols, rows }, (error, channel) => {
+    const pty = { term: 'xterm-256color', cols, rows }
+    const scripted = this.startupBody !== undefined
+    const opened: ClientCallback = (error, channel) => {
       if (this.finished) return channel?.destroy()
-      if (error) return this.finish('서버에서 대화형 터미널을 열 수 없습니다.')
-      this.clearDeadline()
+      if (error) return this.finish(scripted
+        ? '서버에서 대화형 Bash를 열 수 없습니다.' : '서버에서 대화형 터미널을 열 수 없습니다.')
       this.channel = channel
-      this.phase = 'connected'
+      if (!scripted) {
+        this.clearDeadline()
+        this.phase = 'connected'
+      }
       if (cols !== this.cols || rows !== this.rows) channel.setWindow(this.rows, this.cols, 0, 0)
       channel.on('readable', () => this.drainOutput())
       channel.stderr.on('readable', () => this.drainOutput())
       channel.on('error', () => this.finish('터미널 연결이 끊겼습니다.'))
       channel.stderr.on('error', () => this.finish('터미널 연결이 끊겼습니다.'))
-      channel.once('close', () => this.finish())
-    })
+      channel.once('close', () => this.finish(this.startupBody === undefined
+        ? undefined : '서버에서 Bash 시작 파일을 받을 대화형 터미널을 열 수 없습니다.'))
+    }
+    if (scripted) this.client.exec(startupShell, { pty }, opened)
+    else this.client.shell(pty, opened)
   }
 
   private drainOutput() {
@@ -151,7 +189,23 @@ class SshSession {
       while (stream.readableLength && this.output.allowance) {
         const chunk = stream.read(Math.min(stream.readableLength, this.output.allowance)) as Buffer | null
         if (!chunk) break
-        this.output.append(chunk)
+        const ready = stream === this.channel && this.startupBody !== undefined ? chunk.indexOf(0) : -1
+        if (ready < 0) {
+          this.output.append(chunk)
+        } else {
+          this.output.append(chunk.subarray(0, ready))
+          this.output.append(chunk.subarray(ready + 1))
+          const input = this.startupBody + '\0'
+          this.startupBody = undefined
+          this.clearDeadline()
+          this.phase = 'connected'
+          const sendFailed = () => this.finish('서버에 Bash 시작 파일을 전송할 수 없습니다.')
+          try {
+            this.channel.write(input, (error?: Error | null) => { if (error) sendFailed() })
+          } catch {
+            sendFailed()
+          }
+        }
       }
       // Consume the EOF notification even when the last readable event carries no bytes.
       // ssh2 delivers channel close after the readable side has emitted end.
@@ -174,7 +228,7 @@ class SshSession {
     if (![cols, rows].every(value => Number.isInteger(value) && value > 0 && value <= 4096)) throw invalid()
     this.cols = cols
     this.rows = rows
-    if (this.phase === 'connected') this.channel!.setWindow(rows, cols, 0, 0)
+    if (!this.finished) this.channel?.setWindow(rows, cols, 0, 0)
   }
 
   write(data: string | Uint8Array): Promise<void> {
@@ -205,6 +259,8 @@ class SshSession {
     this.message = message
     this.verifyKey = undefined
     this.authenticate = undefined
+    this.startup = undefined
+    this.startupBody = undefined
     this.pendingWrite?.(invalid())
     this.client.destroy()
   }
@@ -218,13 +274,11 @@ export class TermRailSshService {
   private readonly sessions = new Map<string, SshSession>()
   constructor(private readonly pinFile: string) {}
 
-  open(id: string, endpoint: TermRailEndpoint) {
-    if (!isSshSessionId(id) || this.sessions.has(id) || !endpoint || typeof endpoint.host !== 'string' ||
-        !endpoint.host.length || endpoint.host.length > 253 || /[\s/\\@?#\x00-\x1f\x7f]/.test(endpoint.host) ||
-        !Number.isInteger(endpoint.port) || endpoint.port < 1 || endpoint.port > 65535) throw invalid()
+  open(id: string, endpoint: TermRailEndpoint, startup?: TermRailStartup) {
+    if (!isSshSessionId(id) || this.sessions.has(id) || !isTermRailEndpoint(endpoint)) throw invalid()
     if (this.sessions.size >= termRailSessionLimit) throw new Error(`터미널은 최대 ${termRailSessionLimit}개까지 열 수 있습니다.`)
     const target = { host: endpoint.host, port: endpoint.port }
-    const session = new SshSession(target, new SshHostKeys(this.pinFile, target))
+    const session = new SshSession(target, new SshHostKeys(this.pinFile, target), startup)
     this.sessions.set(id, session)
     session.start()
   }
@@ -233,6 +287,17 @@ export class TermRailSshService {
     const session = this.sessions.get(id)
     if (!session) throw new Error('터미널 세션을 찾을 수 없습니다.')
     return session
+  }
+
+  prepareProfileStart(id: string) {
+    const session = this.get(id)
+    return {
+      endpoint: session.loginEndpoint,
+      start: ({ username, password, body }: TermRailStartup) => {
+        if (this.sessions.get(id) !== session) throw invalid()
+        session.login(username, password, body)
+      },
+    }
   }
 
   read(id: string, cursor: number) { return this.get(id).read(cursor) }

@@ -1,8 +1,9 @@
-import {useEffect, useState, type KeyboardEvent, type MouseEvent} from 'react'
+import {useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent} from 'react'
 import {createPortal} from 'react-dom'
 import {libraryKey, readLibrary, type Library, type Profile, type Tab} from './layout'
 import {profileDragType, TerminalTree} from './TerminalTree'
 import {Menu, WorkspaceDialog, type CommandMenu, type Editor} from './WorkspaceControls'
+import {WorkTabDialog, type WorkTabAction} from './WorkTabDialog'
 import {useWorkspace} from './useWorkspace'
 import './termrail.css'
 
@@ -17,15 +18,33 @@ export function TermRail({active}: {active: boolean}) {
   const [notice, report] = useState(initial.error)
   const [menu, setMenu] = useState<CommandMenu | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
+  const [tabAction, setTabAction] = useState<WorkTabAction | null>(null)
+  const focusTabList = useRef(false)
+  const addTab = useRef<HTMLButtonElement>(null)
   const desk = useWorkspace(library.profiles, report)
   const {tabs, selected, windows} = desk.workspace
   const current = tabs.find(t => t.id === selected)
-  useEffect(() => {if (!active) {setMenu(null); setEditor(null)}}, [active])
+  useEffect(() => {if (!active) {setMenu(null); setEditor(null); setTabAction(null)}}, [active])
+  useLayoutEffect(() => {
+    if (!focusTabList.current) return
+    focusTabList.current = false
+    const target = selected ? document.getElementById('tab-' + selected) : addTab.current
+    target?.focus()
+  }, [tabs, selected])
+  function closeTab(id: string) {
+    focusTabList.current = true
+    desk.closeTab(id)
+  }
   function persist(next: Library) {
     if (initial.error) throw Error(initial.error)
     try {localStorage.setItem(libraryKey, JSON.stringify(next))}
     catch {throw Error('서버와 레이아웃을 저장할 수 없습니다.')}
     setLibrary(next)
+    const retained = new Set(next.profiles.map(profile => profile.startup?.id))
+    for (const profile of library.profiles) {
+      if (profile.startup && !retained.has(profile.startup.id))
+        void window.termRailSsh?.discardStartup(profile.startup.id).catch(() => report('기존 시작 파일을 삭제할 수 없습니다.'))
+    }
   }
   function saveProfile(profile: Profile, connect: boolean) {
     const existing = library.profiles.some(p => p.id === profile.id)
@@ -55,7 +74,8 @@ export function TermRail({active}: {active: boolean}) {
   }
   function stage(tab: Tab | undefined, visible: boolean) {
     return <TerminalTree node={tab?.tree ?? null} stage={{profiles: library.profiles, active: visible, focused: tab?.focused ?? null,
-      errors: desk.errors, onFocus: session => tab && desk.focus(tab.id, session),
+      errors: desk.errors, onEnded: desk.sessionEnded,
+      onFocus: session => tab && desk.focus(tab.id, session),
       onClose: (path, session) => tab && desk.closePane(tab.id, path, session),
       onResize: (path, ratio) => tab && desk.resize(tab.id, path, ratio),
       onDrop: (path, profileId, side) => desk.drop(tab?.id ?? null, path, profileId, side)}}/>
@@ -88,7 +108,13 @@ export function TermRail({active}: {active: boolean}) {
           <div role="tablist" aria-label="작업 탭">{tabs.map((tab, index) => {
             const commands = context(anchor => [
               ['별도 창으로 열기', () => desk.detach(tab.id)],
-              ['레이아웃 저장…', () => setEditor({kind: 'layout', name: desk.title(tab), anchor})],
+              ['작업 이름 변경…', () => setTabAction({kind:'rename', id:tab.id, name:tab.workName, anchor})],
+              ['전체 작업 배치 저장…', () => setEditor({kind: 'layout', name: desk.title(tab), anchor})],
+              ['작업 탭 닫기', () => {
+                const count = desk.liveCount(tab)
+                if (count > 1) setTabAction({kind:'close', id:tab.id, name:tab.workName, count, anchor})
+                else closeTab(tab.id)
+              }],
             ])
             return <button type="button" key={tab.id} role="tab" aria-selected={tab.id === selected} aria-controls={'stage-' + tab.id}
               id={'tab-' + tab.id} tabIndex={tab.id === selected ? 0 : -1}
@@ -96,12 +122,14 @@ export function TermRail({active}: {active: boolean}) {
                 if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
                   e.preventDefault()
                   const next = tabs[(index + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]
-                  desk.selected(next.id)
-                  document.getElementById('tab-' + next.id)?.focus()
+                  if (next.id !== selected) {
+                    focusTabList.current = true
+                    desk.selected(next.id)
+                  }
                 } else commands.onKeyDown(e)
               }}>{desk.title(tab)}</button>
           })}</div>
-          <button type="button" className="termrail-add-tab" aria-label="서버 선택" aria-haspopup="menu" onClick={e => {
+          <button type="button" ref={addTab} className="termrail-add-tab" aria-label="서버 선택" aria-haspopup="menu" onClick={e => {
             const anchor = e.currentTarget
             popup(e, [['새 터미널…', () => setEditor({kind: 'connect', anchor})],
               ...library.profiles.map((p): [string, () => void] => [p.name, () => desk.connect(p)])])
@@ -113,7 +141,12 @@ export function TermRail({active}: {active: boolean}) {
       </div>
       {notice && <div role="alert" className="termrail-notice">{notice}<button type="button" aria-label="안내 닫기" onClick={() => report('')}>×</button></div>}
       {menu && active && <Menu menu={menu} dismiss={() => setMenu(null)}/>}
-      {editor && active && <WorkspaceDialog editor={editor} profiles={library.profiles} close={() => setEditor(null)}
+      {tabAction && active && <WorkTabDialog action={tabAction} dismiss={() => setTabAction(null)} apply={name => {
+        setTabAction(null)
+        if (tabAction.kind === 'close') closeTab(tabAction.id)
+        else {desk.rename(tabAction.id, name); tabAction.anchor.focus()}
+      }}/>}
+      {editor && active && <WorkspaceDialog report={report} editor={editor} profiles={library.profiles} close={() => setEditor(null)}
         saveProfile={saveProfile} saveLayout={saveLayout}
         removeProfile={profile => persist({...library, profiles: library.profiles.filter(p => p.id !== profile.id)})}/>}
     </section>

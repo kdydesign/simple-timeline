@@ -25,11 +25,12 @@
   border-radius: 0;
   box-shadow: none;
   background: transparent;
-  color: inherit;
+  color: var(--console-fg);
+  caret-color: var(--console-fg);
   font: inherit;
   padding: 0;
 }
-.termrail-login input:focus { outline: 0; }
+.termrail-console .termrail-login input:focus { outline: none; }
 .termrail-host-key { display: grid; gap: 4px; justify-items: start; overflow-wrap: anywhere; }
 .termrail-host-key div { display: flex; flex-wrap: wrap; gap: 5px; }
 .termrail-host-key button { font: 12px/1.4 "Segoe UI","Malgun Gothic",sans-serif; padding: 1px 6px; }

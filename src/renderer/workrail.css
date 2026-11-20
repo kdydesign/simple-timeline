@@ -617,7 +617,7 @@
 .workrail-home-environment-actions { justify-content: space-between; }
 .workrail-home-environment-actions > .workrail-environment-actions { margin-inline-start: auto; }
 .workrail-environment-actions .workrail-control { min-height: 28px; padding: 3px 8px; font-size: 12px; }
-.workrail-manager-badge[data-ready="true"], .workrail-control[data-active-version] {
+.workrail-manager-badge[data-ready="true"], .workrail-control[data-version-state="active"] {
   --badge-border: color-mix(in srgb, var(--workrail-status-green), transparent 63%);
   border-color: var(--badge-border);
   background: color-mix(in srgb, var(--workrail-status-green), transparent 91%);
@@ -625,7 +625,38 @@
   opacity: 1;
   color: var(--workrail-status-green);
 }
-.workrail-version-status { display: inline-flex; align-items: center; color: var(--muted); }
+/* Version actions share their hue with the resulting inventory state. */
+:root {
+  --version-blue: #154776;
+  --version-blue-glass: #c2ddf5df;
+  --version-green: #174f32;
+  --version-green-glass: #bde5cdde;
+  --version-gray: #50575e;
+}
+:root[data-theme="dark"] {
+  --version-blue: #c1e3ff;
+  --version-blue-glass: #244762dc;
+  --version-green: #c1edd2;
+  --version-green-glass: #244b38dc;
+  --version-gray: #c0c5cb;
+}
+.workrail-control[data-version-state="active"] { color: var(--version-green); }
+.workrail-control[data-version-state="missing"] { --action-ink: var(--version-blue); --action-glass: var(--version-blue-glass); }
+.workrail-control[data-version-state="installed"] { --action-ink: var(--version-green); --action-glass: var(--version-green-glass); }
+.workrail-control:is([data-version-state="missing"], [data-version-state="installed"]) {
+  color: var(--action-ink);
+  background: var(--action-glass) var(--control-sheen);
+  border-color: color-mix(in srgb, var(--action-ink) 45%, transparent);
+}
+.workrail-control:is([data-version-state="missing"], [data-version-state="installed"]):hover:enabled {
+  border-color: var(--action-ink);
+}
+.workrail-control[data-version-state]:disabled {
+  opacity: 1;
+  box-shadow: none;
+}
+.workrail-version-status { display: inline-flex; align-items: center; color: var(--version-gray); }
+.workrail-version-status[data-state="installed"] { color: var(--version-blue); }
 .workrail-version-status[data-state="active"] { color: var(--workrail-status-green); }
 .workrail-version-status[data-state="unknown"] { color: var(--warning-text); }
 .workrail-version-action { display: grid; justify-items: center; gap: 3px; }

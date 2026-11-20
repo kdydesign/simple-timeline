@@ -8,6 +8,7 @@ import { crc32 } from 'node:zlib'
 import { fromBuffer, type Entry, type ZipFile } from 'yauzl'
 import { isNodeVersion } from '../../shared/node-management'
 import { isExplorerComponent } from './windows-probe'
+import { ZipStepError, zipStep } from './zip-diagnostics'
 
 const MiB = 1024 ** 2
 const requiredNpmFiles = ['npm.cmd', 'node_modules/npm/package.json', 'node_modules/npm/bin/npm-cli.js']
@@ -59,16 +60,17 @@ async function inspectDirectory(target: string, existingPackage = true): Promise
 }
 
 export async function prepareNodeZipRoot(root: string, version: string, allowCreate: boolean) {
-  await checkedTarget(root, version, allowCreate)
+  await zipStep('inspect-root', 'root', () => checkedTarget(root, version, allowCreate))
   if (allowCreate) {
-    await mkdir(root).catch((error: NodeJS.ErrnoException) => { if (error.code !== 'EEXIST') throw error })
-    await checkedTarget(root, version)
+    await zipStep('create-root', 'root', () => mkdir(root).catch((error: NodeJS.ErrnoException) => { if (error.code !== 'EEXIST') throw error }))
+    await zipStep('inspect-root', 'root', () => checkedTarget(root, version))
   }
-  await access(root, constants.W_OK)
+  await zipStep('check-write', 'root', () => access(root, constants.W_OK))
 }
 
 export async function inspectNodeZipInstallation(root: string, version: string) {
-  return inspectDirectory(await checkedTarget(root, version))
+  const target = await zipStep('inspect-root', 'root', () => checkedTarget(root, version))
+  return zipStep('inspect-target', 'target', () => inspectDirectory(target))
 }
 
 function validComponent(name: string) {
@@ -157,30 +159,48 @@ interface NodeZipInstallation {
   beforePublish?: (staging: string) => Promise<void>
 }
 export async function installVerifiedNodeZip({ root, version, archive, beforePublish }: NodeZipInstallation): Promise<'installed' | 'already-installed'> {
-  const target = await checkedTarget(root, version)
+  const target = await zipStep('inspect-root', 'root', () => checkedTarget(root, version))
   const checkExisting = async () => {
-    const state = await inspectDirectory(target)
+    const state = await zipStep('inspect-target', 'target', () => inspectDirectory(target))
     if (state === 'incomplete') throw new IncompleteNodeInstallationError(target)
     return state === 'complete'
   }
   if (await checkExisting()) return 'already-installed'
-  const staging = await mkdtemp(join(root, '.workrail-node-'))
+  const staging = await zipStep('create-staging', 'staging', () => mkdtemp(join(root, '.workrail-node-')))
   let published = false
+  let firstFailure: ZipStepError | undefined
   try {
-    await extract(archive, version, staging)
-    if (await inspectDirectory(staging, false) !== 'complete') throw new Error('Node ZIP에서 node.exe 또는 npm 구성을 확인할 수 없습니다.')
-    await beforePublish?.(staging)
+    await zipStep('extract', 'staging', () => extract(archive, version, staging))
+    await zipStep('verify-staging', 'staging', async () => {
+      if (await inspectDirectory(staging, false) !== 'complete') throw new Error('Node ZIP에서 node.exe 또는 npm 구성을 확인할 수 없습니다.')
+    })
+    if (beforePublish) await zipStep('before-publish', 'staging', () => beforePublish(staging))
     if (await checkExisting()) return 'already-installed'
     try {
       await rename(staging, target)
     } catch (error) {
       // Windows refuses to replace an existing directory. Reconcile a concurrent install.
-      if (await checkExisting()) return 'already-installed'
-      throw error
+      const failure = new ZipStepError('publish', 'target', error)
+      try {
+        if (await checkExisting()) return 'already-installed'
+      } catch (recheckError) {
+        if (recheckError instanceof IncompleteNodeInstallationError) failure.incompleteTarget = true
+      }
+      throw failure
     }
     published = true
     return 'installed'
+  } catch (error) {
+    firstFailure = error instanceof ZipStepError ? error : new ZipStepError('inspect-target', 'target', error)
+    throw firstFailure
   } finally {
-    if (!published) await rm(staging, { recursive: true, force: true })
+    if (!published) {
+      try { await rm(staging, { recursive: true, force: true }) }
+      catch (error) {
+        const cleanup = new ZipStepError('cleanup', 'staging', error)
+        if (!firstFailure) throw cleanup
+        firstFailure.cleanup = cleanup.detail
+      }
+    }
   }
 }

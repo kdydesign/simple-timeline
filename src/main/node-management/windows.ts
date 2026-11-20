@@ -11,6 +11,7 @@ import { parseModernList, readClassicList } from './classic-list'
 import { verifyClassicRelease } from './official-classic'
 import { allowedNodeSigner, nodeSignatureCheck } from './node-signing'
 import { downloadNodeZip, NodeZipDownloadError } from './zip-download'
+import { ZipStepError, type ZipIssue } from './zip-diagnostics'
 import { IncompleteNodeInstallationError, installVerifiedNodeZip, inspectNodeZipInstallation, prepareNodeZipRoot } from './zip-install'
 import { knownClassicVersion, legacyHelpers, modernReleases } from './manager-support'
 import { isExplorerComponent, samePath } from './windows-probe'
@@ -368,6 +369,17 @@ export async function resolveSystemPowerShell() {
   return { system, powershell, options }
 }
 
+function zipErrorStatus(cause: unknown, detail?: ZipIssue): ElevatedResult['status'] {
+  if (cause instanceof IncompleteNodeInstallationError) return 'zip-incomplete'
+  if (cause instanceof NodeZipDownloadError) return cause.code
+  if (cause instanceof Error && (cause.message === 'zip-blocked' || cause.message === 'nvm-settings-check')) return cause.message
+  if (detail?.stage === 'acl-read' || detail?.stage === 'acl-policy') return 'zip-permission'
+  const code = (cause as NodeJS.ErrnoException | undefined)?.code
+  if (code === 'EACCES' || code === 'EPERM') return 'zip-permission'
+  if (code === 'ERROR_VIRUS_INFECTED' || code === 'ERROR_VIRUS_DELETED') return 'zip-blocked'
+  return 'zip-extraction'
+}
+
 export function createWindowsNodeAdapter(request: NodeFetch, zipTransport?: (proxy?: string) => Promise<NodeFetch>): WindowsNodeAdapter {
   const verifiedClassic = new Map<string, string>()
   const officialDigests = new Map<string, string>()
@@ -392,22 +404,32 @@ export function createWindowsNodeAdapter(request: NodeFetch, zipTransport?: (pro
     return (await exec(powershell, psArgs(script), { ...options, timeout })).stdout.trim()
   }
 
-  async function checkModernStorage(path: string) {
+  async function checkModernStorage(path: string, role: 'root' | 'staging') {
     // Match nvm's writable-group ACL check without modifying any permissions.
     // Include Everyone in addition to Authenticated Users and the local Users group.
     const verdict = await runPowerShell(`
 $ErrorActionPreference = 'Stop'
-$dir = [IO.DirectoryInfo]::new(${psLiteral(path)})
-if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit 1 }
-$acl = $dir.GetAccessControl()
-$descriptor = [Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)
-if ($null -eq $descriptor.DiscretionaryAcl) { exit 1 }
-foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
-  if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -in @('S-1-1-0', 'S-1-5-11', 'S-1-5-32-545') -and
-      ([int64]$rule.FileSystemRights -band 0x500d0156) -ne 0) { exit 1 }
-}
-[Console]::WriteLine('VERIFIED')`).catch(() => '')
-    if (verdict !== 'VERIFIED') throw Error('zip-permission')
+try {
+  $dir = [IO.DirectoryInfo]::new(${psLiteral(path)})
+  if (($dir.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { [Console]::WriteLine('REPARSE'); return }
+  $acl = $dir.GetAccessControl()
+  $descriptor = [Security.AccessControl.RawSecurityDescriptor]::new($acl.GetSecurityDescriptorBinaryForm(), 0)
+  if ($null -eq $descriptor.DiscretionaryAcl) { [Console]::WriteLine('POLICY'); return }
+  foreach ($rule in $acl.GetAccessRules($true, $true, [Security.Principal.SecurityIdentifier])) {
+    if ($rule.AccessControlType -eq 'Allow' -and $rule.IdentityReference.Value -in @('S-1-1-0', 'S-1-5-11', 'S-1-5-32-545') -and
+        ([int64]$rule.FileSystemRights -band 0x500d0156) -ne 0) { [Console]::WriteLine('POLICY'); return }
+  }
+  [Console]::WriteLine('VERIFIED')
+} catch {
+  $hr = $_.Exception.GetBaseException().HResult
+  if (($hr -band -65536) -eq -2147024896) { [Console]::WriteLine('READ_ERROR:' + ($hr -band 65535)) }
+  else { [Console]::WriteLine('READ_ERROR') }
+}`).catch(error => { throw new ZipStepError('acl-read', role, error) })
+    if (verdict === 'VERIFIED') return
+    if (verdict === 'POLICY') throw new ZipStepError('acl-policy', role)
+    if (verdict === 'REPARSE') throw new ZipStepError(role === 'root' ? 'inspect-root' : 'verify-staging', role)
+    const win32Code = /^READ_ERROR:(\d{1,5})$/.exec(verdict)?.[1]
+    throw new ZipStepError('acl-read', role, win32Code ? { code: 'WIN32_' + win32Code } : undefined)
   }
 
   async function elevate(invocation: ElevationInvocation) {
@@ -566,7 +588,7 @@ ${modernRegistryRead}
             if (!listed || !discovered.installedVersions.every(installed => listed.includes(installed))) return { status: 'nvm-list-unsupported' }
           }
           await prepareNodeZipRoot(installation.root, version, installation.family === 'modern')
-          if (installation.family === 'modern') await checkModernStorage(installation.root)
+          if (installation.family === 'modern') await checkModernStorage(installation.root, 'root')
           const existing = await inspectNodeZipInstallation(installation.root, version)
           if (existing === 'incomplete') return { status: 'zip-incomplete' }
           if (existing === 'complete') return { status: discovered.installedVersions.includes(version) ? 'success' : 'zip-incomplete' }
@@ -579,7 +601,7 @@ ${modernRegistryRead}
           await installVerifiedNodeZip({ root: installation.root, version, archive, beforePublish: async staging => {
             const fresh = discovered.installation
             if (fresh?.family === 'modern') {
-              await checkModernStorage(staging)
+              await checkModernStorage(staging, 'staging')
               const policy = fresh.signingPolicy
               if (!policy) throw new NodeZipDownloadError('zip-integrity')
               const signer = await runPowerShell(nodeSignatureCheck(win32.join(staging, 'node.exe'), policy), 60_000)
@@ -594,15 +616,10 @@ ${modernRegistryRead}
           } })
           return { status: 'success' }
         } catch (error) {
-          if (error instanceof IncompleteNodeInstallationError) return { status: 'zip-incomplete' }
-          if (error instanceof NodeZipDownloadError) return { status: error.code }
-          if (error instanceof Error && error.message === 'zip-permission') return { status: 'zip-permission' }
-          if (error instanceof Error && error.message === 'zip-blocked') return { status: 'zip-blocked' }
-          if (error instanceof Error && error.message === 'nvm-settings-check') return { status: 'nvm-settings-check' }
-          const systemError = error as NodeJS.ErrnoException
-          if (['EACCES', 'EPERM'].includes(systemError.code ?? '')) return { status: 'zip-permission' }
-          if (systemError.code === 'ERROR_VIRUS_INFECTED' || systemError.code === 'ERROR_VIRUS_DELETED') return { status: 'zip-blocked' }
-          return { status: 'zip-extraction' }
+          const failure = error instanceof ZipStepError ? error : null
+          const cause = failure ? failure.cause : error
+          const evidence = failure ? { detail: failure.detail, ...(failure.cleanup ? { cleanup: failure.cleanup } : {}) } : {}
+          return { status: failure?.incompleteTarget ? 'zip-incomplete' : zipErrorStatus(cause, failure?.detail), ...evidence }
         }
       }
       if (installation.family === 'modern') {
