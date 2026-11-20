@@ -82,13 +82,33 @@ body:has(#post:not([hidden])){height:100dvh}
 .code-pane .json-input textarea{position:absolute;inset:0;width:100%;height:100%;min-height:0;overflow:auto;color:transparent;caret-color:#f1f2f3;background:transparent}
 .json-input textarea::selection{background:#6489af80}
 @media(forced-colors:active){.json-input pre{display:none}.code-pane .json-input textarea{color:CanvasText;caret-color:CanvasText}}
+/* The same glass, field dimensions and action spacing as the WorkRail standard dialog. */
+#dialog{width:min(460px,calc(100vw - 28px));max-height:calc(100dvh - 32px);overflow:auto;padding:20px 22px;border:1px solid #b4bfc449;border-radius:14px;background:rgba(43,46,49,.5);backdrop-filter:blur(28px);box-shadow:0 14px 42px #0007}
+#dialog::backdrop{background:#14191f66}
+#dialog .title{background:none;padding:0 0 10px;border-bottom:1px solid #b4bfc430}
+#dialog h2{font-size:19px}
+#dialog .dialogbody{max-height:none;padding:14px 0}
+#dialog .formrow{font-size:13px;font-weight:600;margin:0 0 14px}
+#dialog .formrow:last-child{margin-bottom:0}
+#dialog input,#dialog select{height:36px;padding:6px 10px;border-radius:8px;background:#6e73784d;border:1px solid #b4bfc449;color:inherit}
+#dialog option,#method option{background:#292f35;color:#eef2f5}
+#dialog button,#newRequest{min-height:32px;padding:5px 11px;font-size:13px;border-radius:8px;color:inherit;border:1px solid #b4bfc449;background:linear-gradient(155deg,#ffffff18,transparent 65%),#6e73784d;box-shadow:0 1px 2px #0003,inset 0 1px 0 #ffffff20}
+#dialog .dialogfoot{gap:8px;padding:12px 0 0;border-top:1px solid #b4bfc430}
+#dialog .primary{background:linear-gradient(155deg,#5796cd55,#24507840 65%),#477fae4d;border-color:#8bc1eb}
+#dialog .danger{color:#ffc1ba}
+#dialog .leading{margin-right:auto}
+#newRequest{min-height:24px;padding:0 7px;font-size:16px}
+#method{flex:none;width:78px;padding:3px 4px;background:#30383f;border-color:var(--line)}
+#contextMenu{position:fixed;z-index:20;min-width:125px;padding:3px;max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:5px;background:#2b2e31;box-shadow:0 8px 24px #0005}
+#contextMenu button{display:block;width:100%;padding:4px 7px;font-size:12px;text-align:left;background:none;border:0}
+#contextMenu button:hover,#contextMenu button:focus{background:#b4c8dc26}
 </style>
 <header><div class="brand"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUiPgogIDx0aXRsZSBpZD0idGl0bGUiPldvcmtSYWlsPC90aXRsZT4KICA8ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImluayIgeDI9Ii42NSIgeTI9IjEiPjxzdG9wIHN0b3AtY29sb3I9IiMyYjQzNTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxNTI3MzIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHJ4PSIyIiBmaWxsPSIjNTI2Yjc5Ii8+CiAgPHJlY3QgeD0iLjQiIHk9Ii40IiB3aWR0aD0iMTUuMiIgaGVpZ2h0PSIxNS4yIiByeD0iMS42IiBmaWxsPSJ1cmwoI2luaykiLz4KICA8cGF0aCBmaWxsPSIjZjJmN2ZhIiBkPSJNMSA0aDhMNi42IDdIMXogTTEgOGg0LjVMMyAxMUgxeiIvPgogIDxwYXRoIGZpbGw9IiM5MWQxZjEiIGQ9Ik0zLjUgMTIuNSAxMC40IDRoMy4zbC02LjkgOC41eiBNOC4xNSAxMi41IDEyLjY1IDdoMi43bC00LjUgNS41eiIvPgo8L3N2Zz4K" alt="">WorkRail <span class="auto demo">디자인 시안 · 예시 데이터</span></div><nav aria-label="도구"><button id="homeTab"><span class="mark">⌂</span>Home</button><button disabled>PlanRail</button><button disabled>NodeRail</button><button disabled>TermRail</button><button id="postTab" class="active"><span class="mark">⇄</span>PostRail</button></nav></header>
 <main id="post">
 <aside><label for="env"><strong>환경</strong></label><select class="env" id="env"><option>개발 장비</option><option>QA 장비</option></select>
-<div class="row apart asidehead"><h2>저장한 요청</h2><button id="newGroup" class="ghost">＋ 그룹</button></div><div id="tree"></div></aside>
+<div class="row apart asidehead"><button id="newRequest" aria-label="요청 추가" title="요청 추가">＋</button><button id="newGroup" class="ghost">＋ 그룹</button></div><div id="tree"></div></aside>
 <section class="workspace">
-<div class="panel compose"><div class="request-heading"><span class="pathline" id="crumb"></span><h1 id="reqName"></h1></div><div class="endpoint"><div class="url"><b id="method" class="verb"></b><input id="url" aria-label="요청 URL"></div><button class="primary send" id="send">보내기</button></div>
+<div class="panel compose"><div class="request-heading"><span class="pathline" id="crumb"></span><h1 id="reqName"></h1></div><div class="endpoint"><div class="url"><select id="method" class="verb" aria-label="HTTP 메서드"><option>GET</option><option>POST</option><option>DELETE</option></select><input id="url" aria-label="요청 URL"></div><button class="primary send" id="send">보내기</button></div>
 <div class="tools"><label id="repeatControl"><input type="checkbox" id="repeat">반복 보내기</label><label id="countControl" hidden>횟수 <input type="text" inputmode="numeric" id="count" value="10"></label><span id="range"></span><button id="saveEdits" class="ghost auto" hidden>변경 저장</button></div></div>
 <div class="panel code-pane"><div class="pane-bar"><h2>요청</h2><div id="reqTabs" class="tabs"><button data-tab="0" class="active">JSON 본문</button><button data-tab="1">헤더</button><button data-tab="2">인증</button></div><small id="auth" class="auto"></small></div><div class="editor" id="reqContent"></div></div>
 <div class="panel code-pane"><div class="pane-bar"><h2>응답</h2><div class="tabs"><button id="bodyTab" class="active">본문</button><button id="hdrTab">헤더</button></div><small class="auto" id="responseOwner"></small><span id="status" class="good"></span></div><div class="editor"><pre id="response"></pre></div></div>
@@ -103,7 +123,7 @@ body:has(#post:not([hidden])){height:100dvh}
 <section class="widget panel pad"><h2 class="cardhead">PlanRail 상태</h2><div class="listrow">공유 상태<span class="good">공유 제공 중</span></div><div class="listrow">연결 참여자<b>2명</b></div></section>
 <section class="widget panel pad"><h2 class="cardhead">Node 작업</h2><div class="listrow">24.22.3<span class="pill">사용 중</span></div><div class="listrow">22.16.0<small>설치됨</small></div></section>
 <section class="widget panel pad"><div class="row apart cardhead"><h2>PostRail 즐겨찾기</h2><span class="mark" aria-hidden="true">⇄</span></div><div class="listrow"><span id="homeEnv"></span><small id="homeAuth"></small></div><div id="favorites"></div><p class="home-result" role="status"><span id="homeLast"></span> <span id="homeCode"></span></p><div class="workrail-widget-meta"><span id="favCount"></span><button type="button" class="workrail-link" id="openPost">PostRail 열기</button></div></section></div></main>
-<dialog id="dialog"><div class="title"><h2 id="dialogTitle"></h2><button class="more auto" id="closeDialog" aria-label="닫기">×</button></div><div id="dialogBody" class="dialogbody"></div><div id="actions" class="dialogfoot"></div></dialog>
+<div id="contextMenu" role="menu" aria-label="작업 메뉴" hidden></div><dialog id="dialog" aria-labelledby="dialogTitle"><div class="title"><h2 id="dialogTitle"></h2><button class="more auto" id="closeDialog" aria-label="닫기">×</button></div><div id="dialogBody" class="dialogbody"></div><div id="actions" class="dialogfoot"></div></dialog>
 <script>
 const $ = id => document.getElementById(id);
 const group = (name,open=true) => ({name,open});
@@ -118,8 +138,8 @@ let current = requests[0], requestTab=0, responseHeaders=false;
 const drafts=new WeakMap();
 function values(r){return drafts.get(r)??r}
 function edit(key,value){
-  const draft={url:values(current).url,body:values(current).body,[key]:value};
-  if(draft.url===current.url&&draft.body===current.body)drafts.delete(current);else drafts.set(current,draft);
+  const draft={url:values(current).url,body:values(current).body,method:values(current).method,[key]:value};
+  if(draft.url===current.url&&draft.body===current.body&&draft.method===current.method)drafts.delete(current);else drafts.set(current,draft);
   range();
 }
 const environments = new Map(['개발 장비','QA 장비'].map((name,i)=>[name,{
@@ -164,45 +184,91 @@ function field(label,value) {
   const l=node('label',label,'formrow'),input=node('input');
   input.value=value;l.append(input);$('dialogBody').append(l);return input;
 }
-function nonempty(input) {
-  input.setCustomValidity(input.value.trim()?'':'이름을 입력해 주세요.');
+function nonempty(input,message='이름을 입력해 주세요.') {
+  input.setCustomValidity(input.value.trim()?'':message);
   return input.reportValidity();
+}
+function removeGroup(g) {
+  modal('그룹 삭제',()=>{
+    requests.filter(r=>r.folder===g).forEach(r=>r.folder=loose);
+    loose.open=true;groups=groups.filter(item=>item!==g);$('dialog').close();draw();
+  },'삭제');
+  $('dialogBody').textContent='“'+g.name+'” 그룹을 삭제할까요? 소속 요청은 미분류로 이동합니다.';
+  $('actions').lastElementChild.className='danger';
+}
+function removeRequest(r) {
+  modal('요청 삭제',()=>{
+    requests=requests.filter(item=>item!==r);$('dialog').close();
+    if(current===r)choose(requests[0]);else draw();
+  },'삭제');
+  $('dialogBody').textContent='“'+r.name+'” 요청을 삭제할까요?';
+  $('actions').lastElementChild.className='danger';
 }
 function groupEditor(g) {
   let input;
   modal(g?'그룹 수정':'그룹 추가',()=>{
     if(!nonempty(input))return;
     if(g)g.name=input.value.trim();else groups.splice(groups.length-1,0,group(input.value.trim()));
-    $('dialog').close();tree();
-  });
-  input=field('그룹 이름',g?.name??'');
-  if(g)$('dialogBody').append(button('그룹 삭제',()=>{
-    modal('그룹 삭제',()=>{
-      requests.filter(r=>r.folder===g).forEach(r=>r.folder=loose);loose.open=true;
-      groups=groups.filter(item=>item!==g);$('dialog').close();draw();
-    },'그룹 삭제');
-    $('dialogBody').textContent='그룹의 요청은 미분류로 이동합니다.';
-  },'danger'));
-  input.focus();
-}
-function requestEditor(r) {
-  let name,url,select;
-  modal('저장한 요청 수정',()=>{
-    if(!nonempty(name)||!nonempty(url))return;
-    r.name=name.value.trim();r.url=url.value.trim();if(drafts.has(r))drafts.get(r).url=r.url;r.folder=groups[Number(select.value)];r.folder.open=true;
     $('dialog').close();draw();
   });
-  name=field('요청 이름',r.name);url=field('URL',r.url);
-  const label=node('label','그룹','formrow');select=node('select');select.setAttribute('aria-label','그룹');
-  groups.forEach((g,i)=>{const o=node('option',g.name);o.value=i;o.selected=g===r.folder;select.append(o)});
-  label.append(select);$('dialogBody').append(label,button('요청 삭제',()=>{
-    modal('요청 삭제',()=>{
-      requests=requests.filter(item=>item!==r);
-      if(current===r)choose(requests[0]);else draw();
-      $('dialog').close();
-    },'요청 삭제');$('dialogBody').textContent='“'+r.name+'” 요청을 삭제할까요?';
-  },'danger'));
+  input=field('그룹 이름',g?.name??'');
+  if(g)$('actions').prepend(button('그룹 삭제',()=>removeGroup(g),'danger leading'));
+  input.focus();
 }
+function requestEditor(r,folder=r?.folder??loose) {
+  let name,url,select;
+  modal(r?'요청 수정':'요청 추가',()=>{
+    if(!nonempty(name)||!nonempty(url,'요청 URL을 입력해 주세요.'))return;
+    const dest=groups[Number(select.value)];
+    const item=r??{index:1n,method:'GET',body:'',favorite:false};
+    if(r&&drafts.has(r)&&url.value.trim()!==r.url)drafts.get(r).url=url.value.trim();
+    Object.assign(item,{name:name.value.trim(),url:url.value.trim(),folder:dest});
+    dest.open=true;
+    if(!r)requests.push(item);
+    $('dialog').close();
+    if(r)draw();else choose(item);
+  });
+  name=field('요청 이름',r?.name??'');url=field('URL',r?.url??'');url.placeholder='${deviceUrl}/api/samples';
+  const label=node('label','그룹','formrow');select=node('select');select.setAttribute('aria-label','그룹');
+  groups.forEach((g,i)=>{const o=node('option',g.name);o.value=i;o.selected=g===folder;select.append(o)});
+  label.append(select);$('dialogBody').append(label);
+  if(r)$('actions').prepend(button('요청 삭제',()=>removeRequest(r),'danger leading'));
+  name.focus();
+}
+const menu=$('contextMenu');
+let menuAnchor;
+function dismissMenu(restore=false){
+  if(menu.hidden)return;
+  menu.hidden=true;menuAnchor.setAttribute('aria-expanded','false');
+  if(restore)menuAnchor.focus();
+}
+function menuButton(label,entries,classes='more'){
+  const trigger=button('…',event=>{
+    event.preventDefault();
+    if(!menu.hidden&&menuAnchor===trigger){dismissMenu(true);return}
+    dismissMenu();menuAnchor=trigger;
+    menu.replaceChildren(...entries.map(([title,action])=>{
+      const opt=button(title,()=>{dismissMenu(true);action()});opt.setAttribute('role','menuitem');return opt;
+    }));
+    menu.hidden=false;trigger.setAttribute('aria-expanded','true');
+    const rect=trigger.getBoundingClientRect();
+    menu.style.left=Math.max(0,Math.min(rect.left,innerWidth-menu.offsetWidth))+'px';
+    menu.style.top=(rect.bottom+menu.offsetHeight<=innerHeight?rect.bottom:Math.max(0,rect.top-menu.offsetHeight))+'px';
+    menu.firstElementChild.focus();
+  },classes);
+  trigger.setAttribute('aria-label',label);trigger.setAttribute('aria-haspopup','menu');trigger.setAttribute('aria-expanded','false');
+  return trigger;
+}
+document.addEventListener('pointerdown',event=>{
+  if(!menu.hidden&&!menu.contains(event.target)&&!menuAnchor.contains(event.target))dismissMenu();
+});
+menu.onfocusout=e=>{if(e.relatedTarget&&!menu.contains(e.relatedTarget))dismissMenu()};
+menu.onkeydown=e=>{
+  const items=[...menu.children],i=items.indexOf(document.activeElement);
+  if(e.key==='Escape'){e.preventDefault();dismissMenu(true);return}
+  const jumps={ArrowDown:(i+1)%items.length,ArrowUp:(i+items.length-1)%items.length,Home:0,End:items.length-1};
+  if(Object.hasOwn(jumps,e.key)){e.preventDefault();items[jumps[e.key]].focus()}
+};
 function tree() {
   $('tree').replaceChildren();
   groups.forEach(g=>{
@@ -210,12 +276,14 @@ function tree() {
     const details=node('details',undefined,'folder');details.open=g.open;
     details.ontoggle=()=>g.open=details.open;
     const summary=node('summary',g.name);summary.append(node('small',String(requests.filter(r=>r.folder===g).length)));
-    if(g!==loose){const more=button('···',e=>{e.preventDefault();groupEditor(g)},'more auto');more.setAttribute('aria-label',g.name+' 그룹 수정');summary.append(more)}
+    const entries=[['요청 추가',()=>requestEditor(null,g)]];
+    if(g!==loose)entries.push(['수정',()=>groupEditor(g)],['삭제',()=>removeGroup(g)]);
+    summary.append(menuButton(g.name+' 그룹 메뉴',entries,'more auto'));
     details.append(summary);
     requests.filter(r=>r.folder===g).forEach(r=>{
       const item=node('div',undefined,'item'+(current===r?' sel':''));
       const chooseBtn=button('',()=>choose(r));chooseBtn.append(node('span',r.method,'verb '+r.method.toLowerCase()),document.createTextNode(r.name));
-      const edit=button('···',()=>requestEditor(r),'more');edit.setAttribute('aria-label',r.name+' 요청 수정');
+      const edit=menuButton(r.name+' 요청 메뉴',[['수정',()=>requestEditor(r)],['삭제',()=>removeRequest(r)]]);
       const star=button(r.favorite?'★':'☆',()=>{
         r.favorite=!r.favorite;
         star.textContent=r.favorite?'★':'☆';
@@ -226,10 +294,10 @@ function tree() {
     });
     $('tree').append(details);
   });
-  $('crumb').textContent=current?'저장한 요청　/　'+current.folder.name:'저장한 요청';
+  $('crumb').textContent=current?current.folder.name+'　/':'';
 }
 function choose(r) {
-  current=r;requestTab=r?.method==='GET'?1:0;$('repeat').checked=false;draw();
+  current=r;requestTab=values(r)?.method==='GET'?1:0;$('repeat').checked=false;draw();
 }
 function manage() {
   let rows;
@@ -251,16 +319,16 @@ function manage() {
   env().vars.forEach(([k,v])=>add(k,v));$('dialogBody').append(head,rows,message,node('p','인증 · 토큰 수신 API　'+env().api,'note'));
 }
 function count() {
-  if(current?.method!=='POST'||!$('repeat').checked)return 1n;
+  if(values(current)?.method!=='POST'||!$('repeat').checked)return 1n;
   const raw=$('count').value.trim();return /^\d+$/.test(raw)?BigInt(raw):0n;
 }
 function indexUsed(r,body){return r?.method==='POST'&&body.includes('${index}')}
 function range(){
-  $('countControl').hidden=!current||current.method!=='POST'||!$('repeat').checked;
+  $('countControl').hidden=!current||values(current).method!=='POST'||!$('repeat').checked;
   $('saveEdits').hidden=!current||!drafts.has(current);
   const n=count();$('send').disabled=!current||n<1n;
   $('send').textContent=!$('countControl').hidden&&n>0n?n+'회 보내기':'보내기';
-  $('range').textContent=!current?'':!n?'횟수는 양의 정수로 입력하세요.':indexUsed(current,values(current).body)?'인덱스 '+current.index+(n>1n?' – '+(current.index+n-1n):''):n>1n?'같은 요청을 반복합니다.':'';
+  $('range').textContent=!current?'':!n?'횟수는 양의 정수로 입력하세요.':indexUsed(values(current),values(current).body)?'인덱스 '+current.index+(n>1n?' – '+(current.index+n-1n):''):n>1n?'같은 요청을 반복합니다.':'';
 }
 // Keep the original text nodes so copy, escapes and indentation survive highlighting.
 function paintJson(host, source, templateValues=false) {
@@ -303,7 +371,7 @@ function requestBodyEditor(){
 }
 function requestPane() {
   const panel=$('reqContent');panel.replaceChildren();
-  [...$('reqTabs').children].forEach((b,i)=>{b.classList.toggle('active',i===requestTab);b.disabled=!current||(i===0&&current.method==='GET')});
+  [...$('reqTabs').children].forEach((b,i)=>{b.classList.toggle('active',i===requestTab);b.disabled=!current||(i===0&&values(current).method==='GET')});
   if(!current)return;
   if(requestTab===0)panel.append(requestBodyEditor());
   if(requestTab===1)panel.append(node('pre','Accept: application/json'));
@@ -366,10 +434,10 @@ function results() {
   favorites();$('homeLast').textContent='최근 실행 · '+run.name;$('homeCode').textContent=run.env+' · '+(run.example?'2 성공 / 1 실패':run.count+'회 · '+code(run.count));
 }
 function draw(){
-  tree();$('reqName').textContent=current?.name??'저장한 요청 없음';$('method').textContent=current?.method??'';
-  $('method').className='verb '+(current?.method??'').toLowerCase();$('url').value=current?values(current).url:'';$('url').disabled=!current;
+  tree();$('reqName').textContent=current?.name??'저장한 요청 없음';$('method').value=values(current)?.method??'';$('method').disabled=!current;
+  $('method').className='verb '+(values(current)?.method??'').toLowerCase();$('url').value=current?values(current).url:'';$('url').disabled=!current;
   $('auth').textContent=$('env').value+'　·　'+(env().logged?'인증됨':'로그인 필요');
-  $('repeatControl').hidden=current?.method!=='POST';range();requestPane();results();
+  $('repeatControl').hidden=values(current)?.method!=='POST';range();requestPane();results();
 }
 function sendRequest(r,n,input=r){
   if(!r||n<1n)return;
@@ -377,7 +445,7 @@ function sendRequest(r,n,input=r){
   let ok=false;try{ok=new URL(expanded).origin===env().api&&!expanded.includes('${')}catch{}
   if(!ok){modal('요청 주소 확인');$('dialogBody').textContent='환경 변수와 토큰을 받을 API 주소를 확인하세요. 본 요청을 보내지 않았습니다.';return}
   // A change of environment never transfers the previous environment's login state.
-  env().logged=true;run={name:r.name,env:$('env').value,method:r.method,count:n,plain:r.method==='GET'&&new URL(expanded).pathname==='/health',start:r.index,indexed:indexUsed(r,input.body),example:false};
+  env().logged=true;run={name:r.name,env:$('env').value,method:input.method,count:n,plain:input.method==='GET'&&new URL(expanded).pathname==='/health',start:r.index,indexed:indexUsed(input,input.body),example:false};
   if(run.indexed)r.index+=run.count;
   selected=run.count;$('iteration').value=selected;$('iteration').setCustomValidity('');page=(selected-1n)/logPageSize;responseHeaders=false;draw();
 }
@@ -385,6 +453,11 @@ function drawer(show){$('drawer').hidden=!show;$('toggleLog').setAttribute('aria
 function showHome(home){
   $('home').hidden=!home;$('post').hidden=home;$('footer').hidden=home;$('postTab').classList.toggle('active',!home);$('homeTab').classList.toggle('active',home);window.scrollTo(0,0);
 }
+$('newRequest').onclick=()=>requestEditor(null,current?.folder??loose);
+$('method').onchange=e=>{
+  edit('method',e.target.value);$('repeat').checked=false;
+  requestTab=e.target.value==='GET'?1:0;draw();
+};
 $('env').onchange=draw;$('newGroup').onclick=()=>groupEditor();$('manage').onclick=manage;$('closeDialog').onclick=()=>$('dialog').close();
 $('saveEdits').onclick=()=>{Object.assign(current,drafts.get(current));drafts.delete(current);draw()};
 $('url').oninput=e=>{if(current)edit('url',e.target.value)};$('repeat').onchange=range;$('count').oninput=range;$('send').onclick=()=>sendRequest(current,count(),values(current));

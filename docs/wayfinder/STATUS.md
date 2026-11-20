@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 PostRail 시안에 요청 생성·수정, 그룹·요청 컨텍스트 메뉴, 메서드 선택과 표준 팝업의 하단 삭제 버튼을 반영했다. [설계와 시안](../design/postrail-workspace.md) · 제품 구현 전.
+
 2026-11-20 PostRail 요청·응답 JSON 본문의 타입별 구문 강조와 요청 변수 표시를 [작업 화면 시안](../design/postrail-workspace.md)에 반영했다. 제품 구현 전이다.
 
 2026-11-20 PostRail 후속 시안에 하단에서 펼치는 일반 텍스트 로그, Home 즐겨찾기 최대 5개와 공유 설정 관리 링크 스타일을 반영했다. [설계와 두 화면](../design/postrail-workspace.md) · 제품 구현 전.
