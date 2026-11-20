@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 **PostRail 최종 설계 승인 · 제품 구현 전.** 사용자가 최신 PostRail 작업 화면·환경별 인증·Home 즐겨찾기와 시안을 확정했다. 아래 기록은 협의 이력이다. [최종 설계](../design/postrail-workspace.md) · [승인 시안](../design/mockups/postrail-workspace.html)
+
 2026-11-20 PostRail 요청 메뉴에서 한 번에 같은 그룹에 복제하고 환경 변수 목록 아래에서 행을 추가하도록 [설계와 시안](../design/postrail-workspace.md)을 갱신했다. 목록 단축키는 유지한다. 제품 구현 전이다.
 
 2026-11-20 PostRail 저장 요청 메뉴·단축키 복사와 그룹 붙여넣기, 환경 변수 추가·삭제 아이콘을 [설계와 시안](../design/postrail-workspace.md)에 반영했다. 제품 구현 전이다.

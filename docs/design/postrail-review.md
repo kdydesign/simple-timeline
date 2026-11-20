@@ -2,6 +2,8 @@
 
 2026-11-20 · Wayfinder 상태와 승인 커밋을 대조했다. Q12는 첫 버전의 범위와 화면 배치에 대한 승인이다. 이번 검토에서는 세 가지 추가 동작을 합의하고, 기존 화면에서 확인하기 어려웠던 실행 상태를 별도 시안에 담았다. 제품 구현은 후속 단계다. [승인 커밋 868aa7c](https://github.com/kdydesign/simple-timeline/commit/868aa7c5198aae6794f7fe99e35b1a295e39d14b) · [첫 버전 설계](postrail.md) · [진행 상태](../wayfinder/STATUS.md)
 
+이 문서는 중간 재검토 기록이다. 후속 협의까지 반영한 구현 기준은 [PostRail 최종 승인 설계](postrail-workspace.md)다.
+
 ## 승인 범위를 확인한 결과
 
 | 승인 | 사용자에게 보이는 동작 |
