@@ -7,13 +7,13 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:206px minmax(0,1fr);
 .work{display:flex;flex-direction:column;min-height:0;min-width:0;gap:8px}.compose{flex:none;padding:10px 13px}.title{gap:6px;margin-bottom:8px}.title small{color:var(--muted)}.endpoint{gap:6px}.method{width:75px;flex:none;font:600 12px var(--mono)}.urlbox{height:30px;display:flex;align-items:center;flex:1;min-width:0;background:#20272d;border-radius:5px;padding:0 8px}.edit{font:13px/1.6 var(--mono);white-space:pre;overflow:auto;scrollbar-width:thin}.urlbox .edit{width:100%;scrollbar-width:none}.authbadge{white-space:nowrap;border:0;color:var(--blue);background:#364650;font-size:11px}.split{display:grid;flex:1;min-height:0;grid-template-rows:minmax(65px,var(--req,30fr)) 10px minmax(74px,var(--res,70fr))}.pane{display:flex;flex-direction:column;overflow:hidden}.bar{padding:8px 12px;border-bottom:1px solid #46515999;min-height:37px}.bar h2{margin-right:6px}.bar button,.textlink{border:0;background:transparent;color:var(--muted);padding:3px 7px;font-size:12px}.bar button.chosen,.tabs .chosen{color:#e2f1fa;background:#42525d;border-radius:4px}.meta{font:11px var(--mono);color:var(--muted)}.viewport{flex:1;min-height:0;min-width:0;overflow:auto;scrollbar-color:#606b73 #22292f;scrollbar-width:thin}.inside{padding:12px 14px}.handle{touch-action:none;display:grid;place-content:center;cursor:row-resize}.handle:after{content:"";width:38px;height:3px;background:#71818b;border-radius:2px}.handle:hover:after{background:var(--blue)}.mode{flex-wrap:wrap}.seg{display:inline-flex;padding:2px;border:1px solid #4e5b64;border-radius:7px;background:#23292e}.seg button{font-size:12px;border:0;background:transparent;padding:3px 9px;color:var(--muted)}.seg .chosen{background:#405664;color:white}.authinfo{margin-top:8px;font-size:12px;color:#b8c6ce}.code{font:13px/1.6 var(--mono);white-space:pre;tab-size:2;min-width:max-content;padding:12px 15px;color:#d7dfe5}.keytok{color:#a4cfee}.str{color:#a6d3b2}.num{color:#ecc195}.headeredit{min-height:46px}.small{font-size:11px}.hstatus{color:#b2dabc;font-weight:600}.responsebody{background:#22292ee0}.drawer{height:min(145px,22vh);flex:none;background:#23292e;border-top:1px solid var(--edge);padding:7px 14px;overflow:auto}.drawer pre{font:12px/1.7 var(--mono);white-space:pre;margin:6px 0}.drawer .err{font-weight:600}footer{height:39px;flex:none;padding:4px 14px;gap:10px;border-top:1px solid var(--edge);background:#2b3238;font-size:12px}footer button{border:0;background:transparent;font-size:12px;padding:3px 5px}footer button.chosen{color:var(--blue)}.dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:#9dcba8}
 dialog{padding:0;background:linear-gradient(138deg,#343c43,#282e34 65%);color:var(--ink);border:1px solid #61717b;border-radius:14px;box-shadow:0 18px 80px #0009;width:min(756px,94vw);max-height:90dvh;overflow:auto}dialog::backdrop{background:#10161ba8;backdrop-filter:blur(2px)}.dhead,.actions{display:flex;align-items:center;gap:8px;padding:14px 18px}.dhead{border-bottom:1px solid var(--edge)}.dhead h2{font-size:16px}.dhead button{font-size:17px;padding:0 5px}.actions{border-top:1px solid var(--edge)}.envgrid{display:grid;grid-template-columns:155px minmax(0,1fr)}.envlist{background:#232b30aa;border-right:1px solid var(--edge);padding:13px 8px}.envlist button{display:block;width:100%;text-align:left;margin-bottom:3px}.envlist .sel{border:1px solid #5b7485;background:#344957}.envlist .new{color:var(--blue);margin-bottom:10px}.envbody{padding:14px 18px;min-height:358px}.envbody label,.grpform label{display:block;font-size:12px;margin:6px 0 3px}.envbody input,.envbody textarea,.grpform input{width:100%;padding:5px 8px;background:#20272c}.envbody textarea{resize:vertical;font:12px var(--mono)}.tabs{display:flex;gap:8px;margin:13px 0 8px;border-bottom:1px solid var(--edge);padding-bottom:6px}.tabs button{border:0;background:transparent}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}.full{grid-column:1/-1}.varrow{display:grid;grid-template-columns:1fr 1.5fr auto;gap:6px;margin:6px 0}.varrow input{min-width:0}.session{margin-top:10px;display:flex;align-items:center;justify-content:space-between;color:#b7d2c2;font-size:12px}.tokenedit{background:#20272c;min-height:29px;padding:4px 7px;border:1px solid var(--edge);border-radius:5px}.danger{color:var(--rose)}#groupDialog{width:min(340px,90vw)}.grpform{padding:15px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
 [hidden]{display:none!important}@media(max-width:760px){main{grid-template-columns:150px minmax(0,1fr);gap:6px;padding:7px}.authbadge{max-width:84px;overflow:hidden}.envgrid{grid-template-columns:120px minmax(0,1fr)}.bar{gap:3px}.bar .meta{font-size:10px}}@media(max-width:540px){main{grid-template-columns:1fr;grid-template-rows:125px minmax(0,1fr)}header{padding:4px 6px}nav span{padding:3px;font-size:11px}.envgrid{display:block}.envlist{display:flex;overflow:auto}.envlist button{width:auto;white-space:nowrap}.formgrid{grid-template-columns:1fr}.envbody{min-height:0}.endpoint{flex-wrap:wrap}.compose{padding:5px}.split{min-height:160px}footer{gap:2px;font-size:10px}footer button{font-size:10px}.bar h2{font-size:12px}}
-[data-k="body"]{min-height:72px;max-height:120px}.verb{width:39px}.sideadd.chooser>button{width:auto;background:linear-gradient(170deg,#40647d,#2d4559);border-color:#739bb7}.responsebody::-webkit-scrollbar{width:9px;height:9px}.responsebody::-webkit-scrollbar-thumb{background:#62717b;border:2px solid #22292e;border-radius:5px}.param-grid{display:grid;grid-template-columns:36px minmax(70px,2fr) minmax(95px,3fr) 26px;gap:8px;align-items:center;font-size:11px;color:var(--muted);padding-bottom:3px}.param-grid button{padding:1px 4px}.param-row .edit{background:#242b30;border-radius:4px;padding:1px 6px;color:var(--ink);min-height:22px}.param-row input{justify-self:start;accent-color:#87b5d4}.param-row.excluded .edit{opacity:.55}.param-modes{display:flex;align-items:center;gap:5px;margin-bottom:5px}.param-modes button{padding:1px 8px;border:0;color:var(--muted);background:transparent}.param-modes .chosen{color:var(--blue);background:#364650}.path-grid{display:grid;grid-template-columns:1fr 2fr;gap:8px;padding:3px 0}.param-fields output{font:12px var(--mono)}#requestFields:has(.param-modes){padding-top:5px;padding-bottom:5px}.param-modes select,.part-grid select,.body-ct input,.part-grid input:not([type="checkbox"]){background:#283138;color:var(--ink);border:1px solid var(--edge);border-radius:5px;font:12px var(--mono);padding:2px 5px}.body-ct{display:flex;gap:6px;align-items:center;font:11px var(--mono);min-width:0}.body-ct input{width:min(41vw,290px)}.part-grid{display:grid;grid-template-columns:34px minmax(65px,1fr) 62px minmax(85px,1.3fr) minmax(75px,1fr) 24px;gap:7px;align-items:center;padding:2px 0}.part-grid>input{min-width:0}.part-grid button{font-size:11px;padding:2px 5px}.param-fields:has(.part-grid){min-width:420px}</style></head><body>
+[data-k="body"]{min-height:72px;max-height:120px}.verb{width:39px}.sideadd.chooser>button{width:auto;background:linear-gradient(170deg,#40647d,#2d4559);border-color:#739bb7}.responsebody::-webkit-scrollbar{width:9px;height:9px}.responsebody::-webkit-scrollbar-thumb{background:#62717b;border:2px solid #22292e;border-radius:5px}.param-grid{display:grid;grid-template-columns:36px minmax(70px,2fr) minmax(95px,3fr) 26px;gap:8px;align-items:center;font-size:11px;color:var(--muted);padding-bottom:3px}.param-grid button{padding:1px 4px}.param-row .edit{background:#242b30;border-radius:4px;padding:1px 6px;color:var(--ink);min-height:22px}.param-row input{justify-self:start;accent-color:#87b5d4}.param-row.excluded .edit{opacity:.55}.param-modes{display:flex;align-items:center;gap:5px;margin-bottom:5px}.param-modes button{padding:1px 8px;border:0;color:var(--muted);background:transparent}.param-modes .chosen{color:var(--blue);background:#364650}.path-grid{display:grid;grid-template-columns:1fr 2fr;gap:8px;padding:3px 0}.param-fields output{font:12px var(--mono)}#requestFields:has(.param-modes){padding-top:5px;padding-bottom:5px}.param-modes select,.part-grid select,.body-ct input,.part-grid input:not([type="checkbox"]){background:#283138;color:var(--ink);border:1px solid var(--edge);border-radius:5px;font:12px var(--mono);padding:2px 5px}.body-ct{display:flex;gap:6px;align-items:center;font:11px var(--mono);min-width:0}.body-ct input{width:min(41vw,290px)}.part-grid{display:grid;grid-template-columns:34px minmax(65px,1fr) 62px minmax(85px,1.3fr) minmax(75px,1fr) 24px;gap:7px;align-items:center;padding:2px 0}.part-grid>input{min-width:0}.part-grid button{font-size:11px;padding:2px 5px}.param-fields:has(.part-grid){min-width:420px}.sideadd{display:flex;align-items:center;gap:5px}.sideadd input{width:0;flex:1;min-width:0;padding:3px 6px;font-size:12px;height:26px}.sideadd .pop{left:auto;right:0}.title h1,.title small{font-size:12px}.title h1{font-weight:700}.title .authbadge{font-size:10px;padding:1px 6px}.body-tools{display:flex;align-items:center;gap:5px;height:25px;padding:1px 10px;border-bottom:1px solid #46515970}.body-tools button{display:inline-flex;align-items:center;justify-content:center;height:21px;padding:0 5px;font-size:11px;border:0;background:transparent;color:var(--muted)}.body-tools input{margin-left:auto;min-width:0;width:135px;height:20px;padding:0 5px;font-size:11px}.body-tools small{font-size:10px;color:var(--muted)}#response::highlight(hits){color:#171d20;background:#e9ba6b}#response::highlight(current-hit){color:#101519;background:#a1dbfa}.raw-headers{width:100%;min-height:52px;white-space:pre;overflow:auto;resize:vertical;padding:4px 7px;font:12px var(--mono)}</style></head><body>
 <header><div class="top"><b class="brand">≋</b> WorkRail <span class="fill"></span><span class="chrome">─ □ ×</span></div><nav><span>⌂ Home</span><span>☷ PlanRail</span><span>⬡ NodeRail</span><span>›_ TermRail</span><span class="active-nav">⇄ PostRail</span></nav></header>
-<main><aside class="surface"><label class="envlabel">환경</label><div class="chooser"><button id="environment" aria-label="실행 환경 선택"></button><div class="pop" id="envpop" hidden></div></div><div class="sideadd chooser"><button class="primary" id="add" aria-label="추가 메뉴">＋ ▾</button><div class="pop" id="addpop" hidden><button id="newRequest">요청 추가</button><button id="newGroup">그룹 추가</button></div></div><div id="tree"></div></aside>
-<div class="work"><div class="compose surface"><div class="title"><small id="crumb"></small><h1 id="rname"></h1></div><div class="endpoint"><div class="chooser method"><button id="meth"></button><div id="mpop" class="pop" hidden></div></div><div class="urlbox"><div id="url" class="edit" role="textbox" aria-label="요청 URL" contenteditable="plaintext-only" spellcheck="false"></div></div><button class="authbadge" id="badge"></button><button class="primary" id="send">보내기</button></div></div>
+<main><aside class="surface"><label class="envlabel">환경</label><div class="chooser"><button id="environment" aria-label="실행 환경 선택"></button><div class="pop" id="envpop" hidden></div></div><div class="sideadd chooser"><input type="search" id="libraryFilter" aria-label="요청 이름 검색" placeholder="요청 이름 검색"><button class="primary" id="add" aria-label="추가 메뉴">＋ ▾</button><div class="pop" id="addpop" hidden><button id="newRequest">요청 추가</button><button id="newGroup">그룹 추가</button></div></div><div id="tree"></div></aside>
+<div class="work"><div class="compose surface"><div class="title"><small id="crumb"></small><h1 id="rname"></h1><button class="authbadge" id="badge"></button></div><div class="endpoint"><div class="chooser method"><button id="meth"></button><div id="mpop" class="pop" hidden></div></div><div class="urlbox"><div id="url" class="edit" role="textbox" aria-label="요청 URL" contenteditable="plaintext-only" spellcheck="false"></div></div><button class="primary" id="send">보내기</button></div></div>
 <div class="split" id="split"><section class="surface pane"><div class="bar"><h2>요청</h2><button data-rt="파라미터">파라미터</button><button data-rt="본문">본문</button><button data-rt="헤더">헤더</button><button data-rt="인증">인증</button></div><div class="viewport inside" id="requestFields"></div></section>
 <div class="handle" role="separator" aria-label="요청과 응답 크기 조절" aria-orientation="horizontal" tabindex="0" id="handle"></div>
-<section class="surface pane"><div class="bar"><h2>응답</h2><button id="bodyTab" class="chosen">본문</button><button id="headersTab">헤더</button><span class="fill"></span><span class="hstatus" id="status"></span><span class="meta">1회차 · 128ms</span></div><div class="viewport responsebody"><pre class="code" id="response"></pre></div></section></div></div></main>
+<section class="surface pane"><div class="bar"><h2>응답</h2><button id="bodyTab" class="chosen">본문</button><button id="headersTab">헤더</button><span class="fill"></span><span class="hstatus" id="status"></span><span class="meta">1회차 · 128ms</span></div><div id="bodyTools" class="body-tools"><button id="formatBody" title="원문 보기">원문</button><button id="copyBody" aria-label="응답 본문 복사" title="응답 본문 복사"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M10 4V2H2v8h2"/></svg></button><small role="status" id="copyFeedback"></small><input type="search" aria-label="응답 본문 검색" placeholder="본문 검색" id="bodySearch"><small id="hitCount" role="status"></small></div><div class="viewport responsebody"><pre class="code" id="response"></pre></div></section></div></div></main>
 <section class="drawer" id="drawer" hidden><h3 id="dtitle"></h3><pre id="log"></pre></section><footer><i class="dot" id="dot"></i><span id="summary">실행 대기</span><span class="fill"></span><button data-d="console">›_ console</button><button data-d="회차별 결과">⌃ 회차별 결과</button><button id="manage">⚙ 환경 관리</button></footer>
 <dialog id="envDialog"><div class="dhead"><h2>환경 관리</h2><span class="fill"></span><button class="flat" aria-label="닫기" data-close>×</button></div><div class="envgrid"><div class="envlist" id="envlist"></div><div class="envbody"><label for="ename">환경 이름</label><input id="ename"><div class="tabs"><button id="vt">변수</button><button id="lt">로그인 설정</button></div><div id="envfields"></div></div></div><div class="actions"><button class="flat danger" id="deleteEnv">환경 삭제</button><span class="fill"></span><button data-close>닫기</button><button id="saveEnv" class="primary">저장</button></div></dialog>
 <dialog id="groupDialog"><div class="dhead"><h2 id="formtitle">그룹 추가</h2><span class="fill"></span><button class="flat" data-close aria-label="닫기">×</button></div><div class="grpform"><label id="formlabel" for="gname">그룹 이름</label><input id="gname" autocomplete="off"></div><div class="actions"><span class="fill"></span><button data-close>닫기</button><button class="primary" id="gok">저장</button></div></dialog>
@@ -44,8 +44,14 @@ function editor(el,value,cb){el.innerHTML=vars(value);el.oninput=e=>{if(!e.isCom
 function pop(id){let open=$(id).hidden;$$('.pop').forEach(p=>p.hidden=true);$(id).hidden=!open}
 function method(){let r=reqs[idx];$('#meth').className=r.m;$('#meth').innerHTML=r.m+' <span class="chev">⌄</span>';$('#mpop').innerHTML=['GET','POST','DELETE'].map(m=>'<button class="'+m+'">'+m+'</button>').join('');$$('#mpop button').forEach(b=>b.onclick=()=>{r.m=b.textContent;rt=r.m==='GET'?'헤더':'본문';refresh()})}
 function envChooser(){$('#environment').innerHTML=esc(envs[curr]?.name??'환경 없음')+' <span class="chev">⌄</span>';$('#envpop').innerHTML=envs.map((e,i)=>'<button data-i="'+i+'">'+esc(e.name)+'</button>').join('');$$('#envpop button').forEach(b=>b.onclick=()=>{curr=+b.dataset.i;refresh()})}
-function tree(){$('#tree').innerHTML=gid.map(g=>'<div class="group" data-g="'+esc(g)+'"><button class="gname flat">'+(closed.has(g)?'▸':'▾')+'　'+esc(g)+'</button>'+(closed.has(g)?'':reqs.map((r,i)=>r.g===g?'<div class="item '+(idx===i?'sel':'')+'" data-i="'+i+'" draggable="true"><span class="verb '+r.m+'">'+r.m+'</span><button class="pick flat">'+esc(r.name)+'</button><button class="star '+(r.fav?'on':'')+'" aria-label="즐겨찾기" aria-pressed="'+r.fav+'">'+(r.fav?'★':'☆')+'</button></div>':'').join(''))+'</div>').join('');
-$$('.group').forEach(n=>{let g=n.dataset.g;n.querySelector('.gname').onclick=()=>{if(closed.has(g))closed.delete(g);else closed.add(g);tree()};n.ondragover=e=>{if(dragid!==null){e.preventDefault();n.classList.add('over')}};n.ondragleave=()=>n.classList.remove('over');n.ondrop=e=>{e.preventDefault();if(dragid!==null){reqs[dragid].g=g;dragid=null;closed.delete(g);refresh()}}});$$('.item').forEach(n=>{let i=+n.dataset.i;n.ondragstart=e=>{dragid=i;e.dataTransfer.setData('text/plain',String(i))};n.ondragend=()=>{dragid=null;$$('.over').forEach(n=>n.classList.remove('over'))};n.querySelector('.pick').onclick=()=>{idx=i;refresh()};n.querySelector('.star').onclick=()=>{reqs[i].fav=!reqs[i].fav;tree()}})}
+$('#libraryFilter').oninput=tree;
+function tree(){
+const needle=$('#libraryFilter').value.toLowerCase();
+const matches=r=>r.name.toLowerCase().includes(needle);
+const groups=needle?gid.filter(g=>reqs.some(r=>r.g===g&&matches(r))):gid;
+const folded=g=>!needle&&closed.has(g);
+$('#tree').innerHTML=groups.map(g=>'<div class="group" data-g="'+esc(g)+'"><button class="gname flat">'+(folded(g)?'▸':'▾')+'　'+esc(g)+'</button>'+(folded(g)?'':reqs.map((r,i)=>r.g===g&&matches(r)?'<div class="item '+(idx===i?'sel':'')+'" data-i="'+i+'" draggable="true"><span class="verb '+r.m+'">'+r.m+'</span><button class="pick flat">'+esc(r.name)+'</button><button class="star '+(r.fav?'on':'')+'" aria-label="즐겨찾기" aria-pressed="'+r.fav+'">'+(r.fav?'★':'☆')+'</button></div>':'').join(''))+'</div>').join('') || '<small>일치하는 요청이 없습니다.</small>';
+$$('.group').forEach(n=>{let g=n.dataset.g;n.querySelector('.gname').onclick=()=>{if(needle)return;if(closed.has(g))closed.delete(g);else closed.add(g);tree()};n.ondragover=e=>{if(dragid!==null){e.preventDefault();n.classList.add('over')}};n.ondragleave=()=>n.classList.remove('over');n.ondrop=e=>{e.preventDefault();if(dragid!==null){reqs[dragid].g=g;dragid=null;closed.delete(g);refresh()}}});$$('.item').forEach(n=>{let i=+n.dataset.i;n.ondragstart=e=>{dragid=i;e.dataTransfer.setData('text/plain',String(i))};n.ondragend=()=>{dragid=null;$$('.over').forEach(n=>n.classList.remove('over'))};n.querySelector('.pick').onclick=()=>{idx=i;refresh()};n.querySelector('.star').onclick=()=>{reqs[i].fav=!reqs[i].fav;tree()}})}
 function readQuery(url) {
   const raw = url.split('?').slice(1).join('?');
   if (!raw) return [];
@@ -263,13 +269,146 @@ function formTab(el, request) {
   }
 }
 
-function requestFields(){let r=reqs[idx],el=$('#requestFields');$$('[data-rt]').forEach(b=>{b.classList.toggle('chosen',rt===b.dataset.rt);b.disabled=r.m==='GET'&&b.dataset.rt==='본문'});$('#badge').textContent=r.auth?'환경 로그인':'인증 없음';
+function headerList(raw) {
+  const rows = [], names = new Set();
+  for (const [i, line] of raw.split(/\r?\n/).entries()) {
+    if (!line.trim()) continue;
+    const colon = line.indexOf(':');
+    const key = line.slice(0, colon).trim();
+    if (colon < 1 || !/^[!#$%&'*+.^_`|~\w-]+$/.test(key) || names.has(key.toLowerCase())) {
+      return {error:(i + 1) + '행의 헤더 이름·콜론 또는 중복 이름을 확인하세요.'};
+    }
+    names.add(key.toLowerCase());
+    rows.push({key, value:line.slice(colon + 1).trim(), enabled:true});
+  }
+  return {rows};
+}
+
+function headerEditor(el, r) {
+  const raw = r.headerMode === 'raw';
+  el.innerHTML = '<div class="param-modes"><button id="headerTable">Key / Value</button><button id="headerRaw">raw</button><small role="status" class="err" id="headerError"></small></div><div id="headerInputs"></div>';
+  const inputs = $('#headerInputs'), error = $('#headerError');
+  const parse = () => {
+    const result = headerList(r.head);
+    error.textContent = result.error || '';
+    return result;
+  };
+  $('#headerTable').classList.toggle('chosen', !raw);
+  $('#headerRaw').classList.toggle('chosen', raw);
+  $('#headerTable').onclick = () => {
+    if (raw && parse().rows) { r.headerMode = 'table'; headerEditor(el, r); }
+  };
+  $('#headerRaw').onclick = () => {r.headerMode = 'raw'; headerEditor(el, r)};
+  if (raw) {
+    inputs.innerHTML = '<div class="edit raw-headers" contenteditable="plaintext-only" role="textbox" aria-multiline="true" aria-label="raw 요청 헤더" spellcheck="false"></div>';
+    const field = inputs.firstChild;
+    editor(field,r.head,value => {r.head = value;parse()});
+    parse();
+    return;
+  }
+  const parsed = parse();
+  if (!parsed.rows) {r.headerMode = 'raw'; headerEditor(el, r); return}
+  const rows = parsed.rows;
+  for (const {index, row} of r.parkedHeaders || []) rows.splice(Math.min(index,rows.length),0,row);
+  function sync() {
+    r.head = rows.filter(row => row.enabled && (row.key || row.value)).map(row => row.key + ': ' + row.value).join('\n');
+    r.parkedHeaders = rows.flatMap((row,index) => row.enabled ? [] : [{index,row}]);
+    parse();
+  }
+  function draw() {
+    inputs.innerHTML = '<div class="param-grid"><span>사용</span><span>Key</span><span>Value</span><button aria-label="헤더 추가">＋</button></div>';
+    inputs.querySelector('button').onclick = () => {
+      rows.push({key:'',value:'',enabled:true});draw();
+      inputs.lastElementChild.querySelector('[data-field="key"]').focus();
+    };
+    for (const [index,row] of rows.entries()) {
+      const line = document.createElement('div');
+      line.className = 'param-grid param-row';
+      line.innerHTML = '<input type="checkbox" aria-label="헤더 사용"><div class="edit" role="textbox" aria-label="헤더 Key" data-field="key" contenteditable="plaintext-only"></div><div class="edit" role="textbox" aria-label="헤더 Value" data-field="value" contenteditable="plaintext-only"></div><button aria-label="헤더 삭제">×</button>';
+      const check = line.firstChild;
+      check.checked = row.enabled;
+      line.classList.toggle('excluded',!row.enabled);
+      check.onchange = () => {row.enabled = check.checked;line.classList.toggle('excluded',!row.enabled);sync()};
+      for (const field of line.querySelectorAll('[data-field]')) {
+        const key = field.dataset.field;
+        editor(field,row[key],value => {row[key] = value;sync()});
+        field.onkeydown = event => {if (event.key === 'Enter') event.preventDefault()};
+      }
+      line.lastChild.onclick = () => {rows.splice(index,1);sync();draw()};
+      inputs.append(line);
+    }
+  }
+  draw();
+}
+
+function requestFields(){let r=reqs[idx],el=$('#requestFields');$$('[data-rt]').forEach(b=>{b.classList.toggle('chosen',rt===b.dataset.rt);b.disabled=r.m==='GET'&&b.dataset.rt==='본문'});$('#badge').textContent=r.auth?'환경 로그인 사용':'인증 없음';
 if(rt==='파라미터'){paramsTab(el,r);return}
 if(rt==='본문'){formTab(el,r);return}
 if(rt==='인증'){el.innerHTML='<div class="mode"><span>이 요청의 인증</span><div class="seg"><button id="off">인증 없음</button><button id="on">환경 로그인 사용</button></div></div><p class="authinfo">'+(r.auth?esc(envs[curr]?.name??'환경 없음')+' · 유효한 토큰을 재사용합니다.':'환경 토큰을 보내지 않습니다. 직접 입력한 요청 헤더는 전송됩니다.')+'</p>';['on','off'].forEach(k=>{let b=$('#'+k);b.classList.toggle('chosen',r.auth===(k==='on'));b.onclick=()=>{r.auth=k==='on';requestFields()}})}
-else {el.innerHTML='<div class="edit headeredit" contenteditable="plaintext-only" spellcheck="false" role="textbox"></div>';const key=rt==='헤더'?'head':'body';editor(el.firstChild,r[key],v=>r[key]=v)}}
+else headerEditor(el,r);}
 function refresh(){$$('.pop').forEach(n=>n.hidden=true);envChooser();method();tree();const r=reqs[idx];if(r.m==='GET'&&rt==='본문')rt='헤더';$('#crumb').textContent=r.g+' /';$('#rname').textContent=r.name;editor($('#url'),r.url,v=>{setQueryUrl(r,v);if(rt==='파라미터')paramsTab($('#requestFields'),r)});requestFields()}
-function result(){const el=$('#response');$('#status').nextElementSibling.hidden=payload===null;if(payload===null){$('#status').textContent='';el.textContent='표시할 응답이 없습니다.';return}$('#status').textContent=resok?'200 OK':'401 Unauthorized';$('#status').style.color=resok?'var(--green)':'var(--rose)';el.innerHTML=format==='body'?color(JSON.stringify(payload,null,2)):'content-type: application/json';$('#bodyTab').classList.toggle('chosen',format==='body');$('#headersTab').classList.toggle('chosen',format!=='body')}
+let prettyBody = true, activeHit = 0, previousPayload;
+function shownBody() {
+  return payload === null ? '' : JSON.stringify(payload,null,prettyBody ? 2 : undefined);
+}
+function findInBody(move = 0) {
+  const body = $('#response'), term = $('#bodySearch').value;
+  const marks = CSS.highlights;
+  marks.delete('hits');marks.delete('current-hit');
+  const hits = [];
+  if (format === 'body' && payload !== null && term) {
+    const rx = new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'giu');
+    const nodes = [], walker = document.createTreeWalker(body,NodeFilter.SHOW_TEXT);
+    let n, length = 0;
+    while ((n = walker.nextNode())) {nodes.push({n,start:length});length += n.length}
+    let first = 0, last = 0;
+    for (const match of body.textContent.matchAll(rx)) {
+      const from = match.index, to = from + match[0].length;
+      while (first+1 < nodes.length && nodes[first+1].start <= from) first++;
+      last = Math.max(last,first);
+      while (last+1 < nodes.length && nodes[last+1].start < to) last++;
+      const range = new Range();
+      range.setStart(nodes[first].n,from-nodes[first].start);
+      range.setEnd(nodes[last].n,to-nodes[last].start);
+      hits.push(range);
+    }
+  }
+  activeHit = hits.length ? (Math.min(activeHit,hits.length-1)+move+hits.length)%hits.length : 0;
+  $('#hitCount').textContent = term ? (hits.length ? (activeHit+1)+'/'+hits.length : '0건') : '';
+  if (hits.length) {
+    const highlight = new Highlight();
+    for (const range of hits) highlight.add(range);
+    marks.set('hits',highlight);
+    const current = new Highlight(hits[activeHit]);current.priority=1;
+    marks.set('current-hit',current);
+    const pane = body.parentElement, bounds = pane.getBoundingClientRect(), match = hits[activeHit].getBoundingClientRect();
+    if (match.top<bounds.top || match.bottom>bounds.bottom) pane.scrollTop += match.top-bounds.top-5;
+    if (match.left<bounds.left || match.right>bounds.right) pane.scrollLeft += match.left-bounds.left-5;
+  }
+}
+function result() {
+  $('#copyFeedback').textContent = '';
+  if (previousPayload !== payload) {prettyBody = true;activeHit=0;previousPayload=payload}
+  $('#bodyTools').hidden = format !== 'body';
+  $('#bodyTab').classList.toggle('chosen',format==='body');
+  $('#headersTab').classList.toggle('chosen',format!=='body');
+  $('#status').nextElementSibling.hidden = payload === null;
+  $('#formatBody').disabled = $('#copyBody').disabled = $('#bodySearch').disabled = payload === null;
+  $('#formatBody').textContent = prettyBody ? '원문' : '정렬';
+  $('#formatBody').title = prettyBody ? '원문 보기' : 'JSON 두 칸 들여쓰기';
+  $('#status').textContent = payload === null ? '' : resok ? '200 OK' : '401 Unauthorized';
+  $('#status').style.color = resok ? 'var(--green)' : 'var(--rose)';
+  $('#response').innerHTML = payload === null ? '표시할 응답이 없습니다.' : format === 'body' ? color(shownBody()) : 'content-type: application/json';
+  findInBody();
+}
+$('#formatBody').onclick = () => {prettyBody = !prettyBody;result()};
+$('#bodySearch').oninput = () => {activeHit=0;findInBody()};
+$('#bodySearch').onkeydown = e => {if(e.key==='Enter'){e.preventDefault();findInBody(e.shiftKey ? -1 : 1)}};
+$('#copyBody').onclick = async () => {
+  try {await navigator.clipboard.writeText(shownBody());$('#copyFeedback').textContent='복사됨'}
+  catch {$('#copyFeedback').textContent='클립보드를 사용할 수 없습니다.'}
+};
+
 function logDraw() {
   const panel = $('#drawer');
   const follow = panel.hidden || panel.scrollHeight - panel.clientHeight - panel.scrollTop <= 3;
@@ -289,6 +428,8 @@ function logDraw() {
   }
 }
 function previewIssue(r) {
+  const invalid = headerList(r.head).error;
+  if (invalid) return invalid;
   const missing = pathNames(r).find(name => !r.pathValues?.[name]);
   if (missing) return ':' + missing + ' 경로 값을 입력하세요.';
   if (r.m !== 'POST') return '';
@@ -311,7 +452,7 @@ function exampleResponse(r) {
   return {id:1,title:'예시 상품'};
 }
 
-$('#send').onclick=()=>{let r=reqs[idx],env=envs[curr];if(!env)return;const issue=previewIssue(r);if(issue){$('#summary').textContent=issue;return}let need=r.url.split('?')[0].endsWith('/auth/me');resok=!need||r.auth;let time=new Date().toLocaleTimeString('en-GB');appendLog(time,'INFO',env.name+' · '+r.name+' · '+(r.auth?'환경 로그인 사용':'인증 없음'));if(r.auth){if(!env.hasToken)appendLog(time,'INFO','로그인 시작');appendLog(time,'INFO',env.hasToken?'기존 토큰 재사용':'로그인 성공 · 토큰 발급');env.hasToken=true}appendLog(time,resok?'INFO':'ERROR',r.m+' · '+(resok?'HTTP 200 · 128ms':'HTTP 401 · 인증 없이 전송'));payload=resok?(need?sample:exampleResponse(r)):{message:'Access Token is required'};$('#summary').textContent=resok?'실행 완료 · 1 / 1회':'실행 완료 · 실패 1건';$('#dot').style.background=resok?'var(--green)':'var(--rose)';result();logDraw()};
+$('#send').onclick=()=>{let r=reqs[idx],env=envs[curr];if(!env)return;const issue=previewIssue(r);if(issue){$('#summary').textContent=issue;return}let need=r.url.split('?')[0].endsWith('/auth/me');resok=!need||r.auth;let time=new Date().toLocaleTimeString('en-GB');appendLog(time,'INFO',env.name+' · '+r.name+' · '+(r.auth?'환경 로그인 사용':'인증 없음'));if(r.auth){if(!env.hasToken)appendLog(time,'INFO','로그인 시작');appendLog(time,'INFO',env.hasToken?'기존 토큰 재사용':'로그인 성공 · 토큰 발급');env.hasToken=true}appendLog(time,resok?'INFO':'ERROR',r.m+' · '+(resok?'HTTP 200 · 128ms':'HTTP 401 · 인증 없이 전송'));previousPayload=undefined;payload=resok?(need?sample:exampleResponse(r)):{message:'Access Token is required'};$('#summary').textContent=resok?'실행 완료 · 1 / 1회':'실행 완료 · 실패 1건';$('#dot').style.background=resok?'var(--green)':'var(--rose)';result();logDraw()};
 $('#bodyTab').onclick=()=>{format='body';result()};$('#headersTab').onclick=()=>{format='headers';result()};$$('[data-d]').forEach(b=>b.onclick=()=>{drawer=drawer===b.dataset.d?'':b.dataset.d;logDraw()});$$('[data-rt]').forEach(b=>b.onclick=()=>{rt=b.dataset.rt;requestFields()});$('#badge').onclick=()=>{rt='인증';requestFields()};$('#environment').onclick=()=>pop('#envpop');$('#meth').onclick=()=>pop('#mpop');$('#add').onclick=()=>pop('#addpop');document.addEventListener('click',e=>{if(!e.target.closest('.chooser'))$$('.pop').forEach(p=>p.hidden=true)});
 function ratio(n){pct=Math.max(16,Math.min(80,n));$('#split').style.setProperty('--req',pct+'fr');$('#split').style.setProperty('--res',(100-pct)+'fr');$('#handle').setAttribute('aria-valuenow',Math.round(pct))}const h=$('#handle');h.onpointerdown=e=>{h.setPointerCapture(e.pointerId)};h.onpointermove=e=>{if(h.hasPointerCapture(e.pointerId)){let b=$('#split').getBoundingClientRect();ratio(100*(e.clientY-b.top)/b.height)}};h.onkeydown=e=>{if(['ArrowUp','ArrowDown','Home'].includes(e.key)){e.preventDefault();ratio(e.key==='Home'?30:pct+(e.key==='ArrowUp'?-3:3))}};h.ondblclick=()=>ratio(30);
 function formOpen(isGroup){groupMode=isGroup;$('#addpop').hidden=true;$('#formtitle').textContent=isGroup?'그룹 추가':'요청 추가';$('#formlabel').textContent=isGroup?'그룹 이름':'요청 이름';$('#gname').value='';$('#groupDialog').showModal();$('#gname').focus()}$('#newGroup').onclick=()=>formOpen(true);$('#newRequest').onclick=()=>formOpen(false);$('#gok').onclick=()=>{let v=$('#gname').value.trim();if(!v)return;if(groupMode){if(!gid.includes(v))gid.splice(gid.length-1,0,v)}else{reqs.push(row(v,'GET','/','미분류'));idx=reqs.length-1;rt='인증'}$('#groupDialog').close();refresh()};$('#gname').onkeydown=e=>{if(e.key==='Enter')$('#gok').click()};
@@ -322,5 +463,5 @@ if(evtab==='vars'){f.innerHTML='<div class="varrow muted"><span>이름</span><sp
 else {const field=(k,label,wide=false)=>'<div class="'+(wide?'full':'')+'"><label>'+label+'</label><div class="tokenedit edit" role="textbox" aria-label="'+label+'" contenteditable="plaintext-only" data-k="'+k+'"></div></div>';
 f.innerHTML='<h3>로그인 요청</h3><div class="formgrid">'+field('login','로그인 URL',true)+field('body','로그인 본문 · JSON',true)+'<div class="full"><label>비밀번호</label><input type="password" aria-label="비밀번호" placeholder="이번 세션에 사용할 값"><label><input type="checkbox" style="width:auto"> 이 PC에 저장</label></div></div><h3 style="margin-top:12px">발급 토큰 사용</h3><div class="formgrid">'+field('path','응답의 토큰 경로')+field('api','토큰을 받을 API 주소')+'</div><details style="margin-top:8px"><summary>고급 헤더 설정</summary><div class="formgrid">'+field('header','토큰 헤더')+field('prefix','토큰 접두어')+field('loginHeaders','로그인 헤더 · JSON',true)+'</div></details><div class="session"><span>'+(e.hasToken?'● 사용 가능한 토큰':'저장된 토큰 없음')+'</span>'+(e.hasToken?'<button class="textlink" id="clearToken">저장된 토큰 비우기</button>':'')+'</div>';$$('[data-k]').forEach(n=>editor(n,e[n.dataset.k],v=>e[n.dataset.k]=v));if($('#clearToken'))$('#clearToken').onclick=()=>{if(confirm('‘'+e.name+'’의 저장된 토큰을 비울까요? 다음 인증 요청에서 다시 로그인합니다.')){const live=envs.find(v=>v.id===e.id);if(live)live.hasToken=false;e.hasToken=false;renderEnv()}}}}
 $('#vt').onclick=()=>{evtab='vars';renderEnv()};$('#lt').onclick=()=>{evtab='login';renderEnv()};$('#manage').onclick=()=>envOpen('vars');$('#deleteEnv').onclick=()=>{if(confirm('이 환경을 삭제할까요?')){draft.splice(editing,1);editing=Math.max(0,Math.min(editing,draft.length-1));renderEnv()}};$('#saveEnv').onclick=()=>{if(draft.some(e=>!e.name.trim()))return;const activeId=envs[curr]?.id;envs=draft;curr=Math.max(0,envs.findIndex(e=>e.id===activeId));$('#envDialog').close();refresh()};$$('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
-document.addEventListener('keydown',e=>{if(e.key==='Tab')document.body.classList.add('key');if(e.key==='Escape'&&!document.querySelector('dialog[open]')){drawer='';logDraw();$$('.pop').forEach(p=>p.hidden=true)}});document.addEventListener('pointerdown',()=>document.body.classList.remove('key'));ratio(30);refresh();result();logDraw();if(location.hash==='#params'){idx=reqs.findIndex(r=>r.name==='상품 검색');rt='파라미터';refresh()}if(location.hash==='#path'){idx=reqs.indexOf(pathExample);rt='파라미터';pathExample.paramTab='path';refresh()}if(location.hash==='#form'){idx=reqs.indexOf(formExample);rt='본문';refresh()}if(location.hash==='#multipart'){idx=reqs.indexOf(formExample);formExample.bodyType='multipart';rt='본문';refresh()}if(location.hash==='#login')envOpen('login');if(location.hash==='#variables')envOpen('vars');if(location.hash==='#group')formOpen(true);
+document.addEventListener('keydown',e=>{if(e.key==='Tab')document.body.classList.add('key');if(e.key==='Escape'&&!document.querySelector('dialog[open]')){drawer='';logDraw();$$('.pop').forEach(p=>p.hidden=true)}});document.addEventListener('pointerdown',()=>document.body.classList.remove('key'));ratio(30);refresh();result();logDraw();if(location.hash==='#headers'){rt='헤더';refresh();$('#send').click()}if(location.hash==='#params'){idx=reqs.findIndex(r=>r.name==='상품 검색');rt='파라미터';refresh()}if(location.hash==='#path'){idx=reqs.indexOf(pathExample);rt='파라미터';pathExample.paramTab='path';refresh()}if(location.hash==='#form'){idx=reqs.indexOf(formExample);rt='본문';refresh()}if(location.hash==='#multipart'){idx=reqs.indexOf(formExample);formExample.bodyType='multipart';rt='본문';refresh()}if(location.hash==='#login')envOpen('login');if(location.hash==='#variables')envOpen('vars');if(location.hash==='#group')formOpen(true);
 </script></body></html>
