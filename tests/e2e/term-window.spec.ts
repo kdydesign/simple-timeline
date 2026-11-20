@@ -38,5 +38,6 @@ test('a detached terminal is a sandboxed local surface and follows the main wind
   })
   expect(result).toEqual({ blocked: true, hidden: true, restored: true, sandbox: true, contextIsolation: true })
   await expect.poll(() => page.evaluate(() => document.body.dataset.termWindowReturned)).toBe('true')
-  expect(await popup.evaluate(child => child.closed)).toBe(true)
+  // The opener can observe pagehide before Chromium marks its WindowProxy closed.
+  await expect.poll(() => popup.evaluate(child => child.closed)).toBe(true)
 })
