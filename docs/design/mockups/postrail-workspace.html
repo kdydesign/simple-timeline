@@ -111,11 +111,16 @@ body:has(#post:not([hidden])){height:100dvh}
 #contextMenu{position:fixed;z-index:20;min-width:125px;padding:3px;max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:5px;background:#2b2e31;box-shadow:0 8px 24px #0005}
 #contextMenu button{display:block;width:100%;padding:4px 7px;font-size:12px;text-align:left;background:none;border:0}
 #contextMenu button:hover,#contextMenu button:focus{background:#b4c8dc26}
+#copyStatus:not(:empty){display:block;margin-top:8px;padding-top:6px;border-top:1px solid var(--line);overflow-wrap:anywhere}
+#dialog .variable-icon{width:30px;height:30px;min-height:30px;padding:0;display:inline-grid;place-items:center}
+.variable-icon svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#dialog .varrow{grid-template-columns:minmax(0,1fr) minmax(0,1.3fr) 30px;align-items:center}
+#contextMenu kbd{float:right;color:var(--sub);font:11px/1.7 var(--mono);margin-left:14px}
 </style>
 <header><div class="brand"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUiPgogIDx0aXRsZSBpZD0idGl0bGUiPldvcmtSYWlsPC90aXRsZT4KICA8ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImluayIgeDI9Ii42NSIgeTI9IjEiPjxzdG9wIHN0b3AtY29sb3I9IiMyYjQzNTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxNTI3MzIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHJ4PSIyIiBmaWxsPSIjNTI2Yjc5Ii8+CiAgPHJlY3QgeD0iLjQiIHk9Ii40IiB3aWR0aD0iMTUuMiIgaGVpZ2h0PSIxNS4yIiByeD0iMS42IiBmaWxsPSJ1cmwoI2luaykiLz4KICA8cGF0aCBmaWxsPSIjZjJmN2ZhIiBkPSJNMSA0aDhMNi42IDdIMXogTTEgOGg0LjVMMyAxMUgxeiIvPgogIDxwYXRoIGZpbGw9IiM5MWQxZjEiIGQ9Ik0zLjUgMTIuNSAxMC40IDRoMy4zbC02LjkgOC41eiBNOC4xNSAxMi41IDEyLjY1IDdoMi43bC00LjUgNS41eiIvPgo8L3N2Zz4K" alt="">WorkRail <span class="auto demo">디자인 시안 · 예시 데이터</span></div><nav aria-label="도구"><button id="homeTab"><span class="mark">⌂</span>Home</button><button disabled>PlanRail</button><button disabled>NodeRail</button><button disabled>TermRail</button><button id="postTab" class="active"><span class="mark">⇄</span>PostRail</button></nav></header>
 <main id="post">
 <aside><label for="env"><strong>환경</strong></label><select class="env" id="env"><option>개발 장비</option><option>QA 장비</option></select>
-<div class="row apart asidehead"><span id="addSlot"></span></div><div id="tree"></div></aside>
+<div class="row apart asidehead"><span id="addSlot"></span></div><div id="tree"></div><small id="copyStatus" role="status"></small></aside>
 <section class="workspace">
 <div class="panel compose"><div class="request-heading"><span class="pathline" id="crumb"></span><h1 id="reqName"></h1><button id="saveEdits" class="ghost" hidden>변경 저장</button></div><div class="endpoint"><div class="url"><select id="method" class="verb" aria-label="HTTP 메서드"><option>GET</option><option>POST</option><option>DELETE</option></select><input id="url" aria-label="요청 URL"></div><button class="primary send" id="send">보내기</button></div>
 <div class="tools"><label id="repeatControl"><input type="checkbox" id="repeat">반복 보내기</label><label id="countControl" hidden>횟수 <input type="text" inputmode="numeric" id="count" value="10"></label><span id="range"></span></div></div>
@@ -271,8 +276,11 @@ function menuButton(label,entries,classes='more',symbol='…'){
     event.preventDefault();
     if(!menu.hidden&&menuAnchor===trigger){dismissMenu(true);return}
     dismissMenu();menuAnchor=trigger;
-    menu.replaceChildren(...entries.map(([title,action])=>{
-      const opt=button(title,()=>{dismissMenu(true);action()});opt.setAttribute('role','menuitem');return opt;
+    const options=typeof entries==='function'?entries():entries;
+    menu.replaceChildren(...options.map(([title,action,shortcut])=>{
+      const opt=button(title,()=>{dismissMenu(true);action()});opt.setAttribute('role','menuitem');
+      if(shortcut){opt.setAttribute('aria-label',title);opt.append(node('kbd',shortcut))}
+      return opt;
     }));
     menu.hidden=false;trigger.setAttribute('aria-expanded','true');
     const rect=trigger.getBoundingClientRect();
@@ -293,6 +301,34 @@ menu.onkeydown=e=>{
   const jumps={ArrowDown:(i+1)%items.length,ArrowUp:(i+items.length-1)%items.length,Home:0,End:items.length-1};
   if(Object.hasOwn(jumps,e.key)){e.preventDefault();items[jumps[e.key]].focus()}
 };
+// The request list has its own clipboard. Text inputs keep native clipboard behavior.
+let copiedRequest=null;
+function copyRequest(r){
+  copiedRequest={name:r.name,method:r.method,url:r.url,body:r.body};
+  $('copyStatus').textContent='“'+r.name+'” 복사됨';
+}
+function pasteRequest(folder){
+  if(!copiedRequest)return;
+  const base=copiedRequest.name+' 복사본';
+  const taken=new Set(requests.filter(r=>r.folder===folder).map(r=>r.name));
+  let name=base;
+  for(let n=2;taken.has(name);n++)name=base+' '+n;
+  const r={...copiedRequest,name,folder,index:1n,favorite:false};
+  requests.push(r);folder.open=true;choose(r);
+  focusRequest();$('copyStatus').textContent=folder.name+'에 “'+name+'” 추가됨';
+}
+function focusRequest(){$('tree').querySelector('.item.sel > button')?.focus()}
+function listKey(e,folder,r){
+  if(e.target!==e.currentTarget||!e.ctrlKey||e.altKey||e.shiftKey||e.metaKey||e.isComposing)return;
+  const key=e.key.toLowerCase();
+  if((key==='c'&&r)||(key==='v'&&copiedRequest)){
+    e.preventDefault();if(e.repeat)return;
+    if(key==='c')copyRequest(r);else pasteRequest(folder);
+  }
+}
+function pasteEntry(folder){
+  return copiedRequest?[['붙여넣기',()=>pasteRequest(folder),'Ctrl+V']]:[];
+}
 function tree() {
   $('tree').replaceChildren();
   groups.forEach(g=>{
@@ -302,12 +338,13 @@ function tree() {
     const summary=node('summary',g.name);summary.append(node('small',String(requests.filter(r=>r.folder===g).length)));
     const entries=[['요청 추가',()=>requestEditor(null,g)]];
     if(g!==loose)entries.push(['수정',()=>groupEditor(g)],['삭제',()=>removeGroup(g)]);
-    summary.append(menuButton(g.name+' 그룹 메뉴',entries,'more auto'));
+    summary.onkeydown=e=>listKey(e,g);
+    summary.append(menuButton(g.name+' 그룹 메뉴',()=>[...entries,...pasteEntry(g)],'more auto'));
     details.append(summary);
     requests.filter(r=>r.folder===g).forEach(r=>{
       const item=node('div',undefined,'item'+(current===r?' sel':''));
-      const chooseBtn=button('',()=>choose(r));chooseBtn.append(node('span',r.method,'verb '+r.method.toLowerCase()),document.createTextNode(r.name));
-      const edit=menuButton(r.name+' 요청 메뉴',[['수정',()=>requestEditor(r)],['삭제',()=>removeRequest(r)]]);
+      const chooseBtn=button('',()=>{choose(r);focusRequest()});chooseBtn.onkeydown=e=>listKey(e,g,r);chooseBtn.append(node('span',r.method,'verb '+r.method.toLowerCase()),document.createTextNode(r.name));
+      const edit=menuButton(r.name+' 요청 메뉴',()=>[['수정',()=>requestEditor(r)],['복사',()=>{copyRequest(r);if(current!==r)choose(r);focusRequest()},'Ctrl+C'],...pasteEntry(g),['삭제',()=>removeRequest(r)]]);
       const star=button(r.favorite?'★':'☆',()=>{
         r.favorite=!r.favorite;
         star.textContent=r.favorite?'★':'☆';
@@ -323,6 +360,14 @@ function tree() {
 function choose(r) {
   current=r;requestTab=values(r)?.method==='GET'?1:0;$('repeat').checked=false;draw();
 }
+function variableIcon(label,path,action){
+  const control=button('',action,'variable-icon');
+  control.title=label;control.setAttribute('aria-label',label);
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('aria-hidden','true');svg.setAttribute('viewBox','0 0 24 24');
+  const shape=document.createElementNS(svg.namespaceURI,'path');shape.setAttribute('d',path);
+  svg.append(shape);control.append(svg);return control;
+}
 function manage() {
   let rows;
   modal('환경 관리 · '+$('env').value,()=>{
@@ -331,13 +376,18 @@ function manage() {
     if(names.some(s=>!s||s==='index')||new Set(names).size!==names.length){message.textContent='각 변수에 서로 다른 이름을 입력하세요. index는 예약 이름입니다.';return}
     env().vars=entries;$('dialog').close();draw();
   });
-  const head=node('div',undefined,'row apart');head.append(node('h3','변수'),button('＋ 변수 추가',()=>add('',''),'ghost'));
+  const head=node('div',undefined,'row apart');head.append(node('h3','변수'),variableIcon('변수 추가','M12 4v16M4 12h16',()=>add('','').focus()));
   rows=node('div');const message=node('p','','note');message.setAttribute('role','status');
   function add(key,val){
     const row=node('div',undefined,'varrow');const k=node('input'),v=node('input');
     k.placeholder='변수 이름';v.placeholder='값';k.setAttribute('aria-label','변수 이름');v.setAttribute('aria-label','변수 값');
     k.value=key;v.value=val;
-    const remove=button('×',()=>row.remove(),'more');remove.setAttribute('aria-label','변수 삭제');
+    const remove=variableIcon('변수 삭제','M3 6h18M9 6V3h6v3M5.5 6l1 15h11l1-15M10 10v7m4-7v7',()=>{
+      const next=row.nextElementSibling??row.previousElementSibling;
+      row.remove();(next?.querySelector('input')??head.querySelector('button')).focus();
+    });
+    function labelRemove(){remove.setAttribute('aria-label',(k.value?k.value+' ':'')+'변수 삭제')}
+    k.oninput=labelRemove;labelRemove();
     row.append(k,v,remove);rows.append(row);return k;
   }
   env().vars.forEach(([k,v])=>add(k,v));$('dialogBody').append(head,rows,message,node('p','인증 · 토큰 수신 API　'+env().api,'note'));

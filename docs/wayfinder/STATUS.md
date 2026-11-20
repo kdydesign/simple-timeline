@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 PostRail 저장 요청 메뉴·단축키 복사와 그룹 붙여넣기, 환경 변수 추가·삭제 아이콘을 [설계와 시안](../design/postrail-workspace.md)에 반영했다. 제품 구현 전이다.
+
 2026-11-20 PostRail 시안의 요청 이름 옆 변경 저장, 통합 추가 메뉴, 전체 높이의 왼쪽 패널과 PlanRail 알림 설정형 팝업을 [작업 화면 설계](../design/postrail-workspace.md)에 반영했다. 제품 구현 전이다.
 
 2026-11-20 PostRail 시안에 요청 생성·수정, 그룹·요청 컨텍스트 메뉴, 메서드 선택과 표준 팝업의 하단 삭제 버튼을 반영했다. [설계와 시안](../design/postrail-workspace.md) · 제품 구현 전.
