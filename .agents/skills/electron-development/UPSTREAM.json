@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/Mindrally/skills",
+  "commit": "7682ca77710e0971eab4e0ae5dddfa281aea0ba5",
+  "path": "electron-development",
+  "license": "Apache-2.0",
+  "sha256": {
+    "LICENSE": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "SKILL.md": "b9e2002cc6c5a1a6f6b234b0d240582f0d7e2d825e6e049558d64f328ac90683"
+  }
+}
