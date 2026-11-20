@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 PostRail 시안의 요청 이름 옆 변경 저장, 통합 추가 메뉴, 전체 높이의 왼쪽 패널과 PlanRail 알림 설정형 팝업을 [작업 화면 설계](../design/postrail-workspace.md)에 반영했다. 제품 구현 전이다.
+
 2026-11-20 PostRail 시안에 요청 생성·수정, 그룹·요청 컨텍스트 메뉴, 메서드 선택과 표준 팝업의 하단 삭제 버튼을 반영했다. [설계와 시안](../design/postrail-workspace.md) · 제품 구현 전.
 
 2026-11-20 PostRail 요청·응답 JSON 본문의 타입별 구문 강조와 요청 변수 표시를 [작업 화면 시안](../design/postrail-workspace.md)에 반영했다. 제품 구현 전이다.

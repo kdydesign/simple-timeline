@@ -82,22 +82,31 @@ body:has(#post:not([hidden])){height:100dvh}
 .code-pane .json-input textarea{position:absolute;inset:0;width:100%;height:100%;min-height:0;overflow:auto;color:transparent;caret-color:#f1f2f3;background:transparent}
 .json-input textarea::selection{background:#6489af80}
 @media(forced-colors:active){.json-input pre{display:none}.code-pane .json-input textarea{color:CanvasText;caret-color:CanvasText}}
-/* The same glass, field dimensions and action spacing as the WorkRail standard dialog. */
-#dialog{width:min(460px,calc(100vw - 28px));max-height:calc(100dvh - 32px);overflow:auto;padding:20px 22px;border:1px solid #b4bfc449;border-radius:14px;background:rgba(43,46,49,.5);backdrop-filter:blur(28px);box-shadow:0 14px 42px #0007}
-#dialog::backdrop{background:#14191f66}
-#dialog .title{background:none;padding:0 0 10px;border-bottom:1px solid #b4bfc430}
-#dialog h2{font-size:19px}
-#dialog .dialogbody{max-height:none;padding:14px 0}
+/* PlanRail QuickReminder popup and dark forest-crystal theme. */
+#dialog{position:fixed;inset:auto;margin:0;width:min(340px,calc(100vw - 16px));max-height:calc(100dvh - 64px);overflow:auto;padding:16px;border:1px solid #b4bfc449;border-radius:14px;background:rgba(43,46,49,.5);backdrop-filter:blur(10px);box-shadow:0 12px 30px #0006,inset 0 1px 0 #ffffff20}
+#dialog::backdrop{background:transparent}
+#dialog .title{background:none;padding:0;border:0;justify-content:space-between;gap:12px}
+#dialog h2{font-size:16px}
+#dialog .dialogbody{max-height:none;padding:12px 0 0}
 #dialog .formrow{font-size:13px;font-weight:600;margin:0 0 14px}
 #dialog .formrow:last-child{margin-bottom:0}
 #dialog input,#dialog select{height:36px;padding:6px 10px;border-radius:8px;background:#6e73784d;border:1px solid #b4bfc449;color:inherit}
 #dialog option,#method option{background:#292f35;color:#eef2f5}
-#dialog button,#newRequest{min-height:32px;padding:5px 11px;font-size:13px;border-radius:8px;color:inherit;border:1px solid #b4bfc449;background:linear-gradient(155deg,#ffffff18,transparent 65%),#6e73784d;box-shadow:0 1px 2px #0003,inset 0 1px 0 #ffffff20}
-#dialog .dialogfoot{gap:8px;padding:12px 0 0;border-top:1px solid #b4bfc430}
+#dialog button{min-height:32px;padding:5px 11px;font-size:13px;border-radius:8px;color:inherit;border:1px solid #b4bfc449;background:linear-gradient(155deg,#ffffff18,transparent 65%),#6e73784d;box-shadow:0 1px 2px #0003,inset 0 1px 0 #ffffff20}
+#dialog .dialogfoot{gap:10px;padding:0;border:0;margin-top:16px;flex-wrap:wrap}
+#dialog .dialogfoot button{min-width:76px;border-radius:10px}
+#dialog #closeDialog{background:none;border:0;box-shadow:none;padding:0;width:28px;min-height:28px;font-size:18px}
+#dialog #closeDialog:hover{background:#b4c8dc26}
+@media(forced-colors:active){#dialog{background:Canvas;color:CanvasText;border-color:CanvasText}}
 #dialog .primary{background:linear-gradient(155deg,#5796cd55,#24507840 65%),#477fae4d;border-color:#8bc1eb}
 #dialog .danger{color:#ffc1ba}
 #dialog .leading{margin-right:auto}
-#newRequest{min-height:24px;padding:0 7px;font-size:16px}
+#newRequest{min-height:26px;padding:0 8px;font-size:16px}
+#post aside{display:flex;flex-direction:column;align-self:stretch;min-height:0;overflow:hidden}
+#post aside > :not(#tree){flex:none}
+#tree{flex:1 1 auto;min-height:0;overflow-y:auto}
+@media(min-width:621px){#post{grid-template-rows:minmax(0,1fr)}#post .workspace{min-height:0;overflow:auto}}
+
 #method{flex:none;width:78px;padding:3px 4px;background:#30383f;border-color:var(--line)}
 #contextMenu{position:fixed;z-index:20;min-width:125px;padding:3px;max-height:50vh;overflow:auto;border:1px solid var(--line);border-radius:5px;background:#2b2e31;box-shadow:0 8px 24px #0005}
 #contextMenu button{display:block;width:100%;padding:4px 7px;font-size:12px;text-align:left;background:none;border:0}
@@ -106,10 +115,10 @@ body:has(#post:not([hidden])){height:100dvh}
 <header><div class="brand"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUiPgogIDx0aXRsZSBpZD0idGl0bGUiPldvcmtSYWlsPC90aXRsZT4KICA8ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImluayIgeDI9Ii42NSIgeTI9IjEiPjxzdG9wIHN0b3AtY29sb3I9IiMyYjQzNTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxNTI3MzIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHJ4PSIyIiBmaWxsPSIjNTI2Yjc5Ii8+CiAgPHJlY3QgeD0iLjQiIHk9Ii40IiB3aWR0aD0iMTUuMiIgaGVpZ2h0PSIxNS4yIiByeD0iMS42IiBmaWxsPSJ1cmwoI2luaykiLz4KICA8cGF0aCBmaWxsPSIjZjJmN2ZhIiBkPSJNMSA0aDhMNi42IDdIMXogTTEgOGg0LjVMMyAxMUgxeiIvPgogIDxwYXRoIGZpbGw9IiM5MWQxZjEiIGQ9Ik0zLjUgMTIuNSAxMC40IDRoMy4zbC02LjkgOC41eiBNOC4xNSAxMi41IDEyLjY1IDdoMi43bC00LjUgNS41eiIvPgo8L3N2Zz4K" alt="">WorkRail <span class="auto demo">디자인 시안 · 예시 데이터</span></div><nav aria-label="도구"><button id="homeTab"><span class="mark">⌂</span>Home</button><button disabled>PlanRail</button><button disabled>NodeRail</button><button disabled>TermRail</button><button id="postTab" class="active"><span class="mark">⇄</span>PostRail</button></nav></header>
 <main id="post">
 <aside><label for="env"><strong>환경</strong></label><select class="env" id="env"><option>개발 장비</option><option>QA 장비</option></select>
-<div class="row apart asidehead"><button id="newRequest" aria-label="요청 추가" title="요청 추가">＋</button><button id="newGroup" class="ghost">＋ 그룹</button></div><div id="tree"></div></aside>
+<div class="row apart asidehead"><span id="addSlot"></span></div><div id="tree"></div></aside>
 <section class="workspace">
-<div class="panel compose"><div class="request-heading"><span class="pathline" id="crumb"></span><h1 id="reqName"></h1></div><div class="endpoint"><div class="url"><select id="method" class="verb" aria-label="HTTP 메서드"><option>GET</option><option>POST</option><option>DELETE</option></select><input id="url" aria-label="요청 URL"></div><button class="primary send" id="send">보내기</button></div>
-<div class="tools"><label id="repeatControl"><input type="checkbox" id="repeat">반복 보내기</label><label id="countControl" hidden>횟수 <input type="text" inputmode="numeric" id="count" value="10"></label><span id="range"></span><button id="saveEdits" class="ghost auto" hidden>변경 저장</button></div></div>
+<div class="panel compose"><div class="request-heading"><span class="pathline" id="crumb"></span><h1 id="reqName"></h1><button id="saveEdits" class="ghost" hidden>변경 저장</button></div><div class="endpoint"><div class="url"><select id="method" class="verb" aria-label="HTTP 메서드"><option>GET</option><option>POST</option><option>DELETE</option></select><input id="url" aria-label="요청 URL"></div><button class="primary send" id="send">보내기</button></div>
+<div class="tools"><label id="repeatControl"><input type="checkbox" id="repeat">반복 보내기</label><label id="countControl" hidden>횟수 <input type="text" inputmode="numeric" id="count" value="10"></label><span id="range"></span></div></div>
 <div class="panel code-pane"><div class="pane-bar"><h2>요청</h2><div id="reqTabs" class="tabs"><button data-tab="0" class="active">JSON 본문</button><button data-tab="1">헤더</button><button data-tab="2">인증</button></div><small id="auth" class="auto"></small></div><div class="editor" id="reqContent"></div></div>
 <div class="panel code-pane"><div class="pane-bar"><h2>응답</h2><div class="tabs"><button id="bodyTab" class="active">본문</button><button id="hdrTab">헤더</button></div><small class="auto" id="responseOwner"></small><span id="status" class="good"></span></div><div class="editor"><pre id="response"></pre></div></div>
 </section></main>
@@ -173,12 +182,27 @@ function button(label,action,cls) {
   const b=node('button',label,cls);
   b.onclick=action; return b;
 }
+const popup=$('dialog');
+let popupCaller;
+function placePopup(){
+  if(!popup.open||!popupCaller)return;
+  const box=popupCaller.getBoundingClientRect();
+  popup.style.left=Math.max(8,Math.min(box.left,innerWidth-popup.offsetWidth-8))+'px';
+  popup.style.top=Math.max(56,Math.min(box.bottom+8,innerHeight-popup.offsetHeight-8))+'px';
+}
+new ResizeObserver(placePopup).observe(popup);
+window.addEventListener('resize',placePopup);
+popup.addEventListener('pointerdown',e=>{
+  const rect=popup.getBoundingClientRect();
+  if(e.target===popup&&(e.clientX<rect.left||e.clientX>rect.right||e.clientY<rect.top||e.clientY>rect.bottom))popup.close();
+});
 function modal(title,save,actionLabel='저장') {
+  if(!popup.open)popupCaller=document.activeElement;
   $('dialogTitle').textContent=title;
   $('dialogBody').replaceChildren();$('actions').replaceChildren();
   $('actions').append(button('닫기',()=>$('dialog').close()));
   if(save)$('actions').append(button(actionLabel,save,'primary'));
-  if(!$('dialog').open)$('dialog').showModal();
+  if(!popup.open)popup.showModal();placePopup();
 }
 function field(label,value) {
   const l=node('label',label,'formrow'),input=node('input');
@@ -242,8 +266,8 @@ function dismissMenu(restore=false){
   menu.hidden=true;menuAnchor.setAttribute('aria-expanded','false');
   if(restore)menuAnchor.focus();
 }
-function menuButton(label,entries,classes='more'){
-  const trigger=button('…',event=>{
+function menuButton(label,entries,classes='more',symbol='…'){
+  const trigger=button(symbol,event=>{
     event.preventDefault();
     if(!menu.hidden&&menuAnchor===trigger){dismissMenu(true);return}
     dismissMenu();menuAnchor=trigger;
@@ -453,12 +477,16 @@ function drawer(show){$('drawer').hidden=!show;$('toggleLog').setAttribute('aria
 function showHome(home){
   $('home').hidden=!home;$('post').hidden=home;$('footer').hidden=home;$('postTab').classList.toggle('active',!home);$('homeTab').classList.toggle('active',home);window.scrollTo(0,0);
 }
-$('newRequest').onclick=()=>requestEditor(null,current?.folder??loose);
+const add=menuButton('요청 또는 그룹 추가',[
+  ['요청 추가',()=>requestEditor(null,current?.folder??loose)],
+  ['그룹 추가',()=>groupEditor()]
+],'primary','＋');
+add.id='newRequest';add.title='요청 또는 그룹 추가';$('addSlot').replaceWith(add);
 $('method').onchange=e=>{
   edit('method',e.target.value);$('repeat').checked=false;
   requestTab=e.target.value==='GET'?1:0;draw();
 };
-$('env').onchange=draw;$('newGroup').onclick=()=>groupEditor();$('manage').onclick=manage;$('closeDialog').onclick=()=>$('dialog').close();
+$('env').onchange=draw;$('manage').onclick=manage;$('closeDialog').onclick=()=>$('dialog').close();
 $('saveEdits').onclick=()=>{Object.assign(current,drafts.get(current));drafts.delete(current);draw()};
 $('url').oninput=e=>{if(current)edit('url',e.target.value)};$('repeat').onchange=range;$('count').oninput=range;$('send').onclick=()=>sendRequest(current,count(),values(current));
 $('reqTabs').onclick=e=>{if(e.target.dataset.tab!==undefined){requestTab=Number(e.target.dataset.tab);requestPane()}};
