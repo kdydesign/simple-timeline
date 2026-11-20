@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WorkRail · Home 즐겨찾기 실행과 결과 보기</title>
+<style>
+:root{color-scheme:dark;font:14px/1.5 "Segoe UI","Noto Sans CJK KR",sans-serif;color:#f1f2f3;background:#21272c;--accent:#8bc1eb;--muted:#b8c2c8;--line:#b4bfc430}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 85% 105%,#34334a,transparent 65%),linear-gradient(115deg,#232d33,#24282c)}
+main{max-width:1250px;margin:auto;padding:30px 24px}h1{font-size:19px;margin:0 0 20px}h2{font-size:13px;font-weight:500;color:var(--muted);margin:0 0 7px}.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.card,.detail{background:linear-gradient(136deg,#343b40e8,#2b2e31eb 62%);border:1px solid var(--line);border-radius:12px;padding:13px 15px;box-shadow:inset 0 1px 0 #ffffff0b}
+h3{margin:0;font-size:15px}.heading,.env,.row,.meta{display:flex;align-items:center;gap:7px}.heading,.env,.meta{justify-content:space-between}.heading svg{color:var(--accent)}.env,.row{border-bottom:1px solid var(--line);padding:6px 0;font-size:13px}.env span,.meta{color:var(--muted);font-size:12px}.name{flex:1;min-width:0;overflow-wrap:anywhere}
+.method{color:#9bcaaa;font:700 11px/1.6 Consolas,monospace;min-width:31px}.method.post{color:#eac191}
+button{font:inherit;color:inherit;cursor:pointer}.run{min-width:65px;display:inline-flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(#444c53,#353b41);border:1px solid #84909880;border-radius:6px;font-size:12px;padding:3px 6px}.run:disabled{cursor:default;opacity:.55}.run.active:disabled{opacity:1;color:var(--accent);border-color:#8bc1eb68}.icon{display:inline-block;width:12px;height:12px;flex:none}.spin{animation:turn 1s linear infinite}@keyframes turn{to{transform:rotate(1turn)}}@media(prefers-reduced-motion:reduce){.spin{animation:none}}
+.link{background:transparent;border:0;color:var(--accent);font-size:12px;padding:0 2px}.link:disabled{color:#8b959c;cursor:default}.summary{color:var(--muted);font-size:12px;line-height:1.8;margin:8px 0 0;overflow-wrap:anywhere}.summary strong{color:#ecf0f2}.pill{font-size:10px;line-height:1.5;border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-right:3px;white-space:nowrap}.inspect{color:var(--accent);border-color:#8bc1eb5c;background:#38506355;font-size:11px;line-height:1.6;margin:0 0 0 4px;padding:0 5px}.inspect:hover,.inspect:focus-visible{background:#44668177}.meta{margin-top:11px}.detail{max-width:700px;margin-top:10px}pre{overflow:auto;background:#21272c;border-radius:6px;padding:12px}button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}[hidden]{display:none!important}@media(max-width:850px){.board{grid-template-columns:1fr}main{max-width:420px;padding:18px 14px}}
+</style>
+<main><section id="home"><h1>Home · PostRail 즐겨찾기</h1><div class="board"></div></section>
+<section id="destination" hidden><button class="link" id="back">‹ Home</button><h1 id="destination-title" tabindex="-1">PostRail</h1><div class="detail"><h3 id="target"></h3><p id="context"></p><h3>응답 본문</h3><pre id="body"></pre></div></section></main>
+<script>
+const icons={
+ play:'<path d="m4 2 8 5-8 5z"/>',
+ load:'<path d="M12 7a5 5 0 1 1-5-5"/>',
+ rail:'<path d="M2 4h10L9 1m3 9H2l3 3"/>'
+};
+const svg=k=>'<svg aria-hidden="true" class="icon '+(k==='load'?'spin':'')+'" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+icons[k]+'</svg>';
+const requests=[{name:'공개 API 테스트',method:'GET'},{name:'샘플 생성',method:'POST'}];
+let returnTo;
+const board=document.querySelector('.board');
+function demo(label,initial){
+ const area=document.createElement('section');
+ area.innerHTML='<h2></h2><article class="card"><div class="heading"><h3>PostRail 즐겨찾기</h3>'+svg('rail')+'</div><div class="env"><strong>공개 API 테스트</strong><span>로그인 미설정</span></div><div class="rows"></div><div class="summary" role="status"></div><div class="meta"><span>즐겨찾기 2개</span><button class="link generic">PostRail 열기</button></div></article>';
+ area.querySelector('h2').textContent=label;board.append(area);
+ const summary=area.querySelector('.summary');
+ let state=initial,active=0,count=1,completed=initial==='done'?1:0,serial=1;
+ function open(btn,detail){
+   returnTo=btn;document.querySelector('#home').hidden=true;
+   document.querySelector('#destination').hidden=false;
+   document.querySelector('#target').textContent=detail?requests[active].name:'저장한 요청';
+   document.querySelector('#context').textContent=detail?'공개 API 테스트 · '+completed+'회차 · HTTP 200':'PostRail 작업 화면';
+   document.querySelector('#body').textContent=detail?JSON.stringify({ok:true,iteration:completed},null,2):'응답을 선택하세요.';
+   document.querySelector('#destination-title').focus();
+ }
+ function draw(){
+   const busy=state==='busy';
+   const rows=area.querySelector('.rows');rows.replaceChildren();
+   requests.forEach((r,i)=>{
+     const row=document.createElement('div');row.className='row';
+     row.innerHTML='<b class="method '+(i?'post':'')+'">'+r.method+'</b><span class="name">'+r.name+'</span><button class="run"></button>'+(i?'<button class="link repeat">반복…</button>':'');
+     const button=row.querySelector('.run'),loading=active===i&&busy;
+     button.innerHTML=svg(loading?'load':'play')+(loading?'실행 중':'실행');button.disabled=busy;button.classList.toggle('active',loading);
+     button.setAttribute('aria-label',r.name+' '+(loading?'실행 중':'실행'));button.onclick=()=>start(i,1);
+     if(i){const repeat=row.querySelector('.repeat');repeat.disabled=busy;repeat.onclick=()=>{const n=prompt('반복 횟수','3');if(n&&/^[1-9][0-9]*$/.test(n)&&Number.isSafeInteger(Number(n)))start(i,Number(n))}}
+     rows.append(row);
+   });
+   summary.hidden=state==='idle';
+   summary.innerHTML=busy?'전송 중 · '+completed+' / '+count+'회 완료':state==='done'?'<span class="pill">결과</span> 최근 실행 · <strong>'+requests[active].name+'</strong> · 공개 API 테스트 · 실행 완료 · '+completed+' / '+count+'회 완료 <button class="pill inspect">결과 보기</button>':'';
+   const inspect=summary.querySelector('button');if(inspect)inspect.onclick=()=>open(inspect,true);
+ }
+ function start(i,n){active=i;count=n;completed=0;state='busy';const id=++serial;draw();
+   const tick=()=>{if(id!==serial)return;completed++;if(completed===count)state='done';draw();if(state==='busy')setTimeout(tick,700)};setTimeout(tick,1000)}
+ area.querySelector('.generic').onclick=e=>open(e.currentTarget,false);
+ draw();
+}
+demo('실행 전','idle');demo('실행 중','busy');demo('응답 도착 후','done');
+document.querySelector('#back').onclick=()=>{document.querySelector('#destination').hidden=true;document.querySelector('#home').hidden=false;returnTo?.focus()};
+</script></html>
