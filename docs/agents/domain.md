@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| NodeRail 로그·Home 5개 목록·TermRail 입력·도움말 | [후속 설계 검토본 및 Q1~Q3 결정](../design/workrail-log-home-termrail-help.md) |
 | 설치본 NodeRail·TermRail 피드백 | [ZIP 권한 진단, 터미널 표시와 작업 탭 설계](../design/noderail-termrail-installed-feedback.md) · [구현과 검사 범위](../implementation/2026-11-20-installed-feedback.md) |
 | TermRail SSH 터미널 | [승인된 화면·동작과 후속 검토 항목](../design/ssh-terminal-menu.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |
 | Windows 전 버전 공식 ZIP 설치·내부 로고 축소 | [후속 설계 초안·시안](../design/windows-node-zip-all-versions.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |
