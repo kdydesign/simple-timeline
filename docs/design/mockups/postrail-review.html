@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data:; connect-src 'none'; form-action 'none'">
+<title>PostRail · 화면 검토</title>
+<style>
+:root{color-scheme:dark;--base:#202429;--panel:#292e34;--editor:#20252a;--line:#424a54;--sub:#b0bbc6;--text:#edf1f4;--sky:#9ed1f1;--green:#a6d5b8;--red:#f3b1aa;--amber:#e6c38d;--mono:"Cascadia Mono",Consolas,monospace;font:14px/1.5 "Segoe UI","Noto Sans CJK KR",sans-serif;color:var(--text);background:var(--base)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 98% 95%,#323342,transparent 50%),var(--base)}header,nav,.bar,.row,.heading,.stats,.pager,.identity{display:flex;align-items:center;gap:10px}.spread{justify-content:space-between}.wrap{flex-wrap:wrap}.titlebar{height:42px;padding:0 18px;background:#282e34}.brand{width:23px;height:23px}.identity{font-weight:700;font-size:16px}.preview{color:var(--sub);font-size:12px;margin-left:auto}.preview select{font-size:12px}.icon{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}nav{padding:4px 14px 8px;background:linear-gradient(100deg,#282f35,#292d34);border-bottom:1px solid var(--line);gap:4px;overflow:auto}nav span{display:flex;align-items:center;gap:7px;padding:5px 11px;white-space:nowrap;border:1px solid transparent;border-radius:7px;font-size:13px;color:#d2dae2}nav span{min-width:105px;min-height:36px;justify-content:center}nav .icon{width:20px;height:20px}nav .active{background:linear-gradient(#3b5264,#324758);border-color:#75a9cb;color:#f4f9fc}nav .active .icon{color:var(--sky)}
+main{padding:14px;display:grid;grid-template-columns:205px minmax(0,1fr);align-items:start;gap:14px;max-width:1700px;margin:auto}aside,.panel,dialog{background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 3px 12px #0002;min-width:0}.sideblock{padding:15px 12px}.sideblock+.sideblock{border-top:1px solid var(--line)}h1,h2,h3,p,pre{margin:0}h1{font-size:20px;letter-spacing:-.6px}h2{font-size:15px}h3{font-size:13px}.muted,small{color:var(--sub)}small{font-size:12px}button,select{font:inherit;color:var(--text);background:linear-gradient(#384049,#30363d);border:1px solid #535f69;border-radius:6px;padding:5px 9px;cursor:pointer}button:hover,select:hover{border-color:#8293a1}button:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--sky);outline-offset:2px}button:disabled{cursor:default;color:#bac1c8;background:#343940;border-color:#474d55}.tiny{padding:4px 7px;font-size:12px}.selectrow{display:flex;gap:6px;margin:9px 0 6px}.selectrow select{flex:1;min-width:0}.side-list{display:grid;gap:4px;margin-top:10px}.saved{display:flex;align-items:center;gap:7px;text-align:left;font-size:13px;background:transparent;border:1px solid transparent;padding:8px 6px}.saved[aria-pressed=true]{background:#314454;border-color:#4a6274}.verb{font:700 11px/1.6 "Segoe UI",sans-serif;min-width:46px;text-align:center;letter-spacing:.2px;border-radius:4px;padding:1px 4px}.post{background:#4a4033;color:var(--amber)}.get{background:#31463f;color:var(--green)}.delete{background:#493b3c;color:var(--red)}
+section.workspace{display:grid;min-width:0;gap:12px}.compose{padding:15px 16px 12px}.heading{gap:8px}.heading .icon{color:var(--sky)}.bar{margin:11px 0 7px;gap:8px}.endpoint{min-width:0;flex:1;display:flex;align-items:center;gap:12px;border:1px solid #52606b;border-radius:7px;padding:7px 9px;background:linear-gradient(160deg,#252d33,#21272d)}code,pre{font-family:var(--mono)}.endpoint code{min-width:0;overflow-wrap:anywhere}.variable,.key{color:var(--sky)}.num,.v{color:#b9d7a8}.send{display:flex;align-items:center;gap:8px;justify-content:center;font-weight:700;color:#162937;background:linear-gradient(#b1daf4,#8cbde0);border:1px solid #a8d3ee;min-height:38px}.send.stop{color:var(--red);background:#3b3032;border-color:#866564}.batch{display:flex;gap:8px 14px;align-items:center;flex-wrap:wrap;font-size:12px;color:var(--sub)}.batch b{color:var(--text)}.batch>span+span{border-left:1px solid var(--line);padding-left:13px}
+.panes{display:grid;grid-template-columns:1fr 1fr;min-width:0;overflow:hidden}.pane{min-width:0;background:var(--editor)}.pane+.pane{border-left:1px solid var(--line)}.panehead,.resulthead{padding:12px 15px;background:var(--panel)}.panehead{display:flex;align-items:center;justify-content:space-between;min-height:49px}.tabbar{display:flex;gap:16px;padding:0 14px;background:#272c32;border-bottom:1px solid var(--line)}.tabbar button{font-size:12px;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;color:var(--sub);padding:6px 1px}.tabbar button[aria-pressed=true]{border-color:var(--sky);color:var(--text);font-weight:650}.editor{padding:13px 15px;min-height:132px;overflow:auto}.line{display:block;white-space:pre-wrap;overflow-wrap:anywhere}.ln{color:#83919d;display:inline-block;width:27px;user-select:none}.editor pre{font-size:13px;line-height:1.8}.summary{padding:10px 15px;display:flex;flex-wrap:wrap;align-items:center;gap:7px 16px;background:#252a30;border-top:1px solid var(--line)}.status{font-size:12px;display:inline-flex;align-items:center;gap:6px;font-weight:650}.ok{color:var(--green)}.bad{color:var(--red)}.warn{color:var(--amber)}.neutral{color:var(--sub)}.panel.results{overflow:hidden}.resulthead{display:flex;align-items:center;justify-content:space-between;gap:8px}.stats{gap:12px;flex-wrap:wrap;font-size:12px}.resultmeta{display:flex;align-items:center;gap:8px;margin-top:3px;color:var(--sub);font-size:12px}table{border-collapse:collapse;width:100%;font-size:13px;text-align:left}td,th{padding:7px 14px;border-top:1px solid #3b424a}th{background:#333a41;color:#c2cbd3;font-weight:600;font-size:12px}.number,.time{text-align:right;font-variant-numeric:tabular-nums}.number{width:66px}.time{white-space:nowrap}.choice{text-align:left;padding:0;border:0;background:none;color:inherit;font:inherit}.selected-row{background:#304353;box-shadow:inset 3px 0 var(--sky)}.pager{padding:7px 13px;justify-content:flex-end;border-top:1px solid var(--line);font-size:12px;gap:8px}.notice{margin:0;color:var(--amber);font-size:12px}.sceneNote{font-size:12px;color:var(--sub);margin:0 auto 14px;max-width:1700px;padding:0 17px}.envlink{font-size:12px;background:none;border:0;color:var(--sky);padding:0}.details{display:grid;gap:7px;font-size:13px}.kv{display:flex;align-items:start;justify-content:space-between;gap:12px;border-bottom:1px solid #39424a;padding:5px 0}.kv span:first-child{color:var(--sub)}.kv span:last-child{overflow-wrap:anywhere}.empty{padding:22px 12px;color:var(--sub);text-align:center}.tablewrap{overflow-x:auto}dialog{width:min(420px,94vw);color:inherit;padding:20px}dialog::backdrop{background:#101419ad}dialog h2{font-size:18px}.group{margin-top:16px}.group h3{color:var(--sky);margin-bottom:5px}.mobile-head{display:none}progress{width:100%;height:5px;accent-color:var(--sky)}
+@media(max-width:950px){main{grid-template-columns:165px minmax(0,1fr);gap:10px}.panehead{flex-wrap:wrap}.resulthead{align-items:flex-start;flex-direction:column}.bar{flex-wrap:wrap}}
+@media(max-width:740px){main{grid-template-columns:1fr}aside{display:flex;gap:12px;flex-wrap:wrap}.sideblock{padding:9px 12px;flex:auto}.sideblock+.sideblock{border-top:0}.side-list{display:flex;flex-wrap:wrap}.saved{padding:3px}.panes{grid-template-columns:1fr}.pane+.pane{border-left:0;border-top:1px solid var(--line)}.editor{min-height:95px}.titlebar{padding:0 10px}.preview{font-size:0}.preview select{max-width:165px}nav{padding-left:6px}nav span{padding:4px 7px}.bar .endpoint{flex-basis:100%}.batch>span+span{border:0;padding:0}.resulthead{gap:8px}.stats{gap:8px}main{padding:9px}.namecol{display:none}}
+</style>
+<svg aria-hidden="true" style="display:none"><defs>
+<symbol id="home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v9h-6v-7H9v7H3z"/></symbol>
+<symbol id="plan" viewBox="0 0 24 24"><path d="M3 6h11M8 12h13M5 18h11"/><circle cx="4" cy="6" r="1"/><circle cx="9" cy="12" r="1"/></symbol>
+<symbol id="node" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7zM8 16V8l8 8V8"/></symbol>
+<symbol id="term" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="3"/><path d="m6 8 4 4-4 4m7 0h5"/></symbol>
+<symbol id="posticon" viewBox="0 0 24 24"><path d="M3 7h16m-4-4 4 4-4 4M21 17H5m4-4-4 4 4 4"/></symbol>
+<symbol id="sendicon" viewBox="0 0 24 24"><path d="m3 11 18-8-7 18-3-7-8-3zm8 3L21 3"/></symbol></defs></svg>
+<header class="titlebar"><div class="identity"><img class="brand" alt="" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUiPgogIDx0aXRsZSBpZD0idGl0bGUiPldvcmtSYWlsPC90aXRsZT4KICA8ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImluayIgeDI9Ii42NSIgeTI9IjEiPjxzdG9wIHN0b3AtY29sb3I9IiMyYjQzNTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxNTI3MzIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHJ4PSIyIiBmaWxsPSIjNTI2Yjc5Ii8+CiAgPHJlY3QgeD0iLjQiIHk9Ii40IiB3aWR0aD0iMTUuMiIgaGVpZ2h0PSIxNS4yIiByeD0iMS42IiBmaWxsPSJ1cmwoI2luaykiLz4KICA8cGF0aCBmaWxsPSIjZjJmN2ZhIiBkPSJNMSA0aDhMNi42IDdIMXogTTEgOGg0LjVMMyAxMUgxeiIvPgogIDxwYXRoIGZpbGw9IiM5MWQxZjEiIGQ9Ik0zLjUgMTIuNSAxMC40IDRoMy4zbC02LjkgOC41eiBNOC4xNSAxMi41IDEyLjY1IDdoMi43bC00LjUgNS41eiIvPgo8L3N2Zz4K">WorkRail</div><label class="preview">시안 보기　<select id="scene" aria-label="시안 상태"><option value="last">최근 실행 · HTTP 오류</option><option value="running">실행 중</option><option value="stopping">중지 대기</option><option value="stopped">중지 완료</option><option value="auth">실행 전 인증 실패</option><option value="uncertain">결과 확인 필요</option></select></label></header>
+<nav aria-label="WorkRail 메뉴"><span><svg class="icon"><use href="#home"/></svg>Home</span><span><svg class="icon"><use href="#plan"/></svg>PlanRail</span><span><svg class="icon"><use href="#node"/></svg>NodeRail</span><span><svg class="icon"><use href="#term"/></svg>TermRail</span><span class="active" aria-current="page"><svg class="icon"><use href="#posticon"/></svg>PostRail</span></nav>
+<main><aside><div class="sideblock"><div class="row spread"><h2>환경</h2><button class="envlink" id="manage">환경 관리</button></div><div class="selectrow"><select id="env" aria-label="편집 환경"><option>개발 장비</option><option>QA 장비</option></select></div><small>변수 3개 · 보호 값 1개</small></div>
+<div class="sideblock"><h2>저장한 요청</h2><div class="side-list" id="saved"></div></div></aside>
+<section class="workspace"><div class="compose panel"><div class="heading"><svg class="icon"><use href="#posticon"/></svg><h1 id="title"></h1></div><div class="bar"><div class="endpoint"><strong id="method"></strong><code><span class="variable">${deviceUrl}</span><span id="path"></span></code></div><button class="send" id="send"></button></div><div class="batch" id="batch"></div></div>
+<div class="panes panel"><div class="pane"><div class="panehead"><h2>요청</h2><small id="target"></small></div><div class="tabbar" id="requestTabs" aria-label="요청 보기"></div><div class="editor" id="request"></div></div>
+<div class="pane"><div class="panehead"><h2>응답</h2><span id="badge" class="status"></span></div><div class="tabbar" id="responseTabs" aria-label="응답 보기"></div><div class="editor" id="response"></div></div><div class="summary" style="grid-column:1/-1" id="summary" aria-live="polite"></div></div>
+<div class="panel results"><div class="resulthead"><div><h2>회차별 결과</h2><div class="resultmeta" id="runmeta"></div></div><div id="stats" class="stats"></div></div><div class="tablewrap"><table><thead><tr><th class="number">회차</th><th>인덱스</th><th class="namecol">이름</th><th>결과</th><th class="time">소요 시간</th></tr></thead><tbody id="rows"></tbody></table></div><div id="pager" class="pager"></div></div>
+</section></main><p class="sceneNote">검토용 시안 · 예시 데이터로만 동작합니다. 상단에서 실행 상태를 바꾸거나 회차를 선택해 응답을 확인하세요.</p>
+<dialog id="settings"><div class="row spread"><h2>환경 관리</h2><button id="close" aria-label="환경 관리 닫기">닫기</button></div><div id="envcontent"></div></dialog>
+<script>
+const el=id=>document.getElementById(id);
+const requests=[['샘플 생성','POST','/api/samples'],['샘플 목록','GET','/api/samples'],['샘플 삭제','DELETE','/api/samples/42']];
+const times=[124,118,132,86,129,142,117,122,134,119];
+const app={scene:'last',selection:4,page:0,editor:0,env:'개발 장비',runEnv:'개발 장비',requestTab:1,responseTab:0,runEditor:0};
+const envHost=env=>env==='개발 장비'?'dev.example.test':'qa.example.test';
+const busy=()=>['running','stopping'].includes(app.scene);
+let timer,done=10,runStart=1,nextIndex=11;
+const idx=n=>runStart+n-1;
+const planned=()=>app.runEditor===0?10:1;
+const total=()=>done;
+const attempted=()=>busy()?Math.min(done+1,planned()):done;
+const isError=i=>(['last','running','stopping','stopped'].includes(app.scene))&&app.runEditor===0&&i===4;
+const isUnknown=i=>app.scene==='uncertain'&&i===Math.min(4,planned());
+const counts=()=>({bad:done>=4&&isError(4)?1:0,unknown:app.scene==='uncertain'?1:0,unsent:['auth','stopped'].includes(app.scene)?planned()-done:0});
+const outcome=i=>isError(i)?['bad','409 Conflict']:isUnknown(i)?['warn','결과 확인 필요']:['ok',app.runEditor===0?'201 Created':app.runEditor===1?'200 OK':'204 No Content'];
+function kv(key,val){return '<div class="kv"><span>'+key+'</span><span>'+val+'</span></div>'}
+function code(lines){return '<pre>'+lines.map((v,i)=>'<span class="line"><span class="ln">'+(i+1)+'</span>'+v+'</span>').join('')+'</pre>'}
+function tabs(id,names,selected,set){const host=el(id);host.replaceChildren();names.forEach((name,i)=>{const b=document.createElement('button');b.textContent=name;b.setAttribute('aria-pressed',i===selected);b.onclick=()=>{set(i);render()};host.append(b)})}
+function scene(value){
+ clearTimeout(timer);app.scene=value;el('scene').value=value;
+ app.editor=0;app.runEditor=0;app.env='개발 장비';app.runEnv=app.env;el('env').value=app.env;app.requestTab=1;
+ runStart=1;done=value==='auth'?0:['running','stopping'].includes(value)?4:value==='stopped'?5:10;
+ nextIndex=attempted()+1;app.selection=done?Math.min(4,done):0;app.page=0;render();
+ if(value==='stopping')timer=setTimeout(advance,3000);
+}
+function advance(){
+ done++;app.selection=done;app.page=Math.floor((done-1)/5);
+ if(app.scene==='stopping')app.scene='stopped';
+ else if(done>=planned())app.scene='last';
+ else if(app.runEditor===0)nextIndex++;
+ el('scene').value=app.scene;render();
+ if(busy())timer=setTimeout(advance,1250);
+}
+function startOrStop(){
+ clearTimeout(timer);
+ if(busy()){app.scene='stopping';el('scene').value='stopping';render();timer=setTimeout(advance,1250);return}
+ app.runEnv=app.env;app.runEditor=app.editor;app.scene='running';el('scene').value='running';done=0;app.selection=0;app.page=0;
+ if(app.runEditor===0){runStart=nextIndex;nextIndex++}
+ render();timer=setTimeout(advance,1250)
+}
+function render(){
+ const [name,m,path]=requests[app.editor];const isPost=app.editor===0;const count=planned();
+ el('saved').replaceChildren(...requests.map(([n,v],i)=>{const b=document.createElement('button');b.className='saved';b.setAttribute('aria-pressed',i===app.editor);b.innerHTML='<span class="verb '+v.toLowerCase()+'">'+v+'</span>'+n;b.onclick=()=>{app.editor=i;app.requestTab=i===0?1:0;render()};return b}));
+ el('title').textContent=name;el('method').className='verb '+m.toLowerCase();el('method').textContent=m;el('path').textContent=path;el('target').textContent=app.env+(app.env==='개발 장비'?' · HTTPS':' · HTTP 평문');
+ const next=nextIndex;const currentBatch=busy()&&app.runEditor===0&&app.env===app.runEnv;const first=currentBatch?runStart:next;
+ el('batch').innerHTML=isPost?'<span>반복 횟수 <b>10회</b></span><span>다음 번호 <b>'+next+'</b></span><span>'+(currentBatch?'이번 실행':'다음 실행')+' <b>test_'+first+' ~ test_'+(first+9)+'</b></span>':'<span>'+ (m==='GET'?'GET 본문 없음':'DELETE 본문 선택 · 현재 없음')+'</span>';
+ if(app.env==='QA 장비')el('batch').innerHTML+='<span class="warn">HTTP 평문 · http://qa.example.test/api/samples'+(app.editor===2?'/42':'')+' · 로그인 http://login.qa.example.test/login</span>';
+ const send=el('send');send.className=busy()?'send stop':'send';send.disabled=app.scene==='stopping';send.innerHTML=busy()?(send.disabled?'중지 대기 중':'진행 중지'):'<svg class="icon"><use href="#sendicon"/></svg>'+(isPost?'10회 보내기':'보내기');
+ send.onclick=startOrStop;
+ const rt=app.requestTab;tabs('requestTabs',['헤더','JSON 본문','실행 전'],rt,i=>app.requestTab=i);
+ el('request').innerHTML=rt===0?kv('Accept','application/json')+(isPost?kv('Content-Type','application/json'):''):rt===2?kv('실행 전 인증','사용')+kv('로그인 설정',app.env)+kv('인증 시점','실행 시작 시 한 번')+kv('응답 대기 시간',app.editor===1?'요청별 지정 · 60초 (예시)':'공통 기본값 사용'):isPost?code(['{','  <span class="key">"name"</span>: <span class="v">"test_${index}"</span>','}']):'<p class="muted">'+(m==='GET'?'GET 요청에는 본문을 사용하지 않습니다.':'이 요청에는 JSON 본문이 없습니다.')+'</p>';
+ tabs('responseTabs',['응답 본문','응답 헤더'],app.responseTab,i=>app.responseTab=i);
+ const i=app.selection;const [tone,label]=i?outcome(i):app.scene==='auth'?['bad','인증 실패']:['neutral','응답 대기'];el('badge').className='status '+tone;el('badge').textContent=(i?i+'회차 · ':'')+label+(i&&!isUnknown(i)?' · '+times[i-1]+' ms':'');
+ el('response').innerHTML=!i?(app.scene==='auth'?'<p class="notice">로그인 응답에서 토큰을 찾을 수 없습니다.</p>':'<p class="muted">첫 응답을 기다리고 있습니다.</p>'):isUnknown(i)?'<p class="notice">시간 내에 응답을 받지 못했습니다. 서버 반영 여부를 확인하세요.</p>':app.responseTab?kv('Content-Type',app.runEditor===2?'—':'application/json'):isError(i)?code(['{','  <span class="key">"message"</span>: <span class="v">"test_'+idx(i)+' already exists"</span>','}']):app.runEditor===2?'<p class="muted">응답 본문 없음</p>':app.runEditor===1?code(['[','  { <span class="key">"name"</span>: <span class="v">"test_1"</span> }',']']):code(['{','  <span class="key">"name"</span>: <span class="v">"test_'+idx(i)+'"</span>','}']);
+ const runName=requests[app.runEditor][0]+' / '+app.runEnv+(app.runEditor===0&&attempted()?' · 인덱스 '+runStart+'–'+idx(attempted()):'');el('runmeta').textContent=(busy()?'현재 실행':'최근 실행')+' · '+runName;
+ const c=counts();el('stats').innerHTML='<span class="ok">성공 '+(total()-c.bad-c.unknown)+'</span><span class="'+(c.bad?'bad':'neutral')+'">실패 '+c.bad+'</span><span class="'+(c.unknown?'warn':'neutral')+'">확인 필요 '+c.unknown+'</span><span class="neutral">'+(busy()?'대기 '+(planned()-attempted()):'미전송 '+c.unsent)+'</span>';
+ const messages={last:'실행 완료',running:attempted()+'회차 전송 중',stopping:attempted()+'회차 응답 또는 시간 초과 후 중지합니다.',stopped:done+'회차에서 중지',auth:'실행 전 인증 실패 · 본 요청 미전송',uncertain:'시간 초과 회차는 자동으로 재시도하지 않습니다.'};
+ el('summary').innerHTML='<strong>'+messages[app.scene]+'</strong><span>'+total()+' / '+count+'회 완료</span>';
+ if(busy())el('summary').innerHTML+='<progress max="'+count+'" value="'+done+'" aria-label="완료된 회차"></progress>';
+ const shown=app.scene==='auth'?0:app.scene==='stopped'?planned():attempted();
+ const rows=el('rows');rows.replaceChildren();
+ if(!shown)rows.innerHTML='<tr><td colspan="5" class="empty">본 요청을 보내지 않아 회차별 응답이 없습니다.</td></tr>';
+ for(let n=app.page*5+1;n<=Math.min(shown,app.page*5+5);n++){
+  const complete=n<=total();const [style,title]=complete?outcome(n):['neutral',busy()?'전송 중':'미전송'];const tr=document.createElement('tr');tr.className=n===i?'selected-row':'';
+  tr.innerHTML='<td class="number">'+n+'</td><td>'+(app.runEditor===0&&(complete||busy())?idx(n):'—')+'</td><td class="namecol">'+(app.runEditor===0&&(complete||busy())?'test_'+idx(n):'—')+'</td><td><button class="choice status '+style+'" '+(complete?'':'disabled')+' aria-label="'+n+'회차 '+title+'">'+title+'</button></td><td class="time">'+(complete&&!isUnknown(n)?times[n-1]+' ms':'—')+'</td>';
+  if(complete)tr.onclick=()=>{app.selection=n;render()};rows.append(tr)
+ }
+ el('pager').replaceChildren();if(shown){el('pager').innerHTML='<span>'+(app.page*5+1)+'–'+Math.min(shown,app.page*5+5)+' / '+shown+'회</span>';for(const [text,move] of [['이전',-1],['다음',1]]){const b=document.createElement('button');b.className='tiny';b.textContent=text;b.disabled=move<0?app.page===0:shown<=(app.page+1)*5;b.onclick=()=>{app.page+=move;render()};el('pager').append(b)}}
+}
+el('scene').onchange=e=>scene(e.target.value);el('env').onchange=e=>{app.env=e.target.value;render()};
+el('manage').onclick=()=>{el('envcontent').innerHTML='<div class="group"><h3>'+app.env+' · 변수</h3>'+kv('deviceUrl',(app.env==='개발 장비'?'https://':'http://')+envHost(app.env))+kv('username','sample-user')+kv('password','••••••••')+'</div><div class="group"><h3>실행 전 로그인</h3>'+kv('URL',(app.env==='개발 장비'?'https://':'http://')+'login.'+envHost(app.env)+'/login')+kv('토큰을 보낼 API 주소',(app.env==='개발 장비'?'https://':'http://')+envHost(app.env))+kv('토큰 JSON 경로','data.token')+kv('적용 헤더','Authorization · Bearer')+'</div>';el('settings').showModal()};
+el('close').onclick=()=>el('settings').close();render();
+</script>
+</html>
