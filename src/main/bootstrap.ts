@@ -194,7 +194,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
       (method === 'read' || method === 'close' || method === 'finishStartup' || (!installPending && !appMutationBarrier.blocked())),
     new TermRailStartupFiles(profile, safeStorage),
     async () => {
-      const choice = await dialog.showOpenDialog(window, {title: 'Bash 시작 파일 가져오기', properties: ['openFile']})
+      const choice = await dialog.showOpenDialog(window, {title: '시작 파일 가져오기', properties: ['openFile']})
       return choice.canceled ? undefined : choice.filePaths[0]
     },
   )

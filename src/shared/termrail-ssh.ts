@@ -20,10 +20,11 @@ export function isTermRailEndpoint(value: unknown): value is TermRailEndpoint {
     typeof endpoint.port === 'number' && Number.isInteger(endpoint.port) && endpoint.port >= 1 && endpoint.port <= 65535
 }
 
-export type TermRailSshPhase = 'connecting' | 'host-key' | 'login' | 'authenticating' | 'connected' | 'closed' | 'failed'
+export type TermRailSshPhase = 'connecting' | 'host-key' | 'login' | 'authenticating' | 'opening-shell' | 'connected' | 'closed' | 'failed'
 
 export interface TermRailSshRead extends TermRailEndpoint {
   phase: TermRailSshPhase
+  startupInput?: 'waiting' | 'manual'
   fingerprint?: string
   previousFingerprint?: string
   message?: string

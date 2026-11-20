@@ -118,6 +118,8 @@ function SessionPane({sessionId, startupId, active, onClose, onEnded}: PaneProps
   }, [active, status.phase])
 
   const connected = !error && status.phase === 'connected'
+  const pendingMessage = status.phase === 'authenticating' ? '인증 중…'
+    : status.phase === 'opening-shell' ? '터미널 여는 중…' : '연결 중…'
   const ended = status.phase === 'closed' || status.phase === 'failed' || !!error
   useEffect(() => {if (ended) onEnded?.()}, [ended, onEnded])
   const handleActionError = () => setError('SSH 연결 요청을 처리할 수 없습니다.')
@@ -125,6 +127,9 @@ function SessionPane({sessionId, startupId, active, onClose, onEnded}: PaneProps
     data-terminal-input={connected ? '' : undefined} tabIndex={-1}>
     <div ref={mount} className="termrail-xterm" style={{visibility: connected || ended ? 'visible' : 'hidden'}} />
     {truncated && <small className="termrail-transcript-note">최근 출력부터 표시합니다.</small>}
+    {connected && status.startupInput && <small className="termrail-console-status" role="status">
+      {status.startupInput === 'waiting' ? '시작 명령 대기 중' : '자동 입력이 중지되었습니다. 터미널에서 직접 입력하세요.'}
+    </small>}
     {ended ? <div className="termrail-console-status" role="status">
       {error || status.message || (status.phase === 'closed' ? '연결이 종료되었습니다.' : '서버에 연결하지 못했습니다.')}
     </div> : !connected && <div className="termrail-console-prompt">
@@ -134,7 +139,7 @@ function SessionPane({sessionId, startupId, active, onClose, onEnded}: PaneProps
         : status.phase === 'host-key'
           ? <HostKeyPrompt key={status.fingerprint} status={status} onClose={onClose}
               trust={() => api!.trust(sessionId, status.fingerprint!).catch(handleActionError)} />
-          : <span role="status">{status.phase === 'authenticating' ? '인증 중…' : '연결 중…'}</span>}
+          : <span role="status">{pendingMessage}</span>}
     </div>}
   </div>
 }

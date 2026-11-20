@@ -204,58 +204,90 @@ it('sends a stored login once after host approval and opens no shell after rejec
   }
 })
 
-it.skipIf(process.platform !== 'linux').each(['new tab', 'restored pane'])(
-  'runs startup once in interactive Bash for a %s and retains its state', async origin => {
-  const directory = mkdtempSync(join(tmpdir(), 'termrail-startup-shell-'))
+const shellPrompt = '\x1b]133;A\x07remote@fixture:~$ \x1b]133;B\x07'
+const username = 'fixture-user'
+const password = 'fixture-secret'
+
+async function withStartupShell(run: (fixture: {
+  directory: string
+  service: TermRailSshService
+  id: string
+  target: ReturnType<typeof endpoint>
+  users: string[]
+  input: () => string
+  transcript: () => string
+  requests: string[]
+  openShell: (accept: () => ServerChannel, reject: () => void) => void
+}) => Promise<void>) {
+  const directory = mkdtempSync(join(tmpdir(), 'termrail-default-shell-'))
   const service = new TermRailSshService(join(directory, 'pins'))
-  writeFileSync(join(directory, '.bashrc'), "from_rc=loaded\nPS1='term> '\n")
-  const startup = {
-    username: 'fixture-user', password: 'fixture-secret',
-    body: [
-      '#' + 'x'.repeat(42_000),
-      'cd /tmp',
-      'pwd',
-      'while [[ ! -e "$HOME/continue" ]]; do sleep 0.02; done',
-      'label="한글 \' \\ $"',
-      'runs=$((runs + 1))',
-      "printf 'started %s %s %s\\n' \"$from_rc\" \"$runs\" \"$label\"",
-    ].join('\n'),
-  }
+  const id = randomUUID()
   const users: string[] = []
-  const remoteRequests: string[] = []
+  const requests: string[] = []
   const input: Buffer[] = []
-  let terminals = 0
   const server = new Server({ hostKeys: [createTestSshHostKey()] }, connection => {
     connection.on('error', () => {}).on('authentication', auth => {
       users.push(auth.username)
-      if (auth.method === 'password' && auth.username === startup.username && auth.password === startup.password)
+      if (auth.method === 'password' && auth.username === username && auth.password === password)
         return auth.accept()
       auth.reject(['password'])
     }).on('ready', () => {
       connection.on('session', accept => {
-        accept().on('pty', permit => { terminals++; permit?.() }).on('exec', (permit, _deny, {command}) => {
-          remoteRequests.push(command)
-          const channel = permit()
-          // util-linux script supplies a real controlling terminal for stty, readline, and Bash.
-          const shell = spawn('script', ['-qef', '-E', 'always', '-c', command, '/dev/null'], {
-            env: { PATH: process.env.PATH, HOME: directory, SHELL: '/bin/sh', TERM: 'dumb' },
+        accept().on('pty', permit => { requests.push('pty'); permit?.() })
+          .on('exec', (_permit, reject) => { requests.push('exec'); reject() })
+          .on('shell', (permit, reject) => {
+            requests.push('shell')
+            fixture.openShell(() => {
+              const channel = permit()
+              channel.on('data', (chunk: Buffer) => input.push(chunk))
+              return channel
+            }, reject)
           })
-          channel.on('data', (data: Buffer) => input.push(data))
-          channel.pipe(shell.stdin)
-          shell.stdout.pipe(channel, { end: false })
-          shell.stderr.pipe(channel.stderr, { end: false })
-          shell.stdin.on('error', () => {})
-          shell.on('close', code => { channel.exit(code ?? 1); channel.end() })
-          channel.on('close', () => shell.kill())
-        })
       })
     })
   })
+  const fixture = {
+    directory, id, service, users, requests,
+    get target() { return endpoint(server) },
+    transcript: () => Buffer.from(service.read(id, 0).data).toString(),
+    input: () => Buffer.concat(input).toString(),
+    openShell: (_accept: () => ServerChannel, reject: () => void) => reject(),
+  }
   try {
     server.listen(0, '127.0.0.1')
     await once(server, 'listening')
-    const id = randomUUID()
-    service.open(id, endpoint(server), origin === 'new tab' ? startup : undefined)
+    await run(fixture)
+  } finally {
+    service.dispose()
+    await new Promise<void>(resolve => server.close(() => resolve()))
+    rmSync(directory, { recursive: true, force: true })
+  }
+}
+
+it.skipIf(process.platform !== 'linux').each([
+  { origin: 'headers only', body: '' },
+  { origin: 'new tab', body: 'ls\n' },
+  { origin: 'restored pane', body: 'pwd\nls\n' },
+])('opens the normal interactive shell for $origin and keeps it available for typing', async ({origin, body}) => {
+  await withStartupShell(async fixture => {
+    const { directory, service, id, target, transcript, input, requests, users } = fixture
+    writeFileSync(join(directory, 'listing-witness.txt'), '')
+    writeFileSync(join(directory, '.bashrc'), "PS1='remote@fixture:~$ '\nbind 'set enable-bracketed-paste on'\n")
+    fixture.openShell = accept => {
+      const channel = accept()
+      // util-linux script gives the server's normal Bash a controlling PTY and readline.
+      const shell = spawn('script', ['-qef', '-c', '/bin/bash -i', '/dev/null'], {
+        cwd: directory, env: { PATH: process.env.PATH, HOME: directory, SHELL: '/bin/bash', TERM: 'xterm-256color' },
+      })
+      channel.pipe(shell.stdin)
+      shell.stdout.pipe(channel, { end: false })
+      shell.stderr.pipe(channel.stderr, { end: false })
+      shell.stdin.on('error', () => {})
+      shell.on('close', code => { channel.exit(code ?? 1); channel.end() })
+      channel.on('close', () => shell.kill())
+    }
+    const startup = { username, password, body }
+    service.open(id, target, origin === 'restored pane' ? undefined : startup)
     await vi.waitFor(() => expect(service.read(id, 0).phase).toBe('host-key'))
     expect(() => service.prepareProfileStart(id)).toThrow()
     expect(users).toEqual([])
@@ -265,65 +297,77 @@ it.skipIf(process.platform !== 'linux').each(['new tab', 'restored pane'])(
       expect(users).toEqual([])
       const first = service.prepareProfileStart(id)
       const duplicate = service.prepareProfileStart(id)
-      expect(first.endpoint).toEqual(endpoint(server))
+      expect(first.endpoint).toEqual(target)
       first.start(startup)
       expect(() => duplicate.start(startup)).toThrow()
     }
     await vi.waitFor(() => expect(service.read(id, 0).phase).toBe('connected'))
-    await service.write(id, "printf 'interactive %s %s %s\\n' \"$PWD\" \"$runs\" \"$label\"\n")
-    writeFileSync(join(directory, 'continue'), '')
-    function readTranscript() { return Buffer.from(service.read(id, 0).data).toString().replaceAll('\r', '') }
-    await vi.waitFor(() => expect(readTranscript()).toContain("interactive /tmp 1 한글 ' \\ $"))
-    service.resize(id, 100, 40)
-    const replay = readTranscript()
-    expect(replay).toContain("/tmp\nstarted loaded 1 한글 ' \\ $")
-    expect(replay.match(/started loaded/g)).toHaveLength(1)
-    expect(users).toEqual([startup.username])
-    expect(terminals).toBe(1)
-    expect(Buffer.concat(input).toString()).toContain(startup.body)
-    for (const value of [startup.username, startup.password]) {
-      expect(replay).not.toContain(value)
-      expect(remoteRequests.join('')).not.toContain(value)
-      expect(Buffer.concat(input).toString()).not.toContain(value)
+    if (body) {
+      await vi.waitFor(() => expect(transcript()).toContain('listing-witness.txt'))
+      if (origin === 'restored pane') expect(transcript()).toContain(directory)
+    } else {
+      await vi.waitFor(() => expect(transcript()).toContain('remote@fixture:~$ '))
+      expect(service.read(id, 0).startupInput).toBeUndefined()
     }
-    await service.write(id, 'exit\n')
+    const manual = "printf 'manual-%s\\n' response\r"
+    await service.write(id, manual)
+    await vi.waitFor(() => expect(transcript()).toContain('manual-response'))
+    service.resize(id, 100, 40)
+    expect(input()).toBe(body.replaceAll('\n', '\r') + manual)
+    expect(requests).toEqual(['pty', 'shell'])
+    expect(users).toEqual([username])
+    expect(transcript()).not.toContain(password)
+    expect(transcript()).not.toContain(username)
+    await service.write(id, 'exit\r')
     await vi.waitFor(() => expect(service.read(id, 0).phase).toBe('closed'))
-  } finally {
-    service.dispose()
-    await new Promise<void>(resolve => server.close(() => resolve()))
-    rmSync(directory, { recursive: true, force: true })
-  }
+  })
 })
 
-it('reports an unavailable remote Bash and sends no file to an unprepared shell', async () => {
-  const directory = mkdtempSync(join(tmpdir(), 'termrail-bash-missing-'))
-  const service = new TermRailSshService(join(directory, 'pins'))
-  const input: Buffer[] = []
-  const server = new Server({ hostKeys: [createTestSshHostKey()] }, connection => {
-    connection.on('error', () => {}).on('authentication', auth => auth.accept()).on('ready', () => {
-      connection.on('session', accept => {
-        accept().on('pty', permit => permit?.()).on('exec', permit => {
-          const channel = permit()
-          channel.on('data', (data: Buffer) => input.push(data))
-          channel.exit(127)
-          channel.end('bash: command not found\n')
-        })
-      })
-    })
-  })
-  try {
-    server.listen(0, '127.0.0.1')
-    await once(server, 'listening')
-    const id = randomUUID()
-    service.open(id, endpoint(server), { username: 'fixture', password: 'fixture-only', body: 'pwd' })
+it.each(['question', 'continuation prompt', 'user keystroke'])('stops queued input after a %s and preserves the session', async reason => {
+  await withStartupShell(async fixture => {
+    const { service, id, target, input, transcript } = fixture
+    let shell!: ServerChannel
+    fixture.openShell = permit => { shell = permit() }
+    service.open(id, target, { username, password, body: 'pwd\nls\n' })
     await vi.waitFor(() => expect(service.read(id, 0).phase).toBe('host-key'))
     service.trust(id, service.read(id, 0).fingerprint!)
+    await vi.waitFor(() => expect(service.read(id, 0)).toMatchObject({phase: 'connected', startupInput: 'waiting'}))
+    expect(input()).toBe('')
+    shell.write(shellPrompt)
+    await vi.waitFor(() => expect(input()).toBe('pwd\r'))
+    shell.write('pwd\r\n/fixture/$\r\n')
+    await vi.waitFor(() => expect(transcript()).toContain('/fixture/$'))
+    expect(input()).toBe('pwd\r')
+    if (reason !== 'user keystroke') {
+      shell.write(reason === 'question' ? 'Continue? [y/n] ' : '> ')
+      await vi.waitFor(() => expect(service.read(id, 0).startupInput).toBe('manual'))
+    }
+    await service.write(id, 'y\r')
+    await vi.waitFor(() => expect(input()).toBe('pwd\ry\r'))
+    shell.write('\r\n' + shellPrompt)
+    await vi.waitFor(() => expect(transcript()).toContain('\r\n' + shellPrompt))
+    expect(service.read(id, 0).phase).toBe('connected')
+    await service.write(id, 'echo manual\r')
+    await vi.waitFor(() => expect(input()).toBe('pwd\ry\recho manual\r'))
+  })
+})
+
+it('reports shell-open failure separately from password authentication', async () => {
+  await withStartupShell(async fixture => {
+    const { id, target, service, input, requests } = fixture
+    let rejectShell: (() => void) | undefined
+    fixture.openShell = (_accept, reject) => { rejectShell = reject }
+    service.open(id, target, { username, password, body: 'pwd' })
+    await vi.waitFor(() => expect(service.read(id, 0).phase).toBe('host-key'))
+    service.trust(id, service.read(id, 0).fingerprint!)
+    await vi.waitFor(() => {
+      expect(service.read(id, 0).phase).toBe('opening-shell')
+      expect(rejectShell).toBeDefined()
+    })
+    rejectShell!()
     await vi.waitFor(() => expect(service.read(id, 0).phase).toBe('failed'))
-    expect(service.read(id, 0).message).toMatch(/Bash/)
-    expect(input).toEqual([])
-  } finally {
-    service.dispose()
-    await new Promise<void>(resolve => server.close(() => resolve()))
-    rmSync(directory, { recursive: true, force: true })
-  }
+    expect(service.read(id, 0).message).toMatch(/터미널/)
+    expect(requests).toEqual(['pty', 'shell'])
+    expect(input()).toBe('')
+  })
 })

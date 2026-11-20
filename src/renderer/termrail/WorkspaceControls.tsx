@@ -65,7 +65,7 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
     return () => dialog.close()
   }, [])
 
-  function dismiss() {close(); editor.anchor.focus()}
+  function dismiss() {ref.current?.close(); close(); editor.anchor.focus()}
   function fieldError(field: Field) {
     if (field === 'host') return hostError(endpoint.host)
     if (field === 'port') return portError(port)
@@ -112,7 +112,9 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
       dismiss()
     } catch (cause) {setError(cause instanceof Error ? cause.message : '저장할 수 없습니다.')}
   }
-  return <dialog ref={ref} aria-label={heading} className="termrail-dialog termrail-workspace-dialog" data-standard-dialog={editor.kind === 'add' || layout || undefined} onCancel={e => {e.preventDefault(); dismiss()}}>
+  return <dialog ref={ref} aria-label={heading} className="termrail-dialog termrail-workspace-dialog"
+    data-standard-dialog={editor.kind === 'add' || editor.kind === 'edit' || layout || undefined}
+    onCancel={e => {e.preventDefault(); dismiss()}}>
     <form noValidate onSubmit={submit}>
       <h3>{heading}</h3>
       {editor.kind === 'delete' ? <p>‘{editor.profile.name}’ 서버를 삭제할까요? 이 서버를 사용하는 저장된 레이아웃은 열 수 없게 됩니다.</p>
@@ -127,7 +129,7 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
           <span className="termrail-startup-label">시작 파일 <small>(선택)</small></span>
           <span className="termrail-file-name" title={startup.name}>{startup.name ?? '선택한 파일 없음'}</span>
           <button type="button" aria-label="시작 파일 가져오기" disabled={startup.busy}
-            title="UTF-8 파일의 첫 두 줄에 # workrail-user: 아이디와 # workrail-password: 비밀번호를 적고 다음 줄부터 Bash 명령을 적으세요."
+            title="UTF-8 파일의 첫 두 줄에 # workrail-user: 아이디와 # workrail-password: 비밀번호를 적으세요. 셋째 줄부터는 기본 셸에서 사용할 명령을 한 줄에 하나씩 적으세요."
             onClick={() => void startup.pick()}>가져오기</button>
           {startup.name && <button type="button" aria-label="시작 파일 제거" disabled={startup.busy} onClick={startup.remove}>×</button>}
         </div>

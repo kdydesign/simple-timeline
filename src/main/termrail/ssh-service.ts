@@ -2,23 +2,11 @@ import { createHash } from 'node:crypto'
 import { Client, type ClientCallback, type ClientChannel, type NextAuthHandler } from 'ssh2'
 import { isTermRailEndpoint, termRailSessionLimit, type TermRailEndpoint, type TermRailSshPhase, type TermRailSshRead } from '../../shared/termrail-ssh'
 import { SshHostKeys } from './ssh-host-keys'
+import { StartupPrompt } from './startup-prompt'
 import { SshOutput } from './ssh-output'
 import type { TermRailStartup } from './startup-files'
 
 const invalid = () => new Error('잘못된 터미널 요청입니다.')
-
-// Read the literal UTF-8 script without terminal line limits or control-key processing.
-// NUL is excluded by the file format. The first NUL announces raw mode; the second
-// ends the file, leaving subsequent keyboard input for the same interactive Bash.
-const startupShell = `exec bash -c '
-termrail_tty=$(stty -g) && stty raw -echo || exit 1
-printf "\\0"
-LC_ALL=C IFS= read -r -d "" termrail_body || exit 1
-stty "$termrail_tty" || exit 1
-exec bash --rcfile <(
-  printf "%s\\n" "if [[ -r ~/.bashrc ]]; then . ~/.bashrc; fi"
-  printf "%s" "$termrail_body"
-) -i'`
 
 class SshSession {
   private readonly client = new Client()
@@ -30,7 +18,9 @@ class SshSession {
   private previousFingerprint?: string
   private verifiedFingerprint?: string
   private verifyKey?: (trusted: boolean) => void
-  private startupBody?: string
+  private startupLines?: string[]
+  private startupPrompt?: StartupPrompt
+  private startupInput?: TermRailSshRead['startupInput']
   private authenticate?: NextAuthHandler
   private pendingWrite?: (error?: Error | null) => void
   private deadline?: ReturnType<typeof setTimeout>
@@ -114,9 +104,9 @@ class SshSession {
     this.deadline = undefined
   }
 
-  private armDeadline() {
+  private armDeadline(message = 'SSH 서버 응답 시간이 초과되었습니다.') {
     this.clearDeadline()
-    this.deadline = setTimeout(() => this.finish('SSH 서버 응답 시간이 초과되었습니다.'), 30_000)
+    this.deadline = setTimeout(() => this.finish(message), 30_000)
     this.deadline.unref()
   }
 
@@ -142,9 +132,10 @@ class SshSession {
       throw invalid()
     const next = this.authenticate
     this.authenticate = undefined
-    this.startupBody = startupBody
+    // Pop in file order, without retaining the password or reparsing the file on reattach.
+    this.startupLines = startupBody?.split('\n').filter(line => line.trim()).reverse()
     this.phase = 'authenticating'
-    this.armDeadline()
+    this.armDeadline('SSH 인증 응답 시간이 초과되었습니다.')
     // ssh2 copies the Buffer into its auth packet synchronously, retaining a reference in curAuth.
     const secret = Buffer.from(password)
     try {
@@ -161,26 +152,59 @@ class SshSession {
     if (this.phase !== 'authenticating') return this.finish('SSH 인증 상태를 확인할 수 없습니다.')
     const { cols, rows } = this
     const pty = { term: 'xterm-256color', cols, rows }
-    const scripted = this.startupBody !== undefined
+    this.phase = 'opening-shell'
+    this.armDeadline('서버에서 터미널을 여는 시간이 초과되었습니다.')
     const opened: ClientCallback = (error, channel) => {
       if (this.finished) return channel?.destroy()
-      if (error) return this.finish(scripted
-        ? '서버에서 대화형 Bash를 열 수 없습니다.' : '서버에서 대화형 터미널을 열 수 없습니다.')
+      if (error) return this.finish('서버에서 기본 터미널을 열 수 없습니다.')
+      this.clearDeadline()
+      this.phase = 'connected'
       this.channel = channel
-      if (!scripted) {
-        this.clearDeadline()
-        this.phase = 'connected'
-      }
+      if (this.startupLines?.length) this.waitForPrompt()
       if (cols !== this.cols || rows !== this.rows) channel.setWindow(this.rows, this.cols, 0, 0)
       channel.on('readable', () => this.drainOutput())
       channel.stderr.on('readable', () => this.drainOutput())
       channel.on('error', () => this.finish('터미널 연결이 끊겼습니다.'))
       channel.stderr.on('error', () => this.finish('터미널 연결이 끊겼습니다.'))
-      channel.once('close', () => this.finish(this.startupBody === undefined
-        ? undefined : '서버에서 Bash 시작 파일을 받을 대화형 터미널을 열 수 없습니다.'))
+      channel.once('close', () => this.finish())
     }
-    if (scripted) this.client.exec(startupShell, { pty }, opened)
-    else this.client.shell(pty, opened)
+    this.client.shell(pty, opened)
+  }
+
+  private waitForPrompt() {
+    this.startupInput = 'waiting'
+    this.startupPrompt = new StartupPrompt()
+    this.clearDeadline()
+    // Expiry hands control to the user; it never sends input or closes an open shell.
+    this.deadline = setTimeout(() => this.stopStartup('manual'), 10_000)
+    this.deadline.unref()
+  }
+
+  private stopStartup(status?: 'manual') {
+    this.clearDeadline()
+    this.startupLines = undefined
+    this.startupPrompt = undefined
+    this.startupInput = status
+  }
+
+  private promptOutput(chunk: Buffer, stdout: boolean) {
+    if (!this.startupPrompt || !this.channel) return
+    if (!stdout || this.channel.stderr.readableLength) return this.stopStartup('manual')
+    const signal = this.startupPrompt.push(chunk)
+    if (!signal) return
+    if (signal === 'manual' || this.channel.readableLength) return this.stopStartup('manual')
+    const line = this.startupLines?.pop()
+    // Control characters in a PTY can edit/submit input (including tab completion).
+    if (!line || /[\x00-\x1f\x7f-\x9f]/u.test(line)) return this.stopStartup('manual')
+    if (this.startupLines?.length) this.waitForPrompt()
+    else this.stopStartup()
+    try {
+      this.channel.write(line + '\r', (error?: Error | null) => {
+        if (error && !this.finished) this.stopStartup('manual')
+      })
+    } catch {
+      this.stopStartup('manual')
+    }
   }
 
   private drainOutput() {
@@ -189,23 +213,8 @@ class SshSession {
       while (stream.readableLength && this.output.allowance) {
         const chunk = stream.read(Math.min(stream.readableLength, this.output.allowance)) as Buffer | null
         if (!chunk) break
-        const ready = stream === this.channel && this.startupBody !== undefined ? chunk.indexOf(0) : -1
-        if (ready < 0) {
-          this.output.append(chunk)
-        } else {
-          this.output.append(chunk.subarray(0, ready))
-          this.output.append(chunk.subarray(ready + 1))
-          const input = this.startupBody + '\0'
-          this.startupBody = undefined
-          this.clearDeadline()
-          this.phase = 'connected'
-          const sendFailed = () => this.finish('서버에 Bash 시작 파일을 전송할 수 없습니다.')
-          try {
-            this.channel.write(input, (error?: Error | null) => { if (error) sendFailed() })
-          } catch {
-            sendFailed()
-          }
-        }
+        this.output.append(chunk)
+        this.promptOutput(chunk, stream === this.channel)
       }
       // Consume the EOF notification even when the last readable event carries no bytes.
       // ssh2 delivers channel close after the readable side has emitted end.
@@ -218,7 +227,7 @@ class SshSession {
     this.drainOutput()
     const page = this.output.read(cursor)
     return {
-      ...this.endpoint, ...page, phase: this.phase, message: this.message,
+      ...this.endpoint, ...page, phase: this.phase, message: this.message, startupInput: this.startupInput,
       fingerprint: this.fingerprint, previousFingerprint: this.previousFingerprint,
       more: page.more || !!(this.channel?.readableLength || this.channel?.stderr.readableLength),
     }
@@ -235,6 +244,8 @@ class SshSession {
     if (this.phase !== 'connected' || !this.channel || this.pendingWrite) throw invalid()
     if (typeof data !== 'string' && !(data instanceof Uint8Array)) throw invalid()
     if (Buffer.byteLength(data) > 64 * 1024) throw invalid()
+    if (this.startupPrompt) this.stopStartup('manual')
+    else if (this.startupInput === 'manual') this.startupInput = undefined
     const channel = this.channel
     return new Promise((resolve, reject) => {
       const done = (error?: Error | null) => {
@@ -254,13 +265,12 @@ class SshSession {
 
   finish(message?: string) {
     if (this.finished) return
-    this.clearDeadline()
+    this.stopStartup()
     this.phase = message ? 'failed' : 'closed'
     this.message = message
     this.verifyKey = undefined
     this.authenticate = undefined
     this.startup = undefined
-    this.startupBody = undefined
     this.pendingWrite?.(invalid())
     this.client.destroy()
   }

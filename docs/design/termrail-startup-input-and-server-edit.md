@@ -1,6 +1,6 @@
 # TermRail 시작 파일 입력과 서버 수정 팝업
 
-2026-11-20 설계 확정. 제품 구현은 후속 작업이다. 기존 [시작 파일 설계](noderail-termrail-installed-feedback.md)와 [서버 편집 설계](workrail-log-home-termrail-help.md)를 기준으로 한다.
+2026-11-20 설계 확정. 구현과 인수 범위는 [구현 기록](../implementation/2026-11-20-termrail-default-shell.md)에서 확인한다. 기존 [시작 파일 설계](noderail-termrail-installed-feedback.md)와 [서버 편집 설계](workrail-log-home-termrail-help.md)를 기준으로 한다.
 
 ## 시작 파일로 서버 열기
 

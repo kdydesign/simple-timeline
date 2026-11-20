@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { once } from 'node:events'
-import { writeFile } from 'node:fs/promises'
+import { unlink, writeFile } from 'node:fs/promises'
 import type { AddressInfo } from 'node:net'
 import { join } from 'node:path'
-import { Server, type Connection } from 'ssh2'
+import { Server, type Connection, type ServerChannel } from 'ssh2'
 import { expect, test } from './fixture'
 import { createTestSshHostKey } from '../fixtures/ssh-host-key'
 
@@ -13,9 +13,13 @@ test('imports a startup file through the native picker and authenticates only af
   const { app, page, profile } = desktop
   const password = randomUUID()
   const file = join(profile, 'startup-fixture.sh')
-  await writeFile(file, '# workrail-user: fixture\n# workrail-password: ' + password + '\npwd\n')
+  await writeFile(file, '# workrail-user: fixture\n# workrail-password: ' + password + '\nls\npwd\n')
   const clients = new Set<Connection>()
-  let authentications = 0
+  const shells: { channel: ServerChannel, received: Buffer[] }[] = []
+  const prompt = '\x1b]133;A\x07remote@fixture:~$ \x1b]133;B\x07'
+  const passwordRequests: (() => void)[] = []
+  const shellRequests: (() => void)[] = []
+  let execRequests = 0
   let transports = 0
   const server = new Server({ hostKeys: [createTestSshHostKey()] }, client => {
     transports++
@@ -23,27 +27,50 @@ test('imports a startup file through the native picker and authenticates only af
     client.on('error', () => {}).on('close', () => clients.delete(client))
     client.on('authentication', request => {
       if (request.method === 'password' && request.username === 'fixture' && request.password === password) {
-        authentications++
-        request.accept()
+        passwordRequests.push(() => request.accept())
       } else request.reject(['password'])
     }).on('ready', () => {
       client.on('session', accept => {
-        accept().on('pty', permit => permit?.()).on('exec', (permit, reject, info) => {
-          if (info.command.includes(password)) { reject(); return }
-          const channel = permit()
-          let body = Buffer.alloc(0)
-          channel.on('data', (chunk: Buffer) => {
-            body = Buffer.concat([body, chunk])
-            if (body.includes(0)) {
-              if (body.equals(Buffer.from('pwd\n\0'))) channel.write('STARTUP-SESSION-READY\r\n')
-              else channel.end()
-            }
+        accept().on('pty', permit => permit?.()).on('exec', (_permit, reject) => {
+          execRequests++
+          reject()
+        }).on('shell', permit => {
+          shellRequests.push(() => {
+            const channel = permit()
+            const received: Buffer[] = []
+            shells.push({ channel, received })
+            channel.on('data', (data: Buffer) => received.push(data))
+            channel.write('Connected to disposable server\r\n')
           })
-          channel.write(Buffer.from([0]))
         })
       })
     })
   })
+  async function runStartup(sessionIndex: number) {
+    await expect(page.getByText('인증 중…', {exact: true})).toBeVisible()
+    await expect.poll(() => passwordRequests.length).toBe(sessionIndex + 1)
+    passwordRequests[sessionIndex]()
+    await expect(page.getByText('터미널 여는 중…', {exact: true})).toBeVisible()
+    await expect.poll(() => shellRequests.length).toBe(sessionIndex + 1)
+    shellRequests[sessionIndex]()
+    const rows = page.locator('.termrail-console[data-state=connected] .xterm-rows')
+    await expect(rows).toContainText('Connected to disposable server')
+    await expect(page.getByText('시작 명령 대기 중', {exact: false})).toBeVisible()
+    const {channel, received} = shells[sessionIndex]
+    const input = () => Buffer.concat(received).toString()
+    expect(input()).toBe('')
+    channel.write(prompt)
+    await expect.poll(input).toBe('ls\r')
+    channel.write('ls\r\nlisting-witness.txt\r\n')
+    await expect(rows).toContainText('listing-witness.txt')
+    expect(input()).toBe('ls\r')
+    channel.write(prompt)
+    await expect.poll(input).toBe('ls\rpwd\r')
+    channel.write('pwd\r\n/fixture/work\r\n' + prompt)
+    await expect(rows).toContainText('/fixture/work')
+    await expect(rows).not.toContainText(password)
+    expect(execRequests).toBe(0)
+  }
   try {
     server.listen(0, '127.0.0.1')
     await once(server, 'listening')
@@ -61,7 +88,7 @@ test('imports a startup file through the native picker and authenticates only af
     if (!secure) {
       await expect(dialog.getByRole('alert')).toBeVisible()
       await expect(dialog.getByText('startup-fixture.sh', { exact: true })).toHaveCount(0)
-      expect(authentications).toBe(0)
+      expect(passwordRequests).toHaveLength(0)
       return
     }
     await expect(dialog.getByText('startup-fixture.sh', { exact: true })).toBeVisible()
@@ -75,11 +102,20 @@ test('imports a startup file through the native picker and authenticates only af
     await dialog.getByRole('button', { name: '저장하고 연결' }).click()
     const trust = page.getByRole('button', { name: '키 신뢰', exact: true })
     await expect(trust).toBeVisible()
-    expect(authentications).toBe(0)
+    expect(passwordRequests).toHaveLength(0)
     await trust.click()
-    await expect(page.locator('.termrail-console[data-state=connected] .xterm-rows')).toBeVisible()
-    await expect(page.locator('.xterm-rows')).toContainText('STARTUP-SESSION-READY')
-    expect(authentications).toBe(1)
+    await runStartup(0)
+    // Layout restore must resolve the already-bound encrypted copy after the source disappears.
+    await unlink(file)
+    const dock = page.getByRole('navigation', {name: 'WorkRail 도구'})
+    await dock.getByRole('button', {name: 'Home', exact: true}).click()
+    await dock.getByRole('button', {name: 'TermRail', exact: true}).click()
+    await expect(page.locator('.xterm-rows')).toContainText('/fixture/work')
+    await page.locator('.xterm-helper-textarea').focus()
+    await page.keyboard.type('echo manual')
+    await page.keyboard.press('Enter')
+    await expect.poll(() => Buffer.concat(shells[0].received).toString()).toBe('ls\rpwd\recho manual\r')
+    expect(passwordRequests).toHaveLength(1)
     expect(await page.evaluate(() => JSON.stringify(localStorage))).not.toContain(password)
     await expect(page.locator('.xterm-rows')).not.toContainText(password)
 
@@ -91,11 +127,10 @@ test('imports a startup file through the native picker and authenticates only af
     const resume = page.getByRole('button', { name: '시작 파일로 로그인' })
     await expect(resume).toBeVisible()
     expect(transports).toBe(2)
-    expect(authentications).toBe(1)
+    expect(passwordRequests).toHaveLength(1)
     await resume.click()
-    await expect(page.locator('.termrail-console[data-state=connected] .xterm-rows')).toBeVisible()
-    await expect(page.locator('.xterm-rows')).toContainText('STARTUP-SESSION-READY')
-    expect(authentications).toBe(2)
+    await runStartup(1)
+    expect(passwordRequests).toHaveLength(2)
     expect(transports).toBe(2)
   } finally {
     for (const client of clients) client.end()

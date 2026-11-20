@@ -2,7 +2,7 @@ import {Terminal} from '@xterm/xterm'
 import {FitAddon} from '@xterm/addon-fit'
 import type {TermRailSshApi, TermRailSshRead} from '../../shared/termrail-ssh'
 
-export type TerminalStatus = Pick<TermRailSshRead, 'phase' | 'host' | 'port' | 'fingerprint' | 'previousFingerprint' | 'message'>
+export type TerminalStatus = Pick<TermRailSshRead, 'phase' | 'host' | 'port' | 'fingerprint' | 'previousFingerprint' | 'message' | 'startupInput'>
 export const initialStatus: TerminalStatus = {phase: 'connecting', host: '', port: 22}
 
 const terminalTheme = (doc: Document) => doc.documentElement.dataset.theme === 'dark'
@@ -103,11 +103,11 @@ class SessionTerminal {
       const frame = await this.api.read(this.sessionId, this.cursor)
       if (this.disposed || this.bridgeFailed) return
       const previous = this.status
-      const {phase, host, port, fingerprint, previousFingerprint, message} = frame
-      const changed = phase !== previous.phase || host !== previous.host || port !== previous.port ||
+      const {phase, host, port, fingerprint, previousFingerprint, message, startupInput} = frame
+      const changed = phase !== previous.phase || startupInput !== previous.startupInput || host !== previous.host || port !== previous.port ||
         message !== previous.message || fingerprint !== previous.fingerprint || previousFingerprint !== previous.previousFingerprint
       if (changed) {
-        this.status = {phase, host, port, fingerprint, previousFingerprint, message}
+        this.status = {phase, host, port, fingerprint, previousFingerprint, message, startupInput}
         this.term.options.disableStdin = phase !== 'connected'
       }
       if (frame.truncated) {

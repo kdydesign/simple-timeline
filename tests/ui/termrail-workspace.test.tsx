@@ -157,6 +157,32 @@ it('updates a saved profile by ID and applies its edited endpoint on the next co
   expect(JSON.parse(localStorage.getItem(libraryKey)!).profiles[0].id).toBe('a')
 })
 
+it('opens a standard editor with the saved endpoint and file, and discards changes on cancel', () => {
+  const profile = {...profiles[0], startup:{id:'saved-file', name:'dev.sh'}}
+  localStorage.setItem(libraryKey, JSON.stringify({profiles:[profile], layouts:[]}))
+  render(<TermRail active/>)
+  const server = button('개발')
+  function edit() {
+    fireEvent.keyDown(server, {key:'F10', shiftKey:true})
+    fireEvent.click(screen.getByRole('menuitem', {name:'서버 수정…'}))
+    return screen.getByRole('dialog', {name:'서버 수정'})
+  }
+  const dialog = edit()
+  expect(dialog).toHaveAttribute('data-standard-dialog')
+  expect(within(dialog).getByLabelText('서버 이름')).toHaveValue('개발')
+  expect(within(dialog).getByLabelText('호스트')).toHaveValue('dev.test')
+  expect(within(dialog).getByLabelText('포트')).toHaveValue('22')
+  expect(within(dialog).getByText('dev.sh')).toBeVisible()
+  fireEvent.change(within(dialog).getByLabelText('호스트'), {target:{value:'changed.test'}})
+  fireEvent.click(within(dialog).getByRole('button', {name:'취소'}))
+  expect(server).toHaveFocus()
+  const reopened = edit()
+  expect(within(reopened).getByLabelText('호스트')).toHaveValue('dev.test')
+  expect(within(reopened).getByText('dev.sh')).toBeVisible()
+  expect(JSON.parse(localStorage.getItem(libraryKey)!).profiles).toEqual([profile])
+  expect(ssh.discardStartup).not.toHaveBeenCalled()
+})
+
 it('drops a saved server onto the empty workspace and a pane edge while keeping the original connection', () => {
   render(<TermRail active/>)
   drop('개발', screen.getByText('서버를 여기에 놓으세요').parentElement!, 100, 50)

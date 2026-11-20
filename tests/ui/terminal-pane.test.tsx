@@ -90,6 +90,44 @@ it('focuses the selected login when other panes receive their prompts later', as
   expect(second).toHaveFocus()
 })
 
+it('distinguishes authentication and opening the shell before reporting a shell failure', async () => {
+  let state = frame('authenticating')
+  bridge(async () => state)
+  render(<TerminalPane sessionId="opening" onClose={vi.fn()}/>)
+  expect(await screen.findByText('인증 중…')).toBeVisible()
+  state = frame('opening-shell')
+  expect(await screen.findByText('터미널 여는 중…')).toBeVisible()
+  state = frame('failed', {message: '터미널을 열 수 없습니다.'})
+  expect(await screen.findByText('터미널을 열 수 없습니다.')).toBeVisible()
+})
+
+it('shows prompt-wait and manual-input status alongside the interactive console', async () => {
+  const output = new TextEncoder().encode('Proceed? ')
+  let state = frame('connected', {startupInput:'waiting'})
+  const api = bridge(async (_id, cursor) => ({...state, data: cursor ? new Uint8Array() : output, nextCursor:output.length}))
+  const view = render(<TerminalPane sessionId="startup" onClose={vi.fn()}/>)
+  expect(await screen.findByText('시작 명령 대기 중')).toBeVisible()
+  const terminal = view.container.querySelector('.xterm')
+  expect(terminal).toBeVisible()
+  expect(emulator.output).toEqual(['Proceed? '])
+  act(() => emulator.input!('y'))
+  await waitFor(() => expect(api.write).toHaveBeenCalledWith('startup', new TextEncoder().encode('y')))
+  state = frame('connected', {startupInput:'manual'})
+  expect(await screen.findByText(/직접 입력/)).toBeVisible()
+  expect(terminal).toBeVisible()
+  act(() => emulator.input!('\r'))
+  await waitFor(() => expect(api.write).toHaveBeenCalledWith('startup', new TextEncoder().encode('\r')))
+})
+
+it('removes the waiting indication when startup input finishes on the same connection', async () => {
+  let state = frame('connected', {startupInput:'waiting'})
+  bridge(async () => state)
+  render(<TerminalPane sessionId="startup-finished" onClose={vi.fn()}/>)
+  expect(await screen.findByText('시작 명령 대기 중')).toBeVisible()
+  state = frame('connected')
+  await waitFor(() => expect(screen.queryByText('시작 명령 대기 중')).toBeNull())
+})
+
 it('identifies a changed server key and trusts only the displayed fingerprint on explicit acceptance', async () => {
   const api = bridge(async () => frame('host-key', {fingerprint:'SHA256:new', previousFingerprint:'SHA256:old'}))
   const close = vi.fn()
