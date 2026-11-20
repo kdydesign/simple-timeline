@@ -6,7 +6,7 @@
 <title>WorkRail · PostRail 작업 화면</title>
 <style>
 :root{color-scheme:dark;font:14px/1.55 "Segoe UI","Noto Sans CJK KR",sans-serif;color:#eef2f5;--line:#46515a;--sub:#b2bec8;--sky:#a7d8f5;--green:#98d4ad;--amber:#eac191;--surface:linear-gradient(115deg,#2a3036ed,#272c32ed);--mono:Consolas,"Liberation Mono",monospace}
-*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 100% 100%,#383140,transparent 52%),linear-gradient(120deg,#222b2f,#202327);min-height:100vh}button,input,select,textarea{font:inherit;color:inherit}button,select,input{border:1px solid var(--line);border-radius:6px;background:#232a30;padding:6px 10px}button,select{cursor:pointer}button{background:linear-gradient(#3a434b,#30373d)}button:hover{border-color:#788d9c}button:disabled{opacity:.55;cursor:default}button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--sky);outline-offset:2px}h1,h2,h3,p,pre{margin:0}h1{font-size:21px;letter-spacing:-.6px}h2{font-size:16px}h3{font-size:14px}small,.sub{color:var(--sub)}small{font-size:12px}[hidden]{display:none!important}.row,.brand,nav,.item,.folder summary,.title,.foot,.endpoint,.tabs,.meta,.tools{display:flex;align-items:center;gap:9px}.apart{justify-content:space-between}.auto{margin-left:auto}.brand{padding:9px 16px;font-size:16px;font-weight:700}.brand img{width:24px;height:24px}.demo{font-size:12px;color:var(--sub);font-weight:400}header{background:linear-gradient(110deg,#29323a,#2c2c33);border-bottom:1px solid var(--line)}nav{padding:1px 14px 9px;gap:5px;overflow:auto}nav button{border:1px solid transparent;background:none;min-width:105px;min-height:36px;white-space:nowrap}nav button:disabled{opacity:.84}nav button.active,.primary{background:linear-gradient(#405c73,#304659);border:1px solid #79afd1;color:#eff9ff}.mark{color:var(--sky);font-size:18px;padding-right:6px}main{padding:14px;max-width:1620px;margin:auto}#post{display:grid;grid-template-columns:235px minmax(0,1fr);gap:14px;min-height:calc(100vh - 143px)}aside,.panel,dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:0 4px 18px #0002}aside{align-self:start;padding:14px 11px}.env{width:100%;margin:8px 0 15px}.asidehead{border-top:1px solid var(--line);padding-top:14px;margin-bottom:8px}.ghost,.more{background:transparent;border-color:transparent;color:var(--sub);padding:3px 5px}.ghost{color:var(--sky);font-size:12px}.folder{border-top:1px solid #3b444d}.folder summary{padding:9px 1px;cursor:pointer;list-style:none;font-size:13px;font-weight:650}.folder summary:before{content:'▸';color:var(--sub)}.folder[open]>summary:before{content:'▾'}.folder summary small{font-weight:400}.item{padding:2px 3px;border:1px solid transparent;border-radius:5px;margin:1px 0 4px;gap:1px}.item.sel{background:#314351;border-color:#506777}.item button:first-child{flex:1;min-width:0;text-align:left;background:none;border:0;font-size:13px;padding:5px 2px;overflow-wrap:anywhere}.verb{display:inline-block;min-width:46px;font:700 11px/1.6 var(--mono);letter-spacing:.25px;color:var(--amber)}.get,.good{color:var(--green)}.delete,.bad{color:#f0a9a4}.workspace{display:flex;flex-direction:column;gap:12px;min-width:0}.panel{overflow:hidden}.compose,.pad{padding:15px 18px}.pathline{color:var(--sub);font-size:12px;margin-bottom:3px}.endpoint{margin:12px 0 9px}.url{min-width:0;flex:1;display:flex;align-items:center;padding:4px 8px;background:#1f262d;border:1px solid #576571;border-radius:6px}.url input{border:0;background:transparent;font:14px var(--mono);width:100%;padding:5px 0}.send{min-width:88px;font-weight:650}.tools,.meta{color:var(--sub);font-size:12px;flex-wrap:wrap}.tools label{display:inline-flex;align-items:center;gap:5px}.tools input[type=text]{width:92px;padding:3px 5px}.tools input[type=checkbox]{accent-color:#90c5e9}.title{border-bottom:1px solid var(--line);padding:10px 16px;background:#30363d}.tabs{gap:17px;padding:0 16px;border-bottom:1px solid #414a52}.tabs button{border:0;background:none;border-radius:0;padding:7px 0;color:var(--sub);font-size:12px}.tabs .active{box-shadow:inset 0 -2px var(--sky);color:#fff}.editor{background:#20262c;min-height:100px;padding:14px 16px}.editor textarea,pre{display:block;width:100%;font:14px/1.7 var(--mono);background:transparent;border:0;color:#c4ddda;resize:vertical;overflow-wrap:anywhere;white-space:pre-wrap}.editor textarea{min-height:82px}.pill{font:600 12px/1.55 "Segoe UI",sans-serif;padding:2px 8px;border:1px solid #466258;border-radius:4px;color:#b8dec6;background:#304139}.foot{position:sticky;bottom:0;z-index:2;padding:6px 15px;min-height:44px;background:#282f35;border-top:1px solid var(--line);font-size:12px}.foot button{font-size:12px}.logarea{max-height:180px;overflow:auto;background:#20262c;padding:10px 16px}.logline{display:block;width:100%;font:13px/1.7 var(--mono);text-align:left;white-space:pre-wrap;border:0;background:none;color:#b6c9d4}.logline[aria-pressed=true]{color:#e6f6ff;background:#354752}.home-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}.big{grid-column:span 3}.widget{grid-column:span 2}.cardhead{padding-bottom:15px}.listrow{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #424a51;padding:10px 0;font-size:13px}.big .listrow{padding:13px 0}.cardbtn{width:100%;margin-top:9px}.date{color:var(--sub);font-size:13px;margin:2px 0 12px}.version{font-size:28px;font-weight:600;margin:10px 0}.widget h2,.big h2{font-size:16px}dialog{padding:0;width:min(520px,94vw);background:#292f35;color:#f2f4f6}dialog::backdrop{background:#11171ba8}.dialogbody{padding:16px 18px;max-height:70vh;overflow:auto}.formrow{display:grid;gap:5px;margin:8px 0}.formrow input,select{min-width:0}.dialogfoot{display:flex;justify-content:flex-end;gap:7px;border-top:1px solid var(--line);padding:11px 16px}.varrow{display:grid;grid-template-columns:1fr 1.2fr auto;gap:6px;margin:6px 0}.varrow input{min-width:0;width:100%}.danger{color:#f1aaa6}.note{color:var(--sub);font-size:12px;margin-top:8px}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 100% 100%,#383140,transparent 52%),linear-gradient(120deg,#222b2f,#202327);min-height:100vh}button,input,select,textarea{font:inherit;color:inherit}button,select,input{border:1px solid var(--line);border-radius:6px;background:#232a30;padding:6px 10px}button,select{cursor:pointer}button{background:linear-gradient(#3a434b,#30373d)}button:hover{border-color:#788d9c}button:disabled{opacity:.55;cursor:default}button:focus-visible,summary:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--sky);outline-offset:2px}h1,h2,h3,p,pre{margin:0}h1{font-size:21px;letter-spacing:-.6px}h2{font-size:16px}h3{font-size:14px}small,.sub{color:var(--sub)}small{font-size:12px}[hidden]{display:none!important}.row,.brand,nav,.item,.folder summary,.title,.foot,.endpoint,.tabs,.meta,.tools{display:flex;align-items:center;gap:9px}.apart{justify-content:space-between}.auto{margin-left:auto}.brand{padding:9px 16px;font-size:16px;font-weight:700}.brand img{width:24px;height:24px}.demo{font-size:12px;color:var(--sub);font-weight:400}header{background:linear-gradient(110deg,#29323a,#2c2c33);border-bottom:1px solid var(--line)}nav{padding:1px 14px 9px;gap:5px;overflow:auto}nav button{border:1px solid transparent;background:none;min-width:105px;min-height:36px;white-space:nowrap}nav button:disabled{opacity:.84}nav button.active,.primary{background:linear-gradient(#405c73,#304659);border:1px solid #79afd1;color:#eff9ff}.mark{color:var(--sky);font-size:18px;padding-right:6px}main{padding:14px;max-width:1620px;margin:auto}#post{display:grid;grid-template-columns:235px minmax(0,1fr);gap:14px;min-height:calc(100vh - 143px)}aside,.panel,dialog{border:1px solid var(--line);border-radius:10px;background:var(--surface);box-shadow:0 4px 18px #0002}aside{align-self:start;padding:14px 11px}.env{width:100%;margin:8px 0 15px}.asidehead{border-top:1px solid var(--line);padding-top:14px;margin-bottom:8px}.ghost,.more{background:transparent;border-color:transparent;color:var(--sub);padding:3px 5px}.ghost{color:var(--sky);font-size:12px}.folder{border-top:1px solid #3b444d}.folder summary{padding:9px 1px;cursor:pointer;list-style:none;font-size:13px;font-weight:650}.folder summary:before{content:'▸';color:var(--sub)}.folder[open]>summary:before{content:'▾'}.folder summary small{font-weight:400}.item{padding:2px 3px;border:1px solid transparent;border-radius:5px;margin:1px 0 4px;gap:1px}.item.sel{background:#314351;border-color:#506777}.item button:first-child{flex:1;min-width:0;text-align:left;background:none;border:0;font-size:13px;padding:5px 2px;overflow-wrap:anywhere}.verb{display:inline-block;min-width:46px;font:700 11px/1.6 var(--mono);letter-spacing:.25px;color:var(--amber)}.get,.good{color:var(--green)}.delete,.bad{color:#f0a9a4}.workspace{display:flex;flex-direction:column;gap:12px;min-width:0}.panel{overflow:hidden}.compose,.pad{padding:15px 18px}.pathline{color:var(--sub);font-size:12px;margin-bottom:3px}.endpoint{margin:12px 0 9px}.url{min-width:0;flex:1;display:flex;align-items:center;padding:4px 8px;background:#1f262d;border:1px solid #576571;border-radius:6px}.url input{border:0;background:transparent;font:14px var(--mono);width:100%;padding:5px 0}.send{min-width:88px;font-weight:650}.tools,.meta{color:var(--sub);font-size:12px;flex-wrap:wrap}.tools label{display:inline-flex;align-items:center;gap:5px}.tools input[type=text]{width:92px;padding:3px 5px}.tools input[type=checkbox]{accent-color:#90c5e9}.title{border-bottom:1px solid var(--line);padding:10px 16px;background:#30363d}.tabs{gap:17px;padding:0 16px;border-bottom:1px solid #414a52}.tabs button{border:0;background:none;border-radius:0;padding:7px 0;color:var(--sub);font-size:12px}.tabs .active{box-shadow:inset 0 -2px var(--sky);color:#fff}.editor{background:#20262c;min-height:100px;padding:14px 16px}.editor textarea,pre{display:block;width:100%;font:14px/1.7 var(--mono);background:transparent;border:0;color:#c4ddda;resize:vertical;overflow-wrap:anywhere;white-space:pre-wrap}.editor textarea{min-height:82px}.pill{font:600 12px/1.55 "Segoe UI",sans-serif;padding:2px 8px;border:1px solid #466258;border-radius:4px;color:#b8dec6;background:#304139}.foot{position:sticky;bottom:0;z-index:2;padding:6px 15px;min-height:44px;background:#282f35;border-top:1px solid var(--line);font-size:12px}.foot button{font-size:12px}.home-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}.big{grid-column:span 3}.widget{grid-column:span 2}.cardhead{padding-bottom:15px}.listrow{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #424a51;padding:10px 0;font-size:13px}.big .listrow{padding:13px 0}.cardbtn{width:100%;margin-top:9px}.date{color:var(--sub);font-size:13px;margin:2px 0 12px}.version{font-size:28px;font-weight:600;margin:10px 0}.widget h2,.big h2{font-size:16px}dialog{padding:0;width:min(520px,94vw);background:#292f35;color:#f2f4f6}dialog::backdrop{background:#11171ba8}.dialogbody{padding:16px 18px;max-height:70vh;overflow:auto}.formrow{display:grid;gap:5px;margin:8px 0}.formrow input,select{min-width:0}.dialogfoot{display:flex;justify-content:flex-end;gap:7px;border-top:1px solid var(--line);padding:11px 16px}.varrow{display:grid;grid-template-columns:1fr 1.2fr auto;gap:6px;margin:6px 0}.varrow input{min-width:0;width:100%}.danger{color:#f1aaa6}.note{color:var(--sub);font-size:12px;margin-top:8px}
 @media(max-width:800px){#post{grid-template-columns:185px minmax(0,1fr)}.widget{grid-column:span 3}}@media(max-width:620px){#post{grid-template-columns:1fr}aside{max-height:210px;overflow:auto}.big,.widget{grid-column:1/-1}.endpoint{flex-wrap:wrap}.url{flex-basis:100%}.foot{flex-wrap:wrap}.foot .sub{display:none}.varrow{grid-template-columns:1fr}.meta{gap:3px}nav button{min-width:90px}}
 
 /* PostRail uses the available window height for the two editors. */
@@ -44,7 +44,7 @@ header{flex:none}
 .favorite-row .verb{min-width:43px}
 .favorite-row button{margin-left:auto;padding:2px 7px;font-size:12px}
 .favorite-row .repeat-home{margin-left:0;color:var(--sky);background:transparent;border-color:var(--line);font-size:11px}
-#favorites{max-height:170px;overflow:auto}
+#favorites{min-width:0}
 .home-result{margin-top:8px;font-size:12px;color:var(--sub)}
 /* Match the PlanRail status shell and its dark glass theme. */
 .foot{flex:none;display:flex;align-items:center;flex-wrap:nowrap;gap:10px;min-height:39px;padding:4px 14px;border-top:1px solid var(--rim);background:var(--glass);color:var(--muted);font-size:12px;--rim:#b4bfc449;--glass:rgba(43,46,49,.5);--muted:#c0c5cb}
@@ -52,9 +52,28 @@ header{flex:none}
 .foot button:hover,.foot button[aria-expanded=true]{color:var(--sky)}
 .foot svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
 #footStatus{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-@media(min-width:621px){body:has(#post:not([hidden])){height:100dvh}#post{overflow:auto}.workspace:has(#drawer:not([hidden])){min-height:520px}}
+@media(min-width:621px){body:has(#post:not([hidden])){height:100dvh}#post{overflow:auto}}
 @media(max-width:620px){#post{grid-template-columns:1fr}.code-pane{min-height:195px}.pane-bar{flex-wrap:wrap;gap:4px 9px}.foot{margin-top:auto}}
 @media(max-width:510px){.foot{gap:6px}}
+
+/* Expanded content and the status strip belong to the same footer. */
+#footer{position:sticky;bottom:0;z-index:2;flex:none}
+#footer .foot{position:static}
+#drawer{background:#292f34;border-top:1px solid #b4bfc449;color:#c0c5cb}
+.drawer-head{display:flex;align-items:center;flex-wrap:wrap;gap:4px 9px;padding:4px 14px;font-size:12px}
+.drawer-head h2{font-size:13px}
+.drawer-head button{padding:1px 5px}
+#log{display:block;margin:0;border:0;border-radius:0;border-top:1px solid #b4bfc430;padding:8px 14px;width:100%;height:clamp(76px,14vh,150px);resize:none;background:#23292e;color:#d1dbe2;font:13px/1.6 var(--mono);white-space:pre;overflow:auto}
+#iterationForm{display:flex;align-items:center;gap:5px}
+#iterationForm input{width:6em;padding:2px 5px;font-size:12px}
+#footer #toggleLog svg{transition:transform .15s}
+#footer #toggleLog[aria-expanded=true] svg{transform:rotate(180deg)}
+@media(prefers-reduced-motion:reduce){#footer #toggleLog svg{transition:none}}
+body:has(#post:not([hidden])){height:100dvh}
+#post{overflow:auto}
+.workrail-widget-meta{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 8px;padding-top:6px;border-top:1px solid #b4bfc430;color:#c0c5cb;font-size:11px}
+.workrail-link{width:fit-content;justify-self:end;margin:0;padding:0 1px;border:0;background:transparent;color:inherit;font-size:inherit;text-align:start}
+.workrail-link:hover:enabled{background:transparent;color:#f1f2f3;text-decoration:underline}
 </style>
 <header><div class="brand"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUiPgogIDx0aXRsZSBpZD0idGl0bGUiPldvcmtSYWlsPC90aXRsZT4KICA8ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImluayIgeDI9Ii42NSIgeTI9IjEiPjxzdG9wIHN0b3AtY29sb3I9IiMyYjQzNTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxNTI3MzIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHJ4PSIyIiBmaWxsPSIjNTI2Yjc5Ii8+CiAgPHJlY3QgeD0iLjQiIHk9Ii40IiB3aWR0aD0iMTUuMiIgaGVpZ2h0PSIxNS4yIiByeD0iMS42IiBmaWxsPSJ1cmwoI2luaykiLz4KICA8cGF0aCBmaWxsPSIjZjJmN2ZhIiBkPSJNMSA0aDhMNi42IDdIMXogTTEgOGg0LjVMMyAxMUgxeiIvPgogIDxwYXRoIGZpbGw9IiM5MWQxZjEiIGQ9Ik0zLjUgMTIuNSAxMC40IDRoMy4zbC02LjkgOC41eiBNOC4xNSAxMi41IDEyLjY1IDdoMi43bC00LjUgNS41eiIvPgo8L3N2Zz4K" alt="">WorkRail <span class="auto demo">디자인 시안 · 예시 데이터</span></div><nav aria-label="도구"><button id="homeTab"><span class="mark">⌂</span>Home</button><button disabled>PlanRail</button><button disabled>NodeRail</button><button disabled>TermRail</button><button id="postTab" class="active"><span class="mark">⇄</span>PostRail</button></nav></header>
 <main id="post">
@@ -65,15 +84,17 @@ header{flex:none}
 <div class="tools"><label id="repeatControl"><input type="checkbox" id="repeat">반복 보내기</label><label id="countControl" hidden>횟수 <input type="text" inputmode="numeric" id="count" value="10"></label><span id="range"></span><button id="saveEdits" class="ghost auto" hidden>변경 저장</button></div></div>
 <div class="panel code-pane"><div class="pane-bar"><h2>요청</h2><div id="reqTabs" class="tabs"><button data-tab="0" class="active">JSON 본문</button><button data-tab="1">헤더</button><button data-tab="2">인증</button></div><small id="auth" class="auto"></small></div><div class="editor" id="reqContent"></div></div>
 <div class="panel code-pane"><div class="pane-bar"><h2>응답</h2><div class="tabs"><button id="bodyTab" class="active">본문</button><button id="hdrTab">헤더</button></div><small class="auto" id="responseOwner"></small><span id="status" class="good"></span></div><div class="editor"><pre id="response"></pre></div></div>
-<section id="drawer" class="panel" hidden><div class="title"><h2>회차별 결과</h2><small id="pageNumber" class="auto"></small><button id="prev" class="ghost">이전</button><button id="next" class="ghost">다음</button><button id="closeLog" aria-label="결과 닫기" class="more">×</button></div><div class="logarea" id="log"></div></section>
 </section></main>
-<footer class="foot" id="footer"><span class="good">●</span><span id="footStatus"></span><button id="toggleLog" class="auto" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.1M4 12h.1M4 18h.1"/></svg>회차별 결과</button><button id="manage"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 7h5m4 0h9M3 17h10m4 0h4"/><circle cx="10" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg>환경 관리</button></footer>
+<footer id="footer">
+<section id="drawer" hidden aria-labelledby="drawerLabel"><div class="drawer-head"><h2 id="drawerLabel">회차별 결과</h2><small id="pageNumber"></small><button id="prev" class="ghost">이전</button><button id="next" class="ghost">다음</button><form id="iterationForm" class="auto"><label for="iteration">회차</label><input id="iteration" type="text" inputmode="numeric" required><button type="submit" class="ghost">응답 보기</button></form></div>
+<textarea id="log" aria-label="회차별 결과 로그" readonly wrap="off" spellcheck="false"></textarea></section>
+<div class="foot"><span class="good">●</span><span id="footStatus"></span><button id="toggleLog" aria-controls="drawer" class="auto" aria-expanded="false"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 15 7-7 7 7"/></svg>회차별 결과</button><button id="manage"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 7h5m4 0h9M3 17h10m4 0h4"/><circle cx="10" cy="7" r="2"/><circle cx="15" cy="17" r="2"/></svg>환경 관리</button></div></footer>
 <main id="home" hidden><div class="date">2026년 11월 20일 금요일</div><div class="home-grid">
 <section class="big panel pad"><h2 class="cardhead">오늘의 일정</h2><div class="listrow"><b>장비 API 연동 점검</b><small>공유　·　오늘 마감</small></div><div class="listrow">배포 전 환경 확인<small>개인　·　2일 남음</small></div></section>
 <section class="big panel pad"><h2>내 개발 환경</h2><p class="version">v24.22.3</p><p class="sub">Windows　·　NVM 1.1.11</p></section>
 <section class="widget panel pad"><h2 class="cardhead">PlanRail 상태</h2><div class="listrow">공유 상태<span class="good">공유 제공 중</span></div><div class="listrow">연결 참여자<b>2명</b></div></section>
 <section class="widget panel pad"><h2 class="cardhead">Node 작업</h2><div class="listrow">24.22.3<span class="pill">사용 중</span></div><div class="listrow">22.16.0<small>설치됨</small></div></section>
-<section class="widget panel pad"><div class="row apart cardhead"><h2>PostRail 즐겨찾기</h2><span class="mark" aria-hidden="true">⇄</span></div><div class="listrow"><span id="homeEnv"></span><small id="homeAuth"></small></div><div id="favorites"></div><p class="home-result" role="status"><span id="homeLast"></span> <span id="homeCode"></span></p><button class="cardbtn primary" id="openPost">PostRail 열기　→</button></section></div></main>
+<section class="widget panel pad"><div class="row apart cardhead"><h2>PostRail 즐겨찾기</h2><span class="mark" aria-hidden="true">⇄</span></div><div class="listrow"><span id="homeEnv"></span><small id="homeAuth"></small></div><div id="favorites"></div><p class="home-result" role="status"><span id="homeLast"></span> <span id="homeCode"></span></p><div class="workrail-widget-meta"><span id="favCount"></span><button type="button" class="workrail-link" id="openPost">PostRail 열기</button></div></section></div></main>
 <dialog id="dialog"><div class="title"><h2 id="dialogTitle"></h2><button class="more auto" id="closeDialog" aria-label="닫기">×</button></div><div id="dialogBody" class="dialogbody"></div><div id="actions" class="dialogfoot"></div></dialog>
 <script>
 const $ = id => document.getElementById(id);
@@ -83,8 +104,8 @@ let groups = [group('샘플 API'),group('장비 상태',false),loose];
 function request(name,method,path,folder) {
   return {name,method,url:'${deviceUrl}'+path,folder,index:1n,body:method==='POST'?JSON.stringify({name:'test_${index}',site:'${site}',enabled:true},null,2):''};
 }
-let requests = [request('샘플 생성','POST','/api/samples',groups[0]),request('샘플 조회','GET','/api/samples',groups[0]),request('샘플 삭제','DELETE','/api/samples/42',groups[0]),request('상태 확인','GET','/health',groups[1])];
-requests[0].favorite=true;requests[1].favorite=true;
+let requests = [request('샘플 생성','POST','/api/samples',groups[0]),request('샘플 조회','GET','/api/samples',groups[0]),request('샘플 삭제','DELETE','/api/samples/42',groups[0]),request('상태 확인','GET','/health',groups[1]),request('장비 목록','GET','/devices',groups[1]),request('연결 점검','GET','/ready',groups[1]),request('장비 버전','GET','/version',groups[1])];
+for(const r of requests)r.favorite=r.method!=='DELETE';
 let current = requests[0], requestTab=0, responseHeaders=false;
 const drafts=new WeakMap();
 function values(r){return drafts.get(r)??r}
@@ -100,7 +121,19 @@ const environments = new Map(['개발 장비','QA 장비'].map((name,i)=>[name,{
 const env = () => environments.get($('env').value);
 // Example of a just-finished batch. Subsequent sends only produce local fixture results.
 let run={name:'샘플 생성',env:'개발 장비',method:'POST',start:1n,count:3n,indexed:true,example:true};
+const logPageSize=100n;
 let selected=3n,page=0n;
+function renderLog(){
+  const begin=page*logPageSize+1n;
+  const end=begin+logPageSize-1n<run.count?begin+logPageSize-1n:run.count;
+  const lines=[];
+  for(let i=begin;i<=end;i++)lines.push(i+'회　 '+code(i)+(run.indexed?'　 test_'+(run.start+i-1n):''));
+  const log=$('log');
+  const text=lines.join('\n');
+  if(log.value!==text){log.value=text;log.scrollTop=0}
+  $('pageNumber').textContent=begin+'–'+end+' / '+run.count;
+  $('prev').disabled=page===0n;$('next').disabled=end===run.count;
+}
 current.index=4n;
 function node(tag,txt,cls) {
   const result=document.createElement(tag);
@@ -254,7 +287,9 @@ function homeRepeat(r) {
 }
 function favorites() {
   const list=$('favorites');list.replaceChildren();
-  for(const r of requests.filter(r=>r.favorite)){
+  const saved=groups.flatMap(g=>requests.filter(r=>r.folder===g&&r.favorite));
+  $('favCount').textContent='즐겨찾기 '+saved.length+'개';
+  for(const r of saved.slice(0,5)){
     const row=node('div',undefined,'favorite-row');
     const play=button('▷ 실행',()=>sendRequest(r,1n));play.setAttribute('aria-label',r.name+' 즉시 실행');
     row.append(node('b',r.method,'verb '+r.method.toLowerCase()),node('span',r.name),play);
@@ -275,13 +310,7 @@ function results() {
   const resultName='test_'+(run.start+selected-1n);
   const content=status.startsWith('4')?{message:'이미 등록된 샘플입니다.'}:run.method==='GET'?[{name:'sample'}]:run.indexed?{name:resultName,created:true}:{created:true};
   $('response').textContent=responseHeaders?(status.startsWith('204')?'응답 헤더 없음':'Content-Type: application/json'):status.startsWith('204')?'응답 본문 없음':JSON.stringify(content,null,2);
-  const begin=page*5n+1n,end=begin+4n<run.count?begin+4n:run.count;
-  $('pageNumber').textContent=begin+'–'+end+' / '+run.count;$('prev').disabled=page===0n;$('next').disabled=end===run.count;
-  $('log').replaceChildren();
-  for(let i=begin;i<=end;i++){
-    const b=button(i+'회　 '+code(i)+(run.indexed?'　 test_'+(run.start+i-1n):''),()=>{selected=i;results()},'logline');
-    b.setAttribute('aria-pressed',String(i===selected));$('log').append(b);
-  }
+  if(!$('drawer').hidden)renderLog();
   $('footStatus').textContent='실행 완료　·　'+run.count+'회'+(run.example?'　·　실패 1건':'');
   $('homeEnv').textContent=$('env').value;$('homeAuth').textContent=env().logged?'인증됨':'로그인 필요';
   favorites();$('homeLast').textContent='최근 실행 · '+run.name;$('homeCode').textContent=run.env+' · '+(run.example?'2 성공 / 1 실패':run.count+'회 · '+code(run.count));
@@ -300,9 +329,9 @@ function sendRequest(r,n,input=r){
   // A change of environment never transfers the previous environment's login state.
   env().logged=true;run={name:r.name,env:$('env').value,method:r.method,count:n,start:r.index,indexed:indexUsed(r,input.body),example:false};
   if(run.indexed)r.index+=run.count;
-  selected=run.count;page=(selected-1n)/5n;responseHeaders=false;draw();
+  selected=run.count;$('iteration').value=selected;$('iteration').setCustomValidity('');page=(selected-1n)/logPageSize;responseHeaders=false;draw();
 }
-function drawer(show){$('drawer').hidden=!show;$('toggleLog').setAttribute('aria-expanded',String(show));if(show)$('drawer').scrollIntoView({block:'nearest'})}
+function drawer(show){$('drawer').hidden=!show;$('toggleLog').setAttribute('aria-expanded',String(show));if(show){$('iteration').value=selected;renderLog()}else{$('log').value='';$('toggleLog').focus()}}
 function showHome(home){
   $('home').hidden=!home;$('post').hidden=home;$('footer').hidden=home;$('postTab').classList.toggle('active',!home);$('homeTab').classList.toggle('active',home);window.scrollTo(0,0);
 }
@@ -311,8 +340,17 @@ $('saveEdits').onclick=()=>{Object.assign(current,drafts.get(current));drafts.de
 $('url').oninput=e=>{if(current)edit('url',e.target.value)};$('repeat').onchange=range;$('count').oninput=range;$('send').onclick=()=>sendRequest(current,count(),values(current));
 $('reqTabs').onclick=e=>{if(e.target.dataset.tab!==undefined){requestTab=Number(e.target.dataset.tab);requestPane()}};
 $('bodyTab').onclick=()=>{responseHeaders=false;results()};$('hdrTab').onclick=()=>{responseHeaders=true;results()};
-$('toggleLog').onclick=()=>drawer($('drawer').hidden);$('closeLog').onclick=()=>drawer(false);
-$('prev').onclick=()=>{page--;results()};$('next').onclick=()=>{page++;results()};
+$('toggleLog').onclick=()=>drawer($('drawer').hidden);
+$('prev').onclick=()=>{page--;renderLog()};$('next').onclick=()=>{page++;renderLog()};
+$('iterationForm').onsubmit=e=>{
+  e.preventDefault();const input=$('iteration'),value=input.value.trim();
+  const n=/^\d+$/.test(value)?BigInt(value):0n;
+  input.setCustomValidity(n<1n||n>run.count?'1~'+run.count+' 사이의 회차를 입력하세요.':'');
+  if(!input.reportValidity())return;
+  selected=n;page=(n-1n)/logPageSize;results();
+};
+$('iteration').oninput=e=>e.target.setCustomValidity('');
+$('drawer').onkeydown=e=>{if(e.key==='Escape')drawer(false)};
 $('homeTab').onclick=()=>showHome(true);$('postTab').onclick=$('openPost').onclick=()=>showHome(false);
 draw();showHome(location.hash==='#home');
 </script></html>
