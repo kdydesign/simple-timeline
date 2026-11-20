@@ -5,6 +5,7 @@
 
 | 확인할 내용 | 기준과 읽을 문서 |
 | --- | --- |
+| PostRail REST 요청·실행 전 인증·반복 POST | [첫 버전 승인 설계와 인수 기준](../design/postrail.md) · [확정 화면 시안](../design/mockups/postrail.html). Q1~Q12 설계 승인. 제품 구현은 후속 작업이다. |
 | NodeRail 로그·Home 5개 목록·TermRail 입력·도움말 | [승인 설계 및 Q1~Q3 결정](../design/workrail-log-home-termrail-help.md) · [구현 및 검사 범위](../implementation/2026-11-20-workrail-log-home-termrail-help.md) |
 | 설치본 NodeRail·TermRail 피드백 | [ZIP 권한 진단, 터미널 표시와 작업 탭 설계](../design/noderail-termrail-installed-feedback.md) · [구현과 검사 범위](../implementation/2026-11-20-installed-feedback.md) |
 | TermRail SSH 터미널 | [승인된 화면·동작과 후속 검토 항목](../design/ssh-terminal-menu.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |

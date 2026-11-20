@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 PostRail 첫 버전의 REST 요청, 환경별 인증, 반복 POST 번호와 결과 표시를 Q1~Q12로 확정했다. [승인 설계 및 화면 시안](../design/postrail.md). 현재 단계는 설계까지다.
+
 2026-11-20 TermRail 시작 파일은 기본 셸을 열고 프롬프트에서 한 줄씩 입력한다. 서버 수정 창은 추가 창과 같은 표준 팝업을 사용한다. [검증 범위](../implementation/2026-11-20-termrail-default-shell.md)
 
 2026-11-20 NodeRail 작업 로그와 버전 표시, Home의 5개 목록과 전체 보기, TermRail 파일 선택·팝업, 메뉴별 도움말을 반영했다. [구현 내용과 검사 범위](../implementation/2026-11-20-workrail-log-home-termrail-help.md)

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WorkRail · PostRail 화면 시안</title>
+<style>
+:root{color-scheme:dark;--frame:#2b2e31;--paper:#23262a;--editor:#1d2024;--line:#424850;--text:#f1f2f3;--muted:#aeb9c4;--accent:#8bc1eb;--mono:"Cascadia Mono","DejaVu Sans Mono",monospace}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at 90% 115%,#37344f,transparent 48%),var(--frame);font:14px/1.55 "Segoe UI","Noto Sans CJK KR",sans-serif;color:var(--text);min-height:100vh}
+header{height:43px;padding:9px 18px;font-weight:700;display:flex;align-items:center;gap:10px}
+.brand{color:var(--accent)} nav{display:flex;gap:6px;padding:0 16px 9px;border-bottom:1px solid var(--line)}
+button,.field{background:#30353b;border:1px solid #505963;color:var(--text);border-radius:6px;padding:7px 11px;font:inherit}
+nav span{padding:6px 11px;border:1px solid transparent;border-radius:6px}
+nav .selected{background:#304658;border-color:#79aacf;color:#f4f8fd}
+main{padding:14px 16px;display:grid;grid-template-columns:218px minmax(0,1fr);gap:14px}
+aside,.workspace{background:var(--paper);border:1px solid var(--line);border-radius:9px;min-width:0}
+aside{padding:13px} h2{font-size:13px;margin:0 0 12px}
+.stack{display:grid;gap:9px} .requests{margin:15px -3px 0;border-top:1px solid var(--line);padding-top:13px}
+.request{display:flex;align-items:center;gap:8px;padding:7px;font-size:12px}
+.request.on{background:#2d4252;border-radius:5px}
+.method{font:700 12px var(--mono);color:#91c9ed} .active{color:#f1c795}
+.workspace{display:flex;flex-direction:column}
+.top,.batch,.summary{display:flex;align-items:center;gap:10px;padding:12px}
+.top,.batch{border-bottom:1px solid var(--line)} .url{flex:1;min-width:0;font:13px/1.55 var(--mono)}
+.primary{background:#91c7ed;border-color:#91c7ed;color:#152631;font-weight:700}
+.batch{font-size:12px;color:var(--muted)} .batch b{color:var(--text)} .batch .field{padding:2px 7px}.summary{font-size:12px;color:var(--muted);border-top:1px solid var(--line);flex-wrap:wrap}
+.panes{display:grid;grid-template-columns:1fr 1fr;min-height:360px} .pane{min-width:0} .pane+.pane{border-left:1px solid var(--line)}
+.tabs{min-height:47px;display:flex;align-items:center;gap:16px;padding:0 13px;border-bottom:1px solid var(--line);white-space:nowrap;font-size:12px}
+.tabs strong{border-bottom:2px solid var(--accent);padding:14px 0 11px}
+.tabs span,.muted{color:var(--muted)}
+pre{margin:0;padding:14px 13px;font:13px/1.85 var(--mono);overflow:auto;min-height:264px;background:var(--editor)}
+.ln{display:inline-block;width:22px;color:#8590a0}.code{color:#b9d5eb}.value{color:#cde1af}.ok{color:#cde1af!important}.error{color:#ffac9d!important}
+.small{color:var(--muted);font-size:12px}.foot{margin:10px 16px;font-size:12px;color:var(--muted)}
+@media(max-width:850px){main{grid-template-columns:1fr}aside{display:none}.panes{grid-template-columns:1fr}.pane+.pane{border-top:1px solid var(--line);border-left:0}}
+</style>
+<header><span class="brand" aria-hidden="true">▰</span> WorkRail</header>
+<nav aria-label="WorkRail 메뉴"><span>Home</span><span>PlanRail</span><span>NodeRail</span><span>TermRail</span><span class="selected" aria-current="page">PostRail</span></nav>
+<main>
+<aside aria-label="환경과 요청">
+<h2>환경</h2>
+<div class="stack"><div class="field">개발 장비　⌄</div><div class="small">변수 3개 · 보호 값 1개</div></div>
+<div class="requests"><h2>저장한 요청 <span class="muted">＋</span></h2>
+<div class="request on"><span class="method active">POST</span> 샘플 생성</div>
+<div class="request"><span class="method">GET</span> 샘플 목록</div></div>
+</aside>
+<section class="workspace" aria-label="요청 편집">
+<div class="top"><span class="field method active">POST　⌄</span><code class="field url">&#36;{deviceUrl}/api/samples</code><button type="button" class="primary">10회 보내기</button></div>
+<div class="batch"><b>반복 실행</b> <span class="field">10회</span><span>이 요청의 다음 번호 <b>11</b></span><span>다음 실행 이름 <b>test_11</b> ~ <b>test_20</b></span></div>
+<div class="panes">
+<div class="pane"><div class="tabs"><span>헤더</span><strong>JSON 본문</strong><span>실행 전</span></div>
+<pre><span class="ln">1</span>{
+<span class="ln">2</span>  <span class="code">"name"</span>: <span class="value">"test_&#36;{index}"</span>
+<span class="ln">3</span>}</pre>
+</div>
+<div class="pane"><div class="tabs"><strong>응답 본문</strong><span>응답 헤더</span><span class="error">409 Conflict · 4회차</span></div>
+<pre><span class="ln">1</span>{
+<span class="ln">2</span>  <span class="code">"message"</span>: <span class="value">"test_4 already exists"</span>
+<span class="ln">3</span>}</pre></div>
+</div>
+<div class="summary"><span>최근 실행 · 샘플 생성 / 개발 장비 · 1~10</span><strong class="ok">성공 9</strong><strong class="error">실패 1</strong><span>미전송 0</span><span>표시 중인 응답　4회차 ⌄</span></div>
+</section>
+</main>
+<div class="foot">확정 화면 시안 · 최근 실행은 4회차에서 오류가 난 뒤 10회차까지 진행</div>
+</html>
