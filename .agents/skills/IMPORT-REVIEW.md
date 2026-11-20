@@ -89,3 +89,17 @@ codebase-architecture의 참조**다. agents-md 내부 파일로 잘못 판정�
     ├── LICENSE                             # 원본 저장소 루트
     └── UPSTREAM.json                       # 새 출처·파일별 해시
 ```
+
+## 성능 분석 스킬 추가 — 2026-11-20
+
+Codex와 GitHub Copilot이 공통으로 읽는 `.agents/skills/`에 원본 스킬 폴더와 MIT 라이선스를 한 벌씩 복사했다. [GitHub Copilot 스킬 경로](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills)
+
+| 스킬 | 고정한 원본 커밋 | 가져온 파일 |
+| --- | --- | --- |
+| `performance-profiler` | [`f8593c4`](https://github.com/alirezarezvani/claude-skills/tree/f8593c4941210a621a6629ce1da9e07897976d5f/engineering/skills/performance-profiler) | `SKILL.md`, `LICENSE`, 참조 문서 2개, `scripts/performance_profiler.py` |
+| `cpu-profile-analysis` | [`50b6495`](https://github.com/microsoft/vscode/tree/50b64954152416d2a04cefe3add95c593b1e4192/.github/skills/cpu-profile-analysis) | `SKILL.md`, `LICENSE.txt` |
+
+원본의 Git blob SHA-1·파일 크기와 대조하고, 복사한 내용의 SHA-256을 각 [performance-profiler 출처](performance-profiler/UPSTREAM.json)와 [cpu-profile-analysis 출처](cpu-profile-analysis/UPSTREAM.json)에 기록했다. VS Code의 `parseSnapshot.ts`는 별도 힙 스냅샷 스킬의 참고 예제다. 해당 원본 경로를 기록했으며 이번 가져오기에는 포함하지 않았다.
+
+YAML 메타데이터, 패키지 내부 참조, 파일 무결성을 검사했다. Python 도구는 일회성 예제 디렉터리에서 JSON 보고서가 생성되는지 확인했다. CPU 분석 지침은 정적으로 확인했으며 실제 프로파일 파일에는 적용하지 않았다. 설치 CLI와 부하 테스트는 실행하지 않았다.
+원본 Markdown의 줄 끝 공백과 파일 끝 빈 줄을 보존하기 위해 `.gitattributes`에서 해당 파일 세 개의 경고만 예외로 지정했다.

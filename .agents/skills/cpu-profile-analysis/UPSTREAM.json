@@ -1,0 +1,39 @@
+{
+  "skill": "cpu-profile-analysis",
+  "repository": "https://github.com/microsoft/vscode",
+  "upstream_ref": "main",
+  "commit": "50b64954152416d2a04cefe3add95c593b1e4192",
+  "upstream_directory": ".github/skills/cpu-profile-analysis",
+  "retrieved_on": "2026-11-20",
+  "license": {
+    "spdx": "MIT",
+    "source_path": "LICENSE.txt",
+    "local_path": "LICENSE.txt"
+  },
+  "files": [
+    {
+      "source_path": ".github/skills/cpu-profile-analysis/SKILL.md",
+      "local_path": "SKILL.md",
+      "git_blob_sha1": "d1bab9845484208233330c5430586b7d6a664780",
+      "bytes": 22934,
+      "mode": "100644",
+      "sha256": "73e7d3ba6ff8189d2c43d686dd069b7efc7a616ed0deac6b4a0085363739b415"
+    },
+    {
+      "source_path": "LICENSE.txt",
+      "local_path": "LICENSE.txt",
+      "git_blob_sha1": "0ac28ee234d232ac0691f39cebf95bf6b2a763a5",
+      "bytes": 1088,
+      "mode": "100644",
+      "sha256": "9480271317925265e806a9a196aaa33410a962fa9d4d1e248a4a5187bc8c9df9"
+    }
+  ],
+  "external_references": [
+    {
+      "mentioned_in": "SKILL.md",
+      "source_path": ".github/skills/heap-snapshot-analysis/helpers/parseSnapshot.ts",
+      "scope": "Example from a different upstream skill, not needed for installing this skill",
+      "url": "https://github.com/microsoft/vscode/blob/50b64954152416d2a04cefe3add95c593b1e4192/.github/skills/heap-snapshot-analysis/helpers/parseSnapshot.ts"
+    }
+  ]
+}

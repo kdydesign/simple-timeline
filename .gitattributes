@@ -5,3 +5,8 @@
 *.exe binary
 *.zip binary
 *.sig binary
+
+# Preserve the upstream Markdown bytes of the vendored profiler skill.
+.agents/skills/performance-profiler/SKILL.md whitespace=-blank-at-eol,-blank-at-eof
+.agents/skills/performance-profiler/references/optimization-playbook.md whitespace=-blank-at-eol
+.agents/skills/performance-profiler/references/profiling-recipes.md whitespace=-blank-at-eol

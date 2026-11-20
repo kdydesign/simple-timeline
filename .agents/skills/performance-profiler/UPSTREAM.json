@@ -1,0 +1,55 @@
+{
+  "skill": "performance-profiler",
+  "repository": "https://github.com/alirezarezvani/claude-skills",
+  "upstream_ref": "main",
+  "commit": "f8593c4941210a621a6629ce1da9e07897976d5f",
+  "upstream_directory": "engineering/skills/performance-profiler",
+  "retrieved_on": "2026-11-20",
+  "license": {
+    "spdx": "MIT",
+    "source_path": "LICENSE",
+    "local_path": "LICENSE"
+  },
+  "files": [
+    {
+      "source_path": "LICENSE",
+      "local_path": "LICENSE",
+      "git_blob_sha1": "c3e30bcc287d6a1ebdb4ab29c10d344fd1053639",
+      "bytes": 1072,
+      "mode": "100644",
+      "sha256": "a20126646f93d32a8989c3cf4772d59194f405034f7babe7daebeac22b8ab151"
+    },
+    {
+      "source_path": "engineering/skills/performance-profiler/SKILL.md",
+      "local_path": "SKILL.md",
+      "git_blob_sha1": "bd13809170c8beae1b48a47591007e07669792a3",
+      "bytes": 2599,
+      "mode": "100644",
+      "sha256": "5130cd940c42e4f842706579213c0ddb4e55ab614fc06df840afbc208b357421"
+    },
+    {
+      "source_path": "engineering/skills/performance-profiler/references/optimization-playbook.md",
+      "local_path": "references/optimization-playbook.md",
+      "git_blob_sha1": "7151aadef11f044a6144283906e1315a0812cff1",
+      "bytes": 3262,
+      "mode": "100644",
+      "sha256": "61126e949bad8a53618fc3f6ca149f7b979cacc16d98a36c435b49a4546a0e67"
+    },
+    {
+      "source_path": "engineering/skills/performance-profiler/references/profiling-recipes.md",
+      "local_path": "references/profiling-recipes.md",
+      "git_blob_sha1": "7e5ef5298b7558bb4f6a096f034ff63ddd36502a",
+      "bytes": 11531,
+      "mode": "100644",
+      "sha256": "ca15101b4771e69680c8968e905cfa7ecd223f6e33b0ce39811b1360a61520e6"
+    },
+    {
+      "source_path": "engineering/skills/performance-profiler/scripts/performance_profiler.py",
+      "local_path": "scripts/performance_profiler.py",
+      "git_blob_sha1": "87222d013530f363f82712771b8246f6209032a9",
+      "bytes": 6137,
+      "mode": "100755",
+      "sha256": "fb189779003b1151d55d598722223619638644f0db56f4418f4bdb3f8d7d857f"
+    }
+  ]
+}
