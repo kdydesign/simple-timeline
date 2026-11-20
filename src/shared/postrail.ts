@@ -1,6 +1,24 @@
 export type PrMethod = 'GET' | 'POST' | 'DELETE'
 
-export interface PrRequest {
+export type PrBodyMode = 'none' | 'json' | 'urlencoded' | 'multipart' | 'raw' | 'binary'
+export interface PrField {enabled:boolean, name:string, value:string}
+export interface PrQuery extends PrField {raw?:string, encodeVariables?:boolean}
+export interface PrFile {id:string, name:string}
+export interface PrPart extends PrField {kind:'text'|'file', mime:string, file?:PrFile|null}
+
+export interface PrRequestOptions {
+  headerRows?: PrField[]
+  queryRows?: PrQuery[]
+  pathValues?: Record<string,string>
+  bodyMode?: PrBodyMode
+  formRows?: PrField[]
+  parts?: PrPart[]
+  rawBody?: string
+  binaryFile?: PrFile|null
+  savedRepeatCount?: string|null
+}
+
+export interface PrRequest extends PrRequestOptions {
   id: string
   name: string
   groupId: string | null
@@ -35,14 +53,25 @@ export interface PrLibrary {
   environmentId: string | null
 }
 
+export interface PrEnvSave {
+  environment: PrEnv
+  password?: string
+  remember?: boolean
+}
+
 export type PrMutation =
   | {type: 'group.save', id?: string, name: string}
   | {type: 'group.delete', id: string}
-  | {type: 'request.save', request: PrRequest}
+  | {type: 'request.save', request: PrRequest, copyFilesFrom?:string}
+  | {type: 'request.content', request: PrRequest, baseUrl: string}
+  | {type: 'request.metadata', id: string, name?: string, groupId?: string | null,
+      address?: Pick<PrRequest,'url'|'queryRows'|'pathValues'>}
+  | {type: 'request.move', id: string, groupId: string | null}
   | {type: 'request.favorite', id: string, favorite: boolean}
   | {type: 'request.delete', id: string}
   | {type: 'request.duplicate', id: string, groupId: string | null}
-  | {type: 'env.save', environment: PrEnv, password?: string, remember?: boolean}
+  | ({type: 'env.save'} & PrEnvSave)
+  | {type: 'env.batch', saves: PrEnvSave[], deletedIds: string[]}
   | {type: 'env.delete', id: string}
   | {type: 'env.select', id: string}
 

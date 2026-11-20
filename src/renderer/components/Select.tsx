@@ -1,6 +1,6 @@
 import {useRef,useState,useId} from 'react';
 import {Select as Root,SelectTrigger,SelectValue,SelectContent,SelectItem} from './ui/select';
-export interface SelectOption {value:string;label:string;color?:string}
+export interface SelectOption {value:string;label:string;color?:string;textColor?:string}
 export function Select({id,label,value,options,onChange,disabled=false,escapeClipping=false,...accessibility}:{id?:string;label:string;value:string;options:SelectOption[];onChange:(value:string)=>void;disabled?:boolean;escapeClipping?:boolean; "aria-invalid"?:boolean; "aria-describedby"?:string}) {
  const generatedId=useId(),triggerId=id??generatedId;
  const button=useRef<HTMLButtonElement>(null),nextFocus=useRef<HTMLElement|null>(null),opening=useRef(0);
@@ -22,7 +22,7 @@ export function Select({id,label,value,options,onChange,disabled=false,escapeCli
     if(currentOpening!==opening.current){e.preventDefault();return}
     if(nextFocus.current){e.preventDefault();nextFocus.current.focus();nextFocus.current=null}
    }}>
-   {options.map(o=><SelectItem key={o.value} value={o.value}>{o.color&&<span className="color-dot" style={{backgroundColor:o.color}}/>}<span>{o.label}</span></SelectItem>)}
+   {options.map(o=><SelectItem key={o.value} value={o.value}>{o.color&&<span className="color-dot" style={{backgroundColor:o.color}}/>}<span style={o.textColor ? {color:o.textColor} : undefined}>{o.label}</span></SelectItem>)}
   </SelectContent>}
  </Root></div>
 }

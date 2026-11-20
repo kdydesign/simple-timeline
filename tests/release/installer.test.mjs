@@ -1,3 +1,4 @@
+import {releaseNotes} from '../../src/shared/release-content.ts'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -44,7 +45,7 @@ test('WorkRail rename preserves installer identity and offers directory selectio
  assert.equal(c.win.executableName,'Planrail')
  assert.equal(c.appId,'com.kdydesign.simpletimeline')
  assert.equal(pkg.name,'simple-timeline')
- assert.equal(pkg.version,'1.0.0')
+ assert.equal(pkg.version,releaseNotes[0].version)
  const lock=JSON.parse(readFileSync('package-lock.json','utf8'))
  assert.equal(lock.version,pkg.version)
  assert.equal(lock.packages[''].version,pkg.version)

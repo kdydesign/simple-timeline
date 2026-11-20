@@ -1,0 +1,46 @@
+.pr-template {
+  --pr-template-pad: 3px 6px;
+  --pr-template-border: 1px;
+  position: relative;
+  display: block;
+  min-width: 0;
+  width: 100%;
+  color: var(--text);
+  font: 13px/1.5 var(--pr-code-font, Consolas, monospace);
+}
+.pr-template.pr-template > :is(input, textarea), .pr-template .pr-template-ink {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: var(--pr-template-pad);
+  border: var(--pr-template-border) solid var(--control-border);
+  border-radius: 4px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: none;
+  text-align: start;
+  white-space: pre;
+  tab-size: 4;
+  font-variant-ligatures: none;
+  text-indent: 0;
+}
+.pr-template.pr-template > :is(input,textarea) {background:var(--control);color:inherit;caret-color:var(--text)}
+.pr-template > textarea {resize:vertical;overflow:auto}
+.pr-template .pr-template-ink {
+  position:absolute;
+  inset:0;
+  height:100%;
+  border-color:transparent;
+  overflow:hidden;
+  pointer-events:none;
+  user-select:none;
+  background:transparent;
+}
+.pr-template[data-painted="true"].pr-template > :is(input,textarea) {color:transparent}
+.pr-template .pr-json-variable, .pr-body-editor .pr-json-variable {color:#ffa9ad}
+.pr-template > :is(input,textarea)::selection {background:#6489af80}
+@media (forced-colors:active) {
+  .pr-template .pr-template-ink {display:none}
+  .pr-template[data-painted="true"].pr-template > :is(input,textarea) {color:CanvasText}
+}

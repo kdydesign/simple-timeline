@@ -1,0 +1,46 @@
+.pr-compose .pr-request-name > :is(span,h1) {font-size:14px}
+.pr-compose .pr-request-name h1 {font-weight:700}
+.pr-auth-badge, .pr-modes button {border:0;box-shadow:none;border-radius:4px;padding:2px 7px;font-size:11px}
+.pr-auth-badge,.pr-modes button[aria-pressed="true"] {background:#364650;color:#bedff6}
+.pr-modes {display:flex;align-items:center;gap:5px;margin-bottom:5px}
+.pr-modes button[aria-pressed="false"] {background:transparent;color:var(--muted)}
+.pr-method {flex:none;width:78px}
+.pr-method .select-trigger {height:24px;min-height:0;width:100%;padding:2px 5px;font:700 11px/1.5 var(--pr-code-font)}
+.pr-method .select-trigger span {font:inherit}
+.pr-address .pr-template {flex:1;--pr-template-border:0px;--pr-template-pad:4px 0;font:14px/1.65 var(--pr-code-font)}
+.pr-address .pr-template > input {background:transparent;border:0}
+.pr-send-diagnostic {position:relative;display:inline-flex}
+.pr-send-diagnostic button {width:20px;height:20px;border:1px solid #ed929b;border-radius:50%;color:#ffd3d6;background:#723c46;padding:0;font:bold 13px/1 sans-serif}
+.pr-send-diagnostic [role="tooltip"] {
+  display:none;position:absolute;z-index:12;top:calc(100% + 6px);left:-10px;
+  width:max-content;max-width:min(320px,55vw);padding:6px 9px;border-radius:5px;
+  border:1px solid #99616a;color:#ffe6e8;background:#472f36;font-size:12px;
+}
+.pr-send-diagnostic:is(:hover,:focus-within) [role="tooltip"] {display:block}
+.pr-request-pane .pr-content {gap:4px;padding:7px 12px}
+.pr-request-pane .pr-content > * {flex-shrink:0}
+.pr-request-pane .pr-body-editor {min-height:68px;flex:1 0 68px}
+.pr-request-pane .pr-body-editor .pr-json-variable {color:#ffa9ad}
+.pr-raw-editor {min-height:60px;flex:1 0 60px}
+.pr-raw-editor.pr-template > textarea {height:100%;min-height:60px;resize:none}
+.pr-param-table {min-width:275px}
+.pr-param-row {display:grid;grid-template-columns:28px minmax(76px,2fr) minmax(90px,3fr) 24px;align-items:center;gap:6px}
+.pr-part-table {min-width:460px}
+.pr-part-table .pr-param-row {grid-template-columns:25px minmax(65px,1.4fr) 53px minmax(68px,1.7fr) minmax(70px,1fr) 24px}
+.pr-param-head {color:var(--muted);font-size:11px}
+.pr-param-row button {width:23px;height:22px;padding:2px;display:grid;place-items:center;border:0;background:transparent;color:var(--muted)}
+.pr-param-row button .icon {width:14px;height:14px}
+.pr-param-row input[type="checkbox"] {margin:0;justify-self:start;accent-color:var(--accent)}
+.pr-param-row[data-enabled="false"] .pr-template {opacity:.65}
+.pr-param-record {margin:2px 0}
+.pr-file-cell {min-width:0}
+.pr-param-row .pr-file-cell button,.pr-file-cell button {display:block;width:auto;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 8px;color:var(--text);background:var(--control);border:1px solid var(--control-border);border-radius:4px}
+.pr-body-settings {display:flex;align-items:center;flex-wrap:wrap;gap:3px 10px;margin-bottom:3px}
+.pr-body-settings label,.pr-path-field {display:flex;align-items:center;gap:6px;color:var(--muted);font-size:11px}
+.pr-body-settings label:has(.pr-template) {flex:1;min-width:min(100%,200px);white-space:nowrap}
+.pr-body-settings select,.pr-param-row select,.pr-part-table input:not([type="checkbox"]) {min-width:0;max-width:100%}
+.pr-path-field .pr-template {width:min(320px,70%)}
+.pr-path-field {flex-wrap:wrap}
+.postrail-workspace[data-pointer-focus="true"] :is(.pr-address,.pr-request-pane) :is(input,textarea):focus {outline:none;box-shadow:none}
+.postrail-workspace:not([data-pointer-focus="true"]) .pr-request-pane :is(input,textarea,button):focus-visible,
+.postrail-workspace:not([data-pointer-focus="true"]) .pr-address :is(input,button):focus-visible {outline:2px solid var(--accent);outline-offset:-2px}

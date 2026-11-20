@@ -41,6 +41,7 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { PlanWarning, StatusNotice } from "./components/StatusNotice";
 import {PlanRailStatus} from "./workrail/PlanRailStatus";
 import "./workrail/status.css";
+import type {PostRailResultTarget} from './workrail/PostRailWidget'
 import {usePostRail} from './postrail/usePostRail'
 import { Home } from "./workrail/Home";
 import { NodeScreen } from "./workrail/NodeScreen";
@@ -75,6 +76,7 @@ export function App({
   initialTool?: WorkRailTool;
 }) {
   const [tool, setTool] = useState(initialTool);
+  const [postRailResult,setPostRailResult]=useState<PostRailResultTarget|null>(null);
   const [openedPostRail, setOpenedPostRail] = useState(initialTool === 'postrail');
   const postrail = usePostRail(tool === 'home' || openedPostRail);
   const [openedTermRail, setOpenedTermRail] = useState(initialTool === 'termrail');
@@ -796,7 +798,8 @@ export function App({
       {warning&&<div className="toast warning-toast" role="alert">{warning.message}</div>}
       <div className="toast" hidden={!!warning} role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
       </div>
-      {tool === "home" && <Home postrail={postrail} onPostRail={()=>selectTool("postrail")} date={workDate} snapshot={timeline.snapshot} phase={timeline.phase} timelineError={timeline.error}
+      {tool === "home" && <Home postrail={postrail} onPostRail={()=>selectTool("postrail")}
+        onPostRailResult={target=>{if(!dockBlocked){setPostRailResult(target);selectTool("postrail")}}} date={workDate} snapshot={timeline.snapshot} phase={timeline.phase} timelineError={timeline.error}
         sharing={sharing.state} sharingError={sharing.error} node={node} version={runtimeVersion} onRefresh={() => void timeline.refresh()}
         onEnvironment={environmentPicker.openPicker} onSettings={sharing.state&&sharing.api?()=>sharing.openSettings('sharing'):undefined}
         onPlanrail={() => {
@@ -815,7 +818,7 @@ export function App({
           });
         }}/>}
       {openedPostRail && <Suspense fallback={tool === "postrail" ? <div role="status">PostRail 여는 중…</div> : null}>
-        <PostRail postrail={postrail} active={tool === "postrail"} onDirtyChange={setPostRailDirty}/>
+        <PostRail postrail={postrail} active={tool === "postrail"} onDirtyChange={setPostRailDirty} resultTarget={postRailResult} onResultOpened={()=>setPostRailResult(null)}/>
       </Suspense>}
       {openedTermRail && <Suspense fallback={tool === "termrail" ? <div role="status">TermRail 여는 중…</div> : null}>
         <TermRail active={tool === "termrail"} />

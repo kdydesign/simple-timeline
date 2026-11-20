@@ -10,7 +10,7 @@ import { nodeActiveVersionLabel, nodeCanRecheck, nodeCapabilityReason, nodeDefau
 import { EnvironmentActions, ManagerBadge, type OpenEnvironment } from './NodeEnvironment'
 import { NodeOperationOverlay, NodeOperationStatus, NodeTooltip, NodeVersionAction } from './NodeVersionControls'
 import { SharingWidget } from './SharingWidget'
-import { PostRailWidget, type HomePostRail } from './PostRailWidget'
+import { PostRailWidget, type HomePostRail, type PostRailResultTarget } from './PostRailWidget'
 import './home.css'
 
 const maxSchedules = 10
@@ -25,7 +25,7 @@ const todayFormat = (date: string) => {
   return dateFormat.format(value)
 }
 
-export function Home({ date, snapshot, phase, timelineError, sharing, sharingError, node, onRefresh, onPlanrail, onNode, onEnvironment, onSettings, postrail, onPostRail, version }: {
+export function Home({ date, snapshot, phase, timelineError, sharing, sharingError, node, onRefresh, onPlanrail, onNode, onEnvironment, onSettings, postrail, onPostRail, onPostRailResult, version }: {
   date: string
   snapshot: TimelineSnapshot | null
   phase: TimelinePhase
@@ -39,6 +39,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
   onEnvironment: OpenEnvironment
   postrail?: HomePostRail
   onPostRail?: () => void
+  onPostRailResult?: (target:PostRailResultTarget)=>void
   onSettings?: () => void
   version?: string
 }) {
@@ -142,7 +143,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
         <div className="workrail-home-summaries">
           <SharingWidget sharing={sharing} error={sharingError} onSettings={onSettings} version={version} />
           <HomeNodeWidget node={node} inventory={inventory} working={working} onNode={onNode} />
-          {postrail && <PostRailWidget postrail={postrail} onOpen={onPostRail} />}
+          {postrail && <PostRailWidget postrail={postrail} onOpen={onPostRail} onResult={onPostRailResult} />}
         </div>
       </div>
     </main>

@@ -1,0 +1,21 @@
+.pr-console-log {
+  box-sizing: border-box;
+  height: clamp(76px,14vh,150px);
+  margin: 0;
+  padding: 8px 14px;
+  overflow: auto;
+  white-space: pre;
+  border-top: 1px solid var(--border);
+  color: #d1dbe2;
+  background: #23292e;
+  font: 13px/1.6 var(--pr-code-font);
+  user-select: text;
+}
+.pr-console-log [data-error="true"] { color: #ff9e9e; }
+.pr-console-log:focus:not(:focus-visible),
+.pr-drawer textarea:focus:not(:focus-visible),
+.pr-status button:focus:not(:focus-visible) { outline: none; box-shadow: none; }
+.pr-console-log:focus-visible, .pr-drawer textarea:focus-visible, .pr-status button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}

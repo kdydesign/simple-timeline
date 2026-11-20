@@ -36,7 +36,7 @@ it('copies a saved snapshot to the focused group after the source changes, witho
   const copy={...request,id:'copy',name:'장비 조회 복사본 2',groupId:'h',favorite:false,nextIndex:'1'}
   postrail.mutate.mockResolvedValue({...updated,requests:[...updated.requests,copy]})
   fireEvent.keyDown(screen.getByRole('button',{name:'기록'}),{ctrlKey:true,key:'v'})
-  expect(postrail.mutate).toHaveBeenLastCalledWith({type:'request.save',request:{...copy,id:''}})
+  expect(postrail.mutate).toHaveBeenLastCalledWith({type:'request.save',copyFilesFrom:'r',request:{...copy,id:''}})
   await waitFor(()=>expect(onSelect).toHaveBeenCalledWith('copy'))
 })
 
@@ -45,7 +45,7 @@ it('creates a GET in the selected group and selects it only after storage succee
   render(<Sidebar postrail={postrail} selectedId="r" onSelect={onSelect}/>)
   click('추가 메뉴'); menuItem('요청 추가')
   expect(screen.getByLabelText('그룹')).toHaveValue('g')
-  change('요청 이름','상태'); change('URL','http://localhost/health')
+  change('요청 이름','상태'); change('URL','http://localhost/site/:id?q=${deviceUrl}')
   postrail.mutate.mockResolvedValueOnce(null)
   click('저장')
   await waitFor(()=>expect(screen.getByRole('button',{name:'저장'})).toBeEnabled())
@@ -53,7 +53,8 @@ it('creates a GET in the selected group and selects it only after storage succee
   postrail.mutate.mockResolvedValueOnce({...library, requests:[request,{...request,id:'new',name:'상태'}]})
   click('저장')
   expect(postrail.mutate).toHaveBeenLastCalledWith({type:'request.save',request:expect.objectContaining({
-    id:'',groupId:'g',method:'GET',url:'http://localhost/health',name:'상태',nextIndex:'1',favorite:false})})
+    id:'',groupId:'g',method:'GET',url:'http://localhost/site/:id?q=${deviceUrl}',name:'상태',nextIndex:'1',favorite:false,pathValues:{id:''},
+    queryRows:[{enabled:true,raw:'q=${deviceUrl}',name:'q',value:'${deviceUrl}',encodeVariables:true}]})})
   await waitFor(()=>expect(onSelect).toHaveBeenCalledWith('new'))
 })
 
@@ -85,8 +86,8 @@ it('adds and focuses a variable, blocks reserved or duplicate names, and saves p
   change('비밀번호','test-password'); change('로그인 URL','https://login.test/auth')
   fireEvent.click(screen.getByLabelText('이 PC에 저장'))
   click('저장')
-  expect(postrail.mutate).toHaveBeenCalledWith({type:'env.save', environment:{...environment,
-    loginUrl:'https://login.test/auth', variables:{deviceUrl:'https://dev.test',site:'QA'}},password:'test-password',remember:true})
+  expect(postrail.mutate).toHaveBeenCalledWith({type:'env.batch',saves:[{environment:{...environment,
+    loginUrl:'https://login.test/auth', variables:{deviceUrl:'https://dev.test',site:'QA'}},password:'test-password',remember:true}],deletedIds:[]})
   await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
 })
 
@@ -100,7 +101,7 @@ it('creates the first environment and preserves existing credentials on later de
   change('환경 이름','QA')
   click('저장')
   await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
-  expect(postrail.mutate).toHaveBeenCalledWith({type:'env.save',environment:expect.objectContaining({id:'',name:'QA',hasPassword:false})})
+  expect(postrail.mutate).toHaveBeenCalledWith({type:'env.batch',saves:[{environment:expect.objectContaining({id:'',name:'QA',hasPassword:false})}],deletedIds:[]})
   view.rerender(<EnvironmentManagerButton postrail={{...postrail,canRememberPassword:false}}/>)
   click('환경 관리')
   fireEvent.click(screen.getByText('로그인 설정'))
@@ -110,7 +111,7 @@ it('creates the first environment and preserves existing credentials on later de
   change('비밀번호','')
   change('토큰 수신 API 주소','https://new.test')
   click('저장')
-  expect(postrail.mutate).toHaveBeenLastCalledWith({type:'env.save',environment:{...environment,apiOrigin:'https://new.test'}})
+  expect(postrail.mutate).toHaveBeenLastCalledWith({type:'env.batch',saves:[{environment:{...environment,apiOrigin:'https://new.test'}}],deletedIds:[]})
   await waitFor(()=>expect(screen.queryByRole('dialog')).toBeNull())
 })
 
@@ -142,13 +143,106 @@ it('commits sidebar edits, moves requests to 미분류 on group deletion and rem
     expect(screen.getByRole('button',{name:'미분류'})).toBeVisible()
     expect(store.read().requests[0]).toMatchObject({groupId:null,name:'상태 확인',favorite:true})
     click('환경 관리'); change('환경 이름','개발'); await submit()
-    click('환경 관리'); fireEvent.click(screen.getByText('환경 설정')); click('환경 삭제'); click('닫기')
+    click('환경 관리'); click('환경 삭제'); click('취소')
     expect(store.read().environments.map(env=>env.name)).toEqual(['개발'])
-    click('환경 관리'); fireEvent.click(screen.getByText('환경 설정')); click('환경 삭제'); await submit('삭제')
+    click('환경 삭제'); click('삭제')
+    expect(store.read().environments).toHaveLength(1)
+    await submit()
     expect(store.read().environments).toHaveLength(0)
     expect(screen.getByRole('button',{name:'상태 확인 즐겨찾기'})).toHaveAttribute('aria-pressed','true')
   } finally {
     store.close()
     rmSync(directory,{recursive:true,force:true})
   }
+})
+
+it('retains two environment drafts during selection and failed saves, and confirms discard by name', async () => {
+  const postrail=controller()
+  const qa={...environment,id:'qa',name:'QA'}
+  render(<EnvironmentManagerButton postrail={{...postrail,library:{...library,environments:[environment,qa]}}}/>)
+  click('환경 관리')
+  change('환경 이름','개발 2')
+  click('QA')
+  change('환경 이름','QA 2')
+  click('개발 2')
+  expect(screen.getByLabelText('환경 이름')).toHaveValue('개발 2')
+  expect(postrail.mutate).not.toHaveBeenCalled()
+  postrail.mutate.mockResolvedValueOnce(null)
+  click('저장')
+  await waitFor(()=>expect(screen.getByRole('alert')).toBeVisible())
+  expect(postrail.mutate).toHaveBeenCalledWith({type:'env.batch',saves:[
+    {environment:{...environment,name:'개발 2'}},{environment:{...qa,name:'QA 2'}}],deletedIds:[]})
+  click('닫기')
+  expect(screen.getByRole('dialog')).toHaveTextContent('개발 2')
+  expect(screen.getByRole('dialog')).toHaveTextContent('QA 2')
+  click('계속 편집')
+  expect(screen.getByLabelText('환경 이름')).toHaveValue('개발 2')
+})
+
+it('shows login configuration errors at the field, preserves an explicitly empty prefix and trailing spaces', async () => {
+  const postrail=controller()
+  render(<EnvironmentManagerButton postrail={postrail}/>)
+  click('환경 관리'); click('로그인 설정')
+  change('로그인 본문 (JSON)','{')
+  click('저장')
+  expect(screen.getByLabelText('로그인 본문 (JSON)')).toHaveAttribute('aria-invalid','true')
+  expect(screen.getByRole('alert')).toHaveTextContent('JSON 객체')
+  change('로그인 본문 (JSON)','{"team":"${missing}"}')
+  expect(screen.getByRole('alert')).toHaveTextContent('등록되지 않은')
+  change('로그인 본문 (JSON)','{"team":"${deviceUrl}"}')
+  fireEvent.click(screen.getByText('고급 헤더 설정'))
+  change('토큰 접두어','')
+  postrail.mutate.mockResolvedValueOnce(null)
+  click('저장')
+  await waitFor(()=>expect(postrail.mutate).toHaveBeenCalledWith(expect.objectContaining({
+    saves:[{environment:expect.objectContaining({tokenPrefix:''})}]})))
+  change('토큰 접두어','Team  ')
+  click('저장')
+  await waitFor(()=>expect(postrail.mutate).toHaveBeenCalledWith(expect.objectContaining({
+    saves:[{environment:expect.objectContaining({tokenPrefix:'Team  '})}]})))
+})
+
+it('discards a token immediately for the edited environment only, independently of definition drafts', async () => {
+  const postrail=controller()
+  const qa={...environment,id:'qa',name:'QA'}
+  const data={...library,environments:[environment,qa]}
+  const state={phase:'completed' as const,environmentName:'',environmentId:'',requestName:'',requestId:'',runId:'',total:'1',
+    completed:'1',failed:'0',uncertain:'0',message:'',authenticatedEnvironmentIds:['dev','qa']}
+  const view=render(<EnvironmentManagerButton postrail={{...postrail,library:data,run:state}}/>)
+  click('환경 관리'); click('QA'); click('로그인 설정'); change('환경 이름','QA draft')
+  click('저장된 토큰 비우기')
+  expect(screen.getByRole('dialog')).toHaveTextContent('현재 회차 후 중지')
+  click('취소')
+  expect(postrail.logout).not.toHaveBeenCalled()
+  click('저장된 토큰 비우기'); click('비우기')
+  await waitFor(()=>expect(postrail.logout).toHaveBeenCalledWith('qa'))
+  view.rerender(<EnvironmentManagerButton postrail={{...postrail,library:data,run:{...state,authenticatedEnvironmentIds:['dev']}}}/>)
+  await waitFor(()=>expect(screen.queryByRole('button',{name:'저장된 토큰 비우기'})).toBeNull())
+  click('개발')
+  expect(screen.getByRole('button',{name:'저장된 토큰 비우기'})).toBeVisible()
+  click('닫기');click('폐기')
+  expect(postrail.mutate).not.toHaveBeenCalled()
+})
+
+it('updates saved path and query parameters when the URL changes in the request menu', async () => {
+  const saved:PrRequest={...request,url:'https://example.test/:same/:removed?one=1',
+    pathValues:{same:'kept',removed:'gone'},queryRows:[{enabled:true,name:'one',value:'1'},{enabled:false,name:'off',value:'two'}]}
+  const postrail={...controller(),library:{...library,requests:[saved]}}
+  render(<Sidebar postrail={postrail} selectedId={saved.id} onSelect={vi.fn()}/>)
+  click('장비 조회 요청 메뉴'); menuItem('수정')
+  change('URL','https://example.test/:same/:new/:constructor?other=2')
+  await act(async ()=>click('저장'))
+  expect(postrail.mutate).toHaveBeenCalledWith({type:'request.metadata',id:saved.id,address:{
+    url:'https://example.test/:same/:new/:constructor?other=2',pathValues:{same:'kept',new:'',constructor:''},
+    queryRows:[{enabled:true,name:'other',value:'2',raw:'other=2'},{enabled:false,name:'off',value:'two'}]}})
+})
+
+it('shows unknown URL references next to the metadata field and retains the literal template', () => {
+  render(<Sidebar postrail={controller()} selectedId="r" onSelect={vi.fn()}/>)
+  click('장비 조회 요청 메뉴'); menuItem('수정')
+  change('URL','${OTHER}/read')
+  const input=screen.getByRole('textbox',{name:'URL'})
+  expect(input).toHaveValue('${OTHER}/read')
+  expect(input).toHaveAccessibleDescription(/OTHER/)
+  expect(screen.getByText('${OTHER}',{selector:'.pr-json-variable'})).toBeVisible()
 })

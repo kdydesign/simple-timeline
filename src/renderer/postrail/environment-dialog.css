@@ -1,0 +1,43 @@
+dialog.pr-environment-dialog {
+  inset: 0; margin: auto; width: min(756px, calc(100vw - 24px)); max-height: calc(100dvh - 24px);
+  padding: 0; overflow: hidden;
+}
+.pr-environment-dialog::backdrop { background: rgb(8 15 22 / 48%); }
+.pr-environment-dialog .quick-reminder-heading { margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--rim); }
+.pr-environment-dialog form { display: flex; flex-direction: column; max-height: calc(100dvh - 83px); }
+.pr-environment-dialog .pr-environment-grid { display: grid; grid-template-columns: 155px minmax(0,1fr); min-height: 0; overflow: auto; }
+.pr-environment-list { padding: 12px 8px; background: var(--control); border-right: 1px solid var(--rim); overflow-y: auto; }
+.pr-environment-list button, .pr-environment-tabs button {
+  background: transparent; color: var(--muted); border: 1px solid transparent; border-radius: 5px; font: inherit; padding: 5px 8px;
+}
+.pr-environment-list button { width: 100%; text-align: start; overflow-wrap: anywhere; margin-bottom: 2px; }
+.pr-environment-list .pr-new-environment { display: flex; gap: 4px; align-items: center; margin-bottom: 10px; color: var(--accent-text,var(--text)); }
+.pr-new-environment .icon { height: 14px; width: 14px; }
+.pr-environment-list button[aria-pressed=true], .pr-environment-tabs button[aria-pressed=true] {
+  color: var(--text); background: var(--selected-control); border-color: var(--selected-border);
+}
+.pr-environment-fields { padding: 12px 16px; min-height: min(358px,45vh); min-width: 0; overflow-y: auto; }
+.pr-environment-tabs { display: flex; gap: 4px; margin: 10px 0; padding-bottom: 6px; border-bottom: 1px solid var(--rim); }
+.pr-variable-heading { font-size: 12px; color: var(--muted); }
+.pr-env-variables > [data-add] { margin-left: auto; }
+.pr-env-variables small[role=alert] { grid-column: 1/-1; }
+.pr-environment-login h3 { margin-top: 14px; }
+.pr-environment-login h3 small, .pr-env-session { font-size: 11px; color: var(--muted); }
+.pr-env-field { margin-bottom: 8px; }
+.pr-env-field .pr-field { margin-bottom: 2px; }
+.pr-env-pair { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.pr-env-session { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+.pr-environment-dialog .editor-actions { margin: 0; padding: 10px 16px; border-top: 1px solid var(--rim); flex-shrink: 0; }
+.pr-environment-dialog .pr-environment-error { margin: 4px 16px; }
+.pr-env-field .pr-template { --pr-template-pad: 6px 10px; }
+@media (max-width: 600px) {
+  .pr-environment-dialog .pr-environment-grid { grid-template-columns: 112px minmax(0,1fr); }
+  .pr-environment-fields { padding: 8px; }
+  .pr-env-pair { grid-template-columns: 1fr; gap: 0; }
+}
+@media (max-width: 450px) {
+  .pr-environment-dialog .pr-environment-grid { display: flex; flex-direction: column; }
+  .pr-environment-list { display: flex; gap: 3px; overflow-x: auto; flex-shrink: 0; border-bottom: 1px solid var(--rim); border-right: 0; }
+  .pr-environment-list button { width: auto; white-space: nowrap; }
+  .pr-environment-list .pr-new-environment { margin-bottom: 0; }
+}

@@ -199,3 +199,12 @@
   .pr-body-editor textarea { color: CanvasText; caret-color: CanvasText; }
   .pr-tabs button[aria-selected="true"] { border-bottom: 2px solid Highlight; }
 }
+
+.pr-editor-column { gap:0; }
+.pr-editor-column > .pr-compose { margin-bottom:8px; }
+.pr-editor-column > .pr-pane { min-height:95px; flex:var(--pr-response-share,70) 1 0; }
+.pr-editor-column > .pr-compose + .pr-pane { flex-grow:var(--pr-request-share,30); }
+.pr-resizer { flex:0 0 10px; display:grid; place-items:center; cursor:row-resize; touch-action:none; user-select:none; }
+.pr-resizer::after { content:''; width:36px; height:3px; border-radius:3px; background:var(--control-border); }
+.pr-resizer:is(:hover,:focus-visible)::after { background:var(--accent); }
+@media(max-width:620px){.pr-editor-column{flex:1 0 450px;min-height:450px}}

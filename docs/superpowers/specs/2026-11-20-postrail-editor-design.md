@@ -1,6 +1,6 @@
-# PostRail 요청 편집과 환경 관리 · 검토안
+# PostRail 요청 편집과 환경 관리 · 승인 설계
 
-2026-11-20 · 제품 기준 `08fa1a4`. **개별 협의 완료 · 전체 설계 승인 대기.** 사용자가 새 요청의 인증 기본값, 환경 관리 창의 구성, 수동 토큰 폐기, console 보관 범위에 이어 쿼리·경로·POST 폼 지원과 같은 PC의 첨부 경로 기억을 선택했다. 헤더 입력 방식, 응답 본문 도구와 요청 이름 검색도 아래 검토안에 반영했다. [조작 시안](../../design/mockups/postrail-editor/index.html) · [작업 화면](../../design/mockups/postrail-editor/workspace.png) · [로그인 설정](../../design/mockups/postrail-editor/login.png) · [변수](../../design/mockups/postrail-editor/variables.png)
+2026-11-20 · 제품 기준 `08fa1a4`. **2026-11-21 Home 반복 입력 시안을 포함해 전체 설계를 승인했다.** 사용자가 새 요청의 인증 기본값, 환경 관리 창의 구성, 수동 토큰 폐기, console 보관 범위에 이어 쿼리·경로·POST 폼 지원과 같은 PC의 첨부 경로 기억을 선택했다. 헤더 입력 방식, 응답 본문 도구와 요청 이름 검색도 아래 검토안에 반영했다. [조작 시안](../../design/mockups/postrail-editor/index.html) · [작업 화면](../../design/mockups/postrail-editor/workspace.png) · [로그인 설정](../../design/mockups/postrail-editor/login.png) · [변수](../../design/mockups/postrail-editor/variables.png)
 
 ## 환경과 요청 인증
 

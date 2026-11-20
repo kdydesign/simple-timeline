@@ -8,7 +8,7 @@ import { postRailBusy, usesPostRailIndex } from '../../src/shared/postrail-run'
 const cleanup: (() => Promise<void>)[] = []
 afterEach(async () => { for (const close of cleanup.splice(0).reverse()) await close() })
 
-async function fixture(serve: (url: string, body: string, req: IncomingMessage, res: ServerResponse) => void, onChange?: () => void) {
+async function fixture(serve: (url: string, body: string, req: IncomingMessage, res: ServerResponse) => void, onChange?: () => void, password='secret-"password') {
   const server = createServer(async (req, res) => {
     const chunks = []
     for await (const chunk of req) chunks.push(chunk)
@@ -33,7 +33,7 @@ async function fixture(serve: (url: string, body: string, req: IncomingMessage, 
   const reservations: string[] = []
   const store = {
     read: () => ({ environments:[environment], requests:[request], groups:[], environmentId:'e' }),
-    password: () => 'secret-"password',
+    password: () => password,
     reserveIndex: () => {
       const value = request.nextIndex
       reservations.push(value)
@@ -283,4 +283,150 @@ it('notifies open views when the last run token expires while idle', async () =>
   await f.finish()
   expect(states).toContainEqual(['e'])
   await vi.waitFor(() => expect(states).toContainEqual([]))
+})
+
+it('encodes structured query and path components, preserves raw URL segments and repeats a form without reserving indices', async () => {
+  const calls:{url:string,body:string,mime:unknown}[]=[]
+  const f=await fixture((url,body,req,res)=>{calls.push({url,body,mime:req.headers['content-type']});res.end('ok')})
+  f.environment.variables.term = 'A&B +한'
+  const request:PrRequest = {...f.request, useAuth:false, url:'${base}/items/:id?old=%2f&q=unused', pathValues:{id:'a/b'},
+    queryRows:[{enabled:true,name:'old',value:'/',raw:'old=%2f'}, {enabled:true,name:'q',value:'${term}'},{enabled:false,name:'off',value:'1'}],
+    bodyMode:'urlencoded',formRows:[{enabled:true,name:'title',value:'A&B'}],headerRows:[]}
+  f.runner.start({...f.input,request,count:'2'})
+  await f.finish()
+  expect(calls).toHaveLength(2)
+  for (const c of calls) {
+    expect(c.url).toMatch(/^\/items\/a%2Fb\?old=%2f&q=/)
+    expect([...new URL(c.url,f.origin).searchParams]).toEqual([['old','/'],['q','A&B +한']])
+    expect(c.body).toBe('title=A%26B')
+    expect(c.mime).toMatch(/^application\/x-www-form-urlencoded/)
+  }
+  expect(f.reservations).toEqual([])
+})
+
+it('rejects invalid multipart selection and protected URL parameters before login', async () => {
+  const f=await fixture((_url,_body,_req,res)=>res.end())
+  const request:PrRequest={...f.request,bodyMode:'multipart',parts:[
+    {kind:'file',file:null,name:'item',value:'',mime:'',enabled:true}
+  ]}
+  expect(()=>f.runner.start({...f.input,request})).toThrow('form-data 1행')
+  expect(()=>f.runner.start({...f.input,request:{...request,bodyMode:'none',queryRows:[{name:'token',value:'v',enabled:true}]}})).toThrow('비밀값')
+  expect(f.reservations).toEqual([])
+})
+
+it('retains scoped preflight and login errors without exposing wire values, clearing the icon on success', async () => {
+  let rejectLogin = true
+  const f = await fixture((url, _body, _req, res) => {
+    if (url === '/login') {
+      res.statusCode = rejectLogin ? 401 : 200
+      res.end(rejectLogin ? 'PRIVATE_RESPONSE' : '{"data":{"token":"PRIVATE_TOKEN"}}')
+    } else res.end('PRIVATE_RESPONSE')
+  })
+  const request = {...f.request, url:f.origin+'/samples?filter=PRIVATE_QUERY', headers:{'X-Note':'PRIVATE_HEADER'}}
+  expect(() => f.runner.preview({...f.input,request:{...request,url:'https://elsewhere.test/?filter=PRIVATE_QUERY'}})).toThrow()
+  const preflight = f.runner.state().sendErrors!
+  expect(preflight).toMatchObject([{requestId:'r', environmentId:'e', preflight:true}])
+  expect(f.runner.consoleSince(0).at(-1)?.text).toContain(preflight[0].message)
+  f.runner.start({...f.input,request})
+  await f.finish()
+  expect(f.runner.state().sendErrors![0].message).toMatch(/로그인.*401.*미전송/)
+  rejectLogin = false
+  f.runner.start({...f.input,request}); await f.finish()
+  f.runner.start({...f.input,request}); await f.finish()
+  expect(f.runner.state().sendErrors).toEqual([])
+  const lines = f.runner.consoleSince(0)
+  expect(lines.filter(line => line.error)).toHaveLength(2)
+  expect(lines.map(line => line.text).join('\n')).toMatch(/로그인 시작[\s\S]*토큰 발급[\s\S]*토큰 재사용/)
+  expect(JSON.stringify(lines)).not.toMatch(/PRIVATE_|secret-|\/samples|9007199254740993/)
+  expect(f.runner.consoleSince(lines.at(-2)!.id)).toEqual(lines.slice(-1))
+})
+
+it('retains the latest 1,000 session lines independently of the results and clears them on shutdown', async () => {
+  const f = await fixture((_url,_body,_req,res) => res.end())
+  f.runner.invalidDraft(f.request.id,'e','headers',f.request.method,'3행 · 같은 이름의 헤더가 두 번 있습니다.')
+  expect(f.runner.state().sendErrors![0].message).toBe('3행 · 같은 이름의 헤더가 두 번 있습니다.')
+  f.runner.invalidDraft(f.request.id,'e','params',f.request.method,'경로 값 PRIVATE_FIELD을 입력하세요.')
+  expect(f.runner.consoleSince(0).at(-1)?.text).not.toContain('PRIVATE_FIELD')
+  for (let i=2; i<1000; i++) f.runner.invalidDraft(f.request.id,'e','headers',f.request.method)
+  f.runner.start({...f.input,request:{...f.request,useAuth:false}})
+  await f.finish()
+  const lines = f.runner.consoleSince(0)
+  expect(lines).toHaveLength(1000)
+  expect(lines[0].id).toBe(3)
+  expect(lines.at(-1)?.text).toContain('HTTP 200')
+  expect(f.runner.page('0')).toHaveLength(1)
+  await f.runner.shutdown()
+  expect(f.runner.consoleSince(0)).toEqual([])
+})
+
+it('keeps imported delimiter templates and literal path placeholders when opening the parameter table', async () => {
+  const urls:string[]=[]
+  const f=await fixture((url,_body,_req,res)=>{urls.push(url);res.end()})
+  f.environment.variables.endpoint=f.origin+'/items/:id?take=1&empty'
+  f.environment.variables.suffix='a&flag=1'
+  const request:PrRequest={...f.request,useAuth:false,method:'GET',url:'${endpoint}',queryRows:[]}
+  f.runner.start({...f.input,request});await f.finish()
+  const source=f.origin+'/items/:id?q=${suffix}&q=%2f&empty'
+  const {queryFromUrl}=await import('../../src/shared/postrail-parameters')
+  f.runner.start({...f.input,request:{...request,url:source,queryRows:queryFromUrl(source)}});await f.finish()
+  expect(urls).toEqual(['/items/:id?take=1&empty','/items/:id?q=a&flag=1&q=%2f&empty'])
+})
+
+it('uses the selected raw MIME and masks encoded form credentials echoed by a server', async () => {
+  const received:{body:string,type:unknown}[]=[]
+  const f=await fixture((_url,body,req,res)=>{received.push({body,type:req.headers['content-type']});res.end(body)})
+  const request:PrRequest={...f.request,useAuth:false,bodyMode:'raw',rawBody:'<name>${user}</name>',headerRows:[
+    {enabled:true,name:'Content-Type',value:'application/vnd.team+xml'}, {enabled:false,name:'X-Ignore',value:'${missing}'},
+  ]}
+  f.runner.start({...f.input,request});await f.finish()
+  expect(received[0]).toEqual({body:'<name>worker</name>',type:'application/vnd.team+xml'})
+  const value='top secret!~'
+  const form:PrRequest={...request,bodyMode:'urlencoded',headerRows:[{enabled:true,name:'X-Api-Key',value}],
+    formRows:[{enabled:true,name:'credential',value}]}
+  f.runner.start({...f.input,request:form});await f.finish()
+  expect(received[1].body).toBe('credential=top+secret%21%7E')
+  expect(f.runner.detail('1')?.body).toBe('credential=••••')
+  f.runner.start({...f.input,request:{...form,bodyMode:'none'}});await f.finish()
+  expect(received[2]).toEqual({body:'',type:undefined})
+})
+
+it('distinguishes a main-request 401 with or without the environment token and preserves its error after other sends', async () => {
+  const f = await fixture((url,_body,_req,res) => {
+    if (url === '/login') { res.end('{"data":{"token":"PRIVATE_TOKEN"}}'); return }
+    res.statusCode = url === '/ok' ? 200 : 401
+    res.end('PRIVATE_ERROR')
+  })
+  f.runner.start({...f.input,request:{...f.request,useAuth:false}})
+  await f.finish()
+  expect(f.runner.state().sendErrors![0].message).toContain('환경 인증 없이 전송한 본 요청 HTTP 401')
+  f.runner.start(f.input)
+  await f.finish()
+  expect(f.runner.state().sendErrors![0].message).toContain('환경 토큰을 붙인 본 요청 HTTP 401 · 캐시 폐기')
+  f.runner.start({...f.input,request:{...f.request,id:'other',method:'GET',url:f.origin+'/ok',useAuth:false}})
+  await f.finish()
+  expect(f.runner.state().sendErrors).toMatchObject([{requestId:'r',environmentId:'e'}])
+  const errors = f.runner.consoleSince(0).filter(line=>line.error)
+  expect(errors).toHaveLength(2)
+  expect(JSON.stringify(errors)).not.toMatch(/PRIVATE_/)
+})
+
+it('masks multipart-quoted credentials when a server echoes a part name with punctuation',async()=>{
+  const f=await fixture((_url,body,_req,res)=>res.end(body),undefined,'secret space!"\\~')
+  const request:PrRequest={...f.request,useAuth:false,bodyMode:'multipart',parts:[
+    {kind:'text',enabled:true,name:'${password}',value:'ok',mime:''}
+  ]}
+  f.runner.start({...f.input,request})
+  await f.finish()
+  expect(f.runner.detail('1')?.body).toContain('name="••••"')
+})
+
+it('expands only literal URL-typed query placeholders component-wise, preserving original percent escapes', async()=>{
+  const urls:string[]=[]
+  const f=await fixture((url,_body,_req,res)=>{urls.push(url);res.end()})
+  f.environment.variables.value='A&B +한'
+  const raw='q=%24%7Bmissing%7D${value}'
+  const request:PrRequest={...f.request,method:'GET',useAuth:false,url:'${base}/items?'+raw,
+    queryRows:[{enabled:true,name:'q',value:'${missing}${value}',raw,encodeVariables:true}]}
+  f.runner.start({...f.input,request});await f.finish()
+  expect([...new URL(urls[0],f.origin).searchParams]).toEqual([['q','${missing}A&B +한']])
 })

@@ -1,6 +1,7 @@
-import type {PrEnv, PrMethod} from '../../shared/postrail'
+import {urlWithQuery} from '../../shared/postrail-parameters'
+import type {PrEnv, PrMethod, PrQuery} from '../../shared/postrail'
 
-function variableIssue(text:string, env:PrEnv|undefined, field:'URL'|'헤더'|'본문', allowIndex=false) {
+export function variableIssue(text:string, env:PrEnv|undefined, field:'URL'|'헤더'|'본문', allowIndex=false) {
   for (const match of text.matchAll(/\$\{([^{}]*)\}/g)) {
     const name = match[1]
     if (name==='index') {
@@ -15,11 +16,12 @@ function variableIssue(text:string, env:PrEnv|undefined, field:'URL'|'헤더'|'�
   return ''
 }
 
-export function checkAddress(text:string, env:PrEnv|undefined) {
+export function checkAddress(text:string, env:PrEnv|undefined, rows?:PrQuery[]) {
   const issue = variableIssue(text,env,'URL')
   if (issue) return {error:issue,plaintext:false}
   if (!env && text.includes('${')) return {error:'',plaintext:false}
-  const expanded = env ? text.replace(/\$\{([^{}]*)\}/g,(_raw,key:string)=>env.variables[key]) : text
+  const expand=(value:string)=>env ? value.replace(/\$\{([^{}]*)\}/g,(_raw,key:string)=>env.variables[key]) : value
+  const expanded=rows ? urlWithQuery(text,rows,expand) : expand(text)
   let url: URL
   try { url = new URL(expanded) }
   catch { return {error:'올바른 HTTP 또는 HTTPS URL을 입력하세요.',plaintext:false} }

@@ -26,6 +26,8 @@ WorkRail — PlanRail 일정·사내 LAN 공유, NodeRail 버전 관리, TermRai
 - 저장 commit 전 성공 표시, 실패 DB의 삭제·빈 DB 대체, 운영 DB를 사용하는 자동 테스트를 금지한다.
 - 사용자 요청과 이 저장소의 승인 범위·문서 관례를 외부 스킬의 일반 템플릿보다 우선한다.
 
+- 사용자에게 제공되는 기능·오류 수정은 [배포 버전 기준](docs/release/policy.md#제품-버전)을 적용하고 제품 버전과 릴리즈노트를 함께 갱신한다.
+
 ## 실행·검증 명령
 
 모두 저장소 루트에서 실행한다. 앱 도구는 [.node-version](.node-version)의 Node와 npm을 사용한다.

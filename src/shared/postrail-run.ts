@@ -1,6 +1,8 @@
+import type {PrSendError} from './postrail-console'
 import type { PrRequest } from './postrail'
 
 export interface PrStart {
+  attemptId?: string
   request: PrRequest
   environmentId: string
   count: string
@@ -20,6 +22,8 @@ export interface PrRunState {
   failed: string
   uncertain: string
   message: string
+  consoleVersion?: number
+  sendErrors?: PrSendError[]
   authenticatedEnvironmentIds: string[]
 }
 export interface PrRow {
@@ -41,8 +45,8 @@ export function postRailBusy(phase: PrPhase) {
 export function validPostRailCount(count: string) {
   return typeof count === 'string' && /^[1-9]\d*$/.test(count)
 }
-export function usesPostRailIndex(request: Pick<PrRequest, 'method' | 'body'>) {
-  if (request.method !== 'POST' || !request.body.includes('${index}') && !request.body.includes('\\')) return false
+export function usesPostRailIndex(request: Pick<PrRequest, 'method' | 'body' | 'bodyMode'>) {
+  if (request.method !== 'POST' || (request.bodyMode ?? 'json') !== 'json' || !request.body.includes('${index}') && !request.body.includes('\\')) return false
   let found = false
   try {
     JSON.parse(request.body, (_key, value) => {

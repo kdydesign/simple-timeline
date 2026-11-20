@@ -1,8 +1,10 @@
+import {requestOptions} from './request-options'
 import {randomUUID} from 'node:crypto'
-import {mkdirSync} from 'node:fs'
-import {join} from 'node:path'
+import {environmentLoginErrors} from '../../shared/postrail-environment'
+import {closeSync, constants, fstatSync, mkdirSync, openAsBlob, openSync} from 'node:fs'
+import {basename, join} from 'node:path'
 import {DatabaseSync, type SQLOutputValue} from 'node:sqlite'
-import {postRailCopyName, type PrEnv, type PrLibrary, type PrMutation, type PrRequest} from '../../shared/postrail'
+import {postRailCopyName, type PrEnv, type PrEnvSave, type PrFile, type PrLibrary, type PrMutation, type PrRequest} from '../../shared/postrail'
 
 export class PostRailStoreError extends Error {
   readonly name = 'PostRailStoreError'
@@ -66,8 +68,12 @@ function requestDefinition(request: PrRequest) {
   if (timeoutMs !== null && (!Number.isSafeInteger(timeoutMs) || timeoutMs <= 0 || timeoutMs > 2_147_483_647)) {
     throw new PostRailStoreError('응답 대기 시간을 확인하세요.')
   }
+  const options = requestOptions(request)
+  const headers = options.headerRows
+    ? Object.fromEntries(options.headerRows.filter(row => row.enabled).map(row => [row.name,row.value]))
+    : stringMap(request.headers)
   return {
-    name:required(request.name), method, url:required(request.url), headers:stringMap(request.headers),
+    ...options, name:required(request.name), method, url:required(request.url), headers,
     body:text(request.body), useAuth:bool(request.useAuth), timeoutMs, favorite:bool(request.favorite),
   }
 }
@@ -105,6 +111,8 @@ export class PostRailStore {
   private readonly db: DatabaseSync
   private readonly sessionPasswords = new Map<string, string>()
 
+  private readonly pickedFiles = new Map<string, Map<string,string>>()
+
   constructor(profile: string, private readonly protector: PasswordProtector) {
     mkdirSync(profile, {recursive:true, mode:0o700})
     this.db = new DatabaseSync(join(profile, 'postrail.sqlite'))
@@ -113,7 +121,12 @@ export class PostRailStore {
       this.transaction('BEGIN IMMEDIATE', () => {
         const version = this.db.prepare('PRAGMA user_version').get()!.user_version
         if (version === 0) this.db.exec(schema)
-        else if (version !== 1) throw new PostRailStoreError('지원하지 않는 PostRail 저장 형식입니다.')
+        if (version === 0 || version === 1) {
+          this.db.exec(`CREATE TABLE request_files (
+            request_id TEXT NOT NULL REFERENCES requests(id) ON DELETE CASCADE,
+            id TEXT NOT NULL, path TEXT NOT NULL, PRIMARY KEY (request_id,id)
+          ) STRICT; PRAGMA user_version = 2;`)
+        } else if (version !== 2) throw new PostRailStoreError('지원하지 않는 PostRail 저장 형식입니다.')
       })
     } catch (error) {
       this.db.close()
@@ -169,29 +182,66 @@ export class PostRailStore {
         requireRow(this.db.prepare('DELETE FROM groups WHERE id = ? RETURNING id').get(text(cmd.id)))
         break
       case 'request.save':
-        this.saveRequest(cmd.request)
+        return this.saveRequest(cmd.request, cmd.request.id === '' ? cmd.copyFilesFrom : undefined)
+      case 'request.content': {
+        const current = this.storedRequest(cmd.request.id)
+        const edited = {...cmd.request, name:current.name, groupId:current.groupId}
+        // A metadata URL edit supersedes the editor's older address and its parameter rows.
+        if (current.url !== text(cmd.baseUrl)) {
+          edited.url = current.url
+          edited.queryRows = current.queryRows
+          edited.pathValues = current.pathValues
+        }
+        return this.saveRequest(edited)
+      }
+      case 'request.metadata': {
+        const current = this.storedRequest(cmd.id)
+        if (cmd.name !== undefined) current.name = cmd.name
+        if (cmd.groupId !== undefined) current.groupId = cmd.groupId
+        if (cmd.address !== undefined) {
+          current.url = cmd.address.url
+          current.queryRows = cmd.address.queryRows
+          current.pathValues = cmd.address.pathValues
+        }
+        return this.saveRequest(current)
+      }
+      case 'request.move': {
+        const groupId = cmd.groupId === null ? null : text(cmd.groupId)
+        if (groupId !== null) requireRow(this.db.prepare('SELECT id FROM groups WHERE id = ?').get(groupId))
+        requireRow(this.db.prepare('UPDATE requests SET group_id = ? WHERE id = ? RETURNING id').get(groupId, text(cmd.id)))
         break
+      }
       case 'request.favorite':
         requireRow(this.db.prepare("UPDATE requests SET definition = json_set(definition, '$.favorite', json(?)) WHERE id = ? RETURNING id")
           .get(JSON.stringify(bool(cmd.favorite)), text(cmd.id)))
         break
       case 'request.delete':
         requireRow(this.db.prepare('DELETE FROM requests WHERE id = ? RETURNING id').get(text(cmd.id)))
-        break
+        return () => {this.pickedFiles.delete(cmd.id)}
       case 'request.duplicate': {
-        const original = readRequest(requireRow(this.db.prepare('SELECT * FROM requests WHERE id = ?').get(text(cmd.id))))
+        const original = this.storedRequest(cmd.id)
         const names = this.db.prepare("SELECT json_extract(definition, '$.name') AS name FROM requests WHERE group_id IS ?")
           .all(cmd.groupId).map(row => text(row.name))
-        this.saveRequest({...original, groupId:cmd.groupId, name:postRailCopyName(original.name, names), id:'', favorite:false})
+        this.saveRequest({...original, groupId:cmd.groupId, name:postRailCopyName(original.name, names), id:'', favorite:false},original.id)
         break
+      }
+      case 'env.batch': {
+        if (!Array.isArray(cmd.saves) || !Array.isArray(cmd.deletedIds)) throw new PostRailStoreError('환경 변경 목록을 확인하세요.')
+        const ids = [...cmd.deletedIds.map(required), ...cmd.saves.map(item => text(item.environment.id)).filter(Boolean)]
+        if (new Set(ids).size !== ids.length) throw new PostRailStoreError('같은 환경에 중복 변경이 있습니다.')
+        const committed: (() => void)[] = []
+        for (const id of cmd.deletedIds) committed.push(this.deleteEnvironment(id))
+        for (const save of cmd.saves) committed.push(this.saveEnvironment(save, false))
+        this.db.exec('UPDATE selection SET environment_id = (SELECT id FROM environments ORDER BY rowid LIMIT 1) WHERE environment_id IS NULL')
+        return () => {for (const update of committed) update()}
       }
       case 'env.save':
         return this.saveEnvironment(cmd)
       case 'env.delete': {
         const id = text(cmd.id)
-        requireRow(this.db.prepare('DELETE FROM environments WHERE id = ? RETURNING id').get(id))
+        const committed = this.deleteEnvironment(id)
         this.db.exec('UPDATE selection SET environment_id = (SELECT id FROM environments ORDER BY rowid LIMIT 1) WHERE environment_id IS NULL')
-        return () => {this.sessionPasswords.delete(id)}
+        return committed
       }
       case 'env.select':
         requireRow(this.db.prepare('SELECT id FROM environments WHERE id = ?').get(text(cmd.id)))
@@ -203,22 +253,89 @@ export class PostRailStore {
     return undefined
   }
 
-  private saveRequest(request: PrRequest) {
+  private storedRequest(id:string):PrRequest {
+    return readRequest(requireRow(this.db.prepare('SELECT * FROM requests WHERE id = ?').get(text(id))))
+  }
+
+  private saveRequest(request: PrRequest, copyFrom?:string) {
     const definition = JSON.stringify(requestDefinition(request))
     const id = text(request.id)
     const groupId = request.groupId === null ? null : text(request.groupId)
     if (groupId !== null) requireRow(this.db.prepare('SELECT id FROM groups WHERE id = ?').get(groupId))
+    const destination = id || randomUUID()
     if (id === '') {
-      this.db.prepare('INSERT INTO requests (id, group_id, definition) VALUES (?, ?, ?)').run(randomUUID(), groupId, definition)
+      this.db.prepare('INSERT INTO requests (id, group_id, definition) VALUES (?, ?, ?)').run(destination, groupId, definition)
     } else {
       // The sidebar owns the star; a stale editor snapshot cannot undo that change.
       requireRow(this.db.prepare("UPDATE requests SET group_id = ?, definition = json_set(?, '$.favorite', definition -> '$.favorite') WHERE id = ? RETURNING id")
         .get(groupId, definition, id))
     }
+    const files=[request.binaryFile,...(request.parts ?? []).map(p=>p.file)].filter((f):f is PrFile=>!!f)
+    const paths = new Map(files.map(f=>[f.id, this.filePath(copyFrom ?? id,f)]))
+    this.db.prepare('DELETE FROM request_files WHERE request_id = ?').run(destination)
+    const insert=this.db.prepare('INSERT INTO request_files (request_id,id,path) VALUES (?,?,?)')
+    for (const [fileId,path] of paths) insert.run(destination,fileId,path)
+    return () => {
+      const pending = this.pickedFiles.get(destination)
+      if (!pending) return
+      for (const id of paths.keys()) pending.delete(id)
+      if (!pending.size) this.pickedFiles.delete(destination)
+    }
   }
 
-  private saveEnvironment(cmd: Extract<PrMutation, {type:'env.save'}>) {
-    const definition = JSON.stringify(envDefinition(cmd.environment))
+  private requireFileOwner(id:string) {
+    const owner = this.db.prepare('SELECT id FROM requests WHERE id = ?').get(id)
+    if (!owner) this.pickedFiles.delete(id)
+    requireRow(owner)
+  }
+
+  selectFile(requestId:string, path:string, retainedIds:string[]=[]):PrFile {
+    this.requireFileOwner(requestId)
+    // Keep picks still referenced in other draft slots, including inactive body modes.
+    // Saved grants live in SQLite and are independent of the current editor draft.
+    const retained = new Set(retainedIds)
+    const pending = this.pickedFiles.get(requestId) ?? new Map<string,string>()
+    for (const id of pending.keys()) {
+      if (!retained.has(id)) pending.delete(id)
+    }
+    const id = randomUUID()
+    pending.set(id,path)
+    this.pickedFiles.set(requestId,pending)
+    return {id,name:basename(path)}
+  }
+
+  private filePath(requestId:string, file:PrFile):string {
+    this.requireFileOwner(requestId)
+    const path=this.pickedFiles.get(requestId)?.get(file.id) ??
+      this.db.prepare('SELECT path FROM request_files WHERE request_id = ? AND id = ?').get(requestId,file.id)?.path
+    if (typeof path!=='string' || basename(path)!==file.name) throw new PostRailStoreError('요청의 첨부 파일을 다시 선택하세요.')
+    return path
+  }
+
+  openFile(requestId:string, file:PrFile):()=>Promise<Blob> {
+    const path=this.filePath(requestId,file)
+    const fd = openSync(path,constants.O_RDONLY | constants.O_NONBLOCK)
+    try {
+      if (!fstatSync(fd).isFile()) throw new PostRailStoreError('첨부 파일을 다시 선택하세요.')
+    } finally {
+      closeSync(fd)
+    }
+    return () => {
+      this.requireFileOwner(requestId)
+      return openAsBlob(path)
+    }
+  }
+
+  private deleteEnvironment(id: string) {
+    requireRow(this.db.prepare('DELETE FROM environments WHERE id = ? RETURNING id').get(id))
+    return () => {this.sessionPasswords.delete(id)}
+  }
+
+  private saveEnvironment(cmd: PrEnvSave, selectNew = true) {
+    const environment = envDefinition(cmd.environment)
+    const error = Object.values(environmentLoginErrors(environment))[0]
+    if (error) throw new PostRailStoreError(error)
+    const definition = JSON.stringify(environment)
     const existingId = text(cmd.environment.id)
     const id = existingId || randomUUID()
     const old = existingId ? requireRow(this.db.prepare('SELECT ciphertext FROM environments WHERE id = ?').get(id)) : null
@@ -238,7 +355,7 @@ export class PostRailStore {
       INSERT INTO environments (id, definition, ciphertext) VALUES (?, ?, ?)
       ON CONFLICT(id) DO UPDATE SET definition = excluded.definition, ciphertext = excluded.ciphertext
     `).run(id, definition, ciphertext)
-    if (!existingId) this.db.prepare('UPDATE selection SET environment_id = ? WHERE singleton = 1').run(id)
+    if (selectNew && !existingId) this.db.prepare('UPDATE selection SET environment_id = ? WHERE singleton = 1').run(id)
     return () => {
       if (session === undefined) this.sessionPasswords.delete(id)
       else this.sessionPasswords.set(id, session)
@@ -280,6 +397,7 @@ export class PostRailStore {
 
   close() {
     this.sessionPasswords.clear()
+    this.pickedFiles.clear()
     if (this.db.isOpen) this.db.close()
   }
 }

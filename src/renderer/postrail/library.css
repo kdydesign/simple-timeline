@@ -4,17 +4,20 @@
   color: var(--text); background: var(--glass, var(--surface)); font-size: 12px;
 }
 .pr-env-choice { display: grid; flex: none; gap: 4px; margin-bottom: 10px; font-weight: 650; }
-.pr-env-choice select, .postrail-popup :is(input:not([type="checkbox"]), select, textarea) {
+.pr-add-bar input, .postrail-popup :is(input:not([type="checkbox"]), select, textarea) {
   box-sizing: border-box; min-width: 0; width: 100%; border: 1px solid var(--control-border);
   color: var(--text); background: var(--control); border-radius: 6px; font: inherit;
 }
-.pr-env-choice select { padding: 4px 7px; font-weight: 400; }
-.pr-env-choice option, .postrail-popup option { color: var(--text); background: var(--surface); }
-.pr-add-bar { flex: none; border-block: 1px solid var(--rim, var(--border)); padding: 8px 0 3px; }
+.pr-env-choice .select-trigger { min-height: 0; height: 26px; padding: 3px 7px; font-size: inherit; font-weight: 400; }
+.postrail-popup option { color: var(--text); background: var(--surface); }
+.pr-add-bar { display: flex; gap: 5px; flex: none; border-block: 1px solid var(--rim, var(--border)); padding: 6px 0; }
+.pr-add-bar input { flex: 1; height: 26px; padding: 3px 7px; }
 .pr-sidebar .pr-add-button { display: grid; place-items: center; padding: 0 8px; min-height: 26px; border-radius: 6px; }
 .pr-add-button .icon, .pr-env-manager .icon { width: 16px; height: 16px; }
 .pr-request-tree { flex: 1; min-height: 0; overflow: auto; }
 .pr-group + .pr-group { border-top: 1px solid var(--rim, var(--border)); }
+.pr-group[data-drop-target] { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 5px; background: var(--hover); }
+.pr-no-matches { margin: 10px 3px; color: var(--muted); }
 .pr-group-heading, .pr-request-row { display: flex; align-items: center; gap: 1px; min-width: 0; }
 .pr-group-heading { padding: 4px 1px; }
 .pr-request-row { border: 1px solid transparent; border-radius: 5px; margin: 2px 0; padding: 1px 2px; }
@@ -35,8 +38,10 @@
 .pr-list-method.GET { color: var(--workrail-status-green); }
 .pr-list-method.POST { color: var(--warning-text); }
 .pr-list-method.DELETE { color: var(--workrail-status-error, #c56e71); }
-.pr-sidebar .pr-star { color: var(--muted); font-size: 16px; line-height: 1; }
-.pr-sidebar .pr-star[aria-pressed=true] { color: #bd8b38; }
+.pr-sidebar .pr-star { display: grid; place-items: center; color: var(--muted); }
+.pr-sidebar .pr-star[aria-pressed=true] { border: none; background: transparent; }
+.pr-sidebar .pr-star[aria-pressed=true]:hover { background: var(--hover); }
+.pr-star[aria-pressed=true] svg { fill: #dba84c; }
 .pr-sidebar .pr-more { width: 21px; color: var(--muted); font-weight: 700; }
 .pr-copy-status:not(:empty) { margin-top: 4px; }
 .pr-env-manager { display: inline-flex; align-items: center; gap: 5px; }
@@ -49,6 +54,8 @@ dialog.postrail-popup {
 .postrail-popup h3 { margin: 10px 0 6px; font-size: 13px; }
 .postrail-popup p { overflow-wrap: anywhere; }
 .postrail-popup .pr-field { display: grid; gap: 4px; margin: 0 0 10px; font-size: 13px; font-weight: 600; }
+.postrail-popup .pr-group-name { grid-template-columns: auto minmax(0,1fr); align-items: center; gap: 10px; }
+.postrail-popup .pr-library-url { --pr-template-pad: 7px 10px; font-weight: 400; }
 .postrail-popup :is(input:not([type="checkbox"]), select, textarea) { min-height: 36px; padding: 6px 10px; border-radius: 8px; font-weight: 400; }
 .postrail-popup textarea { resize: vertical; font: 12px/1.5 ui-monospace, monospace; }
 .postrail-popup .editor-actions { flex-wrap: wrap; padding: 0; }

@@ -3,11 +3,12 @@ import {createPortal} from 'react-dom'
 import {IconButton} from '../components/Icon'
 import './library.css'
 
-export function PostRailPopup({title, anchor, onClose, children, busy = false}: {
+export function PostRailPopup({title, anchor, onClose, children, busy = false, wide = false}: {
   title: string
   anchor: HTMLElement
   onClose: () => void
   children: ReactNode
+  wide?: boolean
   busy?: boolean
 }) {
   const ref = useRef<HTMLDialogElement>(null)
@@ -15,6 +16,7 @@ export function PostRailPopup({title, anchor, onClose, children, busy = false}: 
     const dialog = ref.current!
     dialog.showModal()
     const place = () => {
+      if (wide) return
       const bounds = anchor.getBoundingClientRect()
       dialog.style.left = Math.max(8, Math.min(bounds.left, innerWidth - dialog.offsetWidth - 8)) + 'px'
       dialog.style.top = Math.max(56, Math.min(bounds.bottom + 8, innerHeight - dialog.offsetHeight - 8)) + 'px'
@@ -31,8 +33,8 @@ export function PostRailPopup({title, anchor, onClose, children, busy = false}: 
       dialog.close()
       if (anchor.isConnected) anchor.focus()
     }
-  }, [anchor])
-  return createPortal(<dialog ref={ref} className="quick-reminder-popup postrail-popup" aria-label={title}
+  }, [anchor, wide])
+  return createPortal(<dialog ref={ref} className={'quick-reminder-popup postrail-popup' + (wide ? ' pr-environment-dialog' : '')} aria-label={title}
     onCancel={event => {event.preventDefault(); if (!busy) onClose()}}
     onKeyDown={event => {
       if (event.key === 'Escape') {event.preventDefault(); event.stopPropagation(); if (!busy) onClose()}

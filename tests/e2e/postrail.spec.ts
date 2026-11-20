@@ -1,4 +1,5 @@
 import {once} from 'node:events'
+import {writeFile, rm} from 'node:fs/promises'
 import {createServer, type ServerResponse} from 'node:http'
 import type {AddressInfo} from 'node:net'
 import type {ElectronApplication} from 'playwright'
@@ -24,7 +25,7 @@ function observeConsent(app:ElectronApplication, allowed:string[]) {
   }, allowed)
 }
 
-test('sends a saved indexed POST from the editor and Home to a loopback server', async ({desktop}) => {
+test('sends a saved indexed POST from the editor and Home to a loopback server', async ({desktop},testInfo) => {
   const received: {method?:string; path?:string; body:string}[] = []
   const server = createServer(async (request, response) => {
     const chunks: Buffer[] = []
@@ -43,7 +44,7 @@ test('sends a saved indexed POST from the editor and Home to a loopback server',
       const dock = page.getByRole('navigation', {name:'WorkRail 도구'})
       await dock.getByRole('button', {name:'PostRail', exact:true}).click()
       await page.getByRole('button', {name:'환경 관리', exact:true}).click()
-      const environment = page.getByRole('dialog', {name:'환경 추가', exact:true})
+      const environment = page.getByRole('dialog', {name:'환경 관리', exact:true})
       await environment.getByLabel('환경 이름').fill('로컬')
       await environment.getByRole('button', {name:'저장', exact:true}).click()
       await expect(environment).toBeHidden()
@@ -54,7 +55,14 @@ test('sends a saved indexed POST from the editor and Home to a loopback server',
       await form.getByLabel('요청 이름').fill(name)
       await form.getByLabel('URL', {exact:true}).fill(endpoint)
       await form.getByRole('button', {name:'저장', exact:true}).click()
-      await page.getByLabel('HTTP 메서드').selectOption('POST')
+      await page.getByRole('combobox', {name:'HTTP 메서드'}).click()
+      await page.getByRole('option', {name:'POST', exact:true}).click()
+      const splitter=page.getByRole('separator',{name:'요청과 응답 영역 크기'})
+      await splitter.focus()
+      await splitter.press('ArrowDown')
+      await expect(splitter).toHaveAttribute('aria-valuenow','35')
+      await splitter.dblclick()
+      await expect(splitter).toHaveAttribute('aria-valuenow','30')
       await page.getByLabel('JSON 요청 본문').fill('{"sample":"sample_${index}"}')
       await page.getByRole('button', {name:'변경 저장'}).click()
       await expect(page.getByRole('button', {name:/변경 저장|저장 중…/})).toHaveCount(0)
@@ -62,23 +70,53 @@ test('sends a saved indexed POST from the editor and Home to a loopback server',
       await star.click()
       await expect(star).toHaveAttribute('aria-pressed', 'true')
       await page.getByRole('button', {name:'보내기', exact:true}).click()
-      await expect(page.getByLabel('응답 본문', {exact:true})).toContainText('loopback-1')
+      await expect(page.getByLabel('응답 본문 편집')).toHaveValue(/loopback-1/)
+      await page.getByLabel('응답 본문 편집').fill('{"value":"Draft draft"}')
+      const search = page.getByRole('searchbox',{name:'응답 본문 검색'})
+      await search.fill('DRAFT')
+      await expect(page.getByText('1/2',{exact:true})).toBeVisible()
+      await search.press('Enter')
+      await expect(page.getByText('2/2',{exact:true})).toBeVisible()
+      expect(await page.evaluate(()=>Array.from(CSS.highlights.get('postrail-response-current') ?? [],range=>range.toString()))).toEqual(['draft'])
+      await page.getByRole('button',{name:'응답 본문 복사'}).click()
+      await expect.poll(()=>app.evaluate(({clipboard})=>clipboard.readText())).toBe('{"value":"Draft draft"}')
+      await page.getByRole('button',{name:'원문',exact:true}).click()
+      await expect(page.getByLabel('응답 본문 원문')).toHaveValue('{"receipt":"loopback-1"}')
       await page.getByRole('button', {name:'회차별 결과', exact:true}).click()
       await expect(page.getByLabel('회차별 결과 로그')).toHaveValue(/201/)
 
+      await page.getByLabel('반복 보내기',{exact:true}).check()
+      await page.getByLabel('횟수',{exact:true}).fill('3')
+      await page.getByRole('button',{name:'변경 저장'}).click()
+      await expect(page.getByRole('button',{name:/변경 저장|저장 중…/})).toHaveCount(0)
       await dock.getByRole('button', {name:'Home', exact:true}).click()
       const widget = page.getByRole('region', {name:'PostRail 즐겨찾기'})
+      await expect(widget.getByLabel(name+' 반복 보내기')).not.toBeChecked()
+      await expect(widget.getByLabel(name+' 반복 횟수')).toHaveValue('3')
       await widget.getByRole('button', {name:name + ' 즉시 실행'}).click()
       await expect.poll(() => received.length).toBe(2)
       await expect(widget).toBeVisible()
-      await widget.getByRole('button', {name:'PostRail 열기'}).click()
-      await expect(page.getByLabel('응답 본문', {exact:true})).toContainText('loopback-2')
+      await widget.getByRole('button', {name:'결과 보기'}).click()
+      await expect(page.getByLabel('응답 본문 편집')).toHaveValue(/loopback-2/)
+      await page.getByRole('button',{name:'console',exact:true}).click()
+      const consoleLog = page.getByLabel('console 로그')
+      await expect(consoleLog).toContainText(/요청 전송[\s\S]*HTTP 201[\s\S]*요청 전송[\s\S]*HTTP 201/)
+      await expect(consoleLog).not.toContainText('sample_')
       expect(received.map(row => ({...row, body:JSON.parse(row.body)}))).toEqual([
         {method:'POST', path:'/samples', body:{sample:'sample_1'}},
         {method:'POST', path:'/samples', body:{sample:'sample_2'}},
       ])
+      await dock.getByRole('button',{name:'Home',exact:true}).click()
+      await widget.getByLabel(name+' 반복 보내기').check()
+      await widget.getByLabel(name+' 반복 횟수').fill('2')
+      await widget.screenshot({path:testInfo.outputPath('home-inline-repeat.png')})
+      await widget.getByRole('button',{name:name+' 반복 실행'}).click()
+      await expect(widget.getByRole('status')).toContainText('2 / 2회 완료')
+      await widget.getByRole('button',{name:'결과 보기'}).click()
+      await expect(page.getByLabel('응답 본문 편집')).toHaveValue(/loopback-4/)
+      expect(received.slice(2).map(row=>JSON.parse(row.body).sample)).toEqual(['sample_3','sample_4'])
       const warnings = await consent.evaluate(value => value.warnings)
-      expect(warnings).toHaveLength(2)
+      expect(warnings).toHaveLength(3)
       for (const text of warnings) expect(text).toContain(endpoint)
     } finally {
       await consent.evaluate(value => value.restore())
@@ -147,6 +185,9 @@ test('keeps sending in the tray, drains the active round on Exit and resumes at 
     expect(await closing).toBeNull()
     await expect.poll(visible).toBe(true)
     await expect(page.getByRole('button', {name:'중지', exact:true})).toBeVisible()
+    await page.getByRole('button',{name:'console',exact:true}).click()
+    await expect(page.getByLabel('console 로그')).toContainText(/로그인 시작[\s\S]*토큰 발급[\s\S]*2회차 · 요청 전송/)
+    await expect(page.getByLabel('console 로그')).not.toContainText('session-1')
 
     const exited = Promise.all([app.waitForEvent('close'), once(app.process(), 'exit')])
     await control('requestQuit')
@@ -163,8 +204,9 @@ test('keeps sending in the tray, drains the active round on Exit and resumes at 
 
     await desktop.restart()
     const restored = await desktop.page.evaluate(async () => ({
-      run:await window.postRail!.state(), library:await window.postRail!.read(),
+      run:await window.postRail!.state(), library:await window.postRail!.read(), lines:await window.postRail!.consoleSince(0),
     }))
+    expect(restored.lines).toEqual([])
     expect(restored.run).toMatchObject({phase:'idle', runId:'', authenticatedEnvironmentIds:[], completed:'0'})
     expect(restored.library.requests).toMatchObject([{name:'종료 검증', nextIndex:'3', favorite:true}])
     expect(received).toHaveLength(2)
@@ -181,5 +223,68 @@ test('keeps sending in the tray, drains the active round on Exit and resumes at 
   } finally {
     server.closeAllConnections()
     await new Promise<void>((resolve, reject) => server.close(error => error ? reject(error) : resolve()))
+  }
+})
+
+test('sends native-selected binary and repeated multipart files to a loopback server', async ({desktop}, testInfo) => {
+  const uploads:{body:Buffer,type:string}[]=[]
+  const server=createServer(async (req,res)=>{
+    const chunks:Buffer[]=[]
+    for await (const chunk of req) chunks.push(Buffer.from(chunk))
+    uploads.push({body:Buffer.concat(chunks),type:req.headers['content-type'] ?? ''})
+    res.writeHead(204).end()
+  })
+  const path=testInfo.outputPath('upload.bin')
+  const bytes=Buffer.from([0,255,10,128,1])
+  await writeFile(path,bytes)
+  server.listen(0,'127.0.0.1')
+  await once(server,'listening')
+  try {
+    const url='http://127.0.0.1:'+(server.address() as AddressInfo).port+'/upload'
+    await observeConsent(desktop.app,[url])
+    await desktop.app.evaluate(({dialog},path)=>{
+      dialog.showOpenDialog=async ()=>({canceled:false,filePaths:[path]})
+    },path)
+    const {page}=desktop
+    const saved=await page.evaluate(async url=>{
+      const api=window.postRail!
+      const env=await api.mutate({type:'env.save',environment:{
+        id:'',name:'첨부 시험',variables:{},apiOrigin:'',loginUrl:'',loginHeaders:{},loginBody:'',
+        tokenPath:'token',tokenHeader:'Authorization',tokenPrefix:'Bearer ',hasPassword:false,
+      }})
+      const request=(await api.mutate({type:'request.save',request:{
+        id:'',name:'첨부',method:'POST',url,body:'',headers:{},useAuth:false,groupId:null,
+        timeoutMs:null,nextIndex:'1',favorite:false,
+      }})).requests[0]
+      const file=await api.chooseFile(request.id)
+      if (!file) throw Error('첨부 파일 선택 취소')
+      const part={name:'uploads',value:'',enabled:true,kind:'file' as const,file,mime:'application/vnd.team'}
+      const updated=await api.mutate({type:'request.save',request:{...request,bodyMode:'binary',binaryFile:file,parts:[part,part]}})
+      return {request:updated.requests[0],environmentId:env.environmentId!,count:'1'}
+    },url)
+    expect(saved.request.binaryFile?.name).toBe('upload.bin')
+    expect(JSON.stringify(saved)).not.toContain(path)
+    await page.evaluate(input=>window.postRail!.start(input),saved)
+    await expect.poll(()=>page.evaluate(()=>window.postRail!.state())).toMatchObject({phase:'completed',completed:'1',failed:'0',uncertain:'0'})
+    expect(uploads[0]).toEqual({type:'application/octet-stream',body:bytes})
+    await page.evaluate(input=>window.postRail!.start({...input,request:{...input.request,bodyMode:'multipart'}}),saved)
+    await expect.poll(()=>page.evaluate(()=>window.postRail!.state())).toMatchObject({phase:'completed',completed:'1',failed:'0',uncertain:'0'})
+    expect(uploads).toHaveLength(2)
+    const mime=uploads[1].type
+    expect(mime).toMatch(/^multipart\/form-data; boundary=/)
+    const parts=(await new Response(new Uint8Array(uploads[1].body),{headers:{'content-type':mime}}).formData()).getAll('uploads') as File[]
+    expect(parts).toHaveLength(2)
+    for (const part of parts) {
+      expect(part.name).toBe('upload.bin')
+      expect(part.type).toBe('application/vnd.team')
+      expect(Buffer.from(await part.arrayBuffer())).toEqual(bytes)
+    }
+    await rm(path)
+    await expect(page.evaluate(input=>window.postRail!.start(input),saved)).rejects.toThrow('파일을 다시 선택하세요.')
+    expect(uploads).toHaveLength(2)
+  } finally {
+    server.closeAllConnections()
+    await new Promise<void>((resolve,reject)=>server.close(error=>error ? reject(error) : resolve()))
+    await rm(path,{force:true})
   }
 })

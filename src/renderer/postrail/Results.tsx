@@ -1,14 +1,23 @@
+import {ConsoleDrawer} from './ConsoleDrawer'
 import {useEffect, useMemo, useRef, useState, type ReactNode} from 'react'
-import {ChevronUp} from 'lucide-react'
+import {ChevronUp, Terminal} from 'lucide-react'
 import {postRailBusy, validPostRailCount, type PrDetail, type PrRow} from '../../shared/postrail-run'
 import type {PostRailController} from './usePostRail'
-import {JsonText} from './JsonBody'
+import {ResponseBody} from './ResponseBody'
 import {formatPostRailStatus} from './status'
 
 const outcomes = {success:'성공',error:'실패',uncertain:'결과 확인 필요',unsent:'미전송'}
 type ReadDetail = {runId:string, iteration:string, detail:PrDetail|null, error:string}
-export function ResponsePane({postrail, selected, active}: {postrail:PostRailController, selected:string, active:boolean}) {
-  const [headers, setHeaders] = useState(false)
+export function ResponsePane({postrail, selected, active, bodyFocusKey}: {
+  postrail:PostRailController, selected:string, active:boolean, bodyFocusKey?:number
+}) {
+  const [headerSelection, setHeaderSelection] = useState<string|null>(null)
+  const bodyTab = useRef<HTMLButtonElement>(null)
+  useEffect(()=>{
+    if (!bodyFocusKey) return
+    setHeaderSelection(null)
+    bodyTab.current?.focus()
+  },[bodyFocusKey])
   const [read, setRead] = useState<ReadDetail|null>(null)
   const {run, detail} = postrail
   const runId = run?.runId ?? ''
@@ -27,25 +36,29 @@ export function ResponsePane({postrail, selected, active}: {postrail:PostRailCon
   const response = result?.detail
   const mediaType = response && Object.entries(response.headers).find(([key])=>key.toLowerCase()==='content-type')?.[1].split(';')[0].trim()
   const json = mediaType && /(?:\/|\+)json$/i.test(mediaType)
+  const responseId = runId + '/' + selected
+  const headers = headerSelection===responseId
+  const http = response?.status ? 'HTTP ' + response.status : ''
+  const message = response?.message || http || (response && outcomes[response.outcome])
+  const status = response ? [
+    http && !message?.includes(http) ? http : '', message,
+    !response.body && response.status && (!response.message || response.message === http) ? '응답 본문 없음' : '',
+    selected+'회차', response.outcome!=='unsent' ? response.durationMs+'ms' : '',
+  ].filter(Boolean).join(' · ') : result?.error || (selected ? '응답 읽는 중…' : run?.message || '표시할 응답이 없습니다.')
   return <section className="workrail-surface pr-pane" aria-label="응답">
     <div className="pr-bar"><h2>응답</h2>
       <div className="pr-tabs" role="tablist" aria-label="응답 표시">
-        <button role="tab" aria-selected={!headers} onClick={()=>setHeaders(false)}>본문</button>
-        <button role="tab" aria-selected={headers} onClick={()=>setHeaders(true)}>헤더</button>
+        <button ref={bodyTab} role="tab" aria-selected={!headers} onClick={()=>setHeaderSelection(null)}>본문</button>
+        <button role="tab" aria-selected={headers} onClick={()=>setHeaderSelection(responseId)}>헤더</button>
       </div>
       {!!runId && <small>{run?.environmentName} / {run?.requestName}</small>}
-      {selected && <span className="pr-detail-status" data-outcome={response?.outcome}>{[
-        response?.status ? 'HTTP '+response.status : response && outcomes[response.outcome],
-        selected+'회차', response && response.outcome!=='unsent' ? response.durationMs+'ms' : '',
-      ].filter(Boolean).join(' · ')}</span>}
+      <span className="pr-detail-status" data-outcome={response?.outcome}>{status}</span>
     </div>
-    <div className="pr-content">
-      {response ? <>
-        {response.message && <p className="pr-response-message">{response.message}</p>}
-        {headers ? <pre aria-label="응답 헤더">{Object.entries(response.headers).map(([k,v])=>k+': '+v).join('\n') || '응답 헤더 없음'}</pre>
-          : <pre aria-label="응답 본문">{response.body ? json ? <JsonText text={response.body}/> : response.body : '응답 본문 없음'}</pre>}
-      </> : <p>{result?.error || (selected ? '응답 읽는 중…' : run?.message || '표시할 응답이 없습니다.')}</p>}
-    </div>
+    <ResponseBody key={responseId + (response ? '/received' : '/pending')} received={response?.body ?? ''}
+      jsonType={!!json} hidden={headers}/>
+    {headers && <div className="pr-content"><pre aria-label="응답 헤더">{
+      Object.entries(response?.headers ?? {}).map(([key,value])=>key+': '+value).join('\n') || '응답 헤더 없음'
+    }</pre></div>}
   </section>
 }
 
@@ -106,29 +119,40 @@ function LogDrawer({postrail, selected, onSelect, active}: {postrail:PostRailCon
   </section>
 }
 
-export function ResultsFooter({postrail, selected, onSelect, active, environmentButton}: {
-  postrail:PostRailController, selected:string, onSelect:(iteration:string)=>void, active:boolean, environmentButton:ReactNode
+export function ResultsFooter({postrail, selected, onSelect, active, environmentButton, openConsole, requestId}: {
+  postrail:PostRailController, selected:string, onSelect:(iteration:string)=>void, active:boolean, environmentButton:ReactNode, openConsole?:number, requestId?:string
 }) {
   const {run} = postrail
-  const [open,setOpen] = useState(false)
-  const toggle = useRef<HTMLButtonElement>(null)
+  const [open,setOpen] = useState<'results'|'console'|null>(null)
+  const resultsToggle = useRef<HTMLButtonElement>(null)
+  const consoleToggle = useRef<HTMLButtonElement>(null)
+  const preflight = requestId && postrail.sendError(requestId, postrail.library.environmentId)?.preflight &&
+    !(run && postRailBusy(run.phase))
+  const summary = preflight ? '전송 전 오류 · 미전송' : formatPostRailStatus(run) + (run?.message ? ' · '+run.message : '')
+  useEffect(()=>{
+    if (openConsole) setOpen('console')
+  },[openConsole])
   useEffect(()=>{
     if (!open || !active) return
     function escape(event:KeyboardEvent) {
       if (event.key !== 'Escape' || event.defaultPrevented || document.querySelector('dialog[open],[role="dialog"]:not([hidden]),[role="menu"]')) return
       event.preventDefault()
-      setOpen(false)
-      toggle.current?.focus()
+      setOpen(null)
+      const trigger = open === 'console' ? consoleToggle : resultsToggle
+      trigger.current?.focus()
     }
     document.addEventListener('keydown',escape)
     return ()=>document.removeEventListener('keydown',escape)
   },[open,active])
   return <footer className="pr-footer">
-    {open && <LogDrawer key={run?.runId} postrail={postrail} selected={selected} onSelect={onSelect} active={active}/>}
+    {open === 'console' && <ConsoleDrawer postrail={postrail} active={active}/>}
+    {open === 'results' && <LogDrawer key={run?.runId} postrail={postrail} selected={selected} onSelect={onSelect} active={active}/>}
     <div className="planrail-status pr-status">
-      <i aria-hidden="true" data-warning={!!run && (run.failed!=='0' || run.uncertain!=='0' || run.phase==='failed')}/>
-      <span className="pr-summary" title={run?.message || formatPostRailStatus(run)}>{formatPostRailStatus(run)}{run?.message && ' · '+run.message}</span>
-      <button aria-expanded={open} aria-controls="postrail-log" ref={toggle} onClick={()=>setOpen(!open)}>
+      <i aria-hidden="true" data-warning={!!preflight || !!run && (run.failed!=='0' || run.uncertain!=='0' || run.phase==='failed')}/>
+      <span className="pr-summary" title={summary}>{summary}</span>
+      <button aria-expanded={open==='console'} aria-controls="postrail-console" ref={consoleToggle} onClick={()=>setOpen(open==='console' ? null : 'console')}>
+        <Terminal size={15} aria-hidden="true"/>console</button>
+      <button aria-expanded={open==='results'} aria-controls="postrail-log" ref={resultsToggle} onClick={()=>setOpen(open==='results' ? null : 'results')}>
         <ChevronUp size={16} aria-hidden="true"/>회차별 결과</button>
       {environmentButton}
     </div>

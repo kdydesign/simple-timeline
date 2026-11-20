@@ -36,3 +36,14 @@
   font-size: 12px;
 }
 .postrail-home-list .workrail-link { flex: none; font-size: 12px; color: var(--accent); }
+.postrail-home-list li { display:grid; grid-template-columns:auto minmax(0,1fr) auto; row-gap:3px; }
+.postrail-home-repeat { grid-column:2/-1; justify-self:end; display:flex; align-items:center; justify-content:flex-end; gap:4px; flex-wrap:wrap; color:var(--muted); font-size:11px; }
+.postrail-home-repeat label { display:flex; align-items:center; gap:3px; }
+.postrail-home-repeat input[type=checkbox] { margin:0; accent-color:var(--accent); }
+.postrail-home-repeat input[inputmode] { width:4em; min-height:0; padding:2px 4px; font:inherit; text-align:end; }
+.postrail-home-repeat small { width:100%; color:var(--danger); text-align:end; }
+.postrail-home-inspect,.postrail-home-badge { padding:1px 5px; font-size:10px; line-height:1.6; border-radius:4px; border:1px solid var(--border); }
+.postrail-home-inspect { margin-left:4px; color:var(--accent); min-height:0; }
+.postrail-home-spin { color:var(--accent); animation:postrail-rotate 1s linear infinite; }
+@keyframes postrail-rotate { to {transform:rotate(360deg)} }
+@media(prefers-reduced-motion:reduce) { .postrail-home-spin { animation:none; } }

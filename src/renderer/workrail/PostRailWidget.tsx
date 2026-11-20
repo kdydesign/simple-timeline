@@ -1,47 +1,50 @@
-import { ArrowRightLeft, Play } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { ArrowRightLeft, LoaderCircle, Play } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PrEnv, PrRequest } from '../../shared/postrail'
-import { postRailBusy, usesPostRailIndex, validPostRailCount } from '../../shared/postrail-run'
+import { postRailBusy, validPostRailCount } from '../../shared/postrail-run'
 import { formatPostRailStatus } from '../postrail/status'
-import { PostRailPopup } from '../postrail/PostRailPopup'
 import type { PostRailController } from '../postrail/usePostRail'
 import './postrail-widget.css'
 
 export type HomePostRail = Pick<PostRailController, 'library' | 'run' | 'error' | 'start' | 'available' | 'submitting'>
 
-function RepeatFavorite({ request, environment, anchor, close, start }: {
-  request: PrRequest; environment: PrEnv; anchor: HTMLElement; close: () => void; start: HomePostRail['start']
+export interface PostRailResultTarget {runId:string;requestId:string;iteration:string}
+type WidgetController = HomePostRail & Partial<Pick<PostRailController,'sendError'|'submittingRequestId'>>
+
+function FavoriteRow({request, environment, disabled, loading, completedRunId, start}: {
+  request:PrRequest; environment:PrEnv|undefined; disabled:boolean; loading:boolean; completedRunId?:string; start:HomePostRail['start']
 }) {
-  const [count, setCount] = useState('1')
-  const indexed = useMemo(() => usesPostRailIndex(request), [request])
-  const valid = validPostRailCount(count)
-  const summary = !valid ? '횟수는 양의 정수로 입력하세요.'
-    : indexed ? '인덱스 ' + request.nextIndex + ' – ' + (BigInt(request.nextIndex) + BigInt(count) - 1n)
-    : '같은 요청을 ' + count + '회 전송합니다.'
-  return <PostRailPopup title="반복 보내기" anchor={anchor} onClose={close}>
-    <form onSubmit={event => {
-      event.preventDefault()
-      if (!valid) return
-      close()
-      void start(request, environment.id, count)
-    }}>
-      <p className="quick-reminder-schedule">{environment.name} · {request.method} {request.name}</p>
-      <label className="pr-field">횟수
-        <input autoFocus inputMode="numeric" value={count} onFocus={e => e.target.select()} onChange={e => setCount(e.target.value)}
-          aria-invalid={!valid} aria-describedby="postrail-home-repeat-range" />
-      </label>
-      <p id="postrail-home-repeat-range" className="workrail-muted" aria-live="polite">{summary}</p>
-      <div className="editor-actions">
-        <button type="button" onClick={close}>취소</button>
-        <button type="submit" className="primary" disabled={!valid}>{valid ? count + '회 보내기' : '보내기'}</button>
-      </div>
-    </form>
-  </PostRailPopup>
+  const [repeat,setRepeat] = useState(false)
+  const [count,setCount] = useState(request.savedRepeatCount || '1')
+  useEffect(()=>{
+    if(completedRunId){setRepeat(false);setCount(request.savedRepeatCount || '1')}
+  },[completedRunId,request.savedRepeatCount])
+  const repeatable = request.method === 'POST' && validPostRailCount(request.savedRepeatCount ?? '')
+  const invalid = repeat && !validPostRailCount(count)
+  const action = loading ? '실행 중' : repeat ? '반복 실행' : '실행'
+  return <li>
+    <b className="postrail-home-method" data-method={request.method}>{request.method}</b>
+    <span className="postrail-home-name">{request.name}</span>
+    <button type="button" className="workrail-control" disabled={disabled || invalid} aria-busy={loading}
+      aria-label={request.name+' '+(!repeat && !loading?'즉시 실행':action)}
+      onClick={()=>environment && void start(request,environment.id,repeat ? count : '1')}>
+      {loading ? <LoaderCircle className="postrail-home-spin" aria-hidden="true" size={12}/> : <Play aria-hidden="true" size={12}/>}
+      {action}
+    </button>
+    {repeatable && <div className="postrail-home-repeat">
+      <label><input type="checkbox" aria-label={request.name+' 반복 보내기'} checked={repeat} disabled={disabled}
+        onChange={event=>setRepeat(event.target.checked)}/>반복 보내기</label>
+      <input aria-label={request.name+' 반복 횟수'} inputMode="numeric" value={count} aria-invalid={invalid}
+        disabled={disabled || !repeat} onChange={event=>setCount(event.target.value)}/><span>회</span>
+      {invalid && <small role="alert">횟수는 양의 정수로 입력하세요.</small>}
+    </div>}
+  </li>
 }
 
-export function PostRailWidget({ postrail, onOpen }: { postrail: HomePostRail; onOpen?: () => void }) {
+export function PostRailWidget({postrail,onOpen,onResult}: {
+  postrail:WidgetController; onOpen?:()=>void; onResult?:(target:PostRailResultTarget)=>void
+}) {
   const { library, run, available, submitting, error, start } = postrail
-  const [repeat, setRepeat] = useState<{ id: string; environmentId: string; anchor: HTMLElement } | null>(null)
   const environment = library.environments.find(env => env.id === library.environmentId)
   const favorites = useMemo(() => {
     const rank = new Map(library.groups.map((group, index) => [group.id, index]))
@@ -52,7 +55,13 @@ export function PostRailWidget({ postrail, onOpen }: { postrail: HomePostRail; o
   const busy = !!run && postRailBusy(run.phase)
   const disabled = !available || !environment || submitting || busy
   const visible = favorites.slice(0, 5)
-  const repeated = visible.find(request => request.id === repeat?.id && request.method === 'POST')
+  const finished = !!run?.runId && !busy
+  const [attempt,setAttempt] = useState<string|null>(null)
+  const send = (request:PrRequest, environmentId:string, count:string) => {
+    setAttempt(request.id)
+    return start(request, environmentId, count)
+  }
+  const failure = environment && attempt && postrail.sendError?.(attempt,environment.id)
   const authenticated = environment && run?.authenticatedEnvironmentIds.includes(environment.id)
   return <section className="workrail-surface workrail-widget postrail-home-widget" aria-labelledby="postrail-home-heading">
     <header className="workrail-widget-heading">
@@ -64,27 +73,23 @@ export function PostRailWidget({ postrail, onOpen }: { postrail: HomePostRail; o
     {!available && !error && <p className="workrail-muted">저장한 요청을 아직 확인할 수 없습니다.</p>}
     {available && !environment && <p className="workrail-muted">PostRail에서 대상 환경을 선택하세요.</p>}
     {favorites.length > 0 && <ul className="postrail-home-list" aria-labelledby="postrail-home-heading">
-      {visible.map(request => <li key={request.id}>
-        <b className="postrail-home-method" data-method={request.method}>{request.method}</b>
-        <span className="postrail-home-name">{request.name}</span>
-        <button type="button" className="workrail-control" disabled={disabled} aria-label={request.name + ' 즉시 실행'}
-          onClick={() => environment && void start(request, environment.id, '1')}><Play aria-hidden="true" size={12} />실행</button>
-        {request.method === 'POST' && <button type="button" className="workrail-link" disabled={disabled}
-          aria-label={request.name + ' 반복 보내기'} aria-haspopup="dialog"
-          onClick={e => environment && setRepeat({id: request.id, environmentId: environment.id, anchor: e.currentTarget})}>반복…</button>}
-      </li>)}
+      {visible.map(request=><FavoriteRow
+        key={JSON.stringify([request.id,environment?.id,request.savedRepeatCount])}
+        completedRunId={finished && run.requestId===request.id ? run.runId : undefined}
+        request={request} environment={environment} disabled={disabled} start={send}
+        loading={!!(submitting && postrail.submittingRequestId===request.id || busy && run?.requestId===request.id)}/>)}
     </ul>}
     {available && !favorites.length && <p className="workrail-muted">PostRail에서 저장한 요청 옆의 ☆를 누르면 여기에 표시됩니다.</p>}
     {run && run.phase !== 'idle' && <p className="postrail-home-result" role="status">
-      최근 실행 · <strong>{run.requestName}</strong> · {run.environmentName} · {formatPostRailStatus(run)}
+      {finished && <span className="postrail-home-badge">결과</span>} 최근 실행 · <strong>{run.requestName}</strong> · {run.environmentName} · {formatPostRailStatus(run)}
       {run.message && ' · ' + run.message}
+      {finished && onResult && <button type="button" className="postrail-home-inspect"
+        onClick={()=>onResult({runId:run.runId,requestId:run.requestId,iteration:run.completed==='0'?'':run.completed})}>결과 보기</button>}
     </p>}
-    {error && <p className="workrail-note" role="alert">{error}</p>}
+    {(failure || error) && <p className="workrail-note" role="alert">{(failure && failure.message) || error}</p>}
     <div className="workrail-widget-meta">
       <span>{available && '즐겨찾기 ' + favorites.length + '개'}</span>
       {onOpen && <button type="button" className="workrail-link" onClick={onOpen}>PostRail 열기</button>}
     </div>
-    {!disabled && repeat && repeated && environment?.id === repeat.environmentId &&
-      <RepeatFavorite request={repeated} environment={environment} anchor={repeat.anchor} close={() => setRepeat(null)} start={start} />}
   </section>
 }

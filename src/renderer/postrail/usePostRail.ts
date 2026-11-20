@@ -1,3 +1,4 @@
+import type {PrDraftProblem, PrSendError} from '../../shared/postrail-console'
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import type {PrLibrary, PrMutation, PrRequest} from '../../shared/postrail'
 import type {PrRunState} from '../../shared/postrail-run'
@@ -16,9 +17,11 @@ export function usePostRail(enabled: boolean) {
   const [library, setLibrary] = useState(emptyLibrary)
   const [run, setRun] = useState<PrRunState|null>(null)
   const [error, setError] = useState('')
+  const [unreported, setUnreported] = useState<PrSendError[]>([])
   const [canRememberPassword, setCanRememberPassword] = useState(false)
   const [ready, setReady] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
+  const [submittingRequestId, setSubmittingRequestId] = useState<string|null>(null)
+  const submitting = submittingRequestId !== null
   const versions = useRef({library:0, run:0})
   const lastRun = useRef<PrRunState|null>(null)
   const starting = useRef(false)
@@ -68,23 +71,51 @@ export function usePostRail(enabled: boolean) {
   },[api,clearError,report])
   const start = useCallback(async(request:PrRequest,environmentId:string,count:string)=>{
     if (!api||starting.current) return false
-    starting.current=true;setSubmitting(true);clearError()
+    const attemptId = crypto.randomUUID()
+    const sameScope = (error:PrSendError) => error.requestId === request.id && error.environmentId === environmentId
+    const clearFallback = () => setUnreported(previous => previous.some(sameScope) ? previous.filter(error => !sameScope(error)) : previous)
+    starting.current=true;setSubmittingRequestId(request.id);clearError()
     try {
-      const started=await api.start({request,environmentId,count})
+      const started=await api.start({request,environmentId,count,attemptId})
       if (!started) return false
-      await readRun()
+      clearFallback()
+      await readRun().catch(report)
       return true
-    } catch(e) {report(e);return false}
-    finally {starting.current=false;setSubmitting(false)}
+    } catch {
+      try {
+        // Main keeps the first diagnosis for this attempt. A rejected IPC call may
+        // never have reached the runner, in which case it adds one safe entry now.
+        await api.invalidDraft(request.id, environmentId, 'dispatch', request.method, '', attemptId)
+        await readRun()
+        clearFallback()
+      } catch {
+        setUnreported(previous => [...previous.filter(error => !sameScope(error)), {
+          requestId:request.id, environmentId, preflight:false, message:'PostRail에서 전송 요청의 처리 여부를 확인할 수 없습니다.',
+        }])
+      }
+      return false
+    } finally {starting.current=false;setSubmittingRequestId(null)}
   },[api,readRun,clearError,report])
   const stop = useCallback(async()=>{
     if (!api) return
     try {await api.stop();await readRun()} catch(e) {report(e)}
   },[api,readRun,report])
   const logout = useCallback(async(id:string)=>{
-    if (!api) return
-    try {await api.logout(id);await readRun()} catch(e) {report(e)}
+    if (!api) return false
+    try {await api.logout(id);await readRun();return true} catch(e) {report(e);return false}
   },[api,readRun,report])
+  const sendError = useCallback((requestId:string, environmentId:string|null) => {
+    const matches = (error:PrSendError) => error.requestId === requestId && error.environmentId === (environmentId ?? '')
+    return unreported.find(matches) ?? run?.sendErrors?.find(matches)
+  }, [run?.sendErrors,unreported])
+  const consoleSince = useCallback(async (after:number) => api ? api.consoleSince(after) : [], [api])
+  const invalidDraft = useCallback(async (request: PrRequest, environmentId: string|null, category: PrDraftProblem, diagnosis = '') => {
+    if (!api) return
+    try {
+      await api.invalidDraft(request.id, environmentId ?? '', category, request.method, diagnosis)
+      await readRun()
+    } catch(e) { report(e) }
+  }, [api,readRun,report])
   const page = useCallback(async(offset:string,runId=lastRun.current?.runId)=>{
     if (!api||!runId) return []
     try {return await api.page(offset,runId)} catch(e) {report(e);return []}
@@ -93,8 +124,8 @@ export function usePostRail(enabled: boolean) {
     if (!api||!runId) return null
     try {return await api.detail(iteration,runId)} catch(e) {report(e);return null}
   },[api,report])
-  return useMemo(()=>({library,run,error,available:!!api && ready,submitting,canRememberPassword,
+  return useMemo(()=>({library,run,error,available:!!api && ready,submitting,submittingRequestId,sendError,consoleSince,invalidDraft,canRememberPassword,
     refresh,mutate,start,stop,logout,page,detail,clearError}),
-    [library,run,error,api,ready,submitting,canRememberPassword,refresh,mutate,start,stop,logout,page,detail,clearError])
+    [library,run,error,api,ready,submitting,submittingRequestId,sendError,consoleSince,invalidDraft,canRememberPassword,refresh,mutate,start,stop,logout,page,detail,clearError])
 }
 export type PostRailController=ReturnType<typeof usePostRail>

@@ -1,7 +1,10 @@
+import {mapPathNames, postRailHeaderNameError, urlWithQuery} from '../../shared/postrail-parameters'
+import {PostRailRunError, requestOptions} from './request-options'
+import {extendedBody, type OpenFile} from './body'
 import type { PrEnv, PrLibrary, PrRequest } from '../../shared/postrail'
 import { usesPostRailIndex, validPostRailCount, type PrStart } from '../../shared/postrail-run'
 
-export class PostRailRunError extends Error {}
+export {PostRailRunError} from './request-options'
 
 function invalid(message: string): never {
   throw new PostRailRunError(message)
@@ -18,7 +21,10 @@ function substitute(template: string, variables: Variables, index?: string): str
 }
 
 function target(template: string, variables: Variables): URL {
-  const address = substitute(template, variables)
+  return checkedTarget(substitute(template, variables))
+}
+
+function checkedTarget(address:string):URL {
   let url: URL
   try { url = new URL(address) } catch { return invalid('요청 또는 로그인 URL을 확인하세요.') }
   if (!['https:', 'http:'].includes(url.protocol)) invalid('HTTP 또는 HTTPS 주소를 입력하세요.')
@@ -29,11 +35,9 @@ function target(template: string, variables: Variables): URL {
   return url
 }
 
-// Routing, hop-by-hop and ambient browser credentials must remain under transport control.
-const restrictedHeader = /^(?:host|connection|content-length|transfer-encoding|keep-alive|upgrade|te|trailer|cookie2?|set-cookie|proxy-.*|sec-.*|forwarded|x-forwarded-.*)$/i
-
-function checkHeaderName(name: string) {
-  if (!/^[!#$%&'*+.^_`|~\w-]+$/.test(name) || restrictedHeader.test(name)) invalid('사용할 수 없는 HTTP 헤더 이름입니다.')
+function checkHeaderName(name:string) {
+  const message=postRailHeaderNameError(name)
+  if (message) invalid(message)
 }
 
 export function setHeader(headers: Headers, name: string, value: string) {
@@ -76,7 +80,7 @@ function withJsonHeader(headers: Headers, body: string | undefined) {
   if (body !== undefined && !headers.has('content-type')) headers.set('Content-Type', 'application/json')
 }
 
-export function prepareRun(input: PrStart, library: PrLibrary, defaultTimeoutMs: number, getPassword: (id:string) => string, loggedIn: boolean) {
+export function prepareRun(input: PrStart, library: PrLibrary, defaultTimeoutMs: number, getPassword: (id:string) => string, loggedIn: boolean, openFile?:OpenFile) {
   const request: PrRequest = structuredClone(input.request)
   const env: PrEnv | undefined = library.environments.find(item => item.id === input.environmentId)
   if (!env) invalid('대상 환경을 선택하세요.')
@@ -85,12 +89,27 @@ export function prepareRun(input: PrStart, library: PrLibrary, defaultTimeoutMs:
   if (!validPostRailCount(input.count) || (request.method !== 'POST' && input.count !== '1')) invalid('반복 횟수는 POST에만 사용할 수 있는 양의 정수입니다.')
   const timeoutMs = request.timeoutMs === null ? defaultTimeoutMs : request.timeoutMs
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 2147483647) invalid('응답 대기 시간을 확인하세요.')
+  Object.assign(request,requestOptions(request))
   const indexed = usesPostRailIndex(request)
   if ((indexed || input.count !== '1') && !library.requests.some(saved => saved.id === request.id)) invalid('인덱스 또는 반복을 사용하려면 요청을 먼저 저장하세요.')
   const variables = { ...env.variables }
   delete variables.password
   delete variables.index
-  const url = target(request.url, variables)
+  const expandUrl=(value:string)=>substitute(value,variables)
+  let address=request.url
+  if (request.pathValues !== undefined) {
+    const paths=request.pathValues
+    address=mapPathNames(address,name=>{
+      if (!Object.hasOwn(paths,name) || !paths[name]) invalid('경로 파라미터의 빈 값을 입력하세요.')
+      const value=expandUrl(paths[name])
+      if (!value || value==='.' || value==='..') invalid('경로 파라미터 값을 확인하세요.')
+      return encodeURIComponent(value)
+    })
+  }
+  // Preserve whole-template substitution for imported URLs. Structured rows encode
+  // edited components independently while retaining each untouched source segment.
+  const url = request.queryRows === undefined ? target(address,variables) :
+    checkedTarget(urlWithQuery(address,request.queryRows,expandUrl))
   const requireApi = () => {
     const api = target(env.apiOrigin, variables)
     if (api.pathname !== '/' || api.search || api.origin !== url.origin) invalid('요청 주소가 환경에 지정한 토큰 수신 API 주소와 일치하지 않습니다.')
@@ -105,9 +124,13 @@ export function prepareRun(input: PrStart, library: PrLibrary, defaultTimeoutMs:
   }
   const mainValues = { ...variables }
   Object.defineProperty(mainValues, 'password', { get() { requireApi(); return protectedValue() } })
-  const headers = prepareHeaders(request.headers, mainValues)
-  const body = jsonTemplate(request.method === 'GET' ? '' : request.body, mainValues, indexed)
-  withJsonHeader(headers, body(indexed ? '1' : undefined))
+  const definition=request.headerRows === undefined ? request.headers :
+    Object.fromEntries(request.headerRows.filter(r=>r.enabled).map(r=>[r.name,r.value]))
+  const headers = prepareHeaders(definition, mainValues)
+  const jsonMode=request.method!=='POST' || (request.bodyMode ?? 'json')==='json'
+  const json = jsonTemplate(jsonMode && request.method!=='GET' ? request.body : '', mainValues, indexed)
+  const body = jsonMode ? json : extendedBody(request,headers,t=>substitute(t,mainValues),openFile)
+  if (jsonMode) withJsonHeader(headers, json(indexed ? '1' : undefined))
   const httpUrls = new Set<string>()
   if (url.protocol === 'http:') httpUrls.add(url.href)
   let login: {url:string, headers:Headers, body:string | undefined} | undefined

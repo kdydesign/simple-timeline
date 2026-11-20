@@ -1,61 +1,76 @@
 {
-  "source": "215622ceb9a89262944718941dce5961cf144a39",
-  "dirty": true,
-  "version": "1.0.0",
-  "runtimeVersion": "0.0",
-  "platform": "linux",
-  "recordedAt": "2026-11-18T13:49:53.933Z",
-  "command": "tests/e2e/help-assets.spec.ts",
-  "synthetic": true,
-  "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only. All 14 shipped images updated for top navigation, WR identity and compact settings; screenshot-producing cases passed in the first E2E run. Other unrelated E2E cases failed and are recorded separately.",
-  "files": [
-    "app-overview.png",
-    "calendar.png",
-    "holidays.png",
-    "host-address.png",
-    "member-address.png",
-    "member-toolbar.png",
-    "participants.png",
-    "project-editor.png",
-    "project-share.png",
-    "reminders.png",
-    "schedule-editor.png",
-    "settings-personal.png",
-    "updates-host.png",
-    "updates-member.png"
-  ],
-  "commands": [
-    "tests/e2e/help-assets.spec.ts",
-    "tests/e2e/help-member-assets.spec.ts",
-    "tests/e2e/help-update-assets.spec.ts",
-    "tests/e2e/settings-personal.spec.ts"
-  ],
-  "versionNote": "Source package 1.0.0; unpackaged isolated fixture reports runtimeVersion 0.0. Synthetic data; not Windows transparency/UAC evidence.",
-  "subsequentCaptures": [
+  "version": "1.1.0",
+  "previousCaptures": [
     {
-      "source": "a731ca9a2bfcbfe4d07dc67f961ceb789af4ccd4",
+      "source": "215622ceb9a89262944718941dce5961cf144a39",
       "dirty": true,
       "version": "1.0.0",
       "runtimeVersion": "0.0",
       "platform": "linux",
+      "recordedAt": "2026-11-18T13:49:53.933Z",
+      "command": "tests/e2e/help-assets.spec.ts",
       "synthetic": true,
-      "date": "2026-11-20",
-      "scope": "Isolated Electron renderer with synthetic schedules, SSH editor, members, Node versions and Windows install diagnostics. Other images retain the original capture above.",
-      "filesByTest": {
-        "tests/e2e/help-assets.spec.ts": [
-          "app-overview.png"
-        ],
-        "tests/e2e/help-member-assets.spec.ts": [
-          "member-toolbar.png"
-        ],
-        "tests/e2e/node-presentation.spec.ts": [
-          "home-widgets.png",
-          "node-log.png"
-        ],
-        "tests/e2e/termrail-dialogs.spec.ts": [
-          "termrail-server.png"
-        ]
-      }
+      "scope": "Actual renderer with isolated SQLite fixture; only participant section, editor and reminder fields captured. Network addresses above section excluded. Core feature screenshots from the live isolated renderer: toolbar/Gantt, project/schedule editors and calendar; synthetic names only. All 14 shipped images updated for top navigation, WR identity and compact settings; screenshot-producing cases passed in the first E2E run. Other unrelated E2E cases failed and are recorded separately.",
+      "files": [
+        "app-overview.png",
+        "calendar.png",
+        "holidays.png",
+        "host-address.png",
+        "member-address.png",
+        "member-toolbar.png",
+        "participants.png",
+        "project-editor.png",
+        "project-share.png",
+        "reminders.png",
+        "schedule-editor.png",
+        "settings-personal.png",
+        "updates-host.png",
+        "updates-member.png"
+      ],
+      "commands": [
+        "tests/e2e/help-assets.spec.ts",
+        "tests/e2e/help-member-assets.spec.ts",
+        "tests/e2e/help-update-assets.spec.ts",
+        "tests/e2e/settings-personal.spec.ts"
+      ],
+      "versionNote": "Source package 1.0.0; unpackaged isolated fixture reports runtimeVersion 0.0. Synthetic data; not Windows transparency/UAC evidence.",
+      "subsequentCaptures": [
+        {
+          "source": "a731ca9a2bfcbfe4d07dc67f961ceb789af4ccd4",
+          "dirty": true,
+          "version": "1.0.0",
+          "runtimeVersion": "0.0",
+          "platform": "linux",
+          "synthetic": true,
+          "date": "2026-11-20",
+          "scope": "Isolated Electron renderer with synthetic schedules, SSH editor, members, Node versions and Windows install diagnostics. Other images retain the original capture above.",
+          "filesByTest": {
+            "tests/e2e/help-assets.spec.ts": [
+              "app-overview.png"
+            ],
+            "tests/e2e/help-member-assets.spec.ts": [
+              "member-toolbar.png"
+            ],
+            "tests/e2e/node-presentation.spec.ts": [
+              "home-widgets.png",
+              "node-log.png"
+            ],
+            "tests/e2e/termrail-dialogs.spec.ts": [
+              "termrail-server.png"
+            ]
+          }
+        }
+      ]
     }
+  ],
+  "scope": "Home favorite after one completed request, with two repetitions selected. Isolated Electron profile and local loopback server.",
+  "source": "cd1b7a0cc35b19c6b5ff143684ff5fab44f7e749",
+  "dirty": true,
+  "platform": "linux",
+  "recordedAt": "2026-11-20T15:26:53.807751+00:00",
+  "command": "tests/e2e/postrail.spec.ts",
+  "synthetic": true,
+  "files": [
+    "postrail-repeat.png"
   ]
 }

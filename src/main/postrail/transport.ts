@@ -1,3 +1,4 @@
+import {multipartQuoted} from './body'
 import { PostRailRunError, type PreparedRun } from './prepare'
 import type { PrDetail } from '../../shared/postrail-run'
 
@@ -78,8 +79,10 @@ function redactor(secrets: string[]) {
   const terms = new Set<string>()
   for (const secret of secrets.filter(Boolean)) {
     terms.add(secret)
+    terms.add(multipartQuoted(secret))
     terms.add(JSON.stringify(secret).slice(1,-1))
     terms.add(encodeURIComponent(Buffer.from(secret, 'utf8').toString('utf8')))
+    terms.add(new URLSearchParams([['',secret]]).toString().slice(1))
   }
   const sorted = [...terms].sort((a,b) => b.length - a.length)
   return (value:string) => {
@@ -101,8 +104,8 @@ function transportFailure(error: unknown, method:string): Pick<PrDetail, 'outcom
 
 export async function sendRequest(fetchImpl:PostRailFetch, run:PreparedRun, iteration:string, index:string | null, headers: Headers, secrets:string[]): Promise<PrDetail> {
   const started = performance.now()
-  const body = run.body(index ?? undefined)
   const base = { iteration, index, headers:{}, body:'', status:null }
+  const body = await run.body(index ?? undefined)
   try {
     const response = await transfer(fetchImpl, run.url, { method:run.request.method, headers, body }, run.timeoutMs)
     const clean = redactor(secrets)

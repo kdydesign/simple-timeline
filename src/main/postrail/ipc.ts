@@ -1,5 +1,6 @@
+import {draftProblems, type PrDraftProblem} from '../../shared/postrail-console'
 import {dialog, ipcMain, safeStorage, session, type BrowserWindow, type IpcMainInvokeEvent} from 'electron'
-import type {PrEnv, PrMutation} from '../../shared/postrail'
+import type {PrEnv, PrMethod, PrMutation} from '../../shared/postrail'
 import {postRailChannel, postRailChanged, type PostRailChange} from '../../shared/postrail-api'
 import {postRailBusy, type PrStart} from '../../shared/postrail-run'
 import {isTrustedSender} from '../ipc-core'
@@ -7,6 +8,10 @@ import {PostRailRunner, PostRailRunError} from './runner'
 import {canProtectPostRailPassword, PostRailStore, PostRailStoreError} from './store'
 
 class CommandError extends Error {}
+
+function validAttemptId(value: unknown): value is string {
+  return typeof value === 'string' && /^[0-9a-f]{8}(?:-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(value)
+}
 
 function authSettings(env: PrEnv) {
   // A rename or a change to a variable used exclusively by the main request can keep the token.
@@ -48,7 +53,12 @@ export function registerPostRailIpc(window: BrowserWindow, rendererUrl: string, 
   }
 
   function getRunner() {
-    return runner ??= new PostRailRunner(getStore(), (url, init) => {
+    return runner ??= new PostRailRunner({
+      read: () => getStore().read(),
+      password: id => getStore().password(id),
+      reserveIndex: id => getStore().reserveIndex(id),
+      openFile: (id,file) => getStore().openFile(id,file),
+    }, (url, init) => {
       transport ??= session.fromPartition('postrail', {cache:false})
       return transport.fetch(url, {...init, redirect:'manual', credentials:'omit', cache:'no-store', bypassCustomProtocolHandlers:true})
     }, 30_000, changed)
@@ -60,10 +70,12 @@ export function registerPostRailIpc(window: BrowserWindow, rendererUrl: string, 
   }
 
   async function start(event: IpcMainInvokeEvent, input: PrStart) {
-    if (approval) throw new CommandError('현재 전송 확인을 마친 뒤 다시 보내세요.')
     // The renderer can only supply request data. Native confirmation binds consent to the exact destinations.
-    const draft = {request:input.request, environmentId:input.environmentId, count:input.count}
+    const attemptId = validAttemptId(input.attemptId) ? input.attemptId : undefined
+    const draft = {attemptId, request:input.request, environmentId:input.environmentId, count:input.count}
     const active = getRunner()
+    if (blocked()) active.rejectStart(draft, '앱 종료 또는 업데이트가 진행 중입니다.')
+    if (approval) active.rejectStart(draft, '현재 전송 확인을 마친 뒤 다시 보내세요.')
     const addresses = active.preview(draft)
     if (!addresses.length) return active.start({...draft, approvedHttpUrls:[]})
     const prompt = new AbortController()
@@ -73,9 +85,13 @@ export function registerPostRailIpc(window: BrowserWindow, rendererUrl: string, 
         type:'warning', title:'PostRail 평문 연결', message:'다음 HTTP 주소로 평문 전송하시겠습니까?',
         detail:addresses.join('\n'), buttons:['취소','보내기'], cancelId:0, defaultId:0,
         noLink:true, signal:prompt.signal,
+      }).catch(() => {
+        if (prompt.signal.aborted) return {response:0}
+        return active.rejectStart(draft, '평문 전송 확인 창을 열 수 없습니다.')
       })
-      checkOpen(event, true)
+      checkOpen(event, false)
       if (prompt.signal.aborted || choice.response !== 1) return null
+      if (blocked()) active.rejectStart(draft, '앱 종료 또는 업데이트가 진행 중입니다.')
       return active.start({...draft, approvedHttpUrls:addresses, allowPlaintext:true})
     } finally {
       if (approval === prompt) approval = undefined
@@ -88,16 +104,21 @@ export function registerPostRailIpc(window: BrowserWindow, rendererUrl: string, 
     if (state && postRailBusy(state.phase) && cmd.type === 'request.delete' && cmd.id === state.requestId) {
       throw new CommandError('전송 중인 요청은 실행이 끝난 뒤 삭제하세요.')
     }
-    const before = runner && cmd.type === 'env.save' && cmd.environment.id
-      ? db.read().environments.find(env => env.id === cmd.environment.id)
-      : undefined
+    const environmentEdit = cmd.type === 'env.save' || cmd.type === 'env.delete' || cmd.type === 'env.batch'
+    const before = runner && environmentEdit ? db.read().environments : []
     const library = db.mutate(cmd)
     // An open confirmation applies to the definition and credentials shown at preview time.
     approval?.abort()
-    if (runner && cmd.type === 'env.delete') runner.invalidateEnvironment(cmd.id)
-    if (runner && cmd.type === 'env.save' && before) {
-      const after = library.environments.find(env => env.id === before.id)!
-      if (cmd.password !== undefined || authSettings(before) !== authSettings(after)) runner.invalidateEnvironment(before.id)
+    if (runner && before.length) {
+      const saves = cmd.type === 'env.save' ? [cmd] : cmd.type === 'env.batch' ? cmd.saves : []
+      const passwords = new Set(saves.filter(item => item.password !== undefined).map(item => item.environment.id))
+      const byId = new Map(library.environments.map(env => [env.id, env]))
+      for (const previous of before) {
+        const next = byId.get(previous.id)
+        if (!next || passwords.has(previous.id) || authSettings(previous) !== authSettings(next)) {
+          runner.invalidateEnvironment(previous.id)
+        }
+      }
     }
     notify('library')
     return library
@@ -105,10 +126,30 @@ export function registerPostRailIpc(window: BrowserWindow, rendererUrl: string, 
 
   ipcMain.handle(postRailChannel, async (event, method: unknown, ...args: unknown[]) => {
     try {
-      checkOpen(event, method === 'start' || method === 'mutate' || method === 'logout')
+      checkOpen(event, method === 'mutate' || method === 'logout' || method === 'chooseFile')
       switch (method) {
         case 'read': if (!args.length) return getStore().read(); break
+        case 'chooseFile': {
+          const [id,retainedIds=[]] = args
+          if (args.length <= 2 && typeof id === 'string' && Array.isArray(retainedIds) && retainedIds.every(ref=>typeof ref==='string')) {
+            const choice=await dialog.showOpenDialog(window,{title:'PostRail 첨부 파일 선택',properties:['openFile']})
+            checkOpen(event,true)
+            if (choice.canceled || !choice.filePaths.length) return null
+            return getStore().selectFile(id,choice.filePaths[0],retainedIds)
+          }
+          break
+        }
         case 'capability': if (!args.length) return canProtectPostRailPassword(safeStorage); break
+        case 'console':
+          if (args.length === 1 && typeof args[0] === 'number' && Number.isSafeInteger(args[0]) && args[0] >= 0) return getRunner().consoleSince(args[0])
+          break
+        case 'invalidDraft':
+          if ((args.length === 5 || (args.length === 6 && (args[5] === undefined || validAttemptId(args[5])))) && typeof args[4] === 'string' && typeof args[0] === 'string' && typeof args[1] === 'string' &&
+              typeof args[2] === 'string' && Object.hasOwn(draftProblems, args[2]) &&
+              typeof args[3] === 'string' && ['GET','POST','DELETE'].includes(args[3])) {
+            return getRunner().invalidDraft(args[0], args[1], args[2] as PrDraftProblem, args[3] as PrMethod, args[4], args[5] as string|undefined)
+          }
+          break
         case 'state': if (!args.length) return getRunner().state(); break
         case 'mutate': if (args.length === 1 && args[0] && typeof args[0] === 'object') return mutate(args[0] as PrMutation); break
         case 'start': if (args.length === 1 && args[0] && typeof args[0] === 'object') return await start(event, args[0] as PrStart); break
