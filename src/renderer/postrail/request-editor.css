@@ -4,19 +4,18 @@
 .pr-auth-badge,.pr-modes button[aria-pressed="true"] {background:#364650;color:#bedff6}
 .pr-modes {display:flex;align-items:center;gap:5px;margin-bottom:5px}
 .pr-modes button[aria-pressed="false"] {background:transparent;color:var(--muted)}
-.pr-method {flex:none;width:78px}
-.pr-method .select-trigger {height:24px;min-height:0;width:100%;padding:2px 5px;font:700 11px/1.5 var(--pr-code-font)}
+.pr-method {flex:none;width:70px}
+.pr-method .select-trigger[data-compact] {font:700 11px/1.2 var(--pr-code-font)}
 .pr-method .select-trigger span {font:inherit}
 .pr-address .pr-template {flex:1;--pr-template-border:0px;--pr-template-pad:4px 0;font:14px/1.65 var(--pr-code-font)}
 .pr-address .pr-template > input {background:transparent;border:0}
-.pr-send-diagnostic {position:relative;display:inline-flex}
-.pr-send-diagnostic button {width:20px;height:20px;border:1px solid #ed929b;border-radius:50%;color:#ffd3d6;background:#723c46;padding:0;font:bold 13px/1 sans-serif}
-.pr-send-diagnostic [role="tooltip"] {
-  display:none;position:absolute;z-index:12;top:calc(100% + 6px);left:-10px;
-  width:max-content;max-width:min(320px,55vw);padding:6px 9px;border-radius:5px;
-  border:1px solid #99616a;color:#ffe6e8;background:#472f36;font-size:12px;
+.pr-address .pr-send-diagnostic {flex:none;width:20px;height:20px;border:1px solid #ed929b;border-radius:50%;color:#ffd3d6;background:#723c46;padding:0;font:bold 13px/1 sans-serif}
+.pr-send-tooltip {
+  z-index:100;box-sizing:border-box;width:max-content;max-width:min(320px,var(--radix-tooltip-content-available-width),calc(100vw - 16px));
+  max-height:var(--radix-tooltip-content-available-height);overflow:auto;overflow-wrap:anywhere;
+  padding:6px 9px;border-radius:5px;border:1px solid #99616a;color:#ffe6e8;background:#472f36;
+  font-size:12px;line-height:1.4;box-shadow:var(--popup-shadow);
 }
-.pr-send-diagnostic:is(:hover,:focus-within) [role="tooltip"] {display:block}
 .pr-request-pane .pr-content {gap:4px;padding:7px 12px}
 .pr-request-pane .pr-content > * {flex-shrink:0}
 .pr-request-pane .pr-body-editor {min-height:68px;flex:1 0 68px}

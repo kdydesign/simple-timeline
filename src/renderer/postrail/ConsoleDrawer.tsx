@@ -36,6 +36,6 @@ export function ConsoleDrawer({postrail, active}: {postrail:PostRailController, 
       onScroll={event=>{
         const view = event.currentTarget
         follow.current = view.scrollHeight - view.scrollTop - view.clientHeight < 4
-      }}>{lines.length ? lines.map(line=><span key={line.id} data-error={line.error}>{line.text}{'\n'}</span>) : '기록된 로그가 없습니다.'}</pre>
+      }}>{lines.length ? lines.map(line=><span key={line.id} data-error={line.error}>{line.text}{line.ending ?? '\n'}</span>) : '기록된 로그가 없습니다.'}</pre>
   </section>
 }

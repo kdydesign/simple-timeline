@@ -63,11 +63,11 @@
       ]
     }
   ],
-  "scope": "Home favorite after one completed request, with two repetitions selected. Isolated Electron profile and local loopback server.",
-  "source": "cd1b7a0cc35b19c6b5ff143684ff5fab44f7e749",
+  "scope": "Home result summary and separate result link after a completed request, with two repetitions selected. Isolated Electron profile and local loopback server.",
+  "source": "1510a02b9d16fb13454d1e4feca0c48ae9d0ec19",
   "dirty": true,
   "platform": "linux",
-  "recordedAt": "2026-11-20T15:26:53.807751+00:00",
+  "recordedAt": "2026-11-20T15:58:20.474376+00:00",
   "command": "tests/e2e/postrail.spec.ts",
   "synthetic": true,
   "files": [

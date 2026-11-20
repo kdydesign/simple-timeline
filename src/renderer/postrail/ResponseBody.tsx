@@ -23,12 +23,19 @@ async function copyBody(text:string) {
 export function ResponseBody({received, jsonType, hidden}: {received:string, jsonType:boolean, hidden:boolean}) {
   const [initial] = useState(()=>received ? formatResponseJson(received) : {text:'',error:''})
   const [draft,setDraft] = useState(initial.text)
-  const [original,setOriginal] = useState(false)
+  const [mode,setMode] = useState<'draft'|'original'>('draft')
   const [query,setQuery] = useState('')
   const [index,setIndex] = useState(0)
   const [feedback,setFeedback] = useState('')
   const mirror = useRef<HTMLPreElement>(null)
+  const original = mode === 'original'
   const shown = original ? received : draft
+  const selectMode = (next:'draft'|'original')=>{
+    if (next === mode) return
+    setMode(next)
+    setFeedback('')
+    setIndex(0)
+  }
   const hits = useResponseSearch(shown,hidden?'':query,index,mirror)
   const formatted = ()=>{
     const result = formatResponseJson(draft)
@@ -38,9 +45,12 @@ export function ResponseBody({received, jsonType, hidden}: {received:string, jso
   return <div className="pr-response-body" hidden={hidden}>
     <div className="pr-response-tools" role="group" aria-label="응답 본문 도구">
       <button disabled={!received || original} onClick={formatted}>포맷 정렬</button>
-      <button disabled={!received} onClick={()=>{setOriginal(!original);setFeedback('');setIndex(0)}}>
-        {original?'편집본':'원문'}
-      </button>
+      <div className="pr-response-modes" role="group" aria-label="응답 본문 보기">
+        <button aria-pressed={!original} disabled={!received} title="수정할 수 있는 편집본"
+          onClick={()=>selectMode('draft')}>편집본</button>
+        <button aria-pressed={original} disabled={!received} title="받은 그대로의 원문 (읽기 전용)"
+          onClick={()=>selectMode('original')}>원문</button>
+      </div>
       <button disabled={!received} aria-label="응답 본문 복사" title="응답 본문 복사" onClick={async()=>{
         try { await copyBody(shown); setFeedback('복사됨') }
         catch { setFeedback('클립보드를 사용할 수 없습니다.') }
@@ -58,7 +68,11 @@ export function ResponseBody({received, jsonType, hidden}: {received:string, jso
       {received && <div className="pr-response-canvas">
         <pre aria-hidden="true" ref={mirror}>{jsonType || !initial.error ? <JsonText text={shown}/> : shown}</pre>
         <textarea aria-label={original?'응답 본문 원문':'응답 본문 편집'} readOnly={original} value={shown}
-          wrap="off" spellCheck={false} onChange={event=>{setDraft(event.target.value);setFeedback('');setIndex(0)}}/>
+          wrap="off" spellCheck={false} onChange={original ? undefined : event=>{
+            setDraft(event.target.value)
+            setFeedback('')
+            setIndex(0)
+          }}/>
       </div>}
     </div>
   </div>

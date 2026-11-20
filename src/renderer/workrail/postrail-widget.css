@@ -42,8 +42,13 @@
 .postrail-home-repeat input[type=checkbox] { margin:0; accent-color:var(--accent); }
 .postrail-home-repeat input[inputmode] { width:4em; min-height:0; padding:2px 4px; font:inherit; text-align:end; }
 .postrail-home-repeat small { width:100%; color:var(--danger); text-align:end; }
-.postrail-home-inspect,.postrail-home-badge { padding:1px 5px; font-size:10px; line-height:1.6; border-radius:4px; border:1px solid var(--border); }
-.postrail-home-inspect { margin-left:4px; color:var(--accent); min-height:0; }
+.postrail-home-result { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:8px; padding-block:8px; }
+.postrail-home-summary { display:grid; gap:2px; min-width:0; line-height:1.45; overflow-wrap:anywhere; }
+.postrail-home-result-title { display:flex; align-items:baseline; gap:6px; color:var(--text); }
+.postrail-home-result-title strong { min-width:0; font-size:13px; }
+.postrail-home-badge { flex:none; padding:0 4px; border:1px solid var(--border); border-radius:4px; color:var(--muted); font-size:10px; }
+.postrail-home-result-environment { font-size:11px; }
+.postrail-home-inspect { display:inline-flex; align-items:center; gap:1px; min-height:22px; padding:0 2px; border:0; background:transparent; color:var(--accent); font-size:11px; white-space:nowrap; }
 .postrail-home-spin { color:var(--accent); animation:postrail-rotate 1s linear infinite; }
 @keyframes postrail-rotate { to {transform:rotate(360deg)} }
 @media(prefers-reduced-motion:reduce) { .postrail-home-spin { animation:none; } }

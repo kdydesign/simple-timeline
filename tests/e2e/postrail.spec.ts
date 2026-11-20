@@ -27,10 +27,16 @@ function observeConsent(app:ElectronApplication, allowed:string[]) {
 
 test('sends a saved indexed POST from the editor and Home to a loopback server', async ({desktop},testInfo) => {
   const received: {method?:string; path?:string; body:string}[] = []
+  let missing = false
+  const missingBody = '{\n  "reason": "sample not found"\n}'
   const server = createServer(async (request, response) => {
     const chunks: Buffer[] = []
     for await (const chunk of request) chunks.push(Buffer.from(chunk))
     received.push({method:request.method, path:request.url, body:Buffer.concat(chunks).toString('utf8')})
+    if (missing) {
+      response.writeHead(404, {'Content-Type':'application/json'}).end(missingBody)
+      return
+    }
     response.writeHead(201, {'Content-Type':'application/json'})
     response.end(JSON.stringify({receipt:'loopback-' + received.length}))
   })
@@ -82,6 +88,18 @@ test('sends a saved indexed POST from the editor and Home to a loopback server',
       await expect.poll(()=>app.evaluate(({clipboard})=>clipboard.readText())).toBe('{"value":"Draft draft"}')
       await page.getByRole('button',{name:'원문',exact:true}).click()
       await expect(page.getByLabel('응답 본문 원문')).toHaveValue('{"receipt":"loopback-1"}')
+      const originalBody=page.getByLabel('응답 본문 원문')
+      await expect(originalBody).not.toBeEditable()
+      await originalBody.click()
+      await expect(originalBody).toHaveCSS('outline-style','none')
+      await expect(originalBody).toHaveCSS('border-top-width','0px')
+      await page.getByRole('button',{name:'편집본',exact:true}).click()
+      const editedBody=page.getByLabel('응답 본문 편집')
+      await expect(editedBody).toHaveValue('{"value":"Draft draft"}')
+      await expect(editedBody).toBeEditable()
+      await editedBody.click()
+      await expect(editedBody).toHaveCSS('box-shadow','none')
+      await expect(editedBody).toHaveCSS('outline-style','none')
       await page.getByRole('button', {name:'회차별 결과', exact:true}).click()
       await expect(page.getByLabel('회차별 결과 로그')).toHaveValue(/201/)
 
@@ -118,6 +136,12 @@ test('sends a saved indexed POST from the editor and Home to a loopback server',
       const warnings = await consent.evaluate(value => value.warnings)
       expect(warnings).toHaveLength(3)
       for (const text of warnings) expect(text).toContain(endpoint)
+      missing = true
+      await page.getByLabel('반복 보내기',{exact:true}).uncheck()
+      await page.getByRole('button',{name:'보내기',exact:true}).click()
+      await page.getByRole('button',{name:'전송 오류 · console 열기'}).click()
+      await expect.poll(()=>consoleLog.textContent()).toContain(missingBody)
+      await expect(consoleLog).toContainText('HTTP 404')
     } finally {
       await consent.evaluate(value => value.restore())
       await consent.dispose()

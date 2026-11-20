@@ -1,3 +1,5 @@
+@import '../components/pane-divider.css';
+
 .termrail {
   grid-area: 1 / 1;
   position: relative;
@@ -55,9 +57,7 @@
 .termrail-stage[hidden] { display: none; }
 .termrail-split.column, .termrail-leaf { flex-direction: column; }
 .termrail-branch { display: flex; min-width: 0; min-height: 0; flex-basis: 0; overflow: hidden; }
-.termrail-divider { flex: 0 0 5px; cursor: col-resize; background: var(--border); touch-action: none; }
-.column > .termrail-divider { cursor: row-resize; }
-.termrail-divider:is(:hover,:focus-visible,:active) { background: var(--accent); outline: none; }
+.termrail-divider { flex: 0 0 5px; }
 .termrail-leaf { background: var(--subtle); }
 .termrail-caption {
   display: flex; flex: 0 0 19px; align-items: center; gap: 6px; min-width: 0; padding: 0 5px 0 7px;

@@ -2,7 +2,8 @@ export const releaseTypes={Feat:'기능 추가',Fix:'오류 수정',Perf:'성능
 export interface ReleaseNote {version:string;summary:string;sections:{type:keyof typeof releaseTypes;items:string[]}[];notes?:string[]}
 export const releaseNotes:ReleaseNote[]=[
  {version:'1.1.0',summary:'PostRail 요청 편집기와 Home 즐겨찾기 실행',sections:[
-  {type:'Feat',items:['요청의 쿼리·경로·헤더와 POST 폼·파일을 편집하고, 환경별 로그인과 변수를 관리합니다.','응답 본문을 직접 편집·검색·정렬·복사하고 원문으로 전환할 수 있습니다. 전송 오류는 주소 옆 느낌표와 console에서 확인합니다.','Home 즐겨찾기에서 저장한 반복 POST의 횟수를 조절하고 마지막으로 처리한 회차의 응답을 엽니다.']}]},
+  {type:'Feat',items:['요청의 쿼리·경로·헤더와 POST 폼·파일을 편집하고, 환경별 로그인과 변수를 관리합니다.','응답 본문을 직접 편집·검색·정렬·복사하고 원문으로 전환할 수 있습니다. 전송 오류는 주소 옆 느낌표와 console에서 확인합니다.','Home 즐겨찾기에서 저장한 반복 POST의 횟수를 조절하고 마지막으로 처리한 회차의 응답을 엽니다.']},
+  {type:'Fix',items:['쿼리·헤더는 빈 행에서 바로 입력하고, 응답 편집본과 원문은 선택한 상태로 구분합니다.','console에서 HTTP 오류 본문과 연결 오류를 확인할 수 있습니다. 요청 목록과 드롭다운을 줄이고 Home 결과와 터미널 분할선을 정리했습니다.']}]},
  {version:'1.0.0',summary:'WorkRail 통합 도구와 Node 버전 관리',sections:[
   {type:'Feat',items:['앱 이름과 아이콘을 WorkRail로 바꾸고 Home·PlanRail·NodeRail·TermRail을 상단 메뉴로 연결합니다. TermRail에서 SSH 서버에 연결하고 탭과 별도 창의 분할 배치를 저장할 수 있습니다. 24px 이상 앱 아이콘의 레일 심벌을 92%로 줄이고 16·20px에는 기존 소형 도안을 사용합니다.','홈에서 오늘의 일정, 간결한 PlanRail 상태 위젯과 내 PC의 Node 환경을 확인합니다.','Planrail에서 작성하던 내용과 날짜·화면 상태는 메뉴를 바꿔도 유지됩니다.','Windows x64에서는 nvm의 버전 저장 폴더에 공식 Node ZIP을 설치합니다. WorkRail이 서명된 해시 목록과 ZIP 파일을 확인합니다. nvm 2.x의 첫 설치 후에도 사용 버튼으로 활성 버전을 직접 선택합니다.','공식 Node 배포 표를 버전·분류·npm·상태로 정렬하고 설치 목록과 각각 스크롤합니다.','호스트와 멤버를 확인 후 전환합니다. 이전 호스트 자료는 별도 조회로 보존하며 공유와 업데이트 배포는 직접 다시 시작합니다.','확인된 공식 MSI Node 설치를 Windows 제거 화면으로 정리하고 nvm-windows 설치를 이어갑니다. 개발 실행에서는 독립 관리 창과 복구 바로가기를 제공합니다.']},
   {type:'Fix',items:['TermRail 시작 파일로 인증하면 기본 터미널을 엽니다. 기존 등록 파일도 프롬프트가 돌아올 때마다 다음 줄을 입력합니다. 여러 줄에 걸친 Bash 구문이나 추가 질문은 터미널에서 직접 이어가세요.','서버 수정 창의 입력 크기와 버튼 배치를 서버 추가 창과 통일했습니다.']},

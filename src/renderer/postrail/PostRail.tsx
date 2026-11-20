@@ -44,7 +44,7 @@ export function PostRail({postrail, active, onDirtyChange, resultTarget, onResul
       <div className="pr-editor-column" style={{'--pr-request-share':ratio,'--pr-response-share':100-ratio} as CSSProperties}>
         <RequestEditor postrail={postrail} request={request} onDirtyChange={onDirtyChange}
           onOpenEnvironment={()=>setEnvironmentOpen(true)} onOpenConsole={()=>setConsoleKey(key=>key+1)}/>
-        <div className="pr-resizer" role="separator" aria-orientation="horizontal" aria-label="요청과 응답 영역 크기"
+        <div className="pr-resizer pane-divider" role="separator" aria-orientation="horizontal" aria-label="요청과 응답 영역 크기"
           aria-valuemin={10} aria-valuemax={90} aria-valuenow={ratio} tabIndex={0}
           onDoubleClick={()=>setRatio(30)} onKeyDown={event=>{
             if(event.key==='ArrowUp'||event.key==='ArrowDown'){

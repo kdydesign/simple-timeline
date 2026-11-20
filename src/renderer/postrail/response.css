@@ -9,6 +9,13 @@
   padding:0 5px; border:0; background:transparent; box-shadow:none; color:inherit; font:inherit;
 }
 .pr-response-tools button:hover:enabled { background:var(--control); color:var(--text); }
+.pr-response-modes {
+  display:inline-flex; flex:none; gap:1px; border-radius:4px; background:var(--control);
+}
+.pr-response-modes button { border-radius:3px; }
+.pr-response-modes button[aria-pressed="true"] {
+  font-weight:600; color:var(--text); background:var(--selected-control); box-shadow:inset 0 -2px var(--accent);
+}
 .pr-response-tools > span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pr-response-tools input {
   min-width:0; width:135px; height:21px; margin-left:auto; padding:0 6px; font:inherit;
@@ -27,10 +34,12 @@
   background:transparent; color:transparent; caret-color:var(--text);
 }
 .pr-response-canvas textarea::selection { color:transparent; background:#79b6e557; }
-.pr-response-canvas textarea:focus-visible { outline-offset:-2px; }
+.pr-response-canvas textarea:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+.postrail-workspace[data-pointer-focus="true"] .pr-response-canvas textarea:focus { outline:none; box-shadow:none; }
 ::highlight(postrail-response-hits) { background-color:#e9ba6b; color:#171d20; }
 ::highlight(postrail-response-current) { background-color:#a1dbfa; color:#101519; }
 @media (forced-colors:active) {
+  .pr-response-modes button[aria-pressed="true"] { border-bottom:2px solid Highlight; }
   .pr-response-canvas pre { visibility:hidden; }
   .pr-response-canvas textarea { color:CanvasText; caret-color:CanvasText; }
 }

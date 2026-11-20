@@ -319,7 +319,7 @@ it('retains scoped preflight and login errors without exposing wire values, clea
   const f = await fixture((url, _body, _req, res) => {
     if (url === '/login') {
       res.statusCode = rejectLogin ? 401 : 200
-      res.end(rejectLogin ? 'PRIVATE_RESPONSE' : '{"data":{"token":"PRIVATE_TOKEN"}}')
+      res.end(rejectLogin ? 'invalid credentials' : '{"data":{"token":"PRIVATE_TOKEN"}}')
     } else res.end('PRIVATE_RESPONSE')
   })
   const request = {...f.request, url:f.origin+'/samples?filter=PRIVATE_QUERY', headers:{'X-Note':'PRIVATE_HEADER'}}
@@ -335,7 +335,8 @@ it('retains scoped preflight and login errors without exposing wire values, clea
   f.runner.start({...f.input,request}); await f.finish()
   expect(f.runner.state().sendErrors).toEqual([])
   const lines = f.runner.consoleSince(0)
-  expect(lines.filter(line => line.error)).toHaveLength(2)
+  expect(lines.filter(line => line.error && line.text.includes(' · ERROR · '))).toHaveLength(2)
+  expect(lines.some(line => line.text === 'invalid credentials')).toBe(true)
   expect(lines.map(line => line.text).join('\n')).toMatch(/로그인 시작[\s\S]*토큰 발급[\s\S]*토큰 재사용/)
   expect(JSON.stringify(lines)).not.toMatch(/PRIVATE_|secret-|\/samples|9007199254740993/)
   expect(f.runner.consoleSince(lines.at(-2)!.id)).toEqual(lines.slice(-1))
@@ -394,7 +395,7 @@ it('distinguishes a main-request 401 with or without the environment token and p
   const f = await fixture((url,_body,_req,res) => {
     if (url === '/login') { res.end('{"data":{"token":"PRIVATE_TOKEN"}}'); return }
     res.statusCode = url === '/ok' ? 200 : 401
-    res.end('PRIVATE_ERROR')
+    res.end('token=PRIVATE_ERROR')
   })
   f.runner.start({...f.input,request:{...f.request,useAuth:false}})
   await f.finish()
@@ -406,7 +407,7 @@ it('distinguishes a main-request 401 with or without the environment token and p
   await f.finish()
   expect(f.runner.state().sendErrors).toMatchObject([{requestId:'r',environmentId:'e'}])
   const errors = f.runner.consoleSince(0).filter(line=>line.error)
-  expect(errors).toHaveLength(2)
+  expect(errors.filter(line=>line.text.includes(' · ERROR · '))).toHaveLength(2)
   expect(JSON.stringify(errors)).not.toMatch(/PRIVATE_/)
 })
 
@@ -429,4 +430,92 @@ it('expands only literal URL-typed query placeholders component-wise, preserving
     queryRows:[{enabled:true,name:'q',value:'${missing}${value}',raw,encodeVariables:true}]}
   f.runner.start({...f.input,request});await f.finish()
   expect([...new URL(urls[0],f.origin).searchParams]).toEqual([['q','${missing}A&B +한']])
+})
+
+it('keeps HTTP error formatting and masks sensitive fields, paths and credentials in server echoes', async () => {
+  const body = '  {\r\n  "issue" : "<script>invalid</script>",\r\n  "id":9007199254740993, "id":-0,\r\n  "refresh_token" : {"nested":"PRIVATE_REFRESH"}, "pass\\u0077ord":"PRIVATE_PASSWORD",\r\n  "route":"https://user:PRIVATE_URL@host.test/?token=PRIVATE_QUERY",\r\n  "cause":"see C:\\\\Users\\\\PRIVATE_PATH\\\\file.txt"\r\n}  '
+  const f = await fixture((_url,_body,_req,res)=>{
+    res.statusCode = 422
+    res.setHeader('set-cookie','name=PRIVATE_COOKIE')
+    res.end(body)
+  })
+  f.runner.start({...f.input,request:{...f.request,useAuth:false}})
+  await f.finish()
+  const lines = f.runner.consoleSince(0)
+  expect(lines[1].text).toContain('HTTP 422')
+  expect(lines.slice(2).map(line=>line.text)).toEqual([
+    '  {','  "issue" : "<script>invalid</script>",','  "id":9007199254740993, "id":-0,',
+    '  "refresh_token" : "••••", "pass\\u0077ord":"••••",','  "route":"••••",','  "cause":"see ••••"','}  ',
+  ])
+  expect(lines.slice(2).every(line=>line.error)).toBe(true)
+  expect(JSON.stringify([lines,f.runner.state()])).not.toContain('PRIVATE_')
+  expect(f.runner.detail('1')?.body).toBe(body)
+  expect(f.runner.state().sendErrors![0].message).toBe('응답 HTTP 422')
+})
+
+it('logs the transport code and message before a response for both login and main requests',async()=>{
+  const f = await fixture((_url,_body,_req,res)=>res.end())
+  const runner = new PostRailRunner({
+    read:()=>({requests:[f.request],environments:[f.environment],groups:[],environmentId:'e'}),
+    password:()=>'PRIVATE_PASSWORD',reserveIndex:()=>'1',
+  },async()=>{throw new TypeError('fetch failed',{cause:Object.assign(new Error('connection lost at /tmp/PRIVATE_PATH refused'),{code:'ECONNRESET'})})})
+  cleanup.push(()=>runner.shutdown())
+  for (const useAuth of [false,true]) {
+    runner.start({...f.input,request:{...f.request,useAuth}})
+    await vi.waitFor(()=>expect(postRailBusy(runner.state().phase)).toBe(false))
+    expect(runner.consoleSince(0).at(-1)?.text).toBe('ECONNRESET · connection lost at •••• refused')
+  }
+  expect(JSON.stringify(runner.state())).not.toContain('connection lost')
+})
+
+it('bounds a single multiline error and its individual bytes in the session console',async()=>{
+  let body = 'x\n'.repeat(1500)
+  const f=await fixture((_url,_body,_req,res)=>{res.statusCode=400;res.end(body)})
+  const input={...f.input,request:{...f.request,useAuth:false}}
+  f.runner.start(input);await f.finish()
+  const lines=f.runner.consoleSince(0)
+  expect(lines.length).toBeLessThanOrEqual(1000)
+  expect(lines.some(line=>line.text.includes('HTTP 400'))).toBe(true)
+  expect(lines.at(-1)?.text).toContain('생략')
+  body='한'.repeat(20000)
+  f.runner.start(input);await f.finish()
+  const tail=f.runner.consoleSince(lines.at(-1)!.id)
+  expect(tail.at(-1)?.text).toContain('생략')
+  expect(Buffer.byteLength(tail.map(line=>line.text).join('\n'))).toBeLessThan(17*1024)
+})
+
+it('masks login secrets in plain text and XML, preserving nonsecret numbers and the separate response record',async()=>{
+  const f=await fixture((url,_body,_req,res)=>{
+    res.statusCode=401
+    if(url==='/login') res.end('Bad credential PRIVATE_LITERAL or PRIVATE_HEADER\n<error><access_token>PRIVATE_XML</access_token></error>')
+    else res.end('{"code":401,"page":12,"type":"application/json"}')
+  })
+  f.environment.loginBody='{"nested":{"password":"PRIVATE_LITERAL"}}'
+  f.environment.loginHeaders={'X-Login-Auth':'PRIVATE_HEADER','Content-Type':'application/json'}
+  f.runner.start(f.input);await f.finish()
+  const login=f.runner.consoleSince(0)
+  expect(login.slice(-2).map(line=>line.text)).toEqual(['Bad credential •••• or ••••','<error><access_token>••••</access_token></error>'])
+  f.runner.start({...f.input,request:{...f.request,useAuth:false,url:f.origin+'/samples?page=1'}});await f.finish()
+  const actual='{"code":401,"page":12,"type":"application/json"}'
+  expect(f.runner.consoleSince(login.at(-1)!.id).at(-1)?.text).toBe(actual)
+  expect(f.runner.detail('1')?.body).toBe(actual)
+})
+
+it('retains HTTP status and sanitized stream error after headers for login and API',async()=>{
+  const f = await fixture((_url,_body,_req,res)=>res.end())
+  const runner = new PostRailRunner({
+    read:()=>({requests:[f.request],environments:[f.environment],groups:[],environmentId:'e'}),
+    password:()=>'password',reserveIndex:()=>'1',
+  },async()=>new Response(new ReadableStream({start(controller) {
+    controller.error(Object.assign(new Error("socket '/tmp/private dir/PRIVATE_SOCKET' reset by peer"),{code:'ECONNRESET'}))
+  }}),{status:502}))
+  cleanup.push(()=>runner.shutdown())
+  for (const useAuth of [false,true]) {
+    const before=runner.state().consoleVersion!
+    runner.start({...f.input,request:{...f.request,useAuth}})
+    await vi.waitFor(()=>expect(postRailBusy(runner.state().phase)).toBe(false))
+    const lines=runner.consoleSince(before)
+    expect(lines.at(-2)?.text).toContain('HTTP 502')
+    expect(lines.at(-1)?.text).toBe("ECONNRESET · socket '••••' reset by peer")
+  }
 })

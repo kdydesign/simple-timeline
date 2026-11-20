@@ -5,7 +5,7 @@ import type { PrFile, PrLibrary, PrMethod } from '../../shared/postrail'
 import { postRailBusy, validPostRailCount, type PrDetail, type PrRow, type PrRunState, type PrStart } from '../../shared/postrail-run'
 import { PostRailRunError, prepareRun, setHeader, type PreparedRun } from './prepare'
 import { PostRailResults } from './results'
-import { login, sendRequest, type PostRailFetch } from './transport'
+import { login, LoginFailure, sendRequest, type PostRailFetch } from './transport'
 
 export { PostRailRunError } from './prepare'
 
@@ -158,7 +158,7 @@ export class PostRailRunner {
       }
       if (run.request.useAuth) {
         if (run.login) this.console.write(context, '로그인 시작')
-        const token = run.login ? await login(this.fetchImpl, run) : this.token(run.env.id)
+        const token = run.login ? await login(this.fetchImpl, run, secrets) : this.token(run.env.id)
         if (this.current.phase === 'stopping') return
         if (!token) throw new PostRailRunError('인증이 만료되었습니다. 다시 보내세요.')
         setHeader(headers, run.env.tokenHeader, run.env.tokenPrefix + token.value)
@@ -185,7 +185,7 @@ export class PostRailRunner {
           catch { throw new PostRailRunError('다음 인덱스를 저장할 수 없어 발송을 중지했습니다.') }
         }
         this.console.write(context, '요청 전송', {iteration:String(number)})
-        const detail = await sendRequest(this.fetchImpl, run, String(number), index, headers, secrets)
+        const {detail,source} = await sendRequest(this.fetchImpl, run, String(number), index, headers, secrets)
         this.current.completed = String(number)
         if (detail.outcome === 'error') this.current.failed = String(BigInt(this.current.failed)+1n)
         if (detail.outcome === 'uncertain') this.current.uncertain = String(BigInt(this.current.uncertain)+1n)
@@ -201,7 +201,7 @@ export class PostRailRunner {
           message = (run.request.useAuth ? '환경 토큰을 붙인 본 요청 ' : '환경 인증 없이 전송한 본 요청 ') + detail.message
           if (run.request.useAuth) message += ' · 캐시 폐기'
         }
-        this.console.write(context, message, {iteration:detail.iteration, durationMs:detail.durationMs, error})
+        this.console.write(context, message, {iteration:detail.iteration, durationMs:detail.durationMs, error, source})
         try { results.put(detail) }
         catch { throw new PostRailRunError('회차 결과를 임시 저장할 수 없어 이후 발송을 중지했습니다.') }
         this.onChange()
@@ -210,7 +210,7 @@ export class PostRailRunner {
       this.current.phase = 'failed'
       this.current.message = error instanceof PostRailRunError ? error.message : '요청을 실행할 수 없습니다.'
       if (authenticating) this.current.message += ' · 본 요청 미전송'
-      this.console.write(context, this.current.message, {error:true})
+      this.console.write(context, this.current.message, {error:true, source:error instanceof LoginFailure ? error.source : undefined})
     } finally {
       if (this.current.phase !== 'failed') this.current.phase = this.stopping() ? 'stopped' : 'completed'
       if (this.current.phase === 'completed' && this.current.failed === '0' && this.current.uncertain === '0') {

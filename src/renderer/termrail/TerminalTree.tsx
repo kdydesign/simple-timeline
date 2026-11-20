@@ -71,7 +71,7 @@ export function TerminalTree({node, path = [], stage}: {node: Tree<Session> | nu
     <div className="termrail-branch" style={{flexGrow: fraction}}><TerminalTree node={node[side]} path={[...path, side]} stage={stage}/></div>
   return <div className={'termrail-split ' + node.direction}>
     {child('first', node.ratio)}
-    <div role="separator" tabIndex={0} className="termrail-divider" aria-label="터미널 크기 조절"
+    <div role="separator" tabIndex={0} className="termrail-divider pane-divider" aria-label="터미널 크기 조절"
       aria-orientation={row ? 'vertical' : 'horizontal'} aria-valuemin={5} aria-valuemax={95}
       aria-valuenow={Math.round(node.ratio * 100)}
       onPointerDown={e => {

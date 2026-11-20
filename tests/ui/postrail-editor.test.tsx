@@ -179,7 +179,7 @@ it('shows whether the current environment has a login profile before sending', (
 })
 
 it('edits masked response drafts, preserves exact JSON tokens, and copies only the displayed body', async () => {
-  const received='{"b":9007199254740993,"b":1.00e+9,"s":"••••"}'
+  const received=' {\r\n\t"b":9007199254740993, "b":1.00e+9,\r\n "s":"••••" }  '
   const text='{\n  "b": 9007199254740993,\n  "b": 1.00e+9,\n  "s": "••••"\n}'
   const changed='{"z":"\\u0061","q":[],"q":{}}'
   const formatted='{\n  "z": "\\u0061",\n  "q": [],\n  "q": {}\n}'
@@ -191,7 +191,10 @@ it('edits masked response drafts, preserves exact JSON tokens, and copies only t
   try {
     const app=render(<ResponsePane postrail={c} active selected="1"/>)
     const field=await screen.findByRole('textbox',{name:'응답 본문 편집'})
+    const draftMode=screen.getByRole('button',{name:'편집본',pressed:true})
+    const originalMode=screen.getByRole('button',{name:'원문',pressed:false})
     expect(field).toHaveValue(text)
+    expect(field).not.toHaveAttribute('readonly')
     expect(screen.getAllByText(/HTTP 200/)).toHaveLength(1)
     fireEvent.change(field,{target:{value:changed}})
     fireEvent.click(screen.getByRole('button',{name:'포맷 정렬'}))
@@ -199,14 +202,21 @@ it('edits masked response drafts, preserves exact JSON tokens, and copies only t
     fireEvent.click(screen.getByRole('tab',{name:'헤더'}))
     expect(screen.getByLabelText('응답 헤더')).toHaveTextContent('Content-Type: application/json')
     fireEvent.click(screen.getByRole('tab',{name:'본문'}))
-    fireEvent.click(screen.getByRole('button',{name:'원문'}))
+    fireEvent.click(originalMode)
+    expect(originalMode).toHaveAttribute('aria-pressed','true')
+    expect(draftMode).toHaveAttribute('aria-pressed','false')
+    fireEvent.click(originalMode)
     const original=screen.getByRole('textbox',{name:'응답 본문 원문'})
-    expect(original).toHaveValue(received)
+    // Native textarea values normalize line endings. Clipboard below checks the received CRLF.
+    expect(original).toHaveValue(' {\n\t"b":9007199254740993, "b":1.00e+9,\n "s":"••••" }  ')
+    expect(screen.getByRole('button',{name:'포맷 정렬'})).toBeDisabled()
     expect(original).toHaveAttribute('readonly')
     fireEvent.click(screen.getByRole('button',{name:'응답 본문 복사'}))
     await screen.findByText('복사됨')
     expect(copy).toHaveBeenLastCalledWith(received)
-    fireEvent.click(screen.getByRole('button',{name:'편집본'}))
+    fireEvent.click(draftMode)
+    expect(draftMode).toHaveAttribute('aria-pressed','true')
+    expect(originalMode).toHaveAttribute('aria-pressed','false')
     expect(screen.getByLabelText('응답 본문 편집')).toHaveValue(formatted)
     const broken=formatted.slice(0,-1)
     fireEvent.change(screen.getByLabelText('응답 본문 편집'),{target:{value:broken}})
@@ -222,6 +232,23 @@ it('edits masked response drafts, preserves exact JSON tokens, and copies only t
     if(originalClipboard) Object.defineProperty(navigator,'clipboard',originalClipboard)
     else Reflect.deleteProperty(navigator,'clipboard')
   }
+})
+
+it('keeps the active response mode visible when original and edited text are identical',async()=>{
+  const c={...controller(),run}
+  const received='변경되지 않은 서버 응답'
+  c.detail.mockResolvedValue({...row,body:received,headers:{'Content-Type':'text/plain'}})
+  render(<ResponsePane postrail={c} active selected="1"/>)
+  expect(await screen.findByLabelText('응답 본문 편집')).toHaveValue(received)
+  const original=screen.getByRole('button',{name:'원문',pressed:false})
+  const draft=screen.getByRole('button',{name:'편집본',pressed:true})
+  fireEvent.click(original)
+  expect(screen.getByLabelText('응답 본문 원문')).toHaveValue(received)
+  expect(screen.getByLabelText('응답 본문 원문')).toHaveAttribute('readonly')
+  expect(original).toHaveAttribute('aria-pressed','true')
+  fireEvent.click(draft)
+  expect(screen.getByLabelText('응답 본문 편집')).not.toHaveAttribute('readonly')
+  expect(draft).toHaveAttribute('aria-pressed','true')
 })
 
 it('cycles literal matches on the current view without changing the edited body',async()=>{
@@ -249,7 +276,7 @@ it('keeps empty and interrupted response details in the header and disables empt
   render(<ResponsePane postrail={c} active selected="1"/>)
   const status=await screen.findByText(/응답 본문 수신 중단/)
   expect(status).toHaveTextContent(/HTTP 200.*1회차.*24ms/)
-  for(const name of ['포맷 정렬','원문','응답 본문 복사']) expect(screen.getByRole('button',{name})).toBeDisabled()
+  for(const name of ['포맷 정렬','원문','편집본','응답 본문 복사']) expect(screen.getByRole('button',{name})).toBeDisabled()
   expect(screen.getByRole('searchbox')).toBeDisabled()
   expect(screen.queryByLabelText('응답 본문 편집')).toBeNull()
 })
@@ -270,7 +297,7 @@ it('opens the session console on demand, keeps the readers scroll position, and 
   const c = {...controller(),run:{...run,consoleVersion:1}}
   c.page.mockResolvedValue([])
   c.consoleSince.mockResolvedValueOnce([{id:1,text:'ERROR · 로그인 실패',error:true}])
-    .mockResolvedValueOnce([{id:2,text:'INFO · 요청 전송',error:false}])
+    .mockResolvedValueOnce([{id:2,text:'  <b>실패</b>\t',error:true,ending:'\r\n'},{id:3,text:'INFO · 요청 전송',error:false}])
   const props = {postrail:c, selected:'', onSelect:vi.fn(), active:true, environmentButton:null, requestId:'a'}
   const app = render(<ResultsFooter {...props}/>)
   expect(c.consoleSince).not.toHaveBeenCalled()
@@ -283,6 +310,8 @@ it('opens the session console on demand, keeps the readers scroll position, and 
   fireEvent.scroll(view)
   app.rerender(<ResultsFooter {...props} postrail={{...c,run:{...run,consoleVersion:2}}} openConsole={1}/>)
   await waitFor(()=>expect(view).toHaveTextContent('INFO · 요청 전송'))
+  expect(view.textContent).toContain('  <b>실패</b>\t\r\nINFO · 요청 전송')
+  expect(view.querySelector('b')).toBeNull()
   expect(c.consoleSince).toHaveBeenLastCalledWith(1)
   expect(view.scrollTop).toBe(42)
   fireEvent.click(screen.getByRole('button',{name:'회차별 결과'}))
@@ -365,13 +394,21 @@ it('restores each POST mode draft and saves repeat eligibility only through 변�
   })}))
 })
 
-it('distinguishes the request auth choice and opens environment setup and send diagnostics',()=>{
+it('distinguishes the request auth choice and opens environment setup and send diagnostics',async()=>{
   const c=controller()
   c.sendError.mockReturnValue({message:'요청 주소가 환경에 지정한 토큰 수신 API 주소와 일치하지 않습니다.',preflight:true})
   const openEnvironment=vi.fn(),openConsole=vi.fn()
   render(<RequestEditor postrail={c} request={first} onOpenEnvironment={openEnvironment} onOpenConsole={openConsole}/>)
   const indicator=screen.getByRole('button',{name:'전송 오류 · console 열기'})
   expect(indicator).toHaveAccessibleDescription(/토큰 수신 API 주소/)
+  act(()=>indicator.focus())
+  const tooltip=await screen.findByRole('tooltip')
+  expect(tooltip).toHaveTextContent(/토큰 수신 API 주소/)
+  expect(indicator.closest('.pr-compose')).not.toContainElement(tooltip)
+  fireEvent.keyDown(indicator,{key:'Escape'})
+  await waitFor(()=>expect(screen.queryByRole('tooltip')).toBeNull())
+  fireEvent.pointerMove(indicator,{pointerType:'mouse'})
+  expect(await screen.findByRole('tooltip')).toHaveTextContent(/토큰 수신 API 주소/)
   fireEvent.click(indicator)
   expect(openConsole).toHaveBeenCalledOnce()
   fireEvent.click(screen.getByRole('button',{name:'인증 없음'}))
@@ -455,4 +492,81 @@ it('encodes substitutions in newly typed query fields while retaining legacy sub
   expect(sent.queryRows).toBeDefined()
   const target=urlWithQuery(sent.url,sent.queryRows!,value=>value.replace(/\$\{([^{}]+)\}/g,(_,name:string)=>(env.variables as Record<string,string>)[name]))
   expect(target).toBe('https://example.test/api?new=%24%7Bliteral%7D-A%26B%2B&old=a&b=c')
+})
+
+it('opens headers and query parameters with editable entry rows without modifying the request',async()=>{
+  const c=controller(),dirty=vi.fn()
+  render(<RequestEditor postrail={c} request={second} onDirtyChange={dirty}/>)
+  const name=(table:string,n:number)=>screen.getByRole('textbox',{name:table+' '+n+'행 이름'})
+  expect(name('헤더',1)).toHaveValue('')
+  fireEvent.click(screen.getByRole('button',{name:'헤더 추가'}))
+  expect(name('헤더',1)).toHaveFocus()
+  fireEvent.click(screen.getByRole('tab',{name:'파라미터'}))
+  expect(name('쿼리',1)).toHaveValue('')
+  fireEvent.click(screen.getByRole('button',{name:'쿼리 추가'}))
+  expect(name('쿼리',1)).toHaveFocus()
+  expect(screen.queryByRole('button',{name:'변경 저장'})).toBeNull()
+  expect(dirty).toHaveBeenLastCalledWith(false)
+  fireEvent.click(screen.getByRole('button',{name:'보내기'}))
+  await waitFor(()=>expect(c.start).toHaveBeenCalledWith(second,'dev','1'))
+
+  fireEvent.change(name('쿼리',1),{target:{value:'search'}})
+  fireEvent.change(screen.getByLabelText('쿼리 1행 값'),{target:{value:'A&B'}})
+  expect(name('쿼리',2)).toHaveValue('')
+  expect(screen.getByLabelText('요청 URL')).toHaveValue(second.url+'?search=A%26B')
+  fireEvent.click(screen.getByRole('tab',{name:'헤더'}))
+  fireEvent.change(screen.getByLabelText('헤더 1행 값'),{target:{value:'sample'}})
+  fireEvent.change(name('헤더',1),{target:{value:'X-Note'}})
+  expect(name('헤더',2)).toHaveValue('')
+  fireEvent.click(screen.getByRole('button',{name:'헤더 추가'}))
+  expect(name('헤더',2)).toHaveFocus()
+  fireEvent.click(screen.getByRole('button',{name:'raw'}))
+  expect(screen.getByLabelText('raw 요청 헤더')).toHaveValue('X-Note: sample')
+  fireEvent.click(screen.getByRole('button',{name:'변경 저장'}))
+  await waitFor(()=>expect(c.mutate).toHaveBeenCalledWith({type:'request.content',baseUrl:second.url,request:{
+    ...second,url:second.url+'?search=A%26B',queryRows:[{enabled:true,name:'search',value:'A&B'}],
+    headers:{'X-Note':'sample'},headerRows:[{enabled:true,name:'X-Note',value:'sample'}],
+  }}))
+})
+
+it('returns the last cleared header or query to an untouched entry row',async()=>{
+  const c=controller(),dirty=vi.fn()
+  render(<RequestEditor postrail={c} request={second} onDirtyChange={dirty}/>)
+  const header=screen.getByLabelText('헤더 1행 이름')
+  fireEvent.change(header,{target:{value:'X-Remove'}})
+  fireEvent.change(header,{target:{value:''}})
+  fireEvent.click(screen.getByRole('tab',{name:'파라미터'}))
+  const query=screen.getByLabelText('쿼리 1행 값')
+  fireEvent.change(query,{target:{value:'test'}})
+  fireEvent.change(query,{target:{value:''}})
+  expect(screen.queryByLabelText('쿼리 2행 이름')).toBeNull()
+  expect(screen.getByLabelText('요청 URL')).toHaveValue(second.url)
+  expect(dirty).toHaveBeenLastCalledWith(false)
+  fireEvent.click(screen.getByRole('button',{name:'보내기'}))
+  await waitFor(()=>expect(c.start).toHaveBeenCalledWith(second,'dev','1'))
+})
+
+it.each(['쿼리','헤더'])('retains position and cursor while renaming a temporarily empty %s row',async table=>{
+  const c=controller()
+  const request={...second,url:second.url+'?a=&b=2',headers:{a:'',b:'2'}}
+  render(<RequestEditor postrail={c} request={request}/>)
+  if (table==='쿼리') fireEvent.click(screen.getByRole('tab',{name:'파라미터'}))
+  const firstName=screen.getByLabelText(table+' 1행 이름')
+  firstName.focus()
+  fireEvent.change(firstName,{target:{value:''}})
+  expect(firstName).toHaveFocus()
+  expect(firstName).toHaveValue('')
+  expect(screen.getByLabelText(table+' 2행 이름')).toHaveValue('b')
+  fireEvent.click(screen.getByRole('button',{name:'보내기'}))
+  const sent=c.start.mock.calls[0][0] as PrRequest
+  if (table==='쿼리') expect(sent.url).toBe(second.url+'?b=2')
+  else expect(sent.headers).toEqual({b:'2'})
+  fireEvent.change(firstName,{target:{value:'c'}})
+  expect(screen.getByLabelText(table+' 1행 이름')).toHaveValue('c')
+  expect(screen.getByLabelText(table+' 2행 이름')).toHaveValue('b')
+  fireEvent.click(screen.getByRole('button',{name:'변경 저장'}))
+  await waitFor(()=>expect(c.mutate).toHaveBeenCalledOnce())
+  const saved=c.mutate.mock.calls[0][0].request as PrRequest
+  if (table==='쿼리') expect(saved.url).toBe(second.url+'?c=&b=2')
+  else expect(Object.keys(saved.headers)).toEqual(['c','b'])
 })

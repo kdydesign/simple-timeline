@@ -1,6 +1,7 @@
 export interface PrConsoleLine {
   id: number
   text: string
+  ending?: string
   error: boolean
 }
 

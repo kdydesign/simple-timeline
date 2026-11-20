@@ -3,6 +3,7 @@ import type {PrField,PrMethod,PrRequest} from '../../shared/postrail'
 import {pathNames,queryFromUrl,urlWithQuery} from '../../shared/postrail-parameters'
 import {postRailBusy,usesPostRailIndex,validPostRailCount} from '../../shared/postrail-run'
 import {Select} from '../components/Select'
+import {Tooltip,TooltipContent,TooltipProvider,TooltipTrigger} from '../components/ui/tooltip'
 import {TemplateField} from './TemplateField'
 import {ParameterTable} from './ParameterTable'
 import {bodyError,emptyField,RequestBody} from './RequestBody'
@@ -155,7 +156,12 @@ export function RequestEditor({postrail,request,onDirtyChange,onOpenEnvironment,
   function fieldError(field:Field) {
     return request && errors[field] ? <p id={id+field+'-error'} className="pr-error">{errors[field]}</p> : null
   }
-  function changeRows(headerRows:PrField[]) {edit({headerRows,rawText:undefined})}
+  function changeRows(headerRows:PrField[]) {
+    const originalHeaders=Object.entries(base.headers)
+    const matchesLegacy=!base.headerRows && headerRows.length===originalHeaders.length &&
+      headerRows.every((row,i)=>row.enabled && row.name===originalHeaders[i][0] && row.value===originalHeaders[i][1])
+    edit({headerRows:matchesLegacy ? undefined : headerRows,rawText:undefined})
+  }
   function changeMime(value:string) {
     if (mimeRow<0) changeRows([...headerRows,{enabled:true,name:'Content-Type',value}])
     else changeRows(value ? headerRows.map((row,i)=>i===mimeRow ? {...row,value} : row) : headerRows.filter((_,i)=>i!==mimeRow))
@@ -196,15 +202,17 @@ export function RequestEditor({postrail,request,onDirtyChange,onOpenEnvironment,
       </div>
       <div className="pr-endpoint">
         <div className="pr-address">
-          <div className="pr-method"><Select escapeClipping label="HTTP 메서드" value={input.method} disabled={!request} options={methods} onChange={value=>{
+          <div className="pr-method"><Select compact escapeClipping label="HTTP 메서드" value={input.method} disabled={!request} options={methods} onChange={value=>{
             const method=value as PrMethod
             edit({method,...(method!=='POST' && input.savedRepeatCount!=null ? {savedRepeatCount:null} : {})})
             viewAs({tab:method==='GET'?'headers':'body'})
           }}/></div>
-          {sendError && <span className="pr-send-diagnostic">
-            <button aria-label="전송 오류 · console 열기" aria-describedby={id+'send-error'} onClick={onOpenConsole}>!</button>
-            <span id={id+'send-error'} role="tooltip">{sendError.message}</span>
-          </span>}
+          {sendError && <TooltipProvider delayDuration={150}><Tooltip>
+            <TooltipTrigger asChild><button type="button" className="pr-send-diagnostic" aria-label="전송 오류 · console 열기"
+              aria-description={sendError.message} onClick={onOpenConsole}>!</button></TooltipTrigger>
+            <TooltipContent className="pr-send-tooltip" side="bottom" align="start" sideOffset={5}
+              hideWhenDetached collisionPadding={{top:48,bottom:8,left:8,right:8}}>{sendError.message}</TooltipContent>
+          </Tooltip></TooltipProvider>}
           <TemplateField {...fieldProps('url')} aria-label="요청 URL" value={input.url} disabled={!request || saving} onValueChange={url=>edit(changedAddress(input,url))}/>
         </div>
         {busy ? <button className="workrail-control" disabled={run?.phase==='stopping'} onClick={()=>void postrail.stop()}>
@@ -243,7 +251,7 @@ export function RequestEditor({postrail,request,onDirtyChange,onOpenEnvironment,
           </div>
           {view.raw ? <TemplateField {...fieldProps('headers')} className="pr-raw-editor" multiline value={raw} aria-label="raw 요청 헤더"
             placeholder="Accept: application/json" onValueChange={rawText=>edit({rawText:rawText===rawHeaders(rows)?undefined:rawText})}/> :
-            <ParameterTable rows={headerRows} label="헤더" newRow={emptyField} onChange={changeRows} issue={tableIssue}/>}
+            <ParameterTable key={request.id+'-headers'} entryRow rows={headerRows} label="헤더" newRow={emptyField} onChange={changeRows} issue={tableIssue}/>}
           {(!tableIssue || view.raw) && fieldError('headers')}
         </> : tab==='params' ? <>
           <div className="pr-modes">
@@ -254,7 +262,9 @@ export function RequestEditor({postrail,request,onDirtyChange,onOpenEnvironment,
             <TemplateField aria-label={name+' 경로 값'} id={name===badPath?id+'params':undefined} aria-invalid={!!pathIssue(name)}
               value={input.pathValues && Object.hasOwn(input.pathValues,name) ? input.pathValues[name] : ''} onValueChange={value=>edit({pathValues:{...input.pathValues,[name]:value}})}/>
             {pathIssue(name) && <small className="pr-error">{pathIssue(name)}</small>}</label>) : <p>URL의 경로에 :id처럼 이름을 입력하세요.</p>):
-            <ParameterTable label="쿼리" rows={queryRows} newRow={emptyField} onChange={queryRows=>edit({queryRows,url:urlWithQuery(input.url,queryRows)})}/>}
+            <ParameterTable key={request.id+'-query'} entryRow label="쿼리" rows={queryRows} newRow={emptyField} onChange={queryRows=>edit({
+              queryRows:queryRows.length || base.queryRows ? queryRows : undefined,url:urlWithQuery(input.url,queryRows),
+            })}/>}
         </> : <div className="pr-auth">
           <div role="group" aria-label="이 요청의 인증" className="pr-modes"><span>이 요청의 인증</span>
             <button aria-pressed={!input.useAuth} onClick={()=>edit({useAuth:false})}>인증 없음</button>

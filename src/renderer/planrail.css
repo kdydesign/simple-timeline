@@ -92,3 +92,17 @@ button.ui-switch[data-state="checked"],button.ui-switch[data-state="checked"]:ho
 .reminder-switch [data-slot="switch-thumb"] { width: 12px; height: 12px; }
 .reminder-switch[data-state="checked"] [data-slot="switch-thumb"] { transform: translateX(14px); }
 .reminder-options .icon { width: 16px; height: 16px; color: var(--muted); }
+
+.select-trigger[data-compact] {
+  box-sizing: border-box; height: 22px; min-height: 0; gap: 4px; padding: 1px 5px;
+  border-radius: 5px; font-size: 12px; line-height: 1.2; font-weight: 400;
+}
+.select-trigger[data-compact] > svg, .select-popover[data-compact] [data-slot="select-item-indicator"] svg {
+  width: 12px; height: 12px;
+}
+.select-popover[data-compact] {
+  box-sizing: border-box; width: var(--radix-select-trigger-width); padding: 2px; border-radius: 6px;
+}
+.select-popover[data-compact] [data-radix-select-viewport] {padding: 0}
+.select-popover[data-compact] [role="option"] {min-height: 22px; padding: 2px 17px 2px 4px; font-size: 12px; line-height: 1.25}
+.select-popover[data-compact] [data-slot="select-item-indicator"] {right: 2px}

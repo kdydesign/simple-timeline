@@ -8,7 +8,7 @@
   box-sizing: border-box; min-width: 0; width: 100%; border: 1px solid var(--control-border);
   color: var(--text); background: var(--control); border-radius: 6px; font: inherit;
 }
-.pr-env-choice .select-trigger { min-height: 0; height: 26px; padding: 3px 7px; font-size: inherit; font-weight: 400; }
+
 .postrail-popup option { color: var(--text); background: var(--surface); }
 .pr-add-bar { display: flex; gap: 5px; flex: none; border-block: 1px solid var(--rim, var(--border)); padding: 6px 0; }
 .pr-add-bar input { flex: 1; height: 26px; padding: 3px 7px; }
@@ -20,14 +20,14 @@
 .pr-no-matches { margin: 10px 3px; color: var(--muted); }
 .pr-group-heading, .pr-request-row { display: flex; align-items: center; gap: 1px; min-width: 0; }
 .pr-group-heading { padding: 4px 1px; }
-.pr-request-row { border: 1px solid transparent; border-radius: 5px; margin: 2px 0; padding: 1px 2px; }
+.pr-request-row { border: 1px solid transparent; border-radius: 5px; margin: 1px 0; padding: 0 2px; }
 .pr-request-row[data-selected=true] { background: var(--selected-control); border-color: var(--selected-border); }
 .pr-request-tree button {
   border: none; box-shadow: none; color: inherit; background: transparent; font: inherit; padding: 2px 3px; border-radius: 3px;
 }
 .pr-request-tree button:hover { background: var(--hover); }
 .pr-request-tree button:first-child {
-  display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; min-height: 28px; text-align: left;
+  display: flex; align-items: center; gap: 4px; flex: 1; min-width: 0; min-height: 21px; text-align: left;
 }
 .pr-group-heading button:first-child { font-weight: 650; min-height: 25px; }
 .pr-group-heading button .icon { flex: none; width: 10px; height: 10px; }

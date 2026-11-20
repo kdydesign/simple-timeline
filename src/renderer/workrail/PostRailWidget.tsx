@@ -1,4 +1,4 @@
-import { ArrowRightLeft, LoaderCircle, Play } from 'lucide-react'
+import { ArrowRightLeft, ChevronRight, LoaderCircle, Play } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import type { PrEnv, PrRequest } from '../../shared/postrail'
 import { postRailBusy, validPostRailCount } from '../../shared/postrail-run'
@@ -80,12 +80,21 @@ export function PostRailWidget({postrail,onOpen,onResult}: {
         loading={!!(submitting && postrail.submittingRequestId===request.id || busy && run?.requestId===request.id)}/>)}
     </ul>}
     {available && !favorites.length && <p className="workrail-muted">PostRail에서 저장한 요청 옆의 ☆를 누르면 여기에 표시됩니다.</p>}
-    {run && run.phase !== 'idle' && <p className="postrail-home-result" role="status">
-      {finished && <span className="postrail-home-badge">결과</span>} 최근 실행 · <strong>{run.requestName}</strong> · {run.environmentName} · {formatPostRailStatus(run)}
-      {run.message && ' · ' + run.message}
+    {run && run.phase !== 'idle' && <div className="postrail-home-result">
+      <div role="status" aria-label="최근 실행" className="postrail-home-summary">
+        <div className="postrail-home-result-title">
+          <span className="postrail-home-badge">{finished ? '결과' : '진행'}</span>
+          <strong>{run.requestName}</strong>
+        </div>
+        <span className="postrail-home-result-environment">{run.environmentName}</span>
+        <span>{formatPostRailStatus(run)}</span>
+        {run.message && <span>{run.message}</span>}
+      </div>
       {finished && onResult && <button type="button" className="postrail-home-inspect"
-        onClick={()=>onResult({runId:run.runId,requestId:run.requestId,iteration:run.completed==='0'?'':run.completed})}>결과 보기</button>}
-    </p>}
+        onClick={()=>onResult({runId:run.runId,requestId:run.requestId,iteration:run.completed==='0'?'':run.completed})}>
+        결과 보기<ChevronRight size={12} aria-hidden="true"/>
+      </button>}
+    </div>}
     {(failure || error) && <p className="workrail-note" role="alert">{(failure && failure.message) || error}</p>}
     <div className="workrail-widget-meta">
       <span>{available && '즐겨찾기 ' + favorites.length + '개'}</span>

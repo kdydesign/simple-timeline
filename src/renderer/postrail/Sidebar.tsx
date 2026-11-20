@@ -135,7 +135,7 @@ export function Sidebar({postrail, selectedId, onSelect}: {
   }
   return <aside className="pr-sidebar" aria-label="PostRail 요청 목록">
     <div className="pr-env-choice"><span>환경</span>
-      <Select label="실행 환경 선택" escapeClipping disabled={!library?.environments.length}
+      <Select compact label="실행 환경 선택" escapeClipping disabled={!library?.environments.length}
         value={library?.environmentId ?? 'none'} onChange={id => void save({type:'env.select',id})}
         options={library?.environments.length ? library.environments.map(env => ({value:env.id,label:env.name}))
           : [{value:'none',label:'환경 없음'}]}/>

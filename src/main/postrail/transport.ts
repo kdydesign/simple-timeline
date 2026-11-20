@@ -1,9 +1,9 @@
-import {multipartQuoted} from './body'
+import {diagnosticMask, redactor, transportSource} from './diagnostics'
 import { PostRailRunError, type PreparedRun } from './prepare'
 import type { PrDetail } from '../../shared/postrail-run'
 
 export type PostRailFetch = (url:string, options:RequestInit) => Promise<Response>
-type WireResult = { status:number, headers:Headers, body:string, bodyFailure?: 'timeout' | 'interrupted' }
+type WireResult = { status:number, headers:Headers, body:string, bodyFailure?: 'timeout' | 'interrupted', bodyError?:string }
 
 async function transfer(fetchImpl:PostRailFetch, url:string, options:RequestInit, timeoutMs:number): Promise<WireResult> {
   const abort = new AbortController()
@@ -15,11 +15,11 @@ async function transfer(fetchImpl:PostRailFetch, url:string, options:RequestInit
     const head = { status:response.status, headers:response.headers }
     try {
       return { ...head, body:await response.text() }
-    } catch {
-      return { ...head, body:'', bodyFailure:abort.signal.aborted ? 'timeout' : 'interrupted' }
+    } catch (error) {
+      return { ...head, body:'', bodyFailure:abort.signal.aborted ? 'timeout' : 'interrupted', bodyError:transportSource(error) }
     }
   } catch (error) {
-    if (abort.signal.aborted) throw new DeadlineError()
+    if (abort.signal.aborted) throw new DeadlineError('응답 시간 초과', {cause:error})
     throw error
   } finally { clearTimeout(timer) }
 }
@@ -49,13 +49,27 @@ function expiry(data: Record<string, unknown>, value:string): number | null {
   return known.length ? Math.min(...known) : null
 }
 
-export async function login(fetchImpl:PostRailFetch, run:PreparedRun): Promise<Token> {
+export class LoginFailure extends PostRailRunError {
+  constructor(message:string, readonly source:string) { super(message) }
+}
+
+export async function login(fetchImpl:PostRailFetch, run:PreparedRun, secrets:string[]): Promise<Token> {
   const login = run.login!
+  let result: WireResult
   try {
-    const result = await transfer(fetchImpl, login.url, { method:'POST', headers:login.headers, body:login.body }, run.timeoutMs)
-    if (result.status < 200 || result.status >= 300) throw new PostRailRunError('실행 전 로그인 실패 (HTTP ' + result.status + ')')
-    if (result.bodyFailure === 'timeout') throw new DeadlineError()
-    if (result.bodyFailure) throw new PostRailRunError('로그인 응답 본문 수신이 중단되었습니다.')
+    result = await transfer(fetchImpl, login.url, { method:'POST', headers:login.headers, body:login.body }, run.timeoutMs)
+  } catch (error) {
+    const message = error instanceof DeadlineError ? '실행 전 로그인 응답 시간이 초과되었습니다.' : '실행 전 로그인 서버에 연결할 수 없습니다.'
+    throw new LoginFailure(message,diagnosticMask(run,secrets,undefined,true)(transportSource(error)))
+  }
+  if (result.status < 200 || result.status >= 300) {
+    throw new LoginFailure('실행 전 로그인 실패 (HTTP ' + result.status + ')',diagnosticMask(run,secrets,result.headers,true)(result.bodyError || result.body))
+  }
+  try {
+    if (result.bodyFailure) {
+      const message = result.bodyFailure === 'timeout' ? '실행 전 로그인 응답 시간이 초과되었습니다.' : '로그인 응답 본문 수신이 중단되었습니다.'
+      throw new LoginFailure(message,diagnosticMask(run,secrets,result.headers,true)(result.bodyError ?? ''))
+    }
     const data = JSON.parse(result.body)
     let value: unknown = data
     for (const key of run.env.tokenPath.split('.')) {
@@ -68,28 +82,11 @@ export async function login(fetchImpl:PostRailFetch, run:PreparedRun): Promise<T
     return { value, expiresAt }
   } catch (error) {
     if (error instanceof PostRailRunError) throw error
-    if (error instanceof DeadlineError) throw new PostRailRunError('실행 전 로그인 응답 시간이 초과되었습니다.')
     throw new PostRailRunError('실행 전 인증에 실패했습니다. 로그인 주소·인증서·토큰 JSON 경로를 확인하세요.')
   }
 }
 
 const confidential = /^(?:authorization|proxy-authorization|cookie2?|set-cookie2?|password|passwd|(?:access[_-]?|refresh[_-]?)?token|(?:x-)?api[_-]?key)$/i
-
-function redactor(secrets: string[]) {
-  const terms = new Set<string>()
-  for (const secret of secrets.filter(Boolean)) {
-    terms.add(secret)
-    terms.add(multipartQuoted(secret))
-    terms.add(JSON.stringify(secret).slice(1,-1))
-    terms.add(encodeURIComponent(Buffer.from(secret, 'utf8').toString('utf8')))
-    terms.add(new URLSearchParams([['',secret]]).toString().slice(1))
-  }
-  const sorted = [...terms].sort((a,b) => b.length - a.length)
-  return (value:string) => {
-    for (const term of sorted) value = value.replaceAll(term,'••••')
-    return value
-  }
-}
 
 function transportFailure(error: unknown, method:string): Pick<PrDetail, 'outcome' | 'message'> {
   if (error instanceof DeadlineError) return {outcome:'uncertain',message:'응답 시간 초과 · 결과 확인 필요'}
@@ -102,28 +99,30 @@ function transportFailure(error: unknown, method:string): Pick<PrDetail, 'outcom
   return method === 'GET' ? {outcome:'error',message:'응답을 받지 못했습니다.'} : {outcome:'uncertain',message:'응답을 받지 못했습니다. 결과 확인 필요'}
 }
 
-export async function sendRequest(fetchImpl:PostRailFetch, run:PreparedRun, iteration:string, index:string | null, headers: Headers, secrets:string[]): Promise<PrDetail> {
+export async function sendRequest(fetchImpl:PostRailFetch, run:PreparedRun, iteration:string, index:string | null, headers: Headers, secrets:string[]): Promise<{detail:PrDetail,source?:string}> {
   const started = performance.now()
   const base = { iteration, index, headers:{}, body:'', status:null }
   const body = await run.body(index ?? undefined)
   try {
     const response = await transfer(fetchImpl, run.url, { method:run.request.method, headers, body }, run.timeoutMs)
+    const ok = response.status >= 200 && response.status < 300
     const clean = redactor(secrets)
     const maskedHeaders = Object.fromEntries([...response.headers].map(([name,value]) => [
       clean(name), confidential.test(name) || (run.request.useAuth && name === run.env.tokenHeader.toLowerCase()) ? '••••' : clean(value),
     ]))
-    const ok = response.status >= 200 && response.status < 300
     let outcome: PrDetail['outcome'] = ok ? 'success' : 'error'
     let message = 'HTTP ' + response.status
     if (response.bodyFailure) {
       message += response.bodyFailure === 'timeout' ? ' · 응답 본문 시간 초과' : ' · 응답 본문 수신 중단'
       if (ok) { outcome = 'uncertain'; message += ' · 결과 확인 필요' }
     }
-    return {
-      ...base, status:response.status, outcome, message,
-      headers:maskedHeaders, body:clean(response.body), durationMs:Math.round(performance.now()-started),
-    }
+    const maskedBody = clean(response.body)
+    const detail = {...base, status:response.status, outcome, message,
+      headers:maskedHeaders, body:maskedBody, durationMs:Math.round(performance.now()-started)}
+    const rawSource = response.bodyError || (!ok && response.body)
+    return {detail,source:rawSource ? diagnosticMask(run,secrets,response.headers)(rawSource) : undefined}
   } catch (error) {
-    return { ...base, ...transportFailure(error, run.request.method), durationMs:Math.round(performance.now()-started) }
+    const detail = { ...base, ...transportFailure(error, run.request.method), durationMs:Math.round(performance.now()-started) }
+    return {detail,source:diagnosticMask(run,secrets)(transportSource(error))}
   }
 }
