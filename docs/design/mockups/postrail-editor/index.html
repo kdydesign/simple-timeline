@@ -13,10 +13,11 @@ dialog{padding:0;background:linear-gradient(138deg,#343c43,#282e34 65%);color:va
 #bodyEditor{position:absolute;inset:0;width:100%;height:100%;resize:none;background:transparent;border:0;border-radius:0;overflow:hidden;color:transparent;caret-color:var(--ink)}
 #bodyEditor::selection{color:transparent;background:#79b6e557}
 #bodyEditor:focus-visible{outline-offset:-2px}
+.send-error{position:relative;flex:none}.send-error button{width:23px;height:24px;padding:0;display:grid;place-items:center;border:0;background:transparent;color:#ff9e9a}.send-error b{border:1.5px solid currentColor;border-radius:50%;width:16px;height:16px;font:bold 12px/14px sans-serif}.send-error [role=tooltip]{display:none;position:absolute;z-index:9;top:calc(100% + 5px);left:-5px;width:max-content;max-width:min(310px,60vw);background:#282d32;border:1px solid #766265;color:#f2dedf;padding:6px 9px;border-radius:6px;box-shadow:0 4px 14px #0005;font-size:12px}.send-error:not(.dismissed):is(:hover,:focus-within) [role=tooltip]{display:block}
 </style></head><body>
 <header><div class="top"><b class="brand">≋</b> WorkRail <span class="fill"></span><span class="chrome">─ □ ×</span></div><nav><span>⌂ Home</span><span>☷ PlanRail</span><span>⬡ NodeRail</span><span>›_ TermRail</span><span class="active-nav">⇄ PostRail</span></nav></header>
 <main><aside class="surface"><label class="envlabel">환경</label><div class="chooser"><button id="environment" aria-label="실행 환경 선택"></button><div class="pop" id="envpop" hidden></div></div><div class="sideadd chooser"><input type="search" id="libraryFilter" aria-label="요청 이름 검색" placeholder="요청 이름 검색"><button class="primary" id="add" aria-label="추가 메뉴">＋ ▾</button><div class="pop" id="addpop" hidden><button id="newRequest">요청 추가</button><button id="newGroup">그룹 추가</button></div></div><div id="tree"></div></aside>
-<div class="work"><div class="compose surface"><div class="title"><small id="crumb"></small><h1 id="rname"></h1><button class="authbadge" id="badge"></button></div><div class="endpoint"><div class="chooser method"><button id="meth"></button><div id="mpop" class="pop" hidden></div></div><div class="urlbox"><div id="url" class="edit" role="textbox" aria-label="요청 URL" contenteditable="plaintext-only" spellcheck="false"></div></div><button class="primary" id="send">보내기</button></div></div>
+<div class="work"><div class="compose surface"><div class="title"><small id="crumb"></small><h1 id="rname"></h1><button class="authbadge" id="badge"></button></div><div class="endpoint"><div class="chooser method"><button id="meth"></button><div id="mpop" class="pop" hidden></div></div><span id="sendError" class="send-error" hidden><button id="inspectError" type="button" aria-label="전송 오류 · console 열기" aria-describedby="errorTip"><b aria-hidden="true">!</b></button><span role="tooltip" id="errorTip"></span></span><div class="urlbox"><div id="url" class="edit" role="textbox" aria-label="요청 URL" contenteditable="plaintext-only" spellcheck="false"></div></div><button class="primary" id="send">보내기</button></div></div>
 <div class="split" id="split"><section class="surface pane"><div class="bar"><h2>요청</h2><button data-rt="파라미터">파라미터</button><button data-rt="본문">본문</button><button data-rt="헤더">헤더</button><button data-rt="인증">인증</button></div><div class="viewport inside" id="requestFields"></div></section>
 <div class="handle" role="separator" aria-label="요청과 응답 크기 조절" aria-orientation="horizontal" tabindex="0" id="handle"></div>
 <section class="surface pane"><div class="bar"><h2>응답</h2><button id="bodyTab" class="chosen">본문</button><button id="headersTab">헤더</button><span class="fill"></span><span class="hstatus" id="status"></span><span class="meta">1회차 · 128ms</span></div><div id="bodyTools" class="body-tools"><button id="formatBody" title="편집 중인 JSON 두 칸 들여쓰기">포맷 정렬</button><button id="originalBody" title="받은 원문 보기">원문</button><button id="copyBody" aria-label="응답 본문 복사" title="응답 본문 복사"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M10 4V2H2v8h2"/></svg></button><small role="status" id="copyFeedback"></small><input type="search" aria-label="응답 본문 검색" placeholder="본문 검색" id="bodySearch"><small id="hitCount" role="status"></small></div><div class="viewport responsebody"><div class="response-canvas"><pre class="code" id="response"></pre><textarea id="bodyEditor" aria-label="응답 본문 편집" wrap="off" spellcheck="false" hidden></textarea></div></div></section></div></div></main>
@@ -41,6 +42,25 @@ formExample.formRows=[{key:'title',value:'테스트 상품',enabled:true},{key:'
 const sample={id:1,firstName:'Emily',lastName:'Johnson',username:'emilys',email:'emily.johnson@example.test',role:'admin',address:{city:'Phoenix',state:'Mississippi',coordinates:{lat:-77.1621,lng:-92.0848}},userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) WorkRail Review Browser/132.0.0.0 Safari/605.1.15 Example-Client/1.0 Long-Value-For-Horizontal-Scrolling'};
 let payload=null;
 const logs=[];
+const sendErrors=new Map();
+function errorKey(){return JSON.stringify([reqs[idx].id,envs[curr]?.id])}
+function showSendError(){
+  const message=sendErrors.get(errorKey()) || '';
+  $('#errorTip').textContent=message;
+  $('#sendError').hidden=!message;
+  $('#sendError').classList.remove('dismissed');
+}
+function reportSendError(message){
+  sendErrors.set(errorKey(),message);
+  showSendError();
+  appendLog(new Date().toLocaleTimeString('en-GB'),'ERROR',envs[curr].name+' · '+reqs[idx].name+' · '+message);
+  $('#dot').style.background='var(--rose)';
+  logDraw();
+}
+$('#inspectError').onclick=()=>{drawer='console';logDraw()};
+$('#inspectError').onkeydown=e=>{if(e.key==='Escape')$('#sendError').classList.add('dismissed')};
+$('#inspectError').onfocus=$('#sendError').onpointerenter=()=>$('#sendError').classList.remove('dismissed');
+
 function appendLog(time, level, message) {
   logs.push([time, level, message.replace(/[\r\n\u2028\u2029]+/g, ' ')]);
   if (logs.length > 1000) logs.splice(0, logs.length - 1000);
@@ -352,7 +372,7 @@ if(rt==='파라미터'){paramsTab(el,r);return}
 if(rt==='본문'){formTab(el,r);return}
 if(rt==='인증'){el.innerHTML='<div class="mode"><span>이 요청의 인증</span><div class="seg"><button id="off">인증 없음</button><button id="on">환경 로그인 사용</button></div></div><p class="authinfo">'+(r.auth?esc(envs[curr]?.name??'환경 없음')+' · 유효한 토큰을 재사용합니다.':'환경 토큰을 보내지 않습니다. 직접 입력한 요청 헤더는 전송됩니다.')+'</p>';['on','off'].forEach(k=>{let b=$('#'+k);b.classList.toggle('chosen',r.auth===(k==='on'));b.onclick=()=>{r.auth=k==='on';requestFields()}})}
 else headerEditor(el,r);}
-function refresh(){$$('.pop').forEach(n=>n.hidden=true);envChooser();method();tree();const r=reqs[idx];if(r.m==='GET'&&rt==='본문')rt='헤더';$('#crumb').textContent=r.g+' /';$('#rname').textContent=r.name;editor($('#url'),r.url,v=>{setQueryUrl(r,v);if(rt==='파라미터')paramsTab($('#requestFields'),r)});requestFields()}
+function refresh(){showSendError();$$('.pop').forEach(n=>n.hidden=true);envChooser();method();tree();const r=reqs[idx];if(r.m==='GET'&&rt==='본문')rt='헤더';$('#crumb').textContent=r.g+' /';$('#rname').textContent=r.name;editor($('#url'),r.url,v=>{setQueryUrl(r,v);if(rt==='파라미터')paramsTab($('#requestFields'),r)});requestFields()}
 let activeHit = 0, previousPayload;
 let originalText = '', bodyDraft = '', viewingOriginal = false;
 
@@ -477,6 +497,16 @@ function logDraw() {
   }
 }
 function previewIssue(r) {
+  if(r.auth){
+    const env=envs[curr];
+    const values=Object.fromEntries(env.variables);
+    const resolve=text=>text.replace(/\$\{([\w.-]+)\}/g,(token,name)=>values[name]??token);
+    try{
+      const target=new URL(resolve(r.url)),allowed=new URL(resolve(env.api));
+      if(allowed.pathname!=='/' || allowed.search || target.origin!==allowed.origin)
+        return '요청 주소가 환경에 지정한 토큰 수신 API 주소와 일치하지 않습니다.';
+    }catch{return '요청 주소와 환경의 토큰 수신 API 주소를 확인하세요.'}
+  }
   const invalid = headerList(r.head).error;
   if (invalid) return invalid;
   const missing = pathNames(r).find(name => !r.pathValues?.[name]);
@@ -501,7 +531,7 @@ function exampleResponse(r) {
   return {id:1,title:'예시 상품'};
 }
 
-$('#send').onclick=()=>{let r=reqs[idx],env=envs[curr];if(!env)return;const issue=previewIssue(r);if(issue){$('#summary').textContent=issue;return}let need=r.url.split('?')[0].endsWith('/auth/me');resok=!need||r.auth;let time=new Date().toLocaleTimeString('en-GB');appendLog(time,'INFO',env.name+' · '+r.name+' · '+(r.auth?'환경 로그인 사용':'인증 없음'));if(r.auth){if(!env.hasToken)appendLog(time,'INFO','로그인 시작');appendLog(time,'INFO',env.hasToken?'기존 토큰 재사용':'로그인 성공 · 토큰 발급');env.hasToken=true}appendLog(time,resok?'INFO':'ERROR',r.m+' · '+(resok?'HTTP 200 · 128ms':'HTTP 401 · 인증 없이 전송'));previousPayload=undefined;payload=resok?(need?sample:exampleResponse(r)):{message:'Access Token is required'};$('#summary').textContent=resok?'실행 완료 · 1 / 1회':'실행 완료 · 실패 1건';$('#dot').style.background=resok?'var(--green)':'var(--rose)';result();logDraw()};
+$('#send').onclick=()=>{let r=reqs[idx],env=envs[curr];if(!env)return;const issue=previewIssue(r);if(issue){$('#summary').textContent='전송 전 오류 · 미전송';reportSendError(issue);return}sendErrors.delete(errorKey());showSendError();let need=r.url.split('?')[0].endsWith('/auth/me');resok=!need||r.auth;let time=new Date().toLocaleTimeString('en-GB');appendLog(time,'INFO',env.name+' · '+r.name+' · '+(r.auth?'환경 로그인 사용':'인증 없음'));if(r.auth){if(!env.hasToken)appendLog(time,'INFO','로그인 시작');appendLog(time,'INFO',env.hasToken?'기존 토큰 재사용':'로그인 성공 · 토큰 발급');env.hasToken=true}if(resok)appendLog(time,'INFO',r.m+' · HTTP 200 · 128ms');else reportSendError('HTTP 401 · 인증 없이 전송한 요청이 거부되었습니다.');previousPayload=undefined;payload=resok?(need?sample:exampleResponse(r)):{message:'Access Token is required'};$('#summary').textContent=resok?'실행 완료 · 1 / 1회':'실행 완료 · 실패 1건';$('#dot').style.background=resok?'var(--green)':'var(--rose)';result();logDraw()};
 $('#bodyTab').onclick=()=>{format='body';result()};$('#headersTab').onclick=()=>{format='headers';result()};$$('[data-d]').forEach(b=>b.onclick=()=>{drawer=drawer===b.dataset.d?'':b.dataset.d;logDraw()});$$('[data-rt]').forEach(b=>b.onclick=()=>{rt=b.dataset.rt;requestFields()});$('#badge').onclick=()=>{rt='인증';requestFields()};$('#environment').onclick=()=>pop('#envpop');$('#meth').onclick=()=>pop('#mpop');$('#add').onclick=()=>pop('#addpop');document.addEventListener('click',e=>{if(!e.target.closest('.chooser'))$$('.pop').forEach(p=>p.hidden=true)});
 function ratio(n){pct=Math.max(16,Math.min(80,n));$('#split').style.setProperty('--req',pct+'fr');$('#split').style.setProperty('--res',(100-pct)+'fr');$('#handle').setAttribute('aria-valuenow',Math.round(pct))}const h=$('#handle');h.onpointerdown=e=>{h.setPointerCapture(e.pointerId)};h.onpointermove=e=>{if(h.hasPointerCapture(e.pointerId)){let b=$('#split').getBoundingClientRect();ratio(100*(e.clientY-b.top)/b.height)}};h.onkeydown=e=>{if(['ArrowUp','ArrowDown','Home'].includes(e.key)){e.preventDefault();ratio(e.key==='Home'?30:pct+(e.key==='ArrowUp'?-3:3))}};h.ondblclick=()=>ratio(30);
 function formOpen(isGroup){groupMode=isGroup;$('#addpop').hidden=true;$('#formtitle').textContent=isGroup?'그룹 추가':'요청 추가';$('#formlabel').textContent=isGroup?'그룹 이름':'요청 이름';$('#gname').value='';$('#groupDialog').showModal();$('#gname').focus()}$('#newGroup').onclick=()=>formOpen(true);$('#newRequest').onclick=()=>formOpen(false);$('#gok').onclick=()=>{let v=$('#gname').value.trim();if(!v)return;if(groupMode){if(!gid.includes(v))gid.splice(gid.length-1,0,v)}else{reqs.push(row(v,'GET','/','미분류'));idx=reqs.length-1;rt='인증'}$('#groupDialog').close();refresh()};$('#gname').onkeydown=e=>{if(e.key==='Enter')$('#gok').click()};
@@ -512,5 +542,5 @@ if(evtab==='vars'){f.innerHTML='<div class="varrow muted"><span>이름</span><sp
 else {const field=(k,label,wide=false)=>'<div class="'+(wide?'full':'')+'"><label>'+label+'</label><div class="tokenedit edit" role="textbox" aria-label="'+label+'" contenteditable="plaintext-only" data-k="'+k+'"></div></div>';
 f.innerHTML='<h3>로그인 요청</h3><div class="formgrid">'+field('login','로그인 URL',true)+field('body','로그인 본문 · JSON',true)+'<div class="full"><label>비밀번호</label><input type="password" aria-label="비밀번호" placeholder="이번 세션에 사용할 값"><label><input type="checkbox" style="width:auto"> 이 PC에 저장</label></div></div><h3 style="margin-top:12px">발급 토큰 사용</h3><div class="formgrid">'+field('path','응답의 토큰 경로')+field('api','토큰을 받을 API 주소')+'</div><details style="margin-top:8px"><summary>고급 헤더 설정</summary><div class="formgrid">'+field('header','토큰 헤더')+field('prefix','토큰 접두어')+field('loginHeaders','로그인 헤더 · JSON',true)+'</div></details><div class="session"><span>'+(e.hasToken?'● 사용 가능한 토큰':'저장된 토큰 없음')+'</span>'+(e.hasToken?'<button class="textlink" id="clearToken">저장된 토큰 비우기</button>':'')+'</div>';$$('[data-k]').forEach(n=>editor(n,e[n.dataset.k],v=>e[n.dataset.k]=v));if($('#clearToken'))$('#clearToken').onclick=()=>{if(confirm('‘'+e.name+'’의 저장된 토큰을 비울까요? 다음 인증 요청에서 다시 로그인합니다.')){const live=envs.find(v=>v.id===e.id);if(live)live.hasToken=false;e.hasToken=false;renderEnv()}}}}
 $('#vt').onclick=()=>{evtab='vars';renderEnv()};$('#lt').onclick=()=>{evtab='login';renderEnv()};$('#manage').onclick=()=>envOpen('vars');$('#deleteEnv').onclick=()=>{if(confirm('이 환경을 삭제할까요?')){draft.splice(editing,1);editing=Math.max(0,Math.min(editing,draft.length-1));renderEnv()}};$('#saveEnv').onclick=()=>{if(draft.some(e=>!e.name.trim()))return;const activeId=envs[curr]?.id;envs=draft;curr=Math.max(0,envs.findIndex(e=>e.id===activeId));$('#envDialog').close();refresh()};$$('[data-close]').forEach(b=>b.onclick=()=>b.closest('dialog').close());
-document.addEventListener('keydown',e=>{if(e.key==='Tab')document.body.classList.add('key');if(e.key==='Escape'&&!document.querySelector('dialog[open]')){drawer='';logDraw();$$('.pop').forEach(p=>p.hidden=true)}});document.addEventListener('pointerdown',()=>document.body.classList.remove('key'));ratio(30);refresh();result();logDraw();if(location.hash==='#headers'){rt='헤더';refresh();$('#send').click()}if(location.hash==='#params'){idx=reqs.findIndex(r=>r.name==='상품 검색');rt='파라미터';refresh()}if(location.hash==='#path'){idx=reqs.indexOf(pathExample);rt='파라미터';pathExample.paramTab='path';refresh()}if(location.hash==='#form'){idx=reqs.indexOf(formExample);rt='본문';refresh()}if(location.hash==='#multipart'){idx=reqs.indexOf(formExample);formExample.bodyType='multipart';rt='본문';refresh()}if(location.hash==='#login')envOpen('login');if(location.hash==='#variables')envOpen('vars');if(location.hash==='#group')formOpen(true);
+document.addEventListener('keydown',e=>{if(e.key==='Tab')document.body.classList.add('key');if(e.key==='Escape'&&!document.querySelector('dialog[open]')){drawer='';logDraw();$$('.pop').forEach(p=>p.hidden=true)}});document.addEventListener('pointerdown',()=>document.body.classList.remove('key'));ratio(30);refresh();result();logDraw();if(location.hash==='#send-error'){reqs[idx].url='https://qa.example.test/auth/me';rt='헤더';refresh();$('#send').click()}if(location.hash==='#headers'){rt='헤더';refresh();$('#send').click()}if(location.hash==='#params'){idx=reqs.findIndex(r=>r.name==='상품 검색');rt='파라미터';refresh()}if(location.hash==='#path'){idx=reqs.indexOf(pathExample);rt='파라미터';pathExample.paramTab='path';refresh()}if(location.hash==='#form'){idx=reqs.indexOf(formExample);rt='본문';refresh()}if(location.hash==='#multipart'){idx=reqs.indexOf(formExample);formExample.bodyType='multipart';rt='본문';refresh()}if(location.hash==='#login')envOpen('login');if(location.hash==='#variables')envOpen('vars');if(location.hash==='#group')formOpen(true);
 </script></body></html>

@@ -10,6 +10,7 @@ h3{margin:0;font-size:15px}.heading,.env,.row,.meta{display:flex;align-items:cen
 .method{color:#9bcaaa;font:700 11px/1.6 Consolas,monospace;min-width:31px}.method.post{color:#eac191}
 button{font:inherit;color:inherit;cursor:pointer}.run{min-width:65px;display:inline-flex;align-items:center;justify-content:center;gap:4px;background:linear-gradient(#444c53,#353b41);border:1px solid #84909880;border-radius:6px;font-size:12px;padding:3px 6px}.run:disabled{cursor:default;opacity:.55}.run.active:disabled{opacity:1;color:var(--accent);border-color:#8bc1eb68}.icon{display:inline-block;width:12px;height:12px;flex:none}.spin{animation:turn 1s linear infinite}@keyframes turn{to{transform:rotate(1turn)}}@media(prefers-reduced-motion:reduce){.spin{animation:none}}
 .link{background:transparent;border:0;color:var(--accent);font-size:12px;padding:0 2px}.link:disabled{color:#8b959c;cursor:default}.summary{color:var(--muted);font-size:12px;line-height:1.8;margin:8px 0 0;overflow-wrap:anywhere}.summary strong{color:#ecf0f2}.pill{font-size:10px;line-height:1.5;border:1px solid var(--line);border-radius:4px;padding:0 4px;margin-right:3px;white-space:nowrap}.inspect{color:var(--accent);border-color:#8bc1eb5c;background:#38506355;font-size:11px;line-height:1.6;margin:0 0 0 4px;padding:0 5px}.inspect:hover,.inspect:focus-visible{background:#44668177}.meta{margin-top:11px}.detail{max-width:700px;margin-top:10px}pre{overflow:auto;background:#21272c;border-radius:6px;padding:12px}button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}[hidden]{display:none!important}@media(max-width:850px){.board{grid-template-columns:1fr}main{max-width:420px;padding:18px 14px}}
+.row{display:grid;grid-template-columns:31px minmax(0,1fr) auto;column-gap:7px;row-gap:3px}.row .run{justify-self:end}.repeat-form{grid-column:2/-1;justify-self:end;display:flex;align-items:center;gap:4px;color:var(--muted);font-size:11px}.repeat-form label{display:flex;align-items:center;gap:3px}.repeat-form input[type=checkbox]{accent-color:var(--accent);margin:0}.repeat-form input[inputmode]{width:4em;font:inherit;text-align:end;padding:2px 4px;border-radius:4px;border:1px solid var(--line);color:inherit;background:#232a2e}.repeat-form input:disabled{opacity:.6}.repeat-form input[aria-invalid=true]{border-color:#ea999b}.count-error{grid-column:2/-1;justify-self:end;font-size:11px;color:#ffadaa}
 </style>
 <main><section id="home"><h1>Home · PostRail 즐겨찾기</h1><div class="board"></div></section>
 <section id="destination" hidden><button class="link" id="back">‹ Home</button><h1 id="destination-title" tabindex="-1">PostRail</h1><div class="detail"><h3 id="target"></h3><p id="context"></p><h3>응답 본문</h3><pre id="body"></pre></div></section></main>
@@ -20,21 +21,22 @@ const icons={
  rail:'<path d="M2 4h10L9 1m3 9H2l3 3"/>'
 };
 const svg=k=>'<svg aria-hidden="true" class="icon '+(k==='load'?'spin':'')+'" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">'+icons[k]+'</svg>';
-const requests=[{name:'공개 API 테스트',method:'GET'},{name:'샘플 생성',method:'POST'}];
+const requests=[{name:'공개 API 테스트',method:'GET'},{name:'샘플 생성',method:'POST'},{name:'장비 상태 수집',method:'POST',savedCount:'3'}];
 let returnTo;
 const board=document.querySelector('.board');
 function demo(label,initial){
  const area=document.createElement('section');
- area.innerHTML='<h2></h2><article class="card"><div class="heading"><h3>PostRail 즐겨찾기</h3>'+svg('rail')+'</div><div class="env"><strong>공개 API 테스트</strong><span>로그인 미설정</span></div><div class="rows"></div><div class="summary" role="status"></div><div class="meta"><span>즐겨찾기 2개</span><button class="link generic">PostRail 열기</button></div></article>';
+ area.innerHTML='<h2></h2><article class="card"><div class="heading"><h3>PostRail 즐겨찾기</h3>'+svg('rail')+'</div><div class="env"><strong>공개 API 테스트</strong><span>로그인 미설정</span></div><div class="rows"></div><div class="summary" role="status"></div><div class="meta"><span>즐겨찾기 3개</span><button class="link generic">PostRail 열기</button></div></article>';
  area.querySelector('h2').textContent=label;board.append(area);
  const summary=area.querySelector('.summary');
- let state=initial,active=0,count=1,completed=initial==='done'?1:0,serial=1;
+ let state=initial,active=initial==='busy'?2:0,count=initial==='busy'?3n:1n,completed=initial==='idle'?0n:1n,serial=1;
+ const repeatDraft={enabled:initial==='busy',count:requests[2].savedCount};
  function open(btn,detail){
    returnTo=btn;document.querySelector('#home').hidden=true;
    document.querySelector('#destination').hidden=false;
    document.querySelector('#target').textContent=detail?requests[active].name:'저장한 요청';
    document.querySelector('#context').textContent=detail?'공개 API 테스트 · '+completed+'회차 · HTTP 200':'PostRail 작업 화면';
-   document.querySelector('#body').textContent=detail?JSON.stringify({ok:true,iteration:completed},null,2):'응답을 선택하세요.';
+   document.querySelector('#body').textContent=detail?JSON.stringify({ok:true,iteration:String(completed)},null,2):'응답을 선택하세요.';
    document.querySelector('#destination-title').focus();
  }
  function draw(){
@@ -42,19 +44,40 @@ function demo(label,initial){
    const rows=area.querySelector('.rows');rows.replaceChildren();
    requests.forEach((r,i)=>{
      const row=document.createElement('div');row.className='row';
-     row.innerHTML='<b class="method '+(i?'post':'')+'">'+r.method+'</b><span class="name">'+r.name+'</span><button class="run"></button>'+(i?'<button class="link repeat">반복…</button>':'');
+     row.innerHTML='<b class="method '+(r.method==='POST'?'post':'')+'">'+r.method+'</b><span class="name">'+r.name+'</span><button class="run"></button>';
      const button=row.querySelector('.run'),loading=active===i&&busy;
-     button.innerHTML=svg(loading?'load':'play')+(loading?'실행 중':'실행');button.disabled=busy;button.classList.toggle('active',loading);
-     button.setAttribute('aria-label',r.name+' '+(loading?'실행 중':'실행'));button.onclick=()=>start(i,1);
-     if(i){const repeat=row.querySelector('.repeat');repeat.disabled=busy;repeat.onclick=()=>{const n=prompt('반복 횟수','3');if(n&&/^[1-9][0-9]*$/.test(n)&&Number.isSafeInteger(Number(n)))start(i,Number(n))}}
+     button.disabled=busy;button.classList.toggle('active',loading);
+     function label(){
+       const text=loading?'실행 중':r.savedCount && repeatDraft.enabled?'반복 실행':'실행';
+       button.innerHTML=svg(loading?'load':'play')+text;
+       button.setAttribute('aria-label',r.name+' '+text);
+     }
+     label();
+     button.onclick=()=>start(i,r.savedCount && repeatDraft.enabled?BigInt(repeatDraft.count):1n);
+     if(r.savedCount){
+       const form=document.createElement('div');
+       form.className='repeat-form';
+       form.innerHTML='<label><input type="checkbox">반복 보내기</label><input inputmode="numeric" aria-label="반복 횟수"><span>회</span>';
+       const check=form.querySelector('input[type=checkbox]'),field=form.querySelector('[inputmode]');
+       const error=document.createElement('small');error.className='count-error';error.textContent='횟수는 양의 정수로 입력하세요.';error.setAttribute('role','status');
+       check.checked=repeatDraft.enabled;check.disabled=busy;field.value=repeatDraft.count;
+       function sync(){
+         const invalid=repeatDraft.enabled && !/^[1-9][0-9]*$/.test(repeatDraft.count);
+         field.disabled=busy || !repeatDraft.enabled;field.setAttribute('aria-invalid',String(invalid));
+         error.hidden=!invalid;button.disabled=busy || invalid;label();
+       }
+       check.onchange=()=>{repeatDraft.enabled=check.checked;sync()};
+       field.oninput=()=>{repeatDraft.count=field.value;sync()};
+       sync();row.append(form,error);
+     }
      rows.append(row);
    });
    summary.hidden=state==='idle';
    summary.innerHTML=busy?'전송 중 · '+completed+' / '+count+'회 완료':state==='done'?'<span class="pill">결과</span> 최근 실행 · <strong>'+requests[active].name+'</strong> · 공개 API 테스트 · 실행 완료 · '+completed+' / '+count+'회 완료 <button class="pill inspect">결과 보기</button>':'';
    const inspect=summary.querySelector('button');if(inspect)inspect.onclick=()=>open(inspect,true);
  }
- function start(i,n){active=i;count=n;completed=0;state='busy';const id=++serial;draw();
-   const tick=()=>{if(id!==serial)return;completed++;if(completed===count)state='done';draw();if(state==='busy')setTimeout(tick,700)};setTimeout(tick,1000)}
+ function start(i,n){active=i;count=n;completed=0n;state='busy';const id=++serial;draw();
+   const tick=()=>{if(id!==serial)return;completed++;if(completed===count){state='done';repeatDraft.enabled=false;repeatDraft.count=requests[2].savedCount;}draw();if(state==='busy')setTimeout(tick,700)};setTimeout(tick,1000)}
  area.querySelector('.generic').onclick=e=>open(e.currentTarget,false);
  draw();
 }
