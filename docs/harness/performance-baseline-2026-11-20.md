@@ -99,3 +99,5 @@ python3 "$BASELINE_DIR/heap-summary.py"
 ```
 
 결과는 `*-metrics.json`, `*-main.cpuprofile`, `*-renderer.cpuprofile`, `*.pftrace`, `*.heapsnapshot`에 저장된다. `summary.json`은 숫자 반복별 집계이며 p95는 정렬 후 `floor(0.95 × (n − 1))` 위치의 관측값이다. `static-inventory.json`은 저장소의 파일·의존성 목록으로, 기존 출력·소스도 포함하므로 실제 런타임 병목이나 배포 번들의 크기로 사용하지 않았다.
+
+[Electron 실행 후속 분석](electron-runtime-performance-2026-11-20.md)은 PostRail을 포함한 코드에서 기존 DB로 다시 시작하는 구간, Home의 렌더러 작업과 트레이 상주 비용을 별도 측정했다.
