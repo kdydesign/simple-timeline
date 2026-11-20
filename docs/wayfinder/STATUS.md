@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 **PostRail 편집기 후속 설계 · 전체 승인 대기.** 넓은 환경 관리 창, 요청별 인증 표시, 환경별 토큰 비우기 및 세션 console 최근 1,000줄을 협의했다. [11개 개선과 인수 기준](../superpowers/specs/2026-11-20-postrail-editor-design.md)
+
 2026-11-20 **Home·PlanRail과 Electron 성능 1·2차 구현.** 일정 조회·로컬 알림, 릴리즈노트 ×의 창 해제를 반영했다. 공유 인덱스 구현은 Home 준비 시간의 채택 기준에 따라 별도 후보 브랜치에 보관했다. [적용 범위와 측정 결과](../implementation/2026-11-20-electron-performance.md)
 
 
