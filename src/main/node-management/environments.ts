@@ -147,15 +147,17 @@ export function createEnvironmentCoordinator(options: {
     return inspect(method, intent)
   }
 
+  function trackInspection(request: Promise<NodeManagementState>) {
+    inspections.add(request)
+    return request.finally(() => { inspections.delete(request) })
+  }
+
   async function inspect(method: 'getState' | 'refreshCatalog', intent?: 'recheck') {
     const target = backend, command = commandGeneration
     if (target && !mutating && !writing) {
       const request = method === 'getState' && intent ? target.getState(intent) : target[method]()
-      inspections.add(request)
-      try {
-        const snapshot = await request
-        if (command === commandGeneration && target === backend && !mutating && !writing) publish(snapshot)
-      } finally { inspections.delete(request) }
+      const snapshot = await request
+      if (command === commandGeneration && target === backend && !mutating && !writing) publish(snapshot)
     }
     return state
   }
@@ -180,9 +182,15 @@ export function createEnvironmentCoordinator(options: {
   }
 
   async function openManager(expectedId: string, destination: 'folder' | 'release') {
-    if (busy() || state.busy || discovery || inspections.size) return denied(nodeManagementError('busy'))
+    const generation = epoch
+    while (inspections.size && !busy() && !state.busy) {
+      try { await Promise.all(inspections) } catch {
+        return denied(nodeManagementError('inspection-failed'))
+      }
+    }
+    if (busy() || state.busy) return denied(nodeManagementError('busy'))
     const selected = active, target = backend, opener = options.opener
-    if (!selected || !targetSelected() || selected.id !== expectedId) return denied(invalid('선택한 환경이 바뀌었습니다. 환경을 다시 확인해 주세요.'))
+    if (generation !== epoch || !selected || !targetSelected() || selected.id !== expectedId) return denied(invalid('선택한 환경이 바뀌었습니다. 환경을 다시 확인해 주세요.'))
     if (options.barrier?.blocked()) return denied(nodeManagementError('shutdown'))
     const failed = (message: string) => denied({ code: 'operation-failed', message })
     const cannotVerify = () => denied(invalid('관리자 폴더를 확인하지 못했습니다. 선택한 환경을 다시 검사해 주세요.'))
@@ -215,8 +223,8 @@ export function createEnvironmentCoordinator(options: {
     currentState: () => state,
     openManagerFolder: (expectedId: string) => openManager(expectedId, 'folder'),
     openManagerRelease: (expectedId: string) => openManager(expectedId, 'release'),
-    getState: (intent?: 'recheck') => read('getState', intent),
-    refreshCatalog: () => read('refreshCatalog'),
+    getState: (intent?: 'recheck') => trackInspection(read('getState', intent)),
+    refreshCatalog: () => trackInspection(read('refreshCatalog')),
     async selectEnvironment(id: string) {
       if (busy() || discovery) return denied(nodeManagementError('busy'))
       const next = environments.items.find(e => e.id === id)
@@ -235,7 +243,7 @@ export function createEnvironmentCoordinator(options: {
         activate(next)
       } catch { return denied({ code: 'operation-failed', message: '관리 환경 선택을 저장하지 못했습니다.' }) }
       finally { writing = false }
-      return inspect('getState')
+      return trackInspection(inspect('getState'))
     },
     async startEnvironment() {
       if (busy() || discovery) return denied(nodeManagementError('busy'))
@@ -250,7 +258,7 @@ export function createEnvironmentCoordinator(options: {
         if (!active?.running || active.id !== next.id) throw Error('WSL did not start')
       } catch { return denied({ code: 'operation-failed', message: '선택한 WSL 환경을 시작하지 못했습니다. 배포판 상태를 확인해 주세요.' }) }
       finally { mutating = false }
-      return inspect('getState')
+      return trackInspection(inspect('getState'))
     },
     async cancelOperation() {
       if (!backend?.cancelOperation || !targetSelected() || !state.busy?.cancellable) return denied(nodeManagementError('invalid-request'))

@@ -285,3 +285,32 @@ it('completes a passive discovery before dispatching use to the same selected en
   expect((await change).error).toBeNull()
   expect(use).toHaveBeenCalledOnce()
 })
+
+it.each([false, true])('waits for focus inspection before opening the folder (machine busy: %s)', async locked => {
+  const f = setup([windows])
+  const ready: NodeManagementState = { ...module.emptyNodeState('win32', true),
+    manager: { status: 'ready', version: '1.1.11' }, checkedAt: new Date().toISOString() }
+  f.inspectWin.mockResolvedValue(ready)
+  await f.service.getState()
+  const discovery = deferred<NodeEnvironment[]>(), inspection = deferred<NodeManagementState>()
+  f.discover.mockReturnValueOnce(discovery.promise)
+  f.inspectWin.mockReturnValueOnce(inspection.promise)
+  const folder = 'C:\\nvm'
+  vi.spyOn(f.win, 'verifiedManagerFolder').mockResolvedValue(folder)
+  const reading = f.service.getState()
+  const opening = f.service.openManagerFolder('windows')
+  discovery.resolve([windows])
+  await vi.waitFor(() => expect(f.inspectWin).toHaveBeenCalledTimes(2))
+  expect(f.opener.openPath).not.toHaveBeenCalled()
+  vi.spyOn(f.win, 'isBusy').mockReturnValue(locked)
+  inspection.resolve(ready)
+  await reading
+  const error = module.environmentCommandError(await opening)
+  if (locked) {
+    expect(error?.code).toBe('busy')
+    expect(f.opener.openPath).not.toHaveBeenCalled()
+  } else {
+    expect(error).toBeNull()
+    expect(f.opener.openPath).toHaveBeenCalledExactlyOnceWith(folder)
+  }
+})

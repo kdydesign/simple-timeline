@@ -914,3 +914,19 @@ it('offers Install for a configured WSL default missing from the completed inven
   act(() => fixture.emit({ busy: { kind: 'install', phase: 'waiting', version } }))
   expect(within(node()).getByText(/25\.2\.0 설치.*WSL 작업 완료 대기/)).toBeVisible()
 })
+
+it('clears the Home folder error after an explicit environment recheck', async () => {
+  const fixture = nodeFixture({ environments: { status: 'ready', selectedId: 'windows', error: null,
+    items: [{ id: 'windows', kind: 'windows', label: 'Windows', running: true }] } })
+  const busy = nodeManagementError('busy')
+  fixture.api.openManagerFolder.mockResolvedValueOnce({ ok: false, error: busy })
+  const user = userEvent.setup()
+  render(<App initialTool="home" api={memoryApi().api} />)
+  await user.click(await within(home()).findByRole('button', { name: /Windows nvm Node 버전 저장 폴더 열기/ }))
+  expect(await within(home()).findByText(busy.message)).toBeVisible()
+  await user.click(dock('NodeRail'))
+  await user.click(within(node()).getByRole('button', { name: '환경 다시 검사' }))
+  expect(fixture.api.getState).toHaveBeenCalledWith('recheck')
+  await user.click(dock('Home'))
+  expect(within(home()).queryByText(busy.message)).toBeNull()
+})

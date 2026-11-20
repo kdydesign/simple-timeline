@@ -116,6 +116,10 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
     if (kind === 'recheck' && (!result.ok || !result.data.busy)) {
       const recoveryError = result.ok ? result.data.error : result.error
       const recovered = result.ok && recoveryError?.code !== 'inspection-failed'
+      if (result.ok && result.data.environments?.status === 'ready' && !recoveryError) {
+        setFolderError(null)
+        setReleaseError(null)
+      }
       setMutationFailure(failure => {
         if (!failure || failure.request >= request) return failure
         return recovered ? null : { ...failure, recoveryError: recoveryError ?? undefined }
@@ -126,7 +130,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
 
   const refresh = useCallback(async () => {
     const current = connection.current
-    if (!api || !current || current.recheck || current.mutation || current.environmentPending) return
+    if (!api || !current || current.recheck || current.opener || current.mutation || current.environmentPending) return
     const token = Symbol()
     current.recheck = token
     setRecheckPending(true)
