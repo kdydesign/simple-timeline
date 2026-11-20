@@ -1,6 +1,6 @@
 # PostRail 요청 편집과 환경 관리 · 검토안
 
-2026-11-20 · 제품 기준 `08fa1a4`. **개별 협의 완료 · 전체 설계 승인 대기.** 사용자가 새 요청의 인증 기본값, 환경 관리 창의 구성, 수동 토큰 폐기, console 보관 범위를 선택했다. [조작 시안](../../design/mockups/postrail-editor/index.html) · [작업 화면](../../design/mockups/postrail-editor/workspace.png) · [로그인 설정](../../design/mockups/postrail-editor/login.png) · [변수](../../design/mockups/postrail-editor/variables.png)
+2026-11-20 · 제품 기준 `08fa1a4`. **개별 협의 완료 · 전체 설계 승인 대기.** 사용자가 새 요청의 인증 기본값, 환경 관리 창의 구성, 수동 토큰 폐기, console 보관 범위에 이어 쿼리·경로·POST 폼 지원과 같은 PC의 첨부 경로 기억을 선택했다. [조작 시안](../../design/mockups/postrail-editor/index.html) · [작업 화면](../../design/mockups/postrail-editor/workspace.png) · [로그인 설정](../../design/mockups/postrail-editor/login.png) · [변수](../../design/mockups/postrail-editor/variables.png)
 
 ## 환경과 요청 인증
 
@@ -30,6 +30,32 @@
 | 9. 환경 관리 | 위의 환경·요청 인증 설계와 별도 시안을 따른다. |
 | 10. console | footer 높이를 유지하고 ‘회차별 결과’ 옆의 `console`로 같은 위치에 연다. 둘 중 하나만 열린다. 회차 결과는 회차별 성공·상태·인덱스를 조회하고, console은 로그인 시작·발급/재사용·전송·응답·오류를 시간순 일반 텍스트로 기록한다. 에러는 빨간 글자와 ERROR로 구분한다. 요청명·환경명·메서드·회차·경과 시간·상태 코드만 사용하고, 전송 URL의 쿼리나 헤더·본문 값과 자격 정보는 담지 않는다. 자유 입력 실행창은 없다. 메인 프로세스의 앱 세션 전체에서 최근 1,000줄을 시간순으로 보관한다. 1,001번째 줄부터 가장 오래된 줄을 버린다. 메뉴·환경 전환과 트레이 숨김 동안 유지하고 완전 종료 후 다시 시작하면 빈 상태로 연다. 반복 실행 중에는 화면 갱신을 묶고, 위쪽을 읽는 중에는 자동으로 끝으로 이동하지 않는다. |
 | 11. 요청/응답 분할 | URL 입력행과 footer를 뺀 편집 높이에서 처음 30%가 요청, 70%가 응답이다. 경계선을 위아래로 드래그한다. 키보드 화살표로 조절하고 더블클릭으로 기본 비율을 복원한다. 최소 높이를 보장하고 drawer를 열 때에도 입력 내용과 읽던 응답을 유지한다. 시안의 비율은 화면을 여는 동안 유지된다. |
+
+
+## 요청 파라미터와 POST 본문
+
+사용자는 쿼리·경로·POST 폼을 모두 입력하고, 서버에 맞춰 이름·값과 전송 타입을 지정하는 범위를 선택했다. 파일은 **같은 PC에서 선택한 위치를 기억하고 파일이 없으면 다시 선택**한다. 본문 타입과 MIME의 결합 방식은 아래와 같이 제안한다. 현재 제품은 URL에 직접 입력한 쿼리를 보내고 요청 본문으로 JSON 객체를 지원한다. 이 절은 후속 설계다.
+
+### Postman에서 가져올 동작
+
+Postman의 공식 Collection SDK는 URL의 쿼리 목록과 경로 변수를 분리하고, 본문을 raw·urlencoded·formdata·file 등으로 구분한다. 공식 Runtime은 raw의 언어에서 기본 Content-Type을 정하되 명시한 헤더를 우선하며, multipart의 각 파트에도 MIME을 지정할 수 있다. PostRail에서도 **전송 방식 선택**과 **실제 내용 직접 입력**을 분리한다. 예를 들어 XML은 raw를 선택해 본문을 입력하고 Content-Type을 `application/xml`로 지정한다. [Postman URL 모델](https://github.com/postmanlabs/postman-collection/blob/42072b6c56ea9dc1c13406e974673151e8daa0b5/lib/collection/url.js) · [본문 모델](https://github.com/postmanlabs/postman-collection/blob/42072b6c56ea9dc1c13406e974673151e8daa0b5/lib/collection/request-body.js) · [Runtime 직렬화](https://github.com/postmanlabs/postman-runtime/blob/7187683e176ce8a54a58e70400851314a3d97135/lib/requester/core-body-builder.js) · [파트 MIME 검증](https://github.com/postmanlabs/postman-runtime/blob/7187683e176ce8a54a58e70400851314a3d97135/test/integration/sanity/content-type-in-form-data.test.js)
+
+| 화면 | 입력 예 | 전송 결과 |
+|---|---|---|
+| 파라미터 → 쿼리 | `q = phone`, `limit = 10` | `GET /products/search?q=phone&limit=10` |
+| 파라미터 → 경로 | URL `/products/:id`, `id = 1` | `GET /products/1` |
+| 본문 → x-www-form-urlencoded | `title = A&B` | 본문 `title=A%26B` |
+| 본문 → form-data | Text 파트 `title`, File 파트 `attachment` | 하나의 multipart 본문에 텍스트와 파일 바이트를 담는다. 같은 키의 파일도 여러 행으로 전송할 수 있다. |
+| 본문 → raw / binary | XML 텍스트 / 파일 하나 | 직접 입력한 텍스트 또는 선택한 파일 자체를 본문으로 보낸다. |
+
+[쿼리](../../design/mockups/postrail-editor/query.png) · [경로](../../design/mockups/postrail-editor/path.png) · [이름·값 폼](../../design/mockups/postrail-editor/form.png) · [텍스트와 파일 첨부](../../design/mockups/postrail-editor/multipart.png)
+
+- **쿼리**. GET·POST·DELETE 모두에서 URL과 같은 쿼리를 행으로 편집한다. 이름·값·사용 체크·행 추가와 삭제를 제공한다. 사용 해제한 행은 요청에 보관하고 실제 주소에서 제외한다. 기존 URL을 열 때 이름 중복·순서·빈 값과 변경하지 않은 인코딩을 보존한다. 같은 행을 URL과 표 양쪽에서 중복 전송하지 않는다. 환경 변수를 먼저 해당 값에 대입한 후 구성요소별로 인코딩한다. `A&B`, 공백, 리터럴 `+`, 한글이 하나의 값으로 도착하는지 검사한다. 기존 URL에서 구분자까지 포함하는 환경 변수를 사용한 경우, 편집 전후의 실제 주소가 조용히 바뀌지 않도록 기존 URL 전송을 보존한다.
+- **경로**. URL의 한 경로 조각 전체가 `:id`이면 같은 이름의 값 입력란을 만든다. `${BASE_URL}`은 환경 변수다. `:id`의 값에 환경 변수를 쓸 수 있다. 한 값은 한 조각이 되도록 인코딩하며 값이 비면 전송 전에 해당 칸을 표시한다. URL의 호스트·포트·쿼리를 경로 변수로 해석하지 않는다. 기존에 문자 그대로 `:id`를 사용한 저장 요청은 명시적으로 경로 변수를 설정하기 전까지 기존 주소를 유지한다.
+- **본문 방식**. POST는 없음·기존 JSON·이름/값 폼·multipart·raw·binary를 선택한다. 모드를 전환하면 그 모드의 초안을 복원하고 선택한 방식만 보낸다. GET은 본문 없이 동작하고 기존 DELETE의 JSON 편집을 유지한다. 이번 확장 대상은 일반 API 요청이다. 환경의 자동 로그인 본문은 기존 JSON 계약을 따른다.
+- **Content-Type**. 본문 설정과 헤더 탭은 명시한 헤더 한 개를 공유한다. 직접 지정하지 않으면 전송 방식의 기본값을 사용한다. MIME 입력은 직렬화 방식을 바꾸지 않는다. 예를 들어 raw로 `application/vnd.team+json`을 보낼 수 있다. multipart의 외부 헤더는 실제 바디와 같은 boundary를 전송기가 생성한다. 사용자가 다른 형식이나 boundary를 명시해서 충돌하면 전송 전 설명하고 자동값 복원 또는 raw 전환을 안내한다. 각 파트의 이름·값·Text/File·MIME은 직접 지정할 수 있다.
+- **파일**. OS 파일 선택으로 받은 원본 경로는 메인 프로세스에서 이 PC의 요청과 연결하고, 화면에는 파일 이름을 표시한다. 저장 후 재실행하면 같은 위치의 파일을 사용한다. 파일이 없거나 읽을 수 없으면 로그인·인덱스 예약·API 호출 전에 해당 행에서 다시 선택하도록 한다. 임의의 경로 텍스트나 환경 변수에서 파일을 열지 않는다. 전송·반복·Home 즐겨찾기에서 같은 검증을 사용한다. 파일 내용·전체 경로·쿼리값은 console에 기록하지 않는다.
+- **호환 및 검증**. URL·JSON으로 저장한 기존 요청은 이전 동작으로 열린다. 저장·복제·Home 실행 시 선택 모드, 파라미터와 사용 여부를 보존한다. 인덱스는 기존 JSON 문자열의 `${index}`에서만 소비한다. 일반 반복 전송은 새 본문 방식에서도 명시한 횟수를 따른다. 토큰을 보낼 수 있는 origin, URL에 넣을 수 없는 보호 변수와 비밀 키 검사는 파라미터가 모두 반영된 실제 주소에도 적용한다. 같은 PC에서 파일이 사라진 경우, 한 요청에서 같은 이름의 파일 파트 둘, 폼 값이 URL에 섞이지 않는 경우, 직접 지정한 MIME과 생성된 multipart boundary가 일치하는 경우를 인수 검사에 포함한다.
 
 ## 인수 시나리오
 
