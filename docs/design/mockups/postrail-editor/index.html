@@ -7,13 +7,19 @@ main{flex:1;min-height:0;display:grid;grid-template-columns:206px minmax(0,1fr);
 .work{display:flex;flex-direction:column;min-height:0;min-width:0;gap:8px}.compose{flex:none;padding:10px 13px}.title{gap:6px;margin-bottom:8px}.title small{color:var(--muted)}.endpoint{gap:6px}.method{width:75px;flex:none;font:600 12px var(--mono)}.urlbox{height:30px;display:flex;align-items:center;flex:1;min-width:0;background:#20272d;border-radius:5px;padding:0 8px}.edit{font:13px/1.6 var(--mono);white-space:pre;overflow:auto;scrollbar-width:thin}.urlbox .edit{width:100%;scrollbar-width:none}.authbadge{white-space:nowrap;border:0;color:var(--blue);background:#364650;font-size:11px}.split{display:grid;flex:1;min-height:0;grid-template-rows:minmax(65px,var(--req,30fr)) 10px minmax(74px,var(--res,70fr))}.pane{display:flex;flex-direction:column;overflow:hidden}.bar{padding:8px 12px;border-bottom:1px solid #46515999;min-height:37px}.bar h2{margin-right:6px}.bar button,.textlink{border:0;background:transparent;color:var(--muted);padding:3px 7px;font-size:12px}.bar button.chosen,.tabs .chosen{color:#e2f1fa;background:#42525d;border-radius:4px}.meta{font:11px var(--mono);color:var(--muted)}.viewport{flex:1;min-height:0;min-width:0;overflow:auto;scrollbar-color:#606b73 #22292f;scrollbar-width:thin}.inside{padding:12px 14px}.handle{touch-action:none;display:grid;place-content:center;cursor:row-resize}.handle:after{content:"";width:38px;height:3px;background:#71818b;border-radius:2px}.handle:hover:after{background:var(--blue)}.mode{flex-wrap:wrap}.seg{display:inline-flex;padding:2px;border:1px solid #4e5b64;border-radius:7px;background:#23292e}.seg button{font-size:12px;border:0;background:transparent;padding:3px 9px;color:var(--muted)}.seg .chosen{background:#405664;color:white}.authinfo{margin-top:8px;font-size:12px;color:#b8c6ce}.code{font:13px/1.6 var(--mono);white-space:pre;tab-size:2;min-width:max-content;padding:12px 15px;color:#d7dfe5}.keytok{color:#a4cfee}.str{color:#a6d3b2}.num{color:#ecc195}.headeredit{min-height:46px}.small{font-size:11px}.hstatus{color:#b2dabc;font-weight:600}.responsebody{background:#22292ee0}.drawer{height:min(145px,22vh);flex:none;background:#23292e;border-top:1px solid var(--edge);padding:7px 14px;overflow:auto}.drawer pre{font:12px/1.7 var(--mono);white-space:pre;margin:6px 0}.drawer .err{font-weight:600}footer{height:39px;flex:none;padding:4px 14px;gap:10px;border-top:1px solid var(--edge);background:#2b3238;font-size:12px}footer button{border:0;background:transparent;font-size:12px;padding:3px 5px}footer button.chosen{color:var(--blue)}.dot{width:7px;height:7px;border-radius:50%;display:inline-block;background:#9dcba8}
 dialog{padding:0;background:linear-gradient(138deg,#343c43,#282e34 65%);color:var(--ink);border:1px solid #61717b;border-radius:14px;box-shadow:0 18px 80px #0009;width:min(756px,94vw);max-height:90dvh;overflow:auto}dialog::backdrop{background:#10161ba8;backdrop-filter:blur(2px)}.dhead,.actions{display:flex;align-items:center;gap:8px;padding:14px 18px}.dhead{border-bottom:1px solid var(--edge)}.dhead h2{font-size:16px}.dhead button{font-size:17px;padding:0 5px}.actions{border-top:1px solid var(--edge)}.envgrid{display:grid;grid-template-columns:155px minmax(0,1fr)}.envlist{background:#232b30aa;border-right:1px solid var(--edge);padding:13px 8px}.envlist button{display:block;width:100%;text-align:left;margin-bottom:3px}.envlist .sel{border:1px solid #5b7485;background:#344957}.envlist .new{color:var(--blue);margin-bottom:10px}.envbody{padding:14px 18px;min-height:358px}.envbody label,.grpform label{display:block;font-size:12px;margin:6px 0 3px}.envbody input,.envbody textarea,.grpform input{width:100%;padding:5px 8px;background:#20272c}.envbody textarea{resize:vertical;font:12px var(--mono)}.tabs{display:flex;gap:8px;margin:13px 0 8px;border-bottom:1px solid var(--edge);padding-bottom:6px}.tabs button{border:0;background:transparent}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}.full{grid-column:1/-1}.varrow{display:grid;grid-template-columns:1fr 1.5fr auto;gap:6px;margin:6px 0}.varrow input{min-width:0}.session{margin-top:10px;display:flex;align-items:center;justify-content:space-between;color:#b7d2c2;font-size:12px}.tokenedit{background:#20272c;min-height:29px;padding:4px 7px;border:1px solid var(--edge);border-radius:5px}.danger{color:var(--rose)}#groupDialog{width:min(340px,90vw)}.grpform{padding:15px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px;align-items:center}
 [hidden]{display:none!important}@media(max-width:760px){main{grid-template-columns:150px minmax(0,1fr);gap:6px;padding:7px}.authbadge{max-width:84px;overflow:hidden}.envgrid{grid-template-columns:120px minmax(0,1fr)}.bar{gap:3px}.bar .meta{font-size:10px}}@media(max-width:540px){main{grid-template-columns:1fr;grid-template-rows:125px minmax(0,1fr)}header{padding:4px 6px}nav span{padding:3px;font-size:11px}.envgrid{display:block}.envlist{display:flex;overflow:auto}.envlist button{width:auto;white-space:nowrap}.formgrid{grid-template-columns:1fr}.envbody{min-height:0}.endpoint{flex-wrap:wrap}.compose{padding:5px}.split{min-height:160px}footer{gap:2px;font-size:10px}footer button{font-size:10px}.bar h2{font-size:12px}}
-[data-k="body"]{min-height:72px;max-height:120px}.verb{width:39px}.sideadd.chooser>button{width:auto;background:linear-gradient(170deg,#40647d,#2d4559);border-color:#739bb7}.responsebody::-webkit-scrollbar{width:9px;height:9px}.responsebody::-webkit-scrollbar-thumb{background:#62717b;border:2px solid #22292e;border-radius:5px}.param-grid{display:grid;grid-template-columns:36px minmax(70px,2fr) minmax(95px,3fr) 26px;gap:8px;align-items:center;font-size:11px;color:var(--muted);padding-bottom:3px}.param-grid button{padding:1px 4px}.param-row .edit{background:#242b30;border-radius:4px;padding:1px 6px;color:var(--ink);min-height:22px}.param-row input{justify-self:start;accent-color:#87b5d4}.param-row.excluded .edit{opacity:.55}.param-modes{display:flex;align-items:center;gap:5px;margin-bottom:5px}.param-modes button{padding:1px 8px;border:0;color:var(--muted);background:transparent}.param-modes .chosen{color:var(--blue);background:#364650}.path-grid{display:grid;grid-template-columns:1fr 2fr;gap:8px;padding:3px 0}.param-fields output{font:12px var(--mono)}#requestFields:has(.param-modes){padding-top:5px;padding-bottom:5px}.param-modes select,.part-grid select,.body-ct input,.part-grid input:not([type="checkbox"]){background:#283138;color:var(--ink);border:1px solid var(--edge);border-radius:5px;font:12px var(--mono);padding:2px 5px}.body-ct{display:flex;gap:6px;align-items:center;font:11px var(--mono);min-width:0}.body-ct input{width:min(41vw,290px)}.part-grid{display:grid;grid-template-columns:34px minmax(65px,1fr) 62px minmax(85px,1.3fr) minmax(75px,1fr) 24px;gap:7px;align-items:center;padding:2px 0}.part-grid>input{min-width:0}.part-grid button{font-size:11px;padding:2px 5px}.param-fields:has(.part-grid){min-width:420px}.sideadd{display:flex;align-items:center;gap:5px}.sideadd input{width:0;flex:1;min-width:0;padding:3px 6px;font-size:12px;height:26px}.sideadd .pop{left:auto;right:0}.title h1,.title small{font-size:12px}.title h1{font-weight:700}.title .authbadge{font-size:10px;padding:1px 6px}.body-tools{display:flex;align-items:center;gap:5px;height:25px;padding:1px 10px;border-bottom:1px solid #46515970}.body-tools button{display:inline-flex;align-items:center;justify-content:center;height:21px;padding:0 5px;font-size:11px;border:0;background:transparent;color:var(--muted)}.body-tools input{margin-left:auto;min-width:0;width:135px;height:20px;padding:0 5px;font-size:11px}.body-tools small{font-size:10px;color:var(--muted)}#response::highlight(hits){color:#171d20;background:#e9ba6b}#response::highlight(current-hit){color:#101519;background:#a1dbfa}.raw-headers{width:100%;min-height:52px;white-space:pre;overflow:auto;resize:vertical;padding:4px 7px;font:12px var(--mono)}</style></head><body>
+[data-k="body"]{min-height:72px;max-height:120px}.verb{width:39px}.sideadd.chooser>button{width:auto;background:linear-gradient(170deg,#40647d,#2d4559);border-color:#739bb7}.responsebody::-webkit-scrollbar{width:9px;height:9px}.responsebody::-webkit-scrollbar-thumb{background:#62717b;border:2px solid #22292e;border-radius:5px}.param-grid{display:grid;grid-template-columns:36px minmax(70px,2fr) minmax(95px,3fr) 26px;gap:8px;align-items:center;font-size:11px;color:var(--muted);padding-bottom:3px}.param-grid button{padding:1px 4px}.param-row .edit{background:#242b30;border-radius:4px;padding:1px 6px;color:var(--ink);min-height:22px}.param-row input{justify-self:start;accent-color:#87b5d4}.param-row.excluded .edit{opacity:.55}.param-modes{display:flex;align-items:center;gap:5px;margin-bottom:5px}.param-modes button{padding:1px 8px;border:0;color:var(--muted);background:transparent}.param-modes .chosen{color:var(--blue);background:#364650}.path-grid{display:grid;grid-template-columns:1fr 2fr;gap:8px;padding:3px 0}.param-fields output{font:12px var(--mono)}#requestFields:has(.param-modes){padding-top:5px;padding-bottom:5px}.param-modes select,.part-grid select,.body-ct input,.part-grid input:not([type="checkbox"]){background:#283138;color:var(--ink);border:1px solid var(--edge);border-radius:5px;font:12px var(--mono);padding:2px 5px}.body-ct{display:flex;gap:6px;align-items:center;font:11px var(--mono);min-width:0}.body-ct input{width:min(41vw,290px)}.part-grid{display:grid;grid-template-columns:34px minmax(65px,1fr) 62px minmax(85px,1.3fr) minmax(75px,1fr) 24px;gap:7px;align-items:center;padding:2px 0}.part-grid>input{min-width:0}.part-grid button{font-size:11px;padding:2px 5px}.param-fields:has(.part-grid){min-width:420px}.sideadd{display:flex;align-items:center;gap:5px}.sideadd input{width:0;flex:1;min-width:0;padding:3px 6px;font-size:12px;height:26px}.sideadd .pop{left:auto;right:0}.title h1,.title small{font-size:12px}.title h1{font-weight:700}.title .authbadge{font-size:10px;padding:1px 6px}.body-tools{display:flex;align-items:center;gap:5px;height:25px;padding:1px 10px;border-bottom:1px solid #46515970}.body-tools button{display:inline-flex;align-items:center;justify-content:center;height:21px;padding:0 5px;font-size:11px;border:0;background:transparent;color:var(--muted)}.body-tools input{margin-left:auto;min-width:0;width:135px;height:20px;padding:0 5px;font-size:11px}.body-tools small{font-size:10px;color:var(--muted)}#response::highlight(hits){color:#171d20;background:#e9ba6b}#response::highlight(current-hit){color:#101519;background:#a1dbfa}.raw-headers{width:100%;min-height:52px;white-space:pre;overflow:auto;resize:vertical;padding:4px 7px;font:12px var(--mono)}.response-canvas{position:relative;width:max-content;min-width:100%;min-height:100%}
+.response-canvas .code,#bodyEditor{font:13px/1.6 var(--mono);tab-size:2;white-space:pre;padding:12px 15px;margin:0}
+.response-canvas .code::after{content:"\200b"}
+#bodyEditor{position:absolute;inset:0;width:100%;height:100%;resize:none;background:transparent;border:0;border-radius:0;overflow:hidden;color:transparent;caret-color:var(--ink)}
+#bodyEditor::selection{color:transparent;background:#79b6e557}
+#bodyEditor:focus-visible{outline-offset:-2px}
+</style></head><body>
 <header><div class="top"><b class="brand">≋</b> WorkRail <span class="fill"></span><span class="chrome">─ □ ×</span></div><nav><span>⌂ Home</span><span>☷ PlanRail</span><span>⬡ NodeRail</span><span>›_ TermRail</span><span class="active-nav">⇄ PostRail</span></nav></header>
 <main><aside class="surface"><label class="envlabel">환경</label><div class="chooser"><button id="environment" aria-label="실행 환경 선택"></button><div class="pop" id="envpop" hidden></div></div><div class="sideadd chooser"><input type="search" id="libraryFilter" aria-label="요청 이름 검색" placeholder="요청 이름 검색"><button class="primary" id="add" aria-label="추가 메뉴">＋ ▾</button><div class="pop" id="addpop" hidden><button id="newRequest">요청 추가</button><button id="newGroup">그룹 추가</button></div></div><div id="tree"></div></aside>
 <div class="work"><div class="compose surface"><div class="title"><small id="crumb"></small><h1 id="rname"></h1><button class="authbadge" id="badge"></button></div><div class="endpoint"><div class="chooser method"><button id="meth"></button><div id="mpop" class="pop" hidden></div></div><div class="urlbox"><div id="url" class="edit" role="textbox" aria-label="요청 URL" contenteditable="plaintext-only" spellcheck="false"></div></div><button class="primary" id="send">보내기</button></div></div>
 <div class="split" id="split"><section class="surface pane"><div class="bar"><h2>요청</h2><button data-rt="파라미터">파라미터</button><button data-rt="본문">본문</button><button data-rt="헤더">헤더</button><button data-rt="인증">인증</button></div><div class="viewport inside" id="requestFields"></div></section>
 <div class="handle" role="separator" aria-label="요청과 응답 크기 조절" aria-orientation="horizontal" tabindex="0" id="handle"></div>
-<section class="surface pane"><div class="bar"><h2>응답</h2><button id="bodyTab" class="chosen">본문</button><button id="headersTab">헤더</button><span class="fill"></span><span class="hstatus" id="status"></span><span class="meta">1회차 · 128ms</span></div><div id="bodyTools" class="body-tools"><button id="formatBody" title="원문 보기">원문</button><button id="copyBody" aria-label="응답 본문 복사" title="응답 본문 복사"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M10 4V2H2v8h2"/></svg></button><small role="status" id="copyFeedback"></small><input type="search" aria-label="응답 본문 검색" placeholder="본문 검색" id="bodySearch"><small id="hitCount" role="status"></small></div><div class="viewport responsebody"><pre class="code" id="response"></pre></div></section></div></div></main>
+<section class="surface pane"><div class="bar"><h2>응답</h2><button id="bodyTab" class="chosen">본문</button><button id="headersTab">헤더</button><span class="fill"></span><span class="hstatus" id="status"></span><span class="meta">1회차 · 128ms</span></div><div id="bodyTools" class="body-tools"><button id="formatBody" title="편집 중인 JSON 두 칸 들여쓰기">포맷 정렬</button><button id="originalBody" title="받은 원문 보기">원문</button><button id="copyBody" aria-label="응답 본문 복사" title="응답 본문 복사"><svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" aria-hidden="true"><rect x="5" y="5" width="9" height="9" rx="2"/><path d="M10 4V2H2v8h2"/></svg></button><small role="status" id="copyFeedback"></small><input type="search" aria-label="응답 본문 검색" placeholder="본문 검색" id="bodySearch"><small id="hitCount" role="status"></small></div><div class="viewport responsebody"><div class="response-canvas"><pre class="code" id="response"></pre><textarea id="bodyEditor" aria-label="응답 본문 편집" wrap="off" spellcheck="false" hidden></textarea></div></div></section></div></div></main>
 <section class="drawer" id="drawer" hidden><h3 id="dtitle"></h3><pre id="log"></pre></section><footer><i class="dot" id="dot"></i><span id="summary">실행 대기</span><span class="fill"></span><button data-d="console">›_ console</button><button data-d="회차별 결과">⌃ 회차별 결과</button><button id="manage">⚙ 환경 관리</button></footer>
 <dialog id="envDialog"><div class="dhead"><h2>환경 관리</h2><span class="fill"></span><button class="flat" aria-label="닫기" data-close>×</button></div><div class="envgrid"><div class="envlist" id="envlist"></div><div class="envbody"><label for="ename">환경 이름</label><input id="ename"><div class="tabs"><button id="vt">변수</button><button id="lt">로그인 설정</button></div><div id="envfields"></div></div></div><div class="actions"><button class="flat danger" id="deleteEnv">환경 삭제</button><span class="fill"></span><button data-close>닫기</button><button id="saveEnv" class="primary">저장</button></div></dialog>
 <dialog id="groupDialog"><div class="dhead"><h2 id="formtitle">그룹 추가</h2><span class="fill"></span><button class="flat" data-close aria-label="닫기">×</button></div><div class="grpform"><label id="formlabel" for="gname">그룹 이름</label><input id="gname" autocomplete="off"></div><div class="actions"><span class="fill"></span><button data-close>닫기</button><button class="primary" id="gok">저장</button></div></dialog>
@@ -347,9 +353,29 @@ if(rt==='본문'){formTab(el,r);return}
 if(rt==='인증'){el.innerHTML='<div class="mode"><span>이 요청의 인증</span><div class="seg"><button id="off">인증 없음</button><button id="on">환경 로그인 사용</button></div></div><p class="authinfo">'+(r.auth?esc(envs[curr]?.name??'환경 없음')+' · 유효한 토큰을 재사용합니다.':'환경 토큰을 보내지 않습니다. 직접 입력한 요청 헤더는 전송됩니다.')+'</p>';['on','off'].forEach(k=>{let b=$('#'+k);b.classList.toggle('chosen',r.auth===(k==='on'));b.onclick=()=>{r.auth=k==='on';requestFields()}})}
 else headerEditor(el,r);}
 function refresh(){$$('.pop').forEach(n=>n.hidden=true);envChooser();method();tree();const r=reqs[idx];if(r.m==='GET'&&rt==='본문')rt='헤더';$('#crumb').textContent=r.g+' /';$('#rname').textContent=r.name;editor($('#url'),r.url,v=>{setQueryUrl(r,v);if(rt==='파라미터')paramsTab($('#requestFields'),r)});requestFields()}
-let prettyBody = true, activeHit = 0, previousPayload;
+let activeHit = 0, previousPayload;
+let originalText = '', bodyDraft = '', viewingOriginal = false;
+
+// Validate the grammar, then change only whitespace between the original tokens.
+function indentJson(text) {
+  JSON.parse(text);
+  const tokens = text.match(/"(?:\\[\s\S]|[^"\\])*"|[^\s"{}\[\],:]+|[{}\[\],:]/g);
+  let depth = 0, previous = '', formatted = '';
+  const newline = () => '\n' + '  '.repeat(depth);
+  for (const token of tokens) {
+    const closing = token === '}' || token === ']';
+    const afterOpen = previous === '{' || previous === '[';
+    if (closing) depth--;
+    if ((closing && !afterOpen) || (!closing && (afterOpen || previous === ','))) formatted += newline();
+    if (previous === ':') formatted += ' ';
+    formatted += token;
+    if (token === '{' || token === '[') depth++;
+    previous = token;
+  }
+  return formatted;
+}
 function shownBody() {
-  return payload === null ? '' : JSON.stringify(payload,null,prettyBody ? 2 : undefined);
+  return viewingOriginal ? originalText : bodyDraft;
 }
 function findInBody(move = 0) {
   const body = $('#response'), term = $('#bodySearch').value;
@@ -381,27 +407,50 @@ function findInBody(move = 0) {
     marks.set('hits',highlight);
     const current = new Highlight(hits[activeHit]);current.priority=1;
     marks.set('current-hit',current);
-    const pane = body.parentElement, bounds = pane.getBoundingClientRect(), match = hits[activeHit].getBoundingClientRect();
+    const pane = body.closest('.viewport'), bounds = pane.getBoundingClientRect(), match = hits[activeHit].getBoundingClientRect();
     if (match.top<bounds.top || match.bottom>bounds.bottom) pane.scrollTop += match.top-bounds.top-5;
     if (match.left<bounds.left || match.right>bounds.right) pane.scrollLeft += match.left-bounds.left-5;
   }
 }
 function result() {
   $('#copyFeedback').textContent = '';
-  if (previousPayload !== payload) {prettyBody = true;activeHit=0;previousPayload=payload}
+  if (previousPayload !== payload) {
+    originalText = payload === null ? '' : JSON.stringify(payload);
+    bodyDraft = payload === null ? '' : indentJson(originalText);
+    viewingOriginal = false;
+    activeHit = 0;
+    previousPayload = payload;
+  }
   $('#bodyTools').hidden = format !== 'body';
   $('#bodyTab').classList.toggle('chosen',format==='body');
   $('#headersTab').classList.toggle('chosen',format!=='body');
   $('#status').nextElementSibling.hidden = payload === null;
-  $('#formatBody').disabled = $('#copyBody').disabled = $('#bodySearch').disabled = payload === null;
-  $('#formatBody').textContent = prettyBody ? '원문' : '정렬';
-  $('#formatBody').title = prettyBody ? '원문 보기' : 'JSON 두 칸 들여쓰기';
+  const editing = format === 'body' && payload !== null && !viewingOriginal;
+  const field = $('#bodyEditor');
+  field.hidden = !editing;
+  if (editing && field.value !== bodyDraft) field.value = bodyDraft;
+  $('#response').setAttribute('aria-hidden', String(editing));
+  $('#originalBody').disabled = $('#copyBody').disabled = $('#bodySearch').disabled = payload === null;
+  $('#formatBody').disabled = !editing;
+  $('#originalBody').textContent = viewingOriginal ? '편집본' : '원문';
+  $('#originalBody').title = viewingOriginal ? '편집하던 본문으로 돌아가기' : '받은 원문 보기';
   $('#status').textContent = payload === null ? '' : resok ? '200 OK' : '401 Unauthorized';
   $('#status').style.color = resok ? 'var(--green)' : 'var(--rose)';
   $('#response').innerHTML = payload === null ? '표시할 응답이 없습니다.' : format === 'body' ? color(shownBody()) : 'content-type: application/json';
   findInBody();
 }
-$('#formatBody').onclick = () => {prettyBody = !prettyBody;result()};
+$('#bodyEditor').oninput = event => {
+  bodyDraft = event.target.value;
+  $('#copyFeedback').textContent = '';
+  $('#response').innerHTML = color(bodyDraft);
+  findInBody();
+};
+$('#originalBody').onclick = () => {viewingOriginal = !viewingOriginal;activeHit = 0;result()};
+$('#formatBody').onclick = () => {
+  try {bodyDraft = indentJson(bodyDraft)}
+  catch {$('#copyFeedback').textContent = 'JSON 문법을 확인하세요.';return}
+  result();
+};
 $('#bodySearch').oninput = () => {activeHit=0;findInBody()};
 $('#bodySearch').onkeydown = e => {if(e.key==='Enter'){e.preventDefault();findInBody(e.shiftKey ? -1 : 1)}};
 $('#copyBody').onclick = async () => {
