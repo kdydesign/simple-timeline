@@ -62,8 +62,36 @@ jobs:
         if: runner.os == 'Windows'
         run: npm run dist:win:test-update
       - name: Verify production package and actual NSIS lifecycle on the disposable VM
+        id: packaged
         if: runner.os == 'Windows'
         run: npm run test:packaged
+      - name: Collect Windows crash events after a packaged test failure
+        if: failure() && runner.os == 'Windows' && steps.packaged.outcome == 'failure'
+        shell: pwsh
+        run: |
+          $events = Get-WinEvent -FilterHashtable @{
+            LogName = 'Application'
+            ProviderName = 'Application Error'
+            Id = 1000
+            StartTime = (Get-Date).AddMinutes(-45)
+          } -ErrorAction SilentlyContinue
+          $crashes = @(foreach ($event in $events) {
+            $data = @{}
+            foreach ($field in ([xml]$event.ToXml()).Event.EventData.Data) {
+              $data[$field.Name] = $field.'#text'
+            }
+            [pscustomobject]@{
+              time = $event.TimeCreated.ToUniversalTime().ToString('o')
+              app = $data.AppName
+              pid = $data.ProcessId
+              module = $data.ModuleName
+              moduleVersion = $data.ModuleVersion
+              exception = $data.ExceptionCode
+              offset = $data.FaultingOffset
+            }
+          })
+          New-Item -ItemType Directory -Force artifacts/packaged | Out-Null
+          ConvertTo-Json -InputObject $crashes | Tee-Object -FilePath artifacts/packaged/windows-crashes.json
       - uses: actions/upload-artifact@v4
         if: runner.os == 'Windows' && success()
         with:

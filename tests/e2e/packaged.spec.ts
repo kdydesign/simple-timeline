@@ -23,8 +23,9 @@ const ps = (args: string[]) =>
   }).trim();
 const run = (file: string, args: string[]) => {
   const r = spawnSync(file, args, { encoding: "utf8", timeout: 90000 });
+  if (r.error) throw r.error;
   if (r.status !== 0)
-    throw Error(`Installer failed (${r.status}): ${r.stderr ?? ""}`);
+    throw Error(`Installer ${file} (PID ${r.pid}) exited with ${r.status ?? r.signal}: ${r.stderr ?? ""}`);
 };
 async function waitUntil(condition: () => Promise<boolean>) {
   await expect.poll(condition, { timeout: 30000 }).toBe(true);
