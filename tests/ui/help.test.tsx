@@ -8,7 +8,7 @@ it('keeps the common guide first when opening a tool and labels common search re
  render(<HelpApp api={{command:async()=>({ok:true,reading:{section:'termrail',topicId:'ssh-terminal',query:'',scrollTop:0}})}}/>)
  await screen.findByRole('heading',{name:'SSH 서버 연결과 터미널 배치'})
  const toc=within(screen.getByRole('navigation',{name:'도움말 목차'}))
- expect(toc.getAllByRole('heading',{level:2}).map(heading=>heading.textContent)).toEqual(['공통','Home','PlanRail','NodeRail','TermRail'])
+ expect(toc.getAllByRole('heading',{level:2}).map(heading=>heading.textContent)).toEqual(['공통','Home','PlanRail','NodeRail','TermRail','PostRail'])
  await u.type(screen.getByRole('searchbox'),'도움말 검색')
  const result=toc.getByRole('button',{name:/도움말 검색과 화면 확대/})
  expect(result).toHaveTextContent('공통')

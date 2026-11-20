@@ -37,11 +37,13 @@ it('waits for pending save before deciding whether to close', async () => {
   const w = windowStub()
   w.state = { dirty: true, saving: true }
   let asked = 0
+  const stopDispatch = vi.fn()
   installCloseGuard(w.window, async () => {
     asked++
     return true
-  })
+  }, {onQuitRequested:stopDispatch})
   w.events.emit('close', { preventDefault() {} })
+  expect(stopDispatch).toHaveBeenCalledOnce()
   await new Promise((r) => setTimeout(r, 30))
   expect(w.destroyed).toBe(false)
   expect(asked).toBe(0)
@@ -62,13 +64,15 @@ it('asks on every window close and preserves dirty input when hiding or cancelli
   const w = windowStub(), hide = vi.fn(), confirm = vi.fn(async () => true)
   const chooseClose = vi.fn<() => Promise<'hide'|'quit'|'cancel'>>()
     .mockResolvedValueOnce('cancel').mockResolvedValueOnce('hide').mockResolvedValueOnce('quit')
-  installCloseGuard(w.window, confirm, {hide, chooseClose})
+  const stopDispatch = vi.fn()
+  installCloseGuard(w.window, confirm, {hide, chooseClose, onQuitRequested:stopDispatch})
   w.events.emit('close', {preventDefault() {}})
   await vi.waitFor(() => expect(chooseClose).toHaveBeenCalledTimes(1))
   expect(hide).not.toHaveBeenCalled(); expect(w.destroyed).toBe(false)
   w.events.emit('close', {preventDefault() {}})
   await vi.waitFor(() => expect(hide).toHaveBeenCalledTimes(1))
   expect(confirm).not.toHaveBeenCalled(); expect(w.destroyed).toBe(false)
+  expect(stopDispatch).not.toHaveBeenCalled()
   w.events.emit('close', {preventDefault() {}})
   await vi.waitFor(() => expect(w.destroyed).toBe(true))
   expect(confirm).not.toHaveBeenCalled()

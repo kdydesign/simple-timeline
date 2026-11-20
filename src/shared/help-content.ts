@@ -1,5 +1,5 @@
 import type {HelpSection,HelpTopicId} from './help'
-export const helpSectionLabels:Record<HelpSection,string>={home:'Home',planrail:'PlanRail',noderail:'NodeRail',termrail:'TermRail',settings:'공통'}
+export const helpSectionLabels:Record<HelpSection,string>={home:'Home',planrail:'PlanRail',noderail:'NodeRail',termrail:'TermRail',postrail:'PostRail',settings:'공통'}
 export const planrailHelpGroups=['시작하기','기본 사용법','간트·달력','알림·창','호스트 사용법','멤버 사용법','문제 해결'] as const
 export interface HelpArticle {
  id:HelpTopicId;menu:HelpSection;section:typeof planrailHelpGroups[number];title:string;intro:string
@@ -309,16 +309,33 @@ const coreHelpArticles:HelpArticle[]=[
 ]
 export const helpArticles:HelpArticle[]=[
  {id:'workrail-start',menu:'settings',section:'시작하기',title:'WorkRail 시작과 메뉴 이동',intro:'WorkRail을 실행하면 Home에서 오늘의 일정과 내 PC의 개발 환경을 볼 수 있습니다. Windows 로그인 때 트레이에서 시작한 경우 트레이 메뉴에서 Open을 누르세요.',steps:[
-  {title:'할 일에 맞는 도구를 엽니다',text:'상단의 PlanRail에서 일정과 사내 공유를 관리하고, NodeRail에서 Node 버전을 설치하거나 전환합니다. TermRail에서는 SSH 서버에 연결합니다. 상단의 Home으로 돌아가면 각 작업의 현황을 볼 수 있습니다.'},
+  {title:'할 일에 맞는 도구를 엽니다',text:'상단의 PlanRail에서 일정과 사내 공유를 관리하고, NodeRail에서 Node 버전을 설치하거나 전환합니다. TermRail에서는 SSH 서버에 연결하고 PostRail에서는 HTTP 요청을 보냅니다. 상단의 Home으로 돌아가면 각 작업의 현황을 볼 수 있습니다.'},
   {title:'메뉴 사이를 이동합니다',text:'상단의 도구 이름을 누르세요. 키보드로는 F6을 눌러 현재 도구의 메뉴 버튼으로 이동한 뒤 Tab과 Enter로 다른 도구를 열 수 있습니다. 메뉴를 옮겨도 PlanRail의 편집 입력과 날짜·화면 위치가 유지됩니다.'},
   {title:'설정과 도움말을 엽니다',text:'제목 표시줄 오른쪽의 톱니바퀴로 휴일과 사내 공유를 설정합니다. 물음표나 F1은 현재 화면의 도움말을 엽니다. 문서 아이콘을 누르면 버전별 릴리즈노트를 읽을 수 있습니다.'},
  ],related:['workrail-home','settings','window-tray','help-reading']},
- {id:'workrail-home',menu:'home',section:'시작하기',title:'WorkRail 홈과 도구 전환',image:{file:'home-widgets.png',alt:'오늘의 일정과 내 개발 환경 아래의 PlanRail 상태 및 Node 작업 위젯',caption:'연결된 멤버와 설치 버전이 각각 여섯 개인 예시 화면',points:[{step:1,x:44,y:37},{step:2,x:8,y:73},{step:3,x:41,y:74},{step:4,x:94,y:9}]},intro:'Home에서 오늘의 일정, PlanRail의 연결 상태와 선택한 Node 환경을 확인합니다.',steps:[
+ {id:'workrail-home',menu:'home',section:'시작하기',title:'WorkRail 홈과 도구 전환',image:{file:'home-widgets.png',alt:'오늘의 일정과 내 개발 환경 아래의 PlanRail 상태 및 Node 작업 위젯',caption:'연결된 멤버와 설치 버전이 각각 여섯 개인 예시 화면',points:[{step:1,x:44,y:37},{step:2,x:8,y:73},{step:3,x:41,y:74},{step:4,x:94,y:9}]},intro:'Home에서 오늘의 일정, PlanRail의 연결 상태와 선택한 Node 환경을 확인하고 PostRail 즐겨찾기를 실행합니다.',steps:[
   {title:'오늘의 일정을 엽니다',text:'오늘이 기간에 포함된 개인·공유 일정과 마감까지 남은 달력 일수를 확인합니다. 오늘 끝나는 일정에는 오늘 마감이 표시됩니다. PlanRail에서 전체 일정 보기를 누르면 간트와 달력에서 다른 날짜도 볼 수 있습니다.'},
   {title:'접속 멤버 전체를 확인합니다',text:'호스트의 PlanRail 상태에는 연결된 참여자가 다섯 명까지 보입니다. 여섯 명 이상이면 외 N명을 눌러 전체 이름·버전·연결 상태를 봅니다. 닫기나 Esc를 누르면 외 N명 버튼으로 돌아갑니다. 멤버는 내 WorkRail 버전과 최근 정상 동기화에서 받은 호스트 버전을 확인할 수 있습니다. 호스트 버전이 확인 불가이면 해당 버전 정보를 받지 못한 상태입니다.'},
   {title:'설치된 Node 버전을 확인합니다',text:'Node 작업에는 선택한 환경의 설치 버전이 다섯 개까지 보이며 현재 사용 중인 버전이 맨 위에 표시됩니다. 여섯 개 이상이면 외 N개를 누르세요. 같은 환경의 NodeRail 설치된 버전 목록으로 이동하며 목록 제목에 키보드 포커스가 놓입니다. 다른 버전으로 전환하려면 해당 행에서 사용을 누르세요.'},
   {title:'개발 환경 폴더와 작업 상태를 확인합니다',text:'내 개발 환경의 폴더 버튼을 누르면 선택한 Windows nvm의 버전 저장 위치 또는 실행 중인 WSL 기본 사용자의 nodenv 루트가 열립니다. 버전 전환 중에는 Node 작업 위젯에서 진행 상태와 결과를 확인하세요.'},
- ],related:['app-overview','node-management','node-operation-log','workrail-start']},
+  {title:'PostRail 즐겨찾기를 실행합니다',text:'PostRail에서 별표를 켠 요청 중 목록 순서로 최대 다섯 개가 표시됩니다. 위젯의 환경을 확인한 뒤 실행을 누르면 저장된 요청을 한 번 보냅니다. POST를 여러 번 보내려면 반복을 열고 횟수를 지정하세요. PostRail 열기를 누르면 전체 목록과 회차별 결과를 확인할 수 있습니다.'},
+ ],related:['app-overview','node-management','node-operation-log','postrail-requests','workrail-start']},
+ {id:'postrail-requests',menu:'postrail',section:'기본 사용법',title:'PostRail에서 요청 보내기',intro:'처음에는 우측 하단의 환경 관리를 열고 환경 이름을 입력해 저장하세요. 화면 왼쪽에서 환경과 요청을 선택하고 오른쪽에서 내용을 편집해 보냅니다.',steps:[
+  {title:'요청을 만듭니다',text:'왼쪽 목록 위의 ＋에서 요청 추가를 선택하고 이름·URL·그룹을 저장합니다. 그룹 옆의 …에서 요청 추가를 누르면 그 그룹에 들어갑니다. 그룹을 삭제해도 안에 있던 요청은 미분류에서 찾을 수 있습니다.'},
+  {title:'메서드와 내용을 정합니다',text:'URL 왼쪽에서 GET·POST·DELETE를 고릅니다. 헤더와 인증을 확인하고, POST와 본문이 필요한 DELETE에는 JSON 본문을 입력합니다. 보내기는 편집 중인 내용으로 실행합니다. 변경 저장을 누르면 다음에 열 때와 Home에서 실행할 때도 이 내용을 사용합니다.'},
+  {title:'원본을 두고 다른 요청을 만듭니다',text:'요청 옆의 …에서 복제를 눌러 같은 그룹에 복사본을 만듭니다. 다른 그룹에 넣으려면 목록에서 요청을 선택해 Ctrl+C를 누르고 대상 그룹에 초점을 옮겨 Ctrl+V를 누르세요. 복사본에는 저장한 내용만 들어가며 다음 인덱스는 1부터 시작합니다.'},
+  {title:'Home에서 다시 보냅니다',text:'자주 쓰는 요청 옆의 별표를 켜세요. Home의 PostRail 즐겨찾기에서 현재 환경을 확인한 뒤 실행을 누르면 저장된 요청 내용을 그 환경으로 한 번 보냅니다. POST 반복 횟수는 Home에서 따로 지정합니다.'},
+ ],related:['postrail-environments','postrail-results','workrail-home']},
+ {id:'postrail-environments',menu:'postrail',section:'기본 사용법',title:'환경 변수와 로그인 설정',intro:'개발·검증 환경마다 API 주소와 계정을 따로 설정하면 요청 정의를 다시 작성하지 않아도 됩니다.',steps:[
+  {title:'환경에 변수를 추가합니다',text:'왼쪽에서 대상 환경을 선택하고 우측 하단의 환경 관리를 엽니다. 변수 목록 아래 ＋에서 이름과 값을 입력하고 저장하세요. 예를 들어 deviceUrl을 등록하면 요청 URL에서 ${deviceUrl}/api/samples로 참조할 수 있습니다. index는 회차 번호에 사용하는 예약 이름입니다.'},
+  {title:'인증할 요청을 지정합니다',text:'환경에 로그인 URL, 로그인 본문, 응답의 토큰 경로와 토큰을 받을 API 주소를 지정하세요. 비밀번호는 보호 변수로 입력합니다. 요청의 인증을 켜면 같은 환경·계정·로그인 설정·대상 주소에서 유효한 토큰을 재사용합니다. HTTP 평문 연결에서는 보내기 전에 실제 대상 주소를 확인하세요.'},
+  {title:'로그인 오류를 확인합니다',text:'로그인에 실패하면 본 요청을 보내지 않고 다음 인덱스를 유지합니다. 인증을 사용한 본 요청이 401을 받으면 토큰을 폐기하고 남은 회차를 중지합니다. 계정을 확인한 뒤 미전송 회차부터 다시 보내세요. 트레이에 숨긴 동안 토큰은 유지되고 앱을 완전히 종료하면 지워집니다.'},
+ ],related:['postrail-requests','postrail-results']},
+ {id:'postrail-results',menu:'postrail',section:'기본 사용법',title:'반복 POST와 회차별 결과',intro:'POST를 한 건 보낼 때는 보내기를 누릅니다. 같은 요청을 여러 번 보내려면 반복 보내기를 켜고 횟수를 입력하세요.',steps:[
+  {title:'번호가 필요한 값을 작성합니다',text:'저장한 POST의 JSON 문자열 값에 sample_${index}를 입력하면 첫 실행에서 sample_1부터 시작합니다. 보내기 전에 이번 범위를 확인하세요. 한 건만 보내도 번호를 쓰며, 환경을 바꾸거나 앱을 다시 열어도 같은 저장 요청은 다음 번호에서 이어집니다.'},
+  {title:'중지 시점을 확인합니다',text:'회차는 한 번에 하나씩 보냅니다. 중지를 누르면 진행 중인 한 건의 응답이나 시간 초과를 기다립니다. 전송을 시도한 번호는 오류가 나도 이미 사용한 번호입니다. 시간 초과로 결과 확인 필요가 표시되면 서버 반영 여부를 확인한 뒤 다음 실행을 결정하세요.'},
+  {title:'특정 회차의 응답을 읽습니다',text:'하단의 회차별 결과를 열면 회차 번호와 상태, 사용한 인덱스를 복사할 수 있습니다. 보고 싶은 회차 번호를 입력하고 응답 보기를 눌러 실제 요청명·환경·회차와 함께 본문 또는 헤더를 확인하세요. Escape로 로그를 접어도 실행은 이어집니다. 다음 실행을 시작하면 결과가 교체되므로 필요한 로그는 먼저 복사하세요.'},
+ ],related:['postrail-requests','postrail-environments']},
  {id:'ssh-terminal',menu:'termrail',section:'기본 사용법',title:'SSH 서버 연결과 터미널 배치',intro:'서버를 등록한 뒤 여러 터미널을 탭이나 별도 창에 배치할 수 있습니다.',steps:[
   {title:'서버를 등록하고 연결합니다',text:'왼쪽 서버 옆의 ＋ 추가에서 이름·호스트·포트를 입력하고 저장합니다. 목록에서 이름을 더블클릭하거나 Enter를 눌러 연결하세요. 우클릭하면 서버를 수정할 수 있습니다. 탭 옆 ＋의 새 터미널에서는 저장하고 연결을 한 번에 실행합니다. 처음 연결할 때는 관리자에게 받은 서버 지문을 확인한 뒤 로그인하세요.'},
   {title:'작업 탭을 분할합니다',text:'왼쪽의 서버 이름을 터미널 가장자리로 끌어 분할하고 경계를 움직여 크기를 조절합니다. 분할한 탭에는 작업 이름과 터미널 수가 표시됩니다. 탭을 우클릭해 별도 창으로 옮길 수 있으며 그 창을 닫으면 연결된 탭이 메인 창으로 돌아옵니다. 작업 탭 닫기는 그 탭의 모든 세션을 종료합니다.'},

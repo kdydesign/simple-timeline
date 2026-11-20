@@ -30,6 +30,7 @@ import { readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { SharingNetworkError } from './sharing/transport'
 import {createSharingService,type SharingTransport} from './sharing/service'
+import {registerPostRailIpc} from './postrail/ipc'
 import {registerSharingIpc} from './sharing/ipc'
 import type {ProtectedSecrets} from './sharing/secrets'
 import {createReminderStore} from './db/reminders'
@@ -188,6 +189,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     desktopIcon,
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
+  const postRailIpc = registerPostRailIpc(window, rendererUrl, profile, () => installPending || appMutationBarrier.blocked())
   const termRailSsh = new TermRailSshService(join(profile, 'termrail-known-hosts.json'))
   const termRailIpc = registerTermRailSshIpc(termRailSsh,
     (event, method) => isTrustedSender(event, window, rendererUrl) &&
@@ -328,7 +330,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     if(!shutdown){
       clearInterval(reminderTimer)
       updateNotifications?.dispose()
-      shutdown=Promise.all([reminderEngine?.dispose(),sharedReminderEngine?.dispose(),sharing?.dispose()]).then(()=>{})
+      shutdown=Promise.all([postRailIpc.shutdown(),reminderEngine?.dispose(),sharedReminderEngine?.dispose(),sharing?.dispose()]).then(()=>{})
     }
     return shutdown
   }
@@ -368,7 +370,8 @@ export async function bootstrap(options: BootstrapOptions = {}) {
         })
         return choices[result.response] ?? 'cancel'
       })(),
-      beforeClose: async () => { await appMutationBarrier.freezeForShutdown();await updates?.dispose();await stopServices();exiting = true;help?.dispose();releases.dispose() },
+      onQuitRequested: postRailIpc.stopDispatch,
+      beforeClose: async () => { await Promise.all([postRailIpc.shutdown(),appMutationBarrier.freezeForShutdown()]);await updates?.dispose();await stopServices();exiting = true;help?.dispose();releases.dispose() },
       afterClose: () => app.quit(),
     },
   )
@@ -382,6 +385,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
   async function finishShutdown(){
+    postRailIpc.dispose()
     termRailIpc.unregister()
     help?.dispose();releases.dispose()
     powerMonitor.removeListener('resume',resume);powerMonitor.removeListener('suspend',suspend)
@@ -405,7 +409,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     exiting = true
     window.setEnabled(false)
     window.hide()
-    await updates?.dispose()
+    await Promise.all([postRailIpc.shutdown(), updates?.dispose()])
     await stopServices()
     await finishShutdown()
     updatesIpc.dispose(); unregisterWindow()

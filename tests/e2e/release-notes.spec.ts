@@ -5,7 +5,7 @@ test('opens independent offline release notes and help, reuses closed notes, and
  expect(await p.locator('#root').evaluate(e=>getComputedStyle(e).borderTopWidth)).toBe('0px');await expect(p.locator('.window-control-separator')).toHaveCount(2);for(const separator of await p.locator('.window-control-separator').all())await expect(separator).toBeVisible();
  await p.getByRole('button',{name:'릴리즈노트',exact:true}).click();await expect.poll(()=>d.app.windows().some(w=>w.url().includes('release-notes.html'))).toBe(true);
  const r=d.app.windows().find(w=>w.url().includes('release-notes.html'))!;await expect(r.getByRole('heading',{name:'WorkRail 1.0.0',exact:true})).toBeVisible();
- expect(await r.evaluate(()=>({node:typeof (window as any).require,data:'simpleTimeline'in window,help:'planrailHelp'in window,sharing:'timelineSharing'in window,updates:'timelineUpdates'in window}))).toEqual({node:'undefined',data:false,help:false,sharing:false,updates:false});
+ expect(await r.evaluate(()=>({node:typeof (window as any).require,data:'simpleTimeline'in window,help:'planrailHelp'in window,sharing:'timelineSharing'in window,updates:'timelineUpdates'in window,postRail:'postRail'in window}))).toEqual({node:'undefined',data:false,help:false,sharing:false,updates:false,postRail:false});
  expect(await r.evaluate(()=>window.planrailReleaseNotes!.command('deleteProject' as never))).toEqual({ok:false});
  await r.getByRole('button',{name:'0.8.3',exact:true}).click();await expect(r.getByRole('heading',{name:'Fix · 오류 수정'})).toBeVisible();await r.screenshot({path:info.outputPath('release-notes.png')});
  await p.evaluate(()=>window.timelineWindow!.command('help'));await expect.poll(()=>d.app.windows().filter(w=>/help.html|release-notes.html/.test(w.url())).length).toBe(2);

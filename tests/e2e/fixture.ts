@@ -39,6 +39,7 @@ export const test = base.extend<{
     const profile = await mkdtemp(join(tmpdir(), "simple-timeline-e2e-"));
     const log = info.outputPath("electron.log");
     await mkdir(info.outputDir, { recursive: true });
+    let closedApp: ElectronApplication | undefined;
     const launch = async () => {
       const began = Date.now();
       const env = Object.fromEntries(
@@ -59,6 +60,7 @@ export const test = base.extend<{
         },
         timeout: 30000,
       });
+      app.once("close", () => { closedApp = app });
       app.process().stderr?.on("data", (chunk) => {
         void appendFile(log, chunk);
       });
@@ -72,7 +74,7 @@ export const test = base.extend<{
       ...first,
       profile,
       async restart() {
-        await desktop.app.close();
+        if (desktop.app !== closedApp) await desktop.app.close();
         Object.assign(desktop, await launch());
       },
     };

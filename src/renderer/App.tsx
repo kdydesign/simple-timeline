@@ -41,6 +41,7 @@ import { ConfirmDialog } from "./components/ConfirmDialog";
 import { PlanWarning, StatusNotice } from "./components/StatusNotice";
 import {PlanRailStatus} from "./workrail/PlanRailStatus";
 import "./workrail/status.css";
+import {usePostRail} from './postrail/usePostRail'
 import { Home } from "./workrail/Home";
 import { NodeScreen } from "./workrail/NodeScreen";
 import { useEnvironmentPicker } from "./workrail/NodeEnvironment";
@@ -53,6 +54,7 @@ import "./flat-glass.css";
 import "./planrail.css";
 import "./forest-crystal.css";
 import "./workrail.css";
+const PostRail = lazy(() => import('./postrail/PostRail').then(({PostRail}) => ({default:PostRail})))
 const TermRail = lazy(() => import('./termrail/TermRail').then(({ TermRail }) => ({ default: TermRail })));
 
 interface Confirmation {
@@ -73,6 +75,8 @@ export function App({
   initialTool?: WorkRailTool;
 }) {
   const [tool, setTool] = useState(initialTool);
+  const [openedPostRail, setOpenedPostRail] = useState(initialTool === 'postrail');
+  const postrail = usePostRail(tool === 'home' || openedPostRail);
   const [openedTermRail, setOpenedTermRail] = useState(initialTool === 'termrail');
   const [runtimeVersion, setRuntimeVersion] = useState<string>();
   const planrailActive = tool === "planrail";
@@ -89,6 +93,7 @@ export function App({
   const [settingsDirty,setSettingsDirty]=useState(false);
   const [quickReminder,setQuickReminder]=useState<{id:string;caller:HTMLElement}|null>(null);
   const [quickDirty,setQuickDirty]=useState(false);
+  const [postRailDirty,setPostRailDirty]=useState(false);
   const [saveShieldActive,setSaveShieldActive]=useState(false);
   const [filter,setFilter]=useState<'all'|'personal'|'shared'>('all');
   const sharingView=useSharingView(timeline.snapshot,filter);
@@ -151,7 +156,8 @@ export function App({
   const model = editor.editor,
     canEdit = timeline.phase === "ready",
     saving = timeline.phase === "saving" || sharing.busy;
-  const updates=useUpdateGuard({known:(timeline.phase==='ready'||timeline.phase==='saving')&&!sharing.writeOutcomeUnknown,dirty:editor.dirty||settingsDirty||quickDirty,saving});
+  const hasUnsavedInput = editor.dirty || settingsDirty || quickDirty || postRailDirty;
+  const updates=useUpdateGuard({known:(timeline.phase==='ready'||timeline.phase==='saving')&&!sharing.writeOutcomeUnknown,dirty:hasUnsavedInput,saving});
   const settingsVisible=!!sharing.state&&!!sharing.api&&sharing.settingsOpen&&!quickReminder&&!confirmation&&!dayModalOpen&&timeline.mutation!=='pending'&&timeline.phase!=='saving'&&!saveShieldActive;
   const helpSection: HelpSection = settingsVisible ? "settings" : tool === "node" ? "noderail" : tool;
   const openHelp = useCallback(() => { void window.timelineWindow?.command("help", helpSection); }, [helpSection]);
@@ -168,6 +174,7 @@ export function App({
     || settingsVisible || !!quickReminder || !!confirmation || dayModalOpen;
   const selectTool = (next: WorkRailTool) => {
     if (dockBlocked) return;
+    if (next === 'postrail') setOpenedPostRail(true);
     if (next === 'termrail') setOpenedTermRail(true);
     setTool(next);
   };
@@ -194,20 +201,20 @@ export function App({
     return () => window.removeEventListener("resize", resize);
   }, []);
   useLayoutEffect(() => {
-    document.documentElement.dataset.editorDirty = String(editor.dirty || settingsDirty || quickDirty);
+    document.documentElement.dataset.editorDirty = String(hasUnsavedInput);
     document.documentElement.dataset.saving = String(saving);
     document.documentElement.dataset.timelinePhase = timeline.phase;
-  }, [editor.dirty, settingsDirty, quickDirty, saving, timeline.phase]);
+  }, [hasUnsavedInput, saving, timeline.phase]);
   useEffect(() => {
     const prevent = (event: BeforeUnloadEvent) => {
-      if (editor.dirty || settingsDirty || quickDirty || saving) {
+      if (hasUnsavedInput || saving) {
         event.preventDefault();
         event.returnValue = false;
       }
     };
     window.addEventListener("beforeunload", prevent);
     return () => window.removeEventListener("beforeunload", prevent);
-  }, [editor.dirty, settingsDirty, quickDirty, saving, timeline.phase]);
+  }, [hasUnsavedInput, saving, timeline.phase]);
   useEffect(() => {
     if (model?.saved && timeline.phase === "ready"&&!saveShieldActive) editor.close();
   }, [model?.saved, timeline.phase,saveShieldActive]);
@@ -789,7 +796,7 @@ export function App({
       {warning&&<div className="toast warning-toast" role="alert">{warning.message}</div>}
       <div className="toast" hidden={!!warning} role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
       </div>
-      {tool === "home" && <Home date={workDate} snapshot={timeline.snapshot} phase={timeline.phase} timelineError={timeline.error}
+      {tool === "home" && <Home postrail={postrail} onPostRail={()=>selectTool("postrail")} date={workDate} snapshot={timeline.snapshot} phase={timeline.phase} timelineError={timeline.error}
         sharing={sharing.state} sharingError={sharing.error} node={node} version={runtimeVersion} onRefresh={() => void timeline.refresh()}
         onEnvironment={environmentPicker.openPicker} onSettings={sharing.state&&sharing.api?()=>sharing.openSettings('sharing'):undefined}
         onPlanrail={() => {
@@ -807,6 +814,9 @@ export function App({
             } else dockButton.current?.focus();
           });
         }}/>}
+      {openedPostRail && <Suspense fallback={tool === "postrail" ? <div role="status">PostRail 여는 중…</div> : null}>
+        <PostRail postrail={postrail} active={tool === "postrail"} onDirtyChange={setPostRailDirty}/>
+      </Suspense>}
       {openedTermRail && <Suspense fallback={tool === "termrail" ? <div role="status">TermRail 여는 중…</div> : null}>
         <TermRail active={tool === "termrail"} />
       </Suspense>}

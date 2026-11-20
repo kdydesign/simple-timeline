@@ -25,3 +25,10 @@ it.each(helpSectionIds.filter(section=>section!=='settings'))('starts %s at the 
 it.each(['Space','Ctrl','프로젝트 추가','일정 추가','트레이','100%'])('documents core Planrail capability %s',query=>{
  expect(searchHelp(query).length).toBeGreaterThan(0)
 })
+
+it('opens PostRail at the request editor guide and finds instructions for numbered sends and authentication',()=>{
+ expect(initialHelpTopic('personal','postrail')).toBe('postrail-requests')
+ for(const query of ['회차별 결과','401','${index}']){
+  expect(searchHelp(query).some(result=>result.article.menu==='postrail')).toBe(true)
+ }
+})

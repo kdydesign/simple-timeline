@@ -7,12 +7,14 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
     keys: Object.keys(window.simpleTimeline),
     sharingKeys: Object.keys(window.timelineSharing!),
     nodeKeys: Object.keys(window.workrailNodeManagement!),
+    postRailKeys: Object.keys(window.postRail!),
   }))
   expect(shape.node).toBe('undefined')
   expect(shape.keys.sort()).toEqual(['getStatus','getSnapshot','createProject','updateProject','deleteProject','createSchedule','updateSchedule','deleteSchedule','updateScheduleReminder'].sort())
   expect(shape.keys).not.toContain('invoke')
   expect(shape.sharingKeys.sort()).toEqual(['switchRole','getDormantData','savePersonalHolidays','saveHolidays','getState','configureHost','setHosting','connect','confirmHost','approve','saveDevice','deleteDevice','revokeDevice','saveProject','saveReminder','sync','disconnect','acknowledgeSettings','setChangeNotifications','retryChangeNotifications','acknowledgeChange','onChange'].sort())
   expect(shape.nodeKeys.sort()).toEqual(['selectEnvironment','startEnvironment','cancelOperation','getState','refreshCatalog','installManager','install','use','removeStandalone','openMaintenance','openManagerFolder','openManagerRelease','onChange'].sort())
+  expect(shape.postRailKeys.sort()).toEqual(['read','capability','state','mutate','logout','start','stop','page','detail','onChange'].sort())
   const unconfirmed=await d.page.evaluate(()=>window.timelineSharing!.switchRole({role:'host',confirmed:false} as never))
   expect(unconfirmed).toMatchObject({ok:false,error:{code:'VALIDATION_ERROR'}})
   const sandbox = await d.app.evaluate(({app,BrowserWindow})=>({disabled:app.commandLine.hasSwitch('no-sandbox'),renderer:(BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('/index.html'))!.webContents as unknown as {getLastWebPreferences():{sandbox?:boolean}}).getLastWebPreferences().sandbox}))
@@ -39,10 +41,10 @@ test('renderer has no Node/raw IPC and malformed inputs never reach storage', as
   const child = await d.page.evaluate(() => {
     const frame = document.createElement('iframe')
     document.body.append(frame)
-    const child = frame.contentWindow as unknown as { simpleTimeline:unknown;timelineSharing:unknown;workrailNodeManagement:unknown }
-    return {timeline:typeof child.simpleTimeline,sharing:typeof child.timelineSharing,node:typeof child.workrailNodeManagement}
+    const child = frame.contentWindow as unknown as { simpleTimeline:unknown;timelineSharing:unknown;workrailNodeManagement:unknown;postRail:unknown }
+    return {timeline:typeof child.simpleTimeline,sharing:typeof child.timelineSharing,node:typeof child.workrailNodeManagement,postRail:typeof child.postRail}
   })
-  expect(child).toEqual({timeline:'undefined',sharing:'undefined',node:'undefined'})
+  expect(child).toEqual({timeline:'undefined',sharing:'undefined',node:'undefined',postRail:'undefined'})
   const old = d.page.url()
   const attempt = await d.app.evaluate(
     ({ BrowserWindow }) =>

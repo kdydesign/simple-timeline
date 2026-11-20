@@ -4,6 +4,7 @@ const paths: Record<WorkRailTool, string> = {
   home: 'M3 10.5 12 3l9 7.5v10H15v-6h-6v6H3z',
   planrail: 'M3.5 3.5v17M7 6h8M10 12h8M13 18h8',
   termrail: 'M3 4h18v16H3z M6 8l3 3-3 3 M12 15h5',
+  postrail: 'M3 7h16m-5-4 5 4-5 4M21 17H5m5-4-5 4 5 4',
   node: 'm12 2 8.7 5v10L12 22l-8.7-5V7z M9 15.5v-7l6 7v-7',
 }
 

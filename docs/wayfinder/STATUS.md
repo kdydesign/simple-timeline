@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 승인된 PostRail 작업 화면과 Home 즐겨찾기를 제품에 반영했다. 환경별 토큰 재사용, 순차 전송, 회차별 결과 조회와 앱 종료 동작은 [구현·검증 기록](../implementation/2026-11-20-postrail.md)을 따른다.
+
 2026-11-20 **PostRail 최종 설계 승인 · 제품 구현 전.** 사용자가 최신 PostRail 작업 화면·환경별 인증·Home 즐겨찾기와 시안을 확정했다. 아래 기록은 협의 이력이다. [최종 설계](../design/postrail-workspace.md) · [승인 시안](../design/mockups/postrail-workspace.html)
 
 2026-11-20 PostRail 요청 메뉴에서 한 번에 같은 그룹에 복제하고 환경 변수 목록 아래에서 행을 추가하도록 [설계와 시안](../design/postrail-workspace.md)을 갱신했다. 목록 단축키는 유지한다. 제품 구현 전이다.

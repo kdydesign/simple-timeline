@@ -15,9 +15,10 @@ test('a detached terminal is a sandboxed local surface and follows the main wind
     content: child.document.body.textContent,
     timeline: typeof child.simpleTimeline,
     windows: typeof child.workrailTermWindow,
+    postRail: 'postRail' in child,
     node: 'require' in child,
     nested: child.open('about:blank', '_blank') !== null,
-  }))).toEqual({ content: '터미널 출력', timeline: 'undefined', windows: 'undefined', node: false, nested: false })
+  }))).toEqual({ content: '터미널 출력', timeline: 'undefined', windows: 'undefined', postRail: false, node: false, nested: false })
   expect(await page.evaluate(() => window.open('about:blank', 'termrail-unknown') !== null)).toBe(false)
   const result = await app.evaluate(async ({ BrowserWindow }) => {
     const child = BrowserWindow.getAllWindows().find(w => w.webContents.getURL() === 'about:blank')!

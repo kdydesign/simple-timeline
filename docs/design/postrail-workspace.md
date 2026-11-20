@@ -1,6 +1,6 @@
 # PostRail 최종 설계 · 작업 화면과 Home 위젯
 
-**2026-11-20 설계 확정 · 제품 구현 전.** 사용자가 최종 승인한 화면은 `795837d`의 PostRail 작업 화면과 Home 위젯이다. 이 문서를 구현 기준으로 사용한다. [PostRail 시안](mockups/postrail-workspace.html) · [Home 시안](mockups/postrail-workspace.html#home)
+**2026-11-20 설계 확정.** 제품 반영과 검증 범위는 [구현 기록](../implementation/2026-11-20-postrail.md)에서 확인한다. 사용자가 최종 승인한 화면은 `795837d`의 PostRail 작업 화면과 Home 위젯이다. 이 문서를 구현 기준으로 사용한다. [PostRail 시안](mockups/postrail-workspace.html) · [Home 시안](mockups/postrail-workspace.html#home)
 
 [첫 버전 Q1~Q12](postrail.md)의 전송·저장·반복 인덱스·오류 처리 규칙과 [재검토에서 확정한 동작](postrail-review.md)을 함께 적용한다. 토큰의 재사용 범위, 인증 실패에 따른 회차 중지, 요청·응답 배치, footer 로그, 요청 목록 및 Home 즐겨찾기는 이 문서의 최종 결정을 따른다. 공통 응답 대기 시간은 요청별로 재정의할 수 있다. 공통 기본값의 구체적인 초 단위 수치는 구현 시 정한다.
 
