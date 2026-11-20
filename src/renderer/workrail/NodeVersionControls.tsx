@@ -1,9 +1,12 @@
-import { useId, useRef, useState, type ReactElement, type Ref } from 'react'
-import { Archive, Circle, CircleCheck, TriangleAlert } from 'lucide-react'
+import { useId, useLayoutEffect, useRef, useState, type ReactElement, type Ref } from 'react'
+import { Archive, ArrowRightLeft, Check, Circle, CircleCheck, Copy, Download, TriangleAlert } from 'lucide-react'
+import { IconButton } from '../components/Icon'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip'
 import type { NodeRelease } from '../../shared/node-management'
 import type { NodeManagement } from './useNodeManagement'
 import { nodeCanChange, nodeCanRecheck, nodeInstallReason, nodeMutationProgress, nodeOperationMessages, nodeProgress, nodeVersionStatus } from './nodePresentation'
+
+import './node-operation.css'
 
 export function NodeTooltip({ trigger, children }: { trigger: ReactElement; children: string }) {
   return <Tooltip>
@@ -28,27 +31,51 @@ export function NodeVersionStatus({ node, version }: { node: NodeManagement; ver
 export function NodeVersionAction({ node, version, release }: { node: NodeManagement; version: string; release?: NodeRelease }) {
   const description = useId()
   const status = nodeVersionStatus(node, version)
+  if (status === 'active') return <div className="workrail-version-action">
+    <span className="workrail-current-version" data-version-state="active" aria-current="true">
+      <Check aria-hidden="true" size={16} strokeWidth={3} />사용 중
+    </span>
+  </div>
   const reason = status === 'missing' ? release?.installReason : null
   const build = status === 'missing' && !reason && release?.sourceOnly
-  const action = status === 'active' ? '사용 중' : status === 'installed' ? '사용' : status === 'missing' ? '설치' : '다시 확인'
+  const action = status === 'installed' ? '사용' : status === 'missing' ? '설치' : '다시 확인'
   const canChange = nodeCanChange(node)
-  const disabled = status === 'active' || (status === null ? !nodeCanRecheck(node)
+  const disabled = status === null ? !nodeCanRecheck(node)
     : status === 'installed' ? !canChange || node.state?.capabilities?.use.available === false
-    : !canChange || !!nodeInstallReason(node.state, release) || node.catalogPending || node.state?.catalog.status !== 'ready')
+    : !canChange || !!nodeInstallReason(node.state, release) || node.catalogPending || node.state?.catalog.status !== 'ready'
   return <div className="workrail-version-action">
     <button type="button" className="workrail-control" data-version-state={status ?? 'unknown'}
       aria-label={version + ' ' + action} aria-describedby={reason || build ? description : undefined}
       disabled={disabled} onClick={() => {
         if (status === 'installed' || status === 'missing') void node.mutate({ kind: status === 'installed' ? 'use' : 'install', version })
         else if (status === null) void node.refresh()
-      }}>{action}</button>
+      }}>
+      {status === 'installed' && <ArrowRightLeft aria-hidden="true" size={15} />}
+      {status === 'missing' && <Download aria-hidden="true" size={15} />}
+      {action}
+    </button>
     {(reason || build) && <span id={description} className="workrail-action-reason">{reason ?? '소스 컴파일'}</span>}
   </div>
 }
 
-function WindowsDiagnosticLog({ lines }: { lines: string[] }) {
+function OperationLog({ node, open, onToggle }: { node: NodeManagement; open: boolean; onToggle: (open: boolean) => void }) {
+  const panel = useRef<HTMLDivElement>(null)
+  const restoreFocus = useRef(false)
   const log = useRef<HTMLPreElement>(null)
   const [feedback, setFeedback] = useState('')
+  const failure = node.state?.operationResult?.error
+  const lines = node.state?.operationLog
+  const path = node.state?.operationLogPath
+  const content = lines?.length ? lines.join('\n') : path
+  useLayoutEffect(() => {
+    if (restoreFocus.current) panel.current?.querySelector<HTMLButtonElement>('[data-log-toggle]')?.focus()
+    restoreFocus.current = false
+  }, [open])
+  function toggle() {
+    restoreFocus.current = true
+    setFeedback('')
+    onToggle(!open)
+  }
   function copy(button: HTMLButtonElement) {
     const selection = window.getSelection()
     if (!selection || !log.current) return
@@ -65,15 +92,24 @@ function WindowsDiagnosticLog({ lines }: { lines: string[] }) {
     }
     setFeedback(copied ? '진단 이력을 복사했습니다.' : '선택된 이력을 Ctrl+C로 복사해 주세요.')
   }
-  return <>
-    <pre ref={log} tabIndex={-1} onCopy={event => {
-      // HTML clipboard formats may include a source URL containing the user's installation path.
-      event.preventDefault()
-      event.clipboardData.setData('text/plain', window.getSelection()?.toString() ?? '')
-    }}>{lines.join('\n')}</pre>
-    <button type="button" className="workrail-control" onClick={event => copy(event.currentTarget)}>진단 복사</button>
-    {feedback && <span role="status">{feedback}</span>}
-  </>
+  return <div ref={panel} className="workrail-log">
+    {open ? <section aria-label="작업 로그" className={'workrail-surface workrail-log-panel' + (failure ? ' plan-warning' : '')}>
+      <header className="workrail-log-header">
+        <h4>{failure && <TriangleAlert aria-hidden="true" size={16} />}작업 로그</h4>
+        {content && <NodeTooltip trigger={<button type="button" className="workrail-control workrail-log-copy" aria-label="진단 복사"
+          onClick={event => copy(event.currentTarget)}><Copy aria-hidden="true" size={15} /></button>}>진단 복사</NodeTooltip>}
+        <IconButton tooltip icon="close" label="작업 로그 닫기" data-log-toggle onClick={toggle} />
+      </header>
+      {failure && <p role="alert">{failure.message}</p>}
+      {path && !!lines?.length && <p className="workrail-muted">{path}</p>}
+      {content && <pre ref={log} tabIndex={-1} onCopy={event => {
+        // HTML clipboard formats may contain the source installation path.
+        event.preventDefault()
+        event.clipboardData.setData('text/plain', window.getSelection()?.toString() ?? '')
+      }}>{content}</pre>}
+      {feedback && <span role="status">{feedback}</span>}
+    </section> : <button type="button" className="workrail-link" aria-expanded={false} data-log-toggle onClick={toggle}>작업 로그 보기</button>}
+  </div>
 }
 
 export function NodeOperationStatus({ node, showLogs = false, stackedProgress = false }: { node: NodeManagement; showLogs?: boolean; stackedProgress?: boolean }) {
@@ -82,24 +118,23 @@ export function NodeOperationStatus({ node, showLogs = false, stackedProgress = 
   const stacked = stackedProgress ? nodeMutationProgress(node) : null
   const messages = nodeOperationMessages(node)
   const canCancel = !!state?.busy?.cancellable && state.error?.code !== 'operation-unknown'
-  const log = state?.operationLog
-  const logPath = state?.operationLogPath
-  const windowsLog = node.environment?.kind === 'windows'
-    || (state?.platform === 'win32' && !state.environments && state.manager.kind !== 'nodenv')
-  if (!progress && !messages.length && !(showLogs && (log?.length || logPath))) return null
+  const result = state?.operationResult
+  const hasLog = showLogs && !!(result || state?.operationLog?.length || state?.operationLogPath)
+  const environmentId = state?.environments?.selectedId ?? 'windows'
+  const logId = result?.id ?? (state?.busy?.id && 'live:' + state.busy.id)
+  const preference = node.logVisibility[environmentId]
+  const open = preference && preference.logId === logId ? preference.open : !!result?.error
+  const alerts = hasLog && open ? messages.filter(message => message !== result?.error?.message) : messages
+  if (!progress && !alerts.length && !hasLog) return null
   return <div className="workrail-operation">
     {progress && <div className="workrail-operation-progress">
       <p role="status">{stacked ? <>{stacked.name}<br />{stacked.description}</> : progress}</p>
       {canCancel && <button type="button" className="workrail-control" disabled={node.cancelPending}
         onClick={() => void node.cancelOperation()}>작업 취소</button>}
     </div>}
-    {messages.map(message => <p key={message} className="workrail-message" role="alert">{message}</p>)}
-    {showLogs && (logPath || !!log?.length) && <details className="workrail-node-details">
-      <summary>작업 로그</summary>
-      {logPath && <p className="workrail-muted">{logPath}</p>}
-      {!!log?.length && (windowsLog
-        ? <WindowsDiagnosticLog key={log.at(-1)} lines={log} /> : <pre>{log.join('\n')}</pre>)}
-    </details>}
+    {alerts.map(message => <p key={message} className="workrail-message" role="alert">{message}</p>)}
+    {hasLog && <OperationLog key={environmentId + (logId ?? '')} node={node} open={open}
+      onToggle={value => node.showOperationLog(environmentId, logId, value)} />}
   </div>
 }
 

@@ -22,11 +22,22 @@
   background: var(--surface);
 }
 .termrail-side-head { display: flex; align-items: center; justify-content: space-between; gap: 1px; padding: 5px 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
-.termrail-side-head button, .termrail-servers button, .termrail-layouts button, .termrail-tabs button,
+.termrail-servers button, .termrail-layouts button, .termrail-tabs button,
 .termrail-caption button, .termrail-menu button, .termrail-notice button {
   border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--text); font: inherit;
 }
-.termrail-side-head button { color: var(--accent); padding: 0 2px; white-space: nowrap; }
+.termrail-sidebar { container-type: inline-size; }
+.termrail-side-head button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+  min-height: 23px; padding: 2px 6px; white-space: nowrap; font: inherit;
+  border-radius: 6px; border: 1px solid var(--selected-border);
+  background: var(--selected-sheen), var(--selected-control); color: var(--accent-foreground);
+  box-shadow: var(--control-shadow);
+}
+.termrail-side-head button:hover { border-color: var(--accent); }
+@container (max-width: 100px) {
+  .termrail-side-head button span { display: none; }
+}
 .termrail-servers { flex: 1; min-height: 0; overflow: auto; }
 .termrail-layouts { max-height: 28%; overflow: auto; }
 .termrail-layout-title { border-top: 1px solid var(--rim, var(--border)); }

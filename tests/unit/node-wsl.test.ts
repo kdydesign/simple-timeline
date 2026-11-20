@@ -135,11 +135,11 @@ it.runIf(process.platform === 'linux')('cancels only the owned guest process gro
 })
 
 import * as services from '../../src/main/node-management/wsl'
+import type { EnvironmentChanged, EnvironmentLogHistory } from '../../src/main/node-management/environments'
 import { capabilities } from '../../src/main/node-management/manager-support'
 import { createMutationBarrier } from '../../src/main/updates/installer'
-import type { NodeManagementState } from '../../src/shared/node-management'
 
-function setupService(openLog?: () => ReturnType<typeof services.openWslLog>) {
+function setupService(openLog?: () => ReturnType<typeof services.openWslLog>, history?: EnvironmentLogHistory) {
   let snapshot: guest.WslInspection = {
     user: 'tester', arch: 'x64', root: '/home/tester/.nodenv', builder: '/opt/node-build', definitions: ['22.1.0','18.0.0'], buildTools: false,
     global: '20.1.0', manager: { kind: 'nodenv', path: '/opt/nodenv', status: 'ready', version: '1.6.2' },
@@ -147,8 +147,8 @@ function setupService(openLog?: () => ReturnType<typeof services.openWslLog>) {
   }
   const loadCatalog = vi.fn(async () => ['22.1.0','20.1.0','18.0.0'].map(version => ({ version, lts: null, date: '2024-01-01', security: false, npm: null, sourceOnly: version === '18.0.0' })))
   const runner = { verifiedFolder: vi.fn(async () => null), isStopped: vi.fn(async () => false), defaultUser: vi.fn(async () => snapshot.user), probe: vi.fn(async () => snapshot), change: vi.fn<ReturnType<typeof host.createWslRunner>['change']>(async () => 'success') }
-  const changed = vi.fn<(s: NodeManagementState, user?: string | null) => void>(), barrier = createMutationBarrier()
-  const service = services.createWslService({ environment: env, runner, loadCatalog, changed, barrier, openLog })
+  const changed = vi.fn<EnvironmentChanged>(), barrier = createMutationBarrier()
+  const service = services.createWslService({ environment: env, runner, loadCatalog, changed, barrier, openLog, history })
   return { service, runner, loadCatalog, changed, barrier, update: (patch: Partial<guest.WslInspection>) => { snapshot = { ...snapshot, ...patch } } }
 }
 
@@ -392,14 +392,16 @@ it('holds the update barrier on missing or inconclusive termination evidence and
   const { service, runner, barrier } = setupService()
   await service.refreshCatalog()
   runner.change.mockResolvedValueOnce('unknown')
-  await service.install('22.1.0')
+  expect((await service.install('22.1.0')).operationResult).toBeUndefined()
   const probes = runner.probe.mock.calls.length
   runner.isStopped.mockRejectedValueOnce(Error('host read failed'))
   expect((await service.getState()).error?.code).toBe('operation-unknown')
   expect((await service.getState()).busy).toBeTruthy()
   const drain = barrier.freeze()
   runner.isStopped.mockResolvedValue(true)
-  expect((await service.getState()).busy).toBeNull()
+  const stopped = await service.getState()
+  expect(stopped.busy).toBeNull()
+  expect(stopped.operationResult).toMatchObject({ id: expect.any(String), error: { code: 'verification-failed' } })
   expect(service.isBusy()).toBe(false)
   await drain
   expect(runner.probe).toHaveBeenCalledTimes(probes)
@@ -635,3 +637,62 @@ curl -qfsS --max-time 3 ${addresses[2]}/bypass-${i} >/dev/null || exit 1
     await Promise.all(releases.map(f => rm(f.home, { recursive: true, force: true })))
   }
 }, 15000)
+
+it('retains each WSL failure through recheck and identifies a retry without command output', async () => {
+  const { service } = setupService()
+  const failed = await service.use('18.0.0')
+  expect(failed.operationResult).toMatchObject({ id: expect.any(String), error: { code: 'version-not-installed' } })
+  expect(failed.operationLog).toEqual(['use · 18.0.0 · version-not-installed'])
+  expect((await service.getState('recheck')).operationResult).toEqual(failed.operationResult)
+  const retry = await service.use('18.0.0')
+  expect(retry.operationResult?.id).not.toBe(failed.operationResult?.id)
+  expect(retry.operationResult?.error).toEqual(failed.operationResult?.error)
+})
+
+it('restores WSL logs only after verifying the original user and nodenv root', async () => {
+  const original = setupService()
+  const failed = await original.service.use('18.0.0')
+  const target = original.changed.mock.lastCall?.[2]
+  expect(target).toEqual(expect.any(String))
+  const history = { target, log: { operationResult: failed.operationResult, operationLog: failed.operationLog } }
+  const same = setupService(undefined, history)
+  expect((await same.service.getState()).operationResult).toEqual(failed.operationResult)
+  const moved = setupService(undefined, history)
+  moved.update({ root: '/home/tester/another-root' })
+  expect((await moved.service.getState()).operationLog).toBeUndefined()
+  expect((await moved.service.getState()).operationResult).toBeUndefined()
+})
+
+it.each(['failed', 'unknown'] as const)('discards the original user’s %s operation history when postflight finds a new target', async outcome => {
+  const { service, runner, update, changed, barrier } = setupService()
+  await service.refreshCatalog()
+  runner.change.mockImplementationOnce(async (_env, _info, _kind, _version, _signal, line) => {
+    line('output from original user')
+    update({ user: 'another', root: '/home/another/.nodenv' })
+    return outcome
+  })
+  let result = await service.install('22.1.0')
+  if (outcome === 'unknown') {
+    expect(result.error?.code).toBe('operation-unknown')
+    expect(service.isBusy()).toBe(true)
+    const drained = barrier.freeze()
+    runner.isStopped.mockResolvedValue(true)
+    result = await service.getState()
+    await drained
+    expect(service.isBusy()).toBe(false)
+  }
+  expect(result.operationResult).toBeUndefined()
+  expect(result.operationLog ?? []).toEqual([])
+  expect(result.operationLogPath).toBeUndefined()
+  expect(changed.mock.calls.filter(([, user]) => user === 'another').some(([s]) =>
+    s.operationResult || s.operationLog?.includes('output from original user'))).toBe(false)
+})
+
+it('keeps a failed first inspection out of the next verified WSL target’s history', async () => {
+  const { service, runner } = setupService()
+  runner.probe.mockRejectedValueOnce(Error('WSL unavailable'))
+  expect((await service.use('18.0.0')).error?.code).toBe('inspection-failed')
+  const verified = await service.getState()
+  expect(verified.operationResult).toBeUndefined()
+  expect(verified.operationLog ?? []).toEqual([])
+})

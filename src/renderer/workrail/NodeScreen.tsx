@@ -22,7 +22,9 @@ const filters = [
 ] as const
 const pageSize = 30
 
-export function NodeScreen({ node, onEnvironment }: { node: NodeManagement; onEnvironment: OpenEnvironment }) {
+export function NodeScreen({ node, onEnvironment, installedHeading }: {
+  node: NodeManagement; onEnvironment: OpenEnvironment; installedHeading?: RefObject<HTMLHeadingElement | null>
+}) {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<typeof filters[number]['id']>('all')
   const [limit, setLimit] = useState(pageSize)
@@ -171,7 +173,7 @@ export function NodeScreen({ node, onEnvironment }: { node: NodeManagement; onEn
             </div>
           </section>
           <section className="workrail-surface workrail-node-installed" aria-labelledby="workrail-installed-heading">
-            <h3 id="workrail-installed-heading" tabIndex={-1}>설치된 버전</h3>
+            <h3 id="workrail-installed-heading" ref={installedHeading} tabIndex={-1}>설치된 버전</h3>
             <div className="workrail-installed-scroll">
               {installed.length > 0 ? (
                 <>

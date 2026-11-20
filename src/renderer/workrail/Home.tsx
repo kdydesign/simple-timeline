@@ -1,4 +1,4 @@
-import { CalendarDays, FolderOpen } from 'lucide-react'
+import { ArrowRight, CalendarDays, FolderOpen } from 'lucide-react'
 import { toOrdinal } from '../../domain/date'
 import { useMemo } from 'react'
 import type { ApiError, TimelineSnapshot } from '../../shared/types'
@@ -13,7 +13,8 @@ import { SharingWidget } from './SharingWidget'
 import './home.css'
 
 const maxSchedules = 10
-const maxNodeVersions = 3
+const maxNodeVersions = 5
+type OpenNode = (target: 'overview' | 'installed') => void
 const dateFormat = new Intl.DateTimeFormat('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' })
 const todayFormat = (date: string) => {
   // setFullYear preserves four-digit business dates earlier than 0100.
@@ -33,7 +34,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
   node: NodeManagement
   onRefresh: () => void
   onPlanrail: () => void
-  onNode: () => void
+  onNode: OpenNode
   onEnvironment: OpenEnvironment
   onSettings?: () => void
   version?: string
@@ -133,7 +134,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
               {ready && !!state?.conflicts.length && <p className="workrail-note">Node 환경 충돌 {state.conflicts.length}건을 확인해 주세요.</p>}
             </>
           )}
-          <button type="button" className="workrail-control workrail-primary workrail-home-node-link" onClick={onNode}>NodeRail 열기</button>
+          <button type="button" className="workrail-control workrail-primary workrail-home-node-link" onClick={() => onNode('overview')}>NodeRail 열기</button>
         </section>
         <div className="workrail-home-summaries">
           <SharingWidget sharing={sharing} error={sharingError} onSettings={onSettings} version={version} />
@@ -166,7 +167,7 @@ function ManagerFolderButton({ node }: { node: NodeManagement }) {
   }>{reason ? name + ' · ' + reason : name}</NodeTooltip>
 }
 
-function HomeNodeWidget({ node, inventory, working, onNode }: { node: NodeManagement; inventory: NodeManagement; working: boolean; onNode: () => void }) {
+function HomeNodeWidget({ node, inventory, working, onNode }: { node: NodeManagement; inventory: NodeManagement; working: boolean; onNode: OpenNode }) {
   const hasMessages = nodeOperationMessages(node).length > 0
   const showStatus = !!nodeProgress(node) || hasMessages
   return <section className="workrail-surface workrail-widget workrail-node-widget" aria-label="Node 작업">
@@ -176,20 +177,18 @@ function HomeNodeWidget({ node, inventory, working, onNode }: { node: NodeManage
         {inventory.state?.supported && <span className="workrail-muted">{nodeEnvironmentLabel(inventory)}</span>}
       </header>
       {(working || !showStatus) && <HomeVersionList node={inventory} onNode={onNode} />}
-      {!working && showStatus && <>
-        <NodeOperationStatus node={node} showLogs />
-        {hasMessages && <div className="workrail-widget-recovery">
-          <button type="button" className="workrail-control" disabled={!nodeCanRecheck(node) || node.recheckPending}
-            onClick={() => void node.refresh()}>다시 확인</button>
-          <button type="button" className="workrail-link" onClick={onNode}>NodeRail에서 자세히 보기</button>
-        </div>}
-      </>}
+      {!working && <NodeOperationStatus node={node} showLogs />}
+      {!working && hasMessages && <div className="workrail-widget-recovery">
+        <button type="button" className="workrail-control" disabled={!nodeCanRecheck(node) || node.recheckPending}
+          onClick={() => void node.refresh()}>다시 확인</button>
+        <button type="button" className="workrail-link" onClick={() => onNode('overview')}>NodeRail에서 자세히 보기</button>
+      </div>}
     </div>
     {working && <NodeOperationOverlay node={node} />}
   </section>
 }
 
-function HomeVersionList({ node, onNode }: { node: NodeManagement; onNode: () => void }) {
+function HomeVersionList({ node, onNode }: { node: NodeManagement; onNode: OpenNode }) {
   const { state } = node
   if (!nodeEnvironmentReady(node)) {
     return <p className="workrail-muted">{state?.supported === false ? platformScope : node.environment && !node.environment.running
@@ -203,14 +202,16 @@ function HomeVersionList({ node, onNode }: { node: NodeManagement; onNode: () =>
   const wsl = node.environment?.kind === 'wsl2'
   const useReason = nodeCapabilityReason(state, 'use')
   return <>
-    <p className="workrail-muted">{wsl ? '이 WSL 사용자의 설치된 버전' : '설치된 버전'}</p>
+    <p className="workrail-muted">{wsl ? '이 WSL 사용자의 설치된 버전' : '설치된 버전'} {versions.length}개</p>
     <ul className="workrail-widget-versions" aria-label="설치된 버전">
       {versions.slice(0, maxNodeVersions).map(version => <li key={version}>
         <strong>{version}</strong><NodeVersionAction node={node} version={version} />
       </li>)}
     </ul>
     {useReason && <p className="workrail-muted">{useReason}</p>}
-    {versions.length > maxNodeVersions && <button type="button" className="workrail-link" onClick={onNode}>전체 {versions.length}개</button>}
+    {versions.length > maxNodeVersions && <button type="button" className="workrail-link workrail-widget-more" onClick={() => onNode('installed')}>
+      외 {versions.length - maxNodeVersions}개 <ArrowRight aria-hidden="true" size={14} />
+    </button>}
     {wsl && <p className="workrail-widget-meta">프로젝트의 .node-version 설정은 유지됩니다.</p>}
   </>
 }

@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 NodeRail 작업 로그와 버전 표시, Home의 5개 목록과 전체 보기, TermRail 파일 선택·팝업, 메뉴별 도움말을 반영했다. [구현 내용과 검사 범위](../implementation/2026-11-20-workrail-log-home-termrail-help.md)
+
 2026-11-20 설치본 피드백 후속 작업으로 NodeRail ZIP 진단·상태 색상과 TermRail 시작 파일·작업 탭·보이기·입력 검증을 반영했다. [구현과 검사 범위](../implementation/2026-11-20-installed-feedback.md)
 
 2026-11-19 TermRail SSH 터미널, Windows 공식 Node ZIP 설치 통합과 크기별 아이콘을 제품에 반영했다. 플랫폼별 인수 범위는 [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md)에서 확인한다.

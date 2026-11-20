@@ -5,7 +5,7 @@ import { finished } from 'node:stream/promises'
 import { stripVTControlCharacters } from 'node:util'
 import { isNodeVersion, type NodeEnvironment, type NodeManagementError, type NodeManagementErrorCode, type NodeManagementState, type NodeOperation, type NodeRelease } from '../../shared/node-management'
 import type { MutationBarrier } from '../updates/installer'
-import { emptyNodeState, type EnvironmentChanged } from './environments'
+import { emptyNodeState, type EnvironmentChanged, type EnvironmentLogHistory } from './environments'
 import { capabilities } from './manager-support'
 import { nodeManagementError } from './service'
 import { missingBuildTools, type WslInspection } from './wsl-guest'
@@ -77,13 +77,16 @@ export function createWslService(options: {
   runner: Pick<ReturnType<typeof createWslRunner>, 'isStopped' | 'probe' | 'change' | 'verifiedFolder'>
   loadCatalog(arch: string): Promise<NodeRelease[]>
   changed: EnvironmentChanged
+  history?: EnvironmentLogHistory
   openLog?(): ReturnType<typeof openWslLog>
   barrier?: MutationBarrier
 }) {
   const env = options.environment
   let state = emptyNodeState('win32', true)
   let current: WslInspection | undefined
+  let savedHistory = options.history
   let knownIdentity: string | undefined
+  let operationTargetChanged = false
   let releases: NodeRelease[] | undefined
   let generation = 0
   let readInspection: Promise<WslInspection | undefined> | undefined
@@ -100,7 +103,7 @@ export function createWslService(options: {
 
   function publish(patch: Partial<NodeManagementState>) {
     state = { ...state, ...patch, revision: state.revision + 1 }
-    options.changed(state, current?.user ?? null)
+    options.changed(state, current?.user ?? null, knownIdentity)
     return state
   }
   function progress(phase: NodeOperation['phase'], cancellable: boolean) {
@@ -115,13 +118,19 @@ export function createWslService(options: {
       const changed = knownIdentity !== undefined && knownIdentity !== nextIdentity
       current = info
       knownIdentity = nextIdentity
-      if (changed) { invalidateCatalog(); releases = undefined }
+      if (changed) {
+        invalidateCatalog()
+        releases = undefined
+        if (state.busy) operationTargetChanged = true
+      }
+      const restored = savedHistory?.target === nextIdentity ? savedHistory.log : undefined
+      savedHistory = undefined
       publish({
-        manager: info.manager, installedVersions: info.installedVersions, activeVersion: info.activeVersion,
+        ...restored, manager: info.manager, installedVersions: info.installedVersions, activeVersion: info.activeVersion,
         configuredDefaultVersion: isNodeVersion(info.global) ? info.global : undefined,
         activeSource: info.activeVersion ? 'nodenv' : null, capabilities: info.capabilities, conflicts: info.conflicts,
         checkedAt: new Date().toISOString(),
-        ...(changed ? { error: changedTarget, catalog: emptyNodeState('win32', true).catalog, operationLog: [], operationLogPath: undefined }
+        ...(changed ? { error: changedTarget, catalog: emptyNodeState('win32', true).catalog, operationLog: [], operationLogPath: undefined, operationResult: undefined }
           : { error: state.error?.code === 'inspection-failed' ? null : state.error,
               ...(releases ? { catalog: { ...state.catalog, releases: annotate(releases, info) } } : {}) }),
       })
@@ -156,16 +165,26 @@ export function createWslService(options: {
     return request.finally(() => { if (catalogRequest === request) catalogRequest = undefined })
   }
 
+  function completed(operation: NodeOperation, failure: NodeManagementError | null) {
+    // inspect already dropped the old target's log. Never recreate its history under the new target.
+    if (operationTargetChanged || !knownIdentity) return { busy: null, error: operationTargetChanged ? changedTarget : failure }
+    const summary = [operation.kind, operation.version, failure?.code ?? '성공'].filter(Boolean).join(' · ')
+    return { busy: null, error: failure, operationResult: { id: operation.id ?? randomUUID(), error: failure },
+      operationLog: state.operationLog?.length ? state.operationLog : [summary] }
+  }
+
   async function read(refresh: boolean, intent?: 'recheck') {
     if (state.busy) {
+      const operation = state.busy
       const release = releaseUnknown
       if (release && await options.runner.isStopped(env).catch(() => false) && release === releaseUnknown) {
         releaseUnknown = undefined
         release()
         current = undefined
         releases = undefined
-        publish({ ...emptyNodeState('win32', true), configuredDefaultVersion: undefined, operationLog: state.operationLog, operationLogPath: state.operationLogPath,
-          error: error('verification-failed', 'WSL 배포판 종료를 확인했습니다. 다음 환경 시작 후 작업 결과를 다시 확인해 주세요.') })
+        const failure = error('verification-failed', 'WSL 배포판 종료를 확인했습니다. 다음 환경 시작 후 작업 결과를 다시 확인해 주세요.')
+        publish({ ...emptyNodeState('win32', true), configuredDefaultVersion: undefined, operationLogPath: state.operationLogPath,
+          ...completed(operation, failure) })
       }
       return state
     }
@@ -261,6 +280,8 @@ export function createWslService(options: {
     if (!isNodeVersion(version)) return Promise.resolve({ ...state, error: nodeManagementError('invalid-request') })
     if (state.busy) return Promise.resolve({ ...state, error: state.error ?? nodeManagementError('busy') })
     if (options.barrier?.blocked()) return Promise.resolve({ ...state, error: nodeManagementError('shutdown') })
+    savedHistory = undefined
+    operationTargetChanged = false
     const token = ++generation, abort = new AbortController()
     readInspection = undefined
     invalidateCatalog()
@@ -269,7 +290,8 @@ export function createWslService(options: {
     let finish!: (state: NodeManagementState) => void
     const result = new Promise<NodeManagementState>(resolve => { finish = resolve })
     pending = result
-    publish({ busy: { kind, version, phase: 'checking', cancellable: false }, operationLog: [], operationLogPath: undefined, error: null,
+    const operation: NodeOperation = { id: randomUUID(), kind, version, phase: 'checking', cancellable: false }
+    publish({ busy: operation, operationLog: [], operationLogPath: undefined, operationResult: undefined, error: null,
       ...(wasLoading ? { catalog: { ...state.catalog, status: releases ? 'ready' : 'idle' } } : {}) })
     const run = async () => {
       const failure = await perform(kind, version, token, abort.signal)
@@ -277,13 +299,14 @@ export function createWslService(options: {
       pending = undefined
       const unknown = failure?.code === 'operation-unknown'
       const termination = unknown ? new Promise<void>(resolve => { releaseUnknown = resolve }) : undefined
-      finish(publish({ busy: unknown ? { kind, version, phase: 'waiting', cancellable: false } : null, error: failure }))
+      finish(publish(unknown ? { busy: { ...operation, phase: 'waiting', cancellable: false }, error: failure }
+        : completed(operation, failure)))
       if (termination) await termination
     }
     void (options.barrier ? options.barrier.run(run) : run()).catch(() => {
       controller = undefined
       pending = undefined
-      finish(publish({ busy: null, error: inspectionError }))
+      finish(publish(completed(operation, inspectionError)))
     })
     return result
   }

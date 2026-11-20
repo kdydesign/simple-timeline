@@ -50,6 +50,10 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   const [cancelPending, setCancelPending] = useState(false)
   const [controlError, setControlError] = useState<NodeManagementError | null>(null)
 
+  const [logVisibility, setLogVisibility] = useState<Record<string, { logId?: string; open: boolean }>>({})
+  function showOperationLog(environmentId: string, logId: string | undefined, open: boolean) {
+    setLogVisibility(previous => ({ ...previous, [environmentId]: { logId, open } }))
+  }
   const [operationBaseline, setOperationBaseline] = useState<NodeManagementState | null>(null)
   const [recheckPending, setRecheckPending] = useState(false)
   const [openingManager, setOpeningManager] = useState<'folder' | 'release' | null>(null)
@@ -161,6 +165,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
 
   useEffect(() => {
     setState(null)
+    setLogVisibility({})
     setOperationBaseline(null)
     setRecheckPending(false)
     setOpeningManager(null)
@@ -315,7 +320,7 @@ export function useNodeManagement(active: boolean, api: NodeManagementApi | unde
   const error = mutationFailure?.error ?? readError
   return { state, error, controlError, openingMaintenance, maintenanceError, recoveryError: mutationFailure?.recoveryError,
     available: !!api, mutation, busy, refresh, catalogPending, refreshCatalog, mutate, openMaintenance,
-    operationBaseline, recheckPending, openingManager, folderError, releaseError,
+    logVisibility, showOperationLog, operationBaseline, recheckPending, openingManager, folderError, releaseError,
     openManagerFolder: () => openManager('folder'), openManagerRelease: () => openManager('release'),
     environment, environmentPending, changeEnvironment, cancelPending, cancelOperation }
 }

@@ -1,6 +1,6 @@
 # WorkRail 작업 로그, Home 목록과 TermRail 입력 개선
 
-2026-11-20 설계 검토본. Q1~Q3의 동작을 반영했다. 대상은 NodeRail·Home·TermRail·도움말이다. [이전 설치본 피드백 설계](noderail-termrail-installed-feedback.md)
+2026-11-20 승인 설계. Q1~Q3의 동작을 반영했다. 대상은 NodeRail·Home·TermRail·도움말이다. [이전 설치본 피드백 설계](noderail-termrail-installed-feedback.md)
 
 ## NodeRail 작업 로그와 버전 표시
 

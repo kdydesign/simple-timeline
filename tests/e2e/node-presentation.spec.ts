@@ -62,7 +62,7 @@ async function expectCenteredColumns(table: Locator, info: TestInfo, attachment:
     const cells = [...element.querySelectorAll('tbody tr:first-child > *')]
     const measurements = [...headers, ...cells].map(cell => {
       const textNode = cell.querySelector('.workrail-sort > span:first-child, .workrail-tag') ?? cell
-      const control = cell.querySelector('.workrail-version-status svg, .workrail-version-action button')
+      const control = cell.querySelector('.workrail-version-status svg, .workrail-version-action [data-version-state]')
       const range = document.createRange()
       range.selectNodeContents(textNode)
       const content = control?.getBoundingClientRect() ?? range.getBoundingClientRect()
@@ -124,7 +124,21 @@ test('keeps release actions and status icons distinguishable in both themes', as
     const colors = new Set<string>()
     for (const [status, action] of [['미설치', '22.3.0 설치'], ['설치됨', '22.1.0 사용'], ['사용 중', '22.2.0 사용 중']]) {
       colors.add(await contrast(table.getByRole('img', { name: status, exact: true }), true))
-      await contrast(table.getByRole('button', { name: action, exact: true }), false)
+      const control = status === '사용 중' ? table.getByText('사용 중', { exact: true }) : table.getByRole('button', { name: action, exact: true })
+      await contrast(control, false)
+      await expect(control.locator('svg[aria-hidden="true"]')).toHaveCount(1)
+      const [r, g, b] = await control.evaluate(el => getComputedStyle(el).color.match(/\d+/g)!.map(Number))
+      if (status === '사용 중') {
+        await expect(control).toHaveAttribute('aria-current', 'true')
+        expect(await control.evaluate(el => Number(getComputedStyle(el).fontWeight))).toBeGreaterThanOrEqual(700)
+        expect(g).toBeGreaterThan(Math.max(r, b))
+      } else if (status === '설치됨') {
+        expect(b).toBeGreaterThan(Math.max(r, g))
+        expect(await control.evaluate(el => getComputedStyle(el).backgroundImage)).toContain('gradient')
+      } else {
+        expect(Math.max(r, g, b) - Math.min(r, g, b)).toBeLessThan(25)
+        await expect(control).toHaveCSS('background-image', 'none')
+      }
     }
     await publishNode(desktop, { ...state, checkedAt: null, revision: ++revision })
     colors.add(await contrast(table.getByRole('img', { name: '확인 불가' }).first(), true))
@@ -396,7 +410,7 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
   await page.setViewportSize({ width: 1280, height: 900 })
   await showWindowsNode(desktop, { environments: { status: 'ready', items: [windows, ubuntu], selectedId: windows.id, error: null },
     manager: { kind: 'nvm-windows', version: '1.1.11', status: 'ready' }, activeVersion: '24.22.3',
-    installedVersions: ['24.22.3', '22.16.0', '20.19.0', '18.20.1'] })
+    installedVersions: ['24.22.3', '24.22.2', '24.22.1', '22.16.0', '20.19.0', '18.20.1'] })
   const day = await main.locator('.workrail-page-heading time').getAttribute('datetime')
   const snapshot = await page.evaluate(() => window.simpleTimeline.getSnapshot())
   if (!snapshot.ok || !day) throw Error('Timeline presentation fixture unavailable')
@@ -408,11 +422,18 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
     ipcMain.removeHandler(channel)
     ipcMain.handle(channel, () => ({ ok: true, data: today }))
   }, { channel: channels.getSnapshot, today })
-  await publishSharing(desktop, host)
+  const extra = ['수현', '예린', '유진'].map((name, index) => ({
+    id: 'extra-' + index, name, ip: '192.168.0.' + (40 + index), approved: true, revoked: false,
+  }))
+  await publishSharing(desktop, { ...host, snapshotRevision: 189, devices: [...devices, ...extra],
+    memberPresence: { ...host.memberPresence, ...Object.fromEntries(extra.map(device => [device.id, { connected: true, lastSeenAt: lastCheckedAt }])) },
+    deviceVersions: Object.fromEntries([...devices, ...extra].map(device => [device.id, { version: '1.0.0', checkedAt: lastCheckedAt }])) })
   await expect(main.getByRole('region', { name: '오늘의 일정' }).getByText('공유', { exact: true })).toHaveClass('sharing-badge')
   await expect(status.getByText('공유 제공 중')).toBeVisible()
   await expect(status.getByRole('button', { name: '외 1명' })).toBeVisible()
-  await expect(main.getByRole('region', { name: 'Node 작업' }).getByRole('listitem')).toHaveCount(3)
+  const widget = main.getByRole('region', { name: 'Node 작업' })
+  await expect(status.getByRole('listitem')).toHaveCount(5)
+  await expect(widget.getByRole('listitem')).toHaveCount(5)
   const frame = await main.evaluate(element => {
     const css = getComputedStyle(element)
     return [css.paddingBlockStart, css.paddingInlineEnd, css.paddingBlockEnd, css.paddingInlineStart]
@@ -429,6 +450,19 @@ test('keeps the compact dashboard and real status controls legible in dark, ligh
   await expect(number).toHaveCSS('font-family', await main.evaluate(element => getComputedStyle(element).fontFamily))
   expect((await box(main.getByRole('region', { name: 'Node 작업' }))).width).toBeLessThanOrEqual(360)
   await page.screenshot({ path: info.outputPath('compact-home-host-dark.png') })
+  await main.screenshot({ path: info.outputPath('home-widgets-help.png') })
+  const people = status.getByRole('button', { name: '외 1명' })
+  await people.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog', { name: '연결된 참여자' }).getByRole('listitem')).toHaveCount(6)
+  await page.keyboard.press('Escape')
+  await expect(people).toBeFocused()
+  await widget.getByRole('button', { name: '외 1개' }).click()
+  const versions = page.getByRole('region', { name: '설치된 버전' })
+  await expect(versions.getByRole('heading')).toBeFocused()
+  await expect(versions.getByRole('heading')).toBeInViewport()
+  await expect(versions.getByRole('listitem')).toHaveCount(6)
+  await publishSharing(desktop, host)
   await other.click()
   const footer = page.getByRole('contentinfo', { name: 'PlanRail 상태' })
   await expectFooterMembers(footer, info, 3, 3)
@@ -544,15 +578,16 @@ test('covers the Node widget without moving its previous rows and keeps focus an
   expect(Math.abs(bounds.x - widgetBefore.x)).toBeLessThanOrEqual(1)
   expect(Math.abs(bounds.height - widgetBefore.height)).toBeLessThanOrEqual(2)
   expect(Math.abs(bounds.width - widgetBefore.width)).toBeLessThanOrEqual(2)
-  await widget.getByText('작업 로그').click()
-  await overlay.evaluate(element => { element.scrollTop = element.scrollHeight })
-  expect(await overlay.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
+  await widget.getByRole('button', { name: '작업 로그 보기' }).click()
+  const log = overlay.locator('pre')
+  await log.evaluate(element => { element.scrollTop = element.scrollHeight })
+  expect(await log.evaluate(element => element.scrollTop)).toBeGreaterThan(0)
   expect(await box(widget)).toEqual(widgetBefore)
   const dock = page.getByRole('navigation', { name: 'WorkRail 도구' })
   await dock.getByRole('button', { name: 'PlanRail' }).click()
   await dock.getByRole('button', { name: 'Home' }).click()
   await expect(widget.getByRole('status')).toContainText('소스 컴파일 중')
-  await expect(list.locator('li')).toHaveCount(3)
+  await expect(list.locator('li')).toHaveCount(5)
 })
 
 test('keeps both lists in place during a switch and returns focus to the list when the version becomes active', async ({ desktop }, info) => {
@@ -591,16 +626,16 @@ test('keeps both lists in place during a switch and returns focus to the list wh
   expect(await offsets()).toEqual(before)
 })
 
-test('copies the Windows install history without diagnostic screen paths', async ({ desktop }) => {
+test('copies the Windows install history without diagnostic screen paths', async ({ desktop }, info) => {
   const history = [
     '2026-11-19T01:02:03Z · install · 24.0.0 · nvm 1.x · zip-permission · 대상 폴더 · 최종 이동 · EPERM',
     '2026-11-19T01:05:00Z · install · 24.0.0 · nvm 1.x · 성공',
   ]
-  await showWindowsNode(desktop, { operationLog: history,
+  const state = await showWindowsNode(desktop, { operationLog: history,
     manager: { status: 'ready', version: '1.2.2', path: 'C:\\Users\\example\\nvm\\nvm.exe' } })
   await desktop.page.getByRole('navigation', { name: 'WorkRail 도구' }).getByRole('button', { name: 'NodeRail', exact: true }).click()
   const node = desktop.page.getByRole('main', { name: 'NodeRail' })
-  await node.getByText('작업 로그', { exact: true }).click()
+  await node.getByRole('button', { name: '작업 로그 보기' }).click()
   await node.getByRole('button', { name: '진단 복사' }).click()
   await expect(node.getByText('진단 이력을 복사했습니다.')).toBeVisible()
   const readCopy = () => desktop.app.evaluate(async ({ clipboard }) => ({ text: await clipboard.readText(), html: await clipboard.has('text/html') }))
@@ -614,4 +649,11 @@ test('copies the Windows install history without diagnostic screen paths', async
   await expect(node.getByText('선택된 이력을 Ctrl+C로 복사해 주세요.')).toBeVisible()
   await desktop.page.keyboard.press('Control+c')
   await expect.poll(readCopy).toEqual(copied)
+
+  const error = { code: 'zip-permission', message: 'nvm 버전 폴더의 쓰기 권한을 확인해 주세요.' } as const
+  await publishNode(desktop, { ...state, revision: state.revision + 1, error, operationResult: { id: 'retry', error },
+    operationLog: [...history, '2026-11-20T01:10:00Z · install · 24.1.0 · nvm 1.x · zip-permission · 대상 폴더 · 최종 이동 · EPERM'] })
+  const panel = node.getByRole('region', { name: '작업 로그' })
+  await expect(panel.getByRole('alert')).toHaveText(error.message)
+  await panel.screenshot({ path: info.outputPath('node-log-help.png') })
 })

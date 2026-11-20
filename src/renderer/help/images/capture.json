@@ -30,5 +30,32 @@
     "tests/e2e/help-update-assets.spec.ts",
     "tests/e2e/settings-personal.spec.ts"
   ],
-  "versionNote": "Source package 1.0.0; unpackaged isolated fixture reports runtimeVersion 0.0. Synthetic data; not Windows transparency/UAC evidence."
+  "versionNote": "Source package 1.0.0; unpackaged isolated fixture reports runtimeVersion 0.0. Synthetic data; not Windows transparency/UAC evidence.",
+  "subsequentCaptures": [
+    {
+      "source": "a731ca9a2bfcbfe4d07dc67f961ceb789af4ccd4",
+      "dirty": true,
+      "version": "1.0.0",
+      "runtimeVersion": "0.0",
+      "platform": "linux",
+      "synthetic": true,
+      "date": "2026-11-20",
+      "scope": "Isolated Electron renderer with synthetic schedules, SSH editor, members, Node versions and Windows install diagnostics. Other images retain the original capture above.",
+      "filesByTest": {
+        "tests/e2e/help-assets.spec.ts": [
+          "app-overview.png"
+        ],
+        "tests/e2e/help-member-assets.spec.ts": [
+          "member-toolbar.png"
+        ],
+        "tests/e2e/node-presentation.spec.ts": [
+          "home-widgets.png",
+          "node-log.png"
+        ],
+        "tests/e2e/termrail-dialogs.spec.ts": [
+          "termrail-server.png"
+        ]
+      }
+    }
+  ]
 }

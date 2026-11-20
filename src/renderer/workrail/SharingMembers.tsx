@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { Popover } from 'radix-ui'
 import type { SharingState } from '../../shared/sharing'
 import { Tooltip, TooltipContent, TooltipTrigger } from '../components/ui/tooltip'
@@ -47,7 +48,7 @@ export function SharingMembers({ members, footer = false }: { members: Connected
   // Reserve enough space for each name and its version, and the overflow button when needed.
   const memberWidth = 185
   const moreWidth = 50
-  const limit = !footer || footerWidth === null ? 2 : members.length * memberWidth <= footerWidth ? members.length
+  const limit = !footer ? 5 : footerWidth === null ? 2 : members.length * memberWidth <= footerWidth ? members.length
     : Math.max(0, Math.floor((footerWidth - moreWidth) / memberWidth))
   const overflow = members.length - limit
   return <div ref={container} className={footer ? 'planrail-members' : 'workrail-widget-members'}>
@@ -60,7 +61,9 @@ export function SharingMembers({ members, footer = false }: { members: Connected
       </li>)}
     </ul>}
     {overflow > 0 && <Popover.Root>
-      <Popover.Trigger type="button" className="workrail-control workrail-member-more">외 {overflow}명</Popover.Trigger>
+      <Popover.Trigger type="button" className={footer ? 'workrail-control workrail-member-more' : 'workrail-link workrail-widget-more'}>
+        외 {overflow}명 {!footer && <ChevronDown aria-hidden="true" size={14} />}
+      </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className="workrail-member-popover" aria-label="연결된 참여자" side={footer ? 'top' : 'bottom'}
           align="end" sideOffset={6} collisionPadding={8}>

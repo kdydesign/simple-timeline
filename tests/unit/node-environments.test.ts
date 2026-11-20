@@ -314,3 +314,22 @@ it.each([false, true])('waits for focus inspection before opening the folder (ma
     expect(f.opener.openPath).toHaveBeenCalledExactlyOnceWith(folder)
   }
 })
+
+it('keeps a completed log with its environment when the selected backend is recreated', async () => {
+  const service = module.createEnvironmentCoordinator({
+    platform: 'win32', arch: 'x64', discover: async () => [windows, ubuntu], start: vi.fn(),
+    store: { read: async () => windows.id, write: vi.fn() }, changed: vi.fn(), createWsl: vi.fn(),
+    createWindows: (changed, history) => createNodeManagementService({
+      platform: 'win32', arch: 'x64', changed, history, loadCatalog: async () => [],
+      windows: { discover: async () => ({ installation: null, manager: { status: 'missing', version: null },
+        installedVersions: [], activeSource: null, activeVersion: null, conflicts: [] }), changeVersion: vi.fn(), installManager: vi.fn() },
+    }),
+  })
+  await service.getState()
+  const failed = await service.install('20.0.0')
+  expect(failed.operationLog?.length).toBe(1)
+  expect((await service.selectEnvironment(ubuntu.id)).operationLog).toBeUndefined()
+  const restored = await service.selectEnvironment(windows.id)
+  expect(restored.operationLog).toEqual(failed.operationLog)
+  expect(restored.operationResult).toEqual(failed.operationResult)
+})

@@ -409,15 +409,17 @@ it('reports an unread active standalone version while showing the detected insta
   expect(within(current).queryByText('사용 중인 버전 없음')).toBeNull()
 })
 
-it('keeps the active version Use action disabled in both panels', async () => {
+it('shows the active version as a read-only status in both panels', async () => {
   const fixture = nodeFixture({ installedVersions: ['24.11.0'] })
   render(<App initialTool="node" api={memoryApi().api} />)
   const list = await within(node()).findByRole('region', { name: '공식 배포 목록' })
   expect(within(list).getByRole('row', { name: /^24\.11\.0.*사용 중/ })).toBeVisible()
-  expect(within(list).getByRole('button', { name: '24.11.0 사용 중' })).toBeDisabled()
-  const active = within(installed()).getByRole('button', { name: '24.11.0 사용 중' })
-  expect(active).toBeDisabled()
-  fireEvent.click(active)
+  for (const panel of [list, installed()]) {
+    const active = within(panel).getByText('사용 중', { exact: true })
+    expect(active).toHaveAttribute('aria-current', 'true')
+    expect(active.closest('button')).toBeNull()
+    fireEvent.click(active)
+  }
   expect(fixture.api.use).not.toHaveBeenCalled()
 })
 
@@ -717,6 +719,35 @@ it('requires the first environment choice and starts a stopped WSL only on expli
   expect(within(home()).getByText('Ubuntu · minsu · 기본 Node')).toBeVisible()
 })
 
+it('limits Home to five versions and opens the complete list for the same WSL environment', async () => {
+  const environments = { status: 'ready' as const, items: [windows, { ...ubuntu, running: true, user: 'minsu' }], selectedId: ubuntu.id, error: null }
+  const fixture = nodeFixture({ environments, installedVersions: [], activeVersion: null, activeSource: 'nodenv',
+    manager: { kind: 'nodenv', status: 'ready', version: '1.5.0' } })
+  render(<App initialTool="home" api={memoryApi().api} />)
+  const widget = within(within(home()).getByRole('region', { name: 'Node 작업' }))
+  const overflow = () => widget.queryByRole('button', { name: /^외 .*개$/ })
+  expect(await widget.findByText('설치된 버전이 없습니다.')).toBeVisible()
+  expect(overflow()).toBeNull()
+
+  const versions = ['22.2.0', '18.1.0', '20.4.0', '22.10.0', '21.0.0']
+  act(() => fixture.emit({ installedVersions: versions, activeVersion: '18.1.0' }))
+  expect(widget.getAllByRole('listitem')).toHaveLength(5)
+  expect(overflow()).toBeNull()
+  act(() => fixture.emit({ installedVersions: [...versions, '19.0.0'] }))
+  expect(widget.getAllByRole('listitem').map(row => row.querySelector('strong')?.textContent))
+    .toEqual(['18.1.0', '22.10.0', '22.2.0', '21.0.0', '20.4.0'])
+  const more = widget.getByRole('button', { name: '외 1개' })
+  more.focus()
+  await userEvent.keyboard('{Enter}')
+  const panel = within(installed())
+  await waitFor(() => expect(panel.getByRole('heading', { name: '설치된 버전' })).toHaveFocus())
+  expect(panel.getAllByRole('listitem')).toHaveLength(6)
+  expect(panel.getByText('19.0.0')).toBeVisible()
+  expect(within(node()).getByText(/Ubuntu.*minsu/)).toBeVisible()
+  expect(fixture.api.selectEnvironment).not.toHaveBeenCalled()
+  expect(fixture.api.use).not.toHaveBeenCalled()
+})
+
 it('keeps only the active and latest installed versions in Home and locks both screens through quick Use', async () => {
   const environments = { status: 'ready' as const, items: [windows, ubuntu], selectedId: windows.id, error: null }
   const fixture = nodeFixture({ environments, installedVersions: ['22.2.0', '21.0.0', '22.10.0', '20.4.0'], activeVersion: '20.4.0' })
@@ -725,9 +756,9 @@ it('keeps only the active and latest installed versions in Home and locks both s
   render(<App initialTool="home" api={memoryApi().api} />)
   const widget = within(home()).getByRole('region', { name: 'Node 작업' })
   const list = await within(widget).findByRole('list', { name: '설치된 버전' })
-  expect(within(list).getAllByRole('listitem').map(item => item.querySelector('strong')?.textContent)).toEqual(['20.4.0', '22.10.0', '22.2.0'])
-  expect(within(list).getByRole('button', { name: '20.4.0 사용 중' })).toBeDisabled()
-  expect(within(widget).getByRole('button', { name: '전체 4개' })).toBeVisible()
+  expect(within(list).getAllByRole('listitem').map(item => item.querySelector('strong')?.textContent)).toEqual(['20.4.0', '22.10.0', '22.2.0', '21.0.0'])
+  expect(within(list).getByText('사용 중')).toHaveAttribute('aria-current', 'true')
+  expect(within(widget).queryByRole('button', { name: /^외/ })).toBeNull()
   const use = within(list).getByRole('button', { name: '22.10.0 사용' })
   act(() => { use.click(); use.click() })
   expect(fixture.api.use).toHaveBeenCalledExactlyOnceWith('22.10.0')
@@ -752,7 +783,7 @@ it('shows a cancellable source build, locks repeated cancellation and exposes op
   expect(fixture.api.cancelOperation).toHaveBeenCalledOnce()
   fireEvent.click(dock('NodeRail'))
   expect(within(node()).getByText(/24\.11\.0 설치.*소스 컴파일/)).toBeVisible()
-  const log = within(node()).getByText('작업 로그')
+  const log = within(node()).getByRole('button', { name: '작업 로그 보기' })
   fireEvent.click(log)
   expect(within(node()).getByText('/logs/node.log')).toBeVisible()
   await act(async () => finish({ ok: true, data: { ...nodeState, revision: 2, error: { code: 'cancelled', message: '작업을 취소했습니다.' } } }))
@@ -762,34 +793,48 @@ it('shows a cancellable source build, locks repeated cancellation and exposes op
 
 it('uses approved current presence for Home and footer and expands connected names and versions', async () => {
   const displayName = '민수의 이름이 긴 사무실 PC'
-  const devices = [displayName, '지연', '서준', '오프라인', '취소', '대기'].map((name, index) => ({
-    id: String(index), name, ip: '192.168.0.' + (index + 2), approved: index !== 5, revoked: index === 4,
+  const devices = [displayName, '지연', '서준', '지민', '예린', '유진', '오프라인', '취소', '대기'].map((name, index) => ({
+    id: String(index), name, ip: '192.168.0.' + (index + 2), approved: index !== 8, revoked: index === 7,
   }))
   const seen = '2026-11-18T12:00:00Z'
+  const presence = Object.fromEntries(devices.map(device => [device.id, { connected: device.id !== '6', lastSeenAt: seen }]))
   const sharing = sharingFixture({
     role: 'host', status: 'connected', hostingEnabled: true, address: '192.168.0.10',
-    devices, connectedMembers: 5,
-    memberPresence: Object.fromEntries(devices.map(device => [device.id, { connected: device.id !== '3', lastSeenAt: seen }])),
+    devices, memberPresence: {},
     deviceVersions: { '0': { checkedAt: seen, version: '1.0.0' }, '1': { checkedAt: seen, version: null } },
   })
   render(<App initialTool="home" api={memoryApi().api} />)
-  const widget = within(home()).getByRole('region', { name: 'PlanRail 상태' })
-  expect(await within(widget).findByText(displayName)).toBeVisible()
-  expect(within(widget).getByText('버전 1.0.0')).toBeVisible()
-  expect(within(widget).getByText('버전 확인 불가')).toBeVisible()
-  expect(within(widget).queryByText('서준')).toBeNull()
-  fireEvent.click(within(widget).getByRole('button', { name: '외 1명' }))
-  let list = await screen.findByRole('dialog', { name: '연결된 참여자' })
-  expect(within(list).getByText('서준')).toBeVisible()
-  expect(within(list).queryByText('취소')).toBeNull()
-  await userEvent.keyboard('{Escape}')
-  expect(within(widget).getByRole('button', { name: '외 1명' })).toHaveFocus()
+  const widget = within(within(home()).getByRole('region', { name: 'PlanRail 상태' }))
+  expect(await widget.findByText('연결된 참여자 없음')).toBeVisible()
+  expect(widget.queryByRole('button', { name: /^외/ })).toBeNull()
+  act(() => sharing.emit({ memberPresence: { ...presence, '5': { connected: false, lastSeenAt: seen } } }))
+  expect(widget.getAllByRole('listitem')).toHaveLength(5)
+  expect(widget.queryByRole('button', { name: /^외/ })).toBeNull()
+  act(() => sharing.emit({ memberPresence: presence }))
+  expect(widget.getAllByRole('listitem')).toHaveLength(5)
+  expect(widget.getByText(displayName)).toBeVisible()
+  expect(widget.queryByText('유진')).toBeNull()
+  const trigger = widget.getByRole('button', { name: '외 1명' })
+  for (const close of ['escape', 'button']) {
+    trigger.focus()
+    await userEvent.keyboard('{Enter}')
+    const list = within(await screen.findByRole('dialog', { name: '연결된 참여자' }))
+    expect(list.getAllByRole('listitem')).toHaveLength(6)
+    for (const device of devices.slice(0, 6)) {
+      const row = list.getByText(device.name).closest('li')!
+      expect(within(row).getByText(device.id === '0' ? '버전 1.0.0' : '버전 확인 불가')).toBeVisible()
+      expect(within(row).getByText('연결됨')).toBeVisible()
+    }
+    if (close === 'escape') await userEvent.keyboard('{Escape}')
+    else await userEvent.click(list.getByRole('button', { name: '닫기' }))
+    await waitFor(() => expect(trigger).toHaveFocus())
+  }
   fireEvent.click(dock('PlanRail'))
   const footer = screen.getByRole('contentinfo', { name: 'PlanRail 상태' })
-  expect(within(footer).getByText(displayName)).toBeVisible()
-  fireEvent.click(within(footer).getByRole('button', { name: '외 1명' }))
-  list = await screen.findByRole('dialog', { name: '연결된 참여자' })
-  expect(within(list).getByText('서준')).toBeVisible()
+  expect(within(footer).getAllByRole('listitem')).toHaveLength(2)
+  fireEvent.click(within(footer).getByRole('button', { name: '외 4명' }))
+  const list = await screen.findByRole('dialog', { name: '연결된 참여자' })
+  expect(within(list).getByText('유진')).toBeVisible()
   expect(within(list).queryByText('대기')).toBeNull()
   act(() => sharing.emit({ memberPresence: {} }))
   expect(within(footer).getByText('연결된 참여자 없음')).toBeVisible()
@@ -929,4 +974,46 @@ it('clears the Home folder error after an explicit environment recheck', async (
   expect(fixture.api.getState).toHaveBeenCalledWith('recheck')
   await user.click(dock('Home'))
   expect(within(home()).queryByText(busy.message)).toBeNull()
+})
+
+it('keeps a dismissed failure closed through menu changes and inspection, and opens a second identical failure', async () => {
+  const error = nodeManagementError('zip-permission')
+  const fixture = nodeFixture({ operationLog: ['install · zip-permission'], error, operationResult: { id: 'first', error } })
+  render(<App initialTool="node" api={memoryApi().api} />)
+  const close = () => screen.getByRole('button', { name: '작업 로그 닫기' })
+  expect(await screen.findByText('install · zip-permission')).toBeVisible()
+  expect(close()).toHaveTextContent(/^$/)
+  expect(screen.getByRole('button', { name: '진단 복사' })).toHaveTextContent(/^$/)
+  fireEvent.click(close())
+  expect(screen.queryByText('install · zip-permission')).toBeNull()
+  fireEvent.click(dock('Home'))
+  const show = () => screen.getByRole('button', { name: '작업 로그 보기' })
+  expect(show()).toBeVisible()
+  await act(async () => fixture.emit({ error: null }))
+  fireEvent.click(dock('NodeRail'))
+  fireEvent.click(screen.getByRole('button', { name: '환경 다시 검사' }))
+  await waitFor(() => expect(show()).toBeEnabled())
+  fireEvent.click(show())
+  expect(screen.getByText('install · zip-permission')).toBeVisible()
+  fireEvent.click(close())
+  act(() => fixture.emit({ operationResult: { id: 'second', error }, error }))
+  expect(close()).toBeVisible()
+  expect(screen.getByRole('alert')).toHaveTextContent(error.message)
+})
+
+it('keeps the live log toggle local to one running operation and opens its terminal failure', async () => {
+  const busy = { id: 'job-1', kind: 'install', version: '24.11.0', phase: 'compiling', cancellable: true } as const
+  const fixture = nodeFixture({ busy, operationLog: ['one'] })
+  render(<App initialTool="node" api={memoryApi().api} />)
+  fireEvent.click(await screen.findByRole('button', { name: '작업 로그 보기' }))
+  expect(screen.getByText('one')).toBeVisible()
+  act(() => fixture.emit({ busy: null, operationResult: { id: 'job-1', error: null } }))
+  act(() => fixture.emit({ busy: { ...busy, id: 'job-2' }, operationResult: undefined, operationLog: ['two'] }))
+  expect(screen.queryByText('two')).toBeNull()
+  fireEvent.click(screen.getByRole('button', { name: '작업 로그 보기' }))
+  fireEvent.click(screen.getByRole('button', { name: '작업 로그 닫기' }))
+  expect(screen.getByRole('button', { name: '작업 취소' })).toBeEnabled()
+  const error = nodeManagementError('operation-failed')
+  act(() => fixture.emit({ busy: null, error, operationResult: { id: 'job-2', error } }))
+  expect(screen.getByText('two')).toBeVisible()
 })

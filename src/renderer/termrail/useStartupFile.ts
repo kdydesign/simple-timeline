@@ -2,50 +2,62 @@ import {useLayoutEffect, useRef, useState} from 'react'
 import type {TermRailEndpoint, TermRailStartupRef} from '../../shared/termrail-ssh'
 import type {Profile} from './layout'
 
-type Selection = {endpoint: TermRailEndpoint; file: TermRailStartupRef}
 export function useStartupFile(source: Profile | undefined, endpoint: TermRailEndpoint, report: (message: string) => void) {
-  const [selection, select] = useState<Selection | undefined>(() => source?.startup ? {endpoint: source, file: source.startup} : undefined)
-  const [picking, setPicking] = useState(false)
+  // The native picker returns only a display name. A usable reference exists after binding.
+  const [selection, select] = useState<TermRailStartupRef | string | undefined>(source?.startup)
+  const [busy, setBusy] = useState(false)
   const [pickError, setPickError] = useState('')
-  const pending = useRef<string | undefined>(undefined)
-  const mounted = useRef(false)
-  const file = selection?.endpoint.host === endpoint.host && selection.endpoint.port === endpoint.port ? selection.file : undefined
+  const owner = useRef<string | undefined>(undefined)
+  const endpointChanged = typeof selection === 'object' && (source?.host !== endpoint.host || source.port !== endpoint.port)
+  const saved = typeof selection === 'object' && !endpointChanged ? selection : undefined
+  const name = typeof selection === 'string' ? selection : saved?.name
 
-  function discard(id: string) {
-    void window.termRailSsh.discardStartup(id).catch(() => report('가져온 시작 파일을 정리할 수 없습니다.'))
+  function finishDraft(savedId?: string) {
+    if (!owner.current) return
+    void window.termRailSsh.finishStartup(owner.current, savedId).catch(() => report('가져온 시작 파일을 정리할 수 없습니다.'))
+    owner.current = undefined
   }
-  function clearPending() {
-    if (pending.current) discard(pending.current)
-    pending.current = undefined
-  }
-  useLayoutEffect(() => {
-    mounted.current = true
-    return () => {
-      mounted.current = false
-      clearPending()
-    }
-  }, [])
+  useLayoutEffect(() => () => finishDraft(), [])
 
   async function pick() {
-    setPicking(true)
+    const editorId = owner.current ??= crypto.randomUUID()
+    setBusy(true)
     setPickError('')
     try {
-      const imported = await window.termRailSsh.pickStartup(endpoint)
-      if (!imported) return
-      if (!mounted.current) {discard(imported.id); return}
-      clearPending()
-      pending.current = imported.id
-      select({endpoint, file: imported})
+      const imported = await window.termRailSsh.pickStartup(editorId)
+      if (imported && owner.current === editorId) select(imported)
     } catch {
-      if (mounted.current) setPickError('시작 파일을 가져올 수 없습니다. 파일 형식과 보안 저장소를 확인하세요.')
+      if (owner.current === editorId) setPickError('시작 파일을 가져올 수 없습니다. 파일 형식과 보안 저장소를 확인하세요.')
     } finally {
-      if (mounted.current) setPicking(false)
+      if (owner.current === editorId) setBusy(false)
+    }
+  }
+
+  async function bindAndSave(editorId: string, persist: (ref: TermRailStartupRef) => void, done: () => void) {
+    setBusy(true)
+    let bound: TermRailStartupRef | undefined
+    try {
+      bound = await window.termRailSsh.bindStartup(editorId, endpoint).catch(() => {
+        throw Error('시작 파일을 보호하여 저장할 수 없습니다.')
+      })
+      if (owner.current !== editorId) return
+      persist(bound)
+      finishDraft(bound.id)
+      bound = undefined
+      done()
+    } finally {
+      if (bound) await window.termRailSsh.discardStartup(bound.id).catch(() => report('가져온 시작 파일을 정리할 수 없습니다.'))
+      if (owner.current === editorId) setBusy(false)
     }
   }
 
   return {
-    file, picking, pick, pickError, endpointChanged: !!selection && !file,
-    remove() {clearPending(); select(undefined); setPickError('')},
-    saved() {if (pending.current === file?.id) pending.current = undefined},
+    name, busy, pick, pickError, endpointChanged,
+    remove() {finishDraft(); select(undefined); setPickError('')},
+    save(persist: (ref: TermRailStartupRef | undefined) => void, done: () => void) {
+      if (typeof selection === 'string' && owner.current) return bindAndSave(owner.current, persist, done)
+      persist(saved)
+      done()
+    },
   }
 }

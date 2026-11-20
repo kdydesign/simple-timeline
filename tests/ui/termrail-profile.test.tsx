@@ -1,10 +1,11 @@
-import {act, fireEvent, render, screen} from '@testing-library/react'
+import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import {afterEach, expect, it, vi} from 'vitest'
 import {WorkspaceDialog, type Editor} from '../../src/renderer/termrail/WorkspaceControls'
 
 HTMLDialogElement.prototype.showModal ??= function () { this.open = true }
 HTMLDialogElement.prototype.close ??= function () { this.open = false }
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {cleanup(); vi.unstubAllGlobals()})
 
 const profile = {id:'dev', name:'개발', host:'dev.example', port:22, startup:{id:'original', name:'dev.sh'}}
 const draft = {id:'draft', name:'new.sh'}
@@ -15,6 +16,11 @@ function editorDialog(editor: Editor = {kind:'edit', profile, anchor}) {
   const result = render(<WorkspaceDialog editor={editor} profiles={[profile]} close={close}
     saveLayout={vi.fn()} saveProfile={saveProfile} removeProfile={vi.fn()}/>)
   return {...result, saveProfile, close}
+}
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>(finish => {resolve = finish})
+  return {promise, resolve}
 }
 const change = (field: string, value: string) => fireEvent.change(screen.getByLabelText(field), {target:{value}})
 const click = (name: string) => fireEvent.click(screen.getByRole('button',{name}))
@@ -42,62 +48,106 @@ it('shows errors on blur and submit, focuses the first invalid field, then saves
   expect(saveProfile).toHaveBeenCalledExactlyOnceWith({id:expect.any(String), name:'시험', host:'2001:db8::1', port:65535}, true)
 })
 
-it('saves the chosen file reference only for the imported endpoint', async () => {
-  const ssh = {pickStartup:vi.fn().mockResolvedValue(draft), discardStartup:vi.fn().mockResolvedValue(undefined)}
+function bridge() {
+  const ssh = {pickStartup: vi.fn().mockResolvedValue(draft.name), bindStartup: vi.fn().mockResolvedValue(draft),
+    finishStartup: vi.fn().mockResolvedValue(undefined), discardStartup: vi.fn().mockResolvedValue(undefined)}
   vi.stubGlobal('termRailSsh', ssh)
-  const form = editorDialog()
-  click('시작 파일 가져오기')
-  expect(await screen.findByText(draft.name)).toBeVisible()
-  expect(ssh.pickStartup).toHaveBeenCalledExactlyOnceWith({host:'dev.example', port:22})
-  change('호스트', 'other.example')
-  expect(screen.queryByText(draft.name)).toBeNull()
-  click('저장')
-  expect(form.saveProfile).toHaveBeenCalledExactlyOnceWith({id:'dev',name:'개발', host:'other.example',port:22}, false)
-  form.unmount()
-  expect(ssh.discardStartup).toHaveBeenCalledExactlyOnceWith(draft.id)
-})
+  return ssh
+}
 
-it('keeps the imported reference after a successful save', async () => {
-  const ssh = {pickStartup:vi.fn().mockResolvedValue(draft), discardStartup:vi.fn().mockResolvedValue(undefined)}
-  vi.stubGlobal('termRailSsh', ssh)
-  const form = editorDialog()
-  click('시작 파일 가져오기')
+it('tabs to import on a blank server, keeps the file on validation failure, and binds to the final endpoint', async () => {
+  const user = userEvent.setup()
+  const ssh = bridge()
+  const form = editorDialog({kind:'add', anchor})
+  screen.getByLabelText('서버 이름').focus()
+  await user.tab()
+  await user.tab()
+  await user.tab()
+  expect(screen.getByRole('button', {name:'시작 파일 가져오기'})).toHaveFocus()
+  expect(screen.queryByRole('alert')).toBeNull()
+  await user.keyboard('{Enter}')
   expect(await screen.findByText(draft.name)).toBeVisible()
-  click('저장')
-  expect(form.saveProfile).toHaveBeenCalledExactlyOnceWith({...profile, startup:draft}, false)
-  form.unmount()
+  expect(ssh.bindStartup).not.toHaveBeenCalled()
+  const owner = ssh.pickStartup.mock.calls[0][0]
+  expect(typeof owner).toBe('string')
+  await user.click(screen.getByRole('button', {name:'저장'}))
+  expect(screen.getByLabelText('서버 이름')).toHaveFocus()
+  expect(screen.getByLabelText('호스트')).toHaveAccessibleDescription(/입력/)
+  expect(screen.getByText(draft.name)).toBeVisible()
+  expect(ssh.bindStartup).not.toHaveBeenCalled()
+  change('서버 이름', '새 서버')
+  change('호스트', 'dev.test')
+  change('포트', '2200')
+  await user.click(screen.getByRole('button', {name:'저장'}))
+  expect(ssh.bindStartup).toHaveBeenCalledExactlyOnceWith(owner, {host:'dev.test', port:2200})
+  expect(form.saveProfile).toHaveBeenCalledExactlyOnceWith({id:expect.any(String),name:'새 서버',host:'dev.test',port:2200,startup:draft}, false)
+  expect(ssh.finishStartup).toHaveBeenCalledExactlyOnceWith(owner, draft.id)
   expect(ssh.discardStartup).not.toHaveBeenCalled()
 })
 
-it('discards a native import that finishes after leaving the dialog', async () => {
-  let complete!: (value: typeof draft) => void
-  const deferred = new Promise<typeof draft>(resolve => {complete = resolve})
-  const ssh = {pickStartup:vi.fn().mockReturnValue(deferred), discardStartup:vi.fn().mockResolvedValue(undefined)}
-  vi.stubGlobal('termRailSsh', ssh)
+it.each([['호스트', 'other.example'], ['포트','2222']])('requires a fresh choice to use an existing file after editing %s', (field, value) => {
+  const ssh = bridge()
+  const form = editorDialog()
+  change(field, value)
+  expect(screen.queryByText(profile.startup.name)).toBeNull()
+  expect(screen.getByRole('status')).toHaveTextContent('다시 가져오세요')
+  click('저장')
+  expect(form.saveProfile.mock.calls[0][0].startup).toBeUndefined()
+  expect(ssh.bindStartup).not.toHaveBeenCalled()
+})
+
+it('revokes the editor while its picker is open', async () => {
+  const pending = deferred<string>()
+  const ssh = bridge()
+  ssh.pickStartup.mockReturnValueOnce(pending.promise)
   const form = editorDialog()
   click('시작 파일 가져오기')
   form.unmount()
-  await act(async () => complete(draft))
-  expect(ssh.discardStartup).toHaveBeenCalledExactlyOnceWith(draft.id)
+  expect(ssh.finishStartup).toHaveBeenCalledExactlyOnceWith(ssh.pickStartup.mock.calls[0][0], undefined)
+  await act(async () => pending.resolve(draft.name))
+  expect(ssh.bindStartup).not.toHaveBeenCalled()
 })
 
-it('retains the original file on cancel and discards only unsaved imports after a failed save', async () => {
-  const replacement = {id:'replacement', name:'replacement.sh'}
-  const ssh = {pickStartup:vi.fn().mockResolvedValueOnce(draft).mockResolvedValueOnce(replacement),
-    discardStartup:vi.fn().mockResolvedValue(undefined)}
-  vi.stubGlobal('termRailSsh', ssh)
+it('shows an import error immediately and keeps the existing selection available', async () => {
+  const ssh = bridge()
+  ssh.pickStartup.mockRejectedValueOnce(Error('unavailable'))
+  editorDialog()
+  click('시작 파일 가져오기')
+  expect(await screen.findByRole('alert')).toHaveTextContent('파일 형식')
+  expect(screen.getByText(profile.startup.name)).toBeVisible()
+})
+
+it('rolls back the new binding on storage failure, preserving the draft and saved file for retry', async () => {
+  const ssh = bridge()
   const form = editorDialog()
   click('시작 파일 가져오기')
   expect(await screen.findByText(draft.name)).toBeVisible()
-  click('시작 파일 가져오기')
-  expect(await screen.findByText(replacement.name)).toBeVisible()
-  expect(ssh.discardStartup).toHaveBeenCalledExactlyOnceWith(draft.id)
   form.saveProfile.mockImplementationOnce(() => {throw Error('저장 실패')})
   click('저장')
-  expect(screen.getByRole('alert')).toHaveTextContent('저장 실패')
-  expect(screen.getByText(replacement.name)).toBeVisible()
+  expect(await screen.findByRole('alert')).toHaveTextContent('저장 실패')
+  expect(ssh.discardStartup).toHaveBeenCalledExactlyOnceWith(draft.id)
+  expect(screen.getByText(draft.name)).toBeVisible()
   expect(form.close).not.toHaveBeenCalled()
-  click('취소')
+  const retry = {...draft, id:'retry'}
+  ssh.bindStartup.mockResolvedValueOnce(retry)
+  click('저장')
+  await waitFor(() => expect(form.close).toHaveBeenCalledOnce())
+  expect(form.saveProfile).toHaveBeenLastCalledWith({...profile, startup:retry}, false)
+  expect(ssh.discardStartup).not.toHaveBeenCalledWith(retry.id)
+})
+
+it('does not persist or connect if the dialog is unmounted while binding', async () => {
+  const ssh = bridge()
+  const binding = deferred<typeof draft>()
+  ssh.bindStartup.mockReturnValueOnce(binding.promise)
+  const form = editorDialog({kind:'connect', anchor})
+  change('서버 이름', '새 서버')
+  change('호스트', 'other.test')
+  click('시작 파일 가져오기')
+  expect(await screen.findByText(draft.name)).toBeVisible()
+  click('저장하고 연결')
   form.unmount()
-  expect(ssh.discardStartup.mock.calls).toEqual([[draft.id], [replacement.id]])
+  await act(async () => binding.resolve(draft))
+  expect(form.saveProfile).not.toHaveBeenCalled()
+  expect(ssh.discardStartup).toHaveBeenCalledExactlyOnceWith(draft.id)
 })

@@ -34,7 +34,10 @@ export interface TermRailSshRead extends TermRailEndpoint {
 }
 
 export interface TermRailSshApi {
-  pickStartup(endpoint: TermRailEndpoint): Promise<TermRailStartupRef | null>
+  pickStartup(editorId: string): Promise<string | null>
+  bindStartup(editorId: string, endpoint: TermRailEndpoint): Promise<TermRailStartupRef>
+  finishStartup(editorId: string, savedId?: string): Promise<void>
+  recoverStartup(savedIds: string[]): Promise<void>
   discardStartup(id: string): Promise<void>
   open(id: string, endpoint: TermRailEndpoint & {startupId?: string}): Promise<void>
   startProfile(id: string, startupId: string): Promise<void>

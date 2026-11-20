@@ -84,17 +84,18 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
     const id = 'termrail-field-' + field
     return <div className="termrail-field">
       <label htmlFor={id}>{label}</label>
-      <input id={id} name={field} required disabled={startup.picking} value={value} maxLength={maxLength}
+      <input id={id} name={field} required disabled={startup.busy} value={value} maxLength={maxLength}
         autoFocus={field === 'name'} inputMode={field === 'port' ? 'numeric' : undefined}
         aria-invalid={errors[field] ? true : undefined} aria-describedby={errors[field] ? id + '-error' : undefined}
         onChange={e => {update(e.target.value); setErrors(old => ({...old, [field]: ''}))}}
-        onBlur={() => setErrors(old => ({...old, [field]: fieldError(field)}))}/>
+        onBlur={() => {if (!server || value.trim()) setErrors(old => ({...old, [field]: fieldError(field)}))}}/>
       {errors[field] && <span id={id + '-error'} role="alert">{errors[field]}</span>}
     </div>
   }
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault()
-    if (startup.picking) return
+    if (startup.busy) return
+    setError('')
     try {
       if (editor.kind === 'delete') removeProfile(editor.profile)
       else if (layout) {
@@ -102,18 +103,21 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
         saveLayout(name.trim())
       } else {
         if (!validate(['name', 'host', 'port'])) return
-        saveProfile({id: source?.id ?? crypto.randomUUID(), name: name.trim(), ...endpoint,
-          ...(startup.file ? {startup: startup.file} : {})}, editor.kind === 'connect')
-        startup.saved()
+        await startup.save(file => {
+          saveProfile({id: source?.id ?? crypto.randomUUID(), name: name.trim(), ...endpoint,
+            ...(file ? {startup: file} : {})}, editor.kind === 'connect')
+        }, dismiss)
+        return
       }
       dismiss()
     } catch (cause) {setError(cause instanceof Error ? cause.message : '저장할 수 없습니다.')}
   }
-  return <dialog ref={ref} aria-label={heading} className="termrail-dialog termrail-workspace-dialog" onCancel={e => {e.preventDefault(); dismiss()}}>
+  return <dialog ref={ref} aria-label={heading} className="termrail-dialog termrail-workspace-dialog" data-standard-dialog={editor.kind === 'add' || layout || undefined} onCancel={e => {e.preventDefault(); dismiss()}}>
     <form noValidate onSubmit={submit}>
       <h3>{heading}</h3>
       {editor.kind === 'delete' ? <p>‘{editor.profile.name}’ 서버를 삭제할까요? 이 서버를 사용하는 저장된 레이아웃은 열 수 없게 됩니다.</p>
         : input('name', layout ? '레이아웃 이름' : '서버 이름', name, setName, layout ? 40 : 60)}
+      {layout && <p className="termrail-layout-description">모든 작업 탭, 분할 비율, 별도 창 배치를 함께 저장합니다.</p>}
       {server && <>
         <div className="termrail-endpoint">
           {input('host', '호스트', host, setHost)}
@@ -121,18 +125,18 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
         </div>
         <div className="termrail-startup" role="group" aria-label="시작 파일">
           <span className="termrail-startup-label">시작 파일 <small>(선택)</small></span>
-          <span className="termrail-file-name" title={startup.file?.name}>{startup.file?.name ?? '선택한 파일 없음'}</span>
-          <button type="button" aria-label="시작 파일 가져오기" disabled={startup.picking}
+          <span className="termrail-file-name" title={startup.name}>{startup.name ?? '선택한 파일 없음'}</span>
+          <button type="button" aria-label="시작 파일 가져오기" disabled={startup.busy}
             title="UTF-8 파일의 첫 두 줄에 # workrail-user: 아이디와 # workrail-password: 비밀번호를 적고 다음 줄부터 Bash 명령을 적으세요."
-            onClick={() => {if (validate(['host', 'port'])) void startup.pick()}}>가져오기</button>
-          {startup.file && <button type="button" aria-label="시작 파일 제거" disabled={startup.picking} onClick={startup.remove}>×</button>}
+            onClick={() => void startup.pick()}>가져오기</button>
+          {startup.name && <button type="button" aria-label="시작 파일 제거" disabled={startup.busy} onClick={startup.remove}>×</button>}
         </div>
         {startup.endpointChanged && <p role="status">주소나 포트가 바뀌었습니다. 시작 파일을 사용하려면 다시 가져오세요.</p>}
         {startup.pickError && <p role="alert">{startup.pickError}</p>}
       </>}
       {error && <p role="alert">{error}</p>}
       <div className="termrail-actions"><button type="button" onClick={dismiss}>취소</button>
-        <button type="submit" disabled={startup.picking}>{editor.kind === 'connect' ? '저장하고 연결' : editor.kind === 'delete' ? '삭제' : '저장'}</button></div>
+        <button type="submit" disabled={startup.busy}>{editor.kind === 'connect' ? '저장하고 연결' : editor.kind === 'delete' ? '삭제' : '저장'}</button></div>
     </form>
   </dialog>
 }

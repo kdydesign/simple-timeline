@@ -9,19 +9,27 @@
   },
   "holidays.png": {
     "width": 880,
-    "height": 398
+    "height": 451
+  },
+  "home-widgets.png": {
+    "width": 1280,
+    "height": 803
   },
   "host-address.png": {
     "width": 880,
-    "height": 229
+    "height": 181
   },
   "member-address.png": {
     "width": 888,
-    "height": 181
+    "height": 177
   },
   "member-toolbar.png": {
     "width": 1440,
-    "height": 124
+    "height": 960
+  },
+  "node-log.png": {
+    "width": 1252,
+    "height": 162
   },
   "participants.png": {
     "width": 880,
@@ -29,7 +37,7 @@
   },
   "project-editor.png": {
     "width": 389,
-    "height": 754
+    "height": 732
   },
   "project-share.png": {
     "width": 388,
@@ -41,15 +49,19 @@
   },
   "schedule-editor.png": {
     "width": 389,
-    "height": 754
+    "height": 732
   },
   "settings-personal.png": {
     "width": 940,
-    "height": 646
+    "height": 698
+  },
+  "termrail-server.png": {
+    "width": 460,
+    "height": 380
   },
   "updates-host.png": {
     "width": 880,
-    "height": 247
+    "height": 205
   },
   "updates-member.png": {
     "width": 320,

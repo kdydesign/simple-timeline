@@ -38,7 +38,11 @@ export function emptyNodeState(platform: string, supported: boolean): NodeManage
   }
 }
 
-export type EnvironmentChanged = (state: NodeManagementState, user?: string | null) => void
+export interface EnvironmentLogHistory {
+  log: Pick<NodeManagementState, 'operationResult' | 'operationLog' | 'operationLogPath'>
+  target?: string
+}
+export type EnvironmentChanged = (state: NodeManagementState, user?: string | null, logTarget?: string) => void
 type Backend = NodeManagementService & { cancelOperation?(): Promise<NodeManagementState> }
 
 // A command-local error stays on its reply and never becomes a published state.
@@ -53,8 +57,8 @@ export function createEnvironmentCoordinator(options: {
   discover(): Promise<NodeEnvironment[]>
   store: ReturnType<typeof environmentSelectionStore>
   start(environment: NodeEnvironment): Promise<void>
-  createWindows(changed: EnvironmentChanged): Backend
-  createWsl(environment: NodeEnvironment, changed: EnvironmentChanged): Backend
+  createWindows(changed: EnvironmentChanged, history?: EnvironmentLogHistory): Backend
+  createWsl(environment: NodeEnvironment, changed: EnvironmentChanged, history?: EnvironmentLogHistory): Backend
   changed: EnvironmentChanged
   opener?: { openPath(path: string): Promise<string>; openExternal(url: string): Promise<void> }
   barrier?: MutationBarrier
@@ -67,6 +71,7 @@ export function createEnvironmentCoordinator(options: {
   let saved: string | null | undefined
   let epoch = 0, scan = 0, commandGeneration = 0, writing = false, mutating = false
   let discovery: Promise<void> | null = null
+  const histories = new Map<string, EnvironmentLogHistory>()
   const inspections = new Set<Promise<NodeManagementState>>()
   const invalid = (message: string): NodeManagementError => ({ code: 'environment-conflict', message })
   const publish = (snapshot: NodeManagementState) => {
@@ -91,17 +96,24 @@ export function createEnvironmentCoordinator(options: {
     const generation = ++epoch
     active = next
     backend = undefined
-    publish(empty())
+    const history = next && histories.get(next.id)
+    publish({ ...empty(), ...(!next?.running && history?.log) })
     if (!next?.running) return
-    const changed: EnvironmentChanged = (snapshot, user) => {
+    const changed: EnvironmentChanged = (snapshot, user, logTarget) => {
       if (generation !== epoch) return
+      if (snapshot.operationResult) {
+        const { operationResult, operationLog, operationLogPath } = snapshot
+        histories.set(next.id, { log: { operationResult, operationLog, operationLogPath }, target: logTarget })
+      } else if (snapshot.busy || (logTarget && logTarget !== histories.get(next.id)?.target)) {
+        histories.delete(next.id)
+      }
       if (user !== undefined && active && user !== active.user) {
         active = { ...active, user: user ?? undefined }
         environments = { ...environments, items: environments.items.map(e => e.id === active!.id ? active! : e) }
       }
       publish(snapshot)
     }
-    backend = next.kind === 'windows' ? options.createWindows(changed) : options.createWsl(next, changed)
+    backend = next.kind === 'windows' ? options.createWindows(changed, history) : options.createWsl(next, changed, history)
   }
 
   function detect() {

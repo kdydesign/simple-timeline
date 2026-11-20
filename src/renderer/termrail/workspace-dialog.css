@@ -23,6 +23,34 @@
   background: var(--control-sheen), #205d91; color: white; border: 1px solid #306b9f;
 }
 .termrail-workspace-dialog [role="status"] { font-size: 11px; }
+.termrail-workspace-dialog[data-standard-dialog] {
+  width: min(460px, calc(100vw - 28px)); max-height: calc(100vh - 32px);
+  overflow: auto; padding: 20px 22px; border-radius: 14px;
+  background: var(--popup-glass); backdrop-filter: blur(28px); box-shadow: var(--popup-shadow);
+}
+.termrail-workspace-dialog[data-standard-dialog] form { gap: 14px; }
+.termrail-workspace-dialog[data-standard-dialog] h3 { font-size: 19px; padding-bottom: 10px; }
+.termrail-workspace-dialog[data-standard-dialog] .termrail-field { gap: 5px; }
+.termrail-workspace-dialog[data-standard-dialog] label { font-size: 13px; font-weight: 600; }
+.termrail-workspace-dialog[data-standard-dialog] input {
+  height: 36px; padding: 6px 10px; font: inherit; color: var(--text);
+  background: var(--control); border: 1px solid var(--control-border); border-radius: 8px;
+}
+.termrail-workspace-dialog[data-standard-dialog] input[aria-invalid="true"] { border-color: var(--danger-border); }
+.termrail-workspace-dialog[data-standard-dialog] .termrail-endpoint { grid-template-columns: minmax(0, 1fr) 82px; gap: 12px; }
+.termrail-workspace-dialog[data-standard-dialog] .termrail-startup {
+  padding: 10px; gap: 6px; border: 1px dashed var(--control-border); border-radius: 8px;
+}
+.termrail-workspace-dialog[data-standard-dialog] .termrail-actions { gap: 8px; padding-top: 12px; }
+.termrail-workspace-dialog[data-standard-dialog] button {
+  padding: 5px 11px; min-height: 32px; font-size: 13px; border-radius: 8px;
+  background: var(--control-sheen), var(--control); border: 1px solid var(--control-border);
+  box-shadow: var(--control-shadow); color: var(--text);
+}
+.termrail-workspace-dialog[data-standard-dialog] .termrail-actions button[type="submit"] {
+  background: var(--selected-sheen), var(--selected-control); border-color: var(--selected-border); color: var(--accent-foreground);
+}
+.termrail-layout-description { color: var(--muted); font-size: 13px; }
 .termrail .termrail-servers button {
   background: transparent;
   box-shadow: none;

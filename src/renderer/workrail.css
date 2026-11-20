@@ -586,9 +586,17 @@
   font-size: 12px;
 }
 .workrail-widget-versions li { justify-content: space-between; }
-.workrail-widget-versions .workrail-control, .workrail-member-more { min-height: 24px; padding: 2px 8px; font-size: 12px; }
+.workrail-widget-versions :is(.workrail-control, .workrail-current-version), .workrail-member-more { min-height: 24px; padding: 2px 8px; font-size: 12px; }
 .workrail-widget-members { display: grid; gap: 4px; }
-.workrail-widget-members .workrail-member-more { justify-self: end; }
+.workrail-widget-more {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 5px;
+  min-height: 24px;
+  color: var(--version-blue);
+  font-size: 12px;
+}
 .workrail-member-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
 .workrail-member-name:focus-visible, .workrail-member-version:focus-visible, .workrail-version-status:focus-visible,
 .planrail-policy:focus-visible, .planrail-connection:focus-visible {
@@ -617,7 +625,7 @@
 .workrail-home-environment-actions { justify-content: space-between; }
 .workrail-home-environment-actions > .workrail-environment-actions { margin-inline-start: auto; }
 .workrail-environment-actions .workrail-control { min-height: 28px; padding: 3px 8px; font-size: 12px; }
-.workrail-manager-badge[data-ready="true"], .workrail-control[data-version-state="active"] {
+.workrail-manager-badge[data-ready="true"] {
   --badge-border: color-mix(in srgb, var(--workrail-status-green), transparent 63%);
   border-color: var(--badge-border);
   background: color-mix(in srgb, var(--workrail-status-green), transparent 91%);
@@ -625,31 +633,53 @@
   opacity: 1;
   color: var(--workrail-status-green);
 }
-/* Version actions share their hue with the resulting inventory state. */
 :root {
   --version-blue: #154776;
-  --version-blue-glass: #c2ddf5df;
-  --version-green: #174f32;
-  --version-green-glass: #bde5cdde;
+  --version-blue-glass: linear-gradient(#e4f1fd, #c9def1);
+  --version-blue-edge: #7295af;
+  --version-green: #204c36;
+  --version-green-fill: #d4e5da;
+  --version-green-edge: #7a9c87;
   --version-gray: #50575e;
+  --version-gray-edge: #89939c;
 }
 :root[data-theme="dark"] {
-  --version-blue: #c1e3ff;
-  --version-blue-glass: #244762dc;
-  --version-green: #c1edd2;
-  --version-green-glass: #244b38dc;
-  --version-gray: #c0c5cb;
+  --version-blue: #c0e7ff;
+  --version-blue-glass: linear-gradient(#324b60, #2a3e4e);
+  --version-blue-edge: #6592b2;
+  --version-green: #d0e9d9;
+  --version-green-fill: #344c42;
+  --version-green-edge: #729682;
+  --version-gray: #d1dbe2;
+  --version-gray-edge: #62707b;
 }
-.workrail-control[data-version-state="active"] { color: var(--version-green); }
-.workrail-control[data-version-state="missing"] { --action-ink: var(--version-blue); --action-glass: var(--version-blue-glass); }
-.workrail-control[data-version-state="installed"] { --action-ink: var(--version-green); --action-glass: var(--version-green-glass); }
-.workrail-control:is([data-version-state="missing"], [data-version-state="installed"]) {
-  color: var(--action-ink);
-  background: var(--action-glass) var(--control-sheen);
-  border-color: color-mix(in srgb, var(--action-ink) 45%, transparent);
+.workrail-current-version {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border: 1px solid var(--version-green-edge);
+  border-radius: 6px;
+  background: var(--version-green-fill);
+  color: var(--version-green);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.workrail-control[data-version-state] { gap: 5px; }
+.workrail-control[data-version-state="installed"] {
+  color: var(--version-blue);
+  background: var(--version-blue-glass);
+  border-color: var(--version-blue-edge);
+}
+.workrail-control[data-version-state="missing"] {
+  color: var(--version-gray);
+  background: transparent;
+  border-color: var(--version-gray-edge);
+  box-shadow: none;
 }
 .workrail-control:is([data-version-state="missing"], [data-version-state="installed"]):hover:enabled {
-  border-color: var(--action-ink);
+  border-color: currentColor;
 }
 .workrail-control[data-version-state]:disabled {
   opacity: 1;

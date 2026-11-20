@@ -16,7 +16,10 @@ it('searches Korean titles/body/steps and trims query without searching user dat
  expect(searchHelp('존재하지않는항목123')).toEqual([])
  expect(initialHelpTopic('personal')).toBe('app-overview');expect(initialHelpTopic('host')).toBe('host-start');expect(initialHelpTopic('member')).toBe('member-connect')
 })
-it.each(helpSectionIds)('starts %s at the first article in its table of contents',section=>{
+it('opens settings directly at its controls within the common guide',()=>{
+ expect(initialHelpTopic('host','settings')).toBe('settings')
+})
+it.each(helpSectionIds.filter(section=>section!=='settings'))('starts %s at the first article in its table of contents',section=>{
  expect(initialHelpTopic('host',section)).toBe(helpArticles.find(a=>a.menu===section)?.id)
 })
 it.each(['Space','Ctrl','프로젝트 추가','일정 추가','트레이','100%'])('documents core Planrail capability %s',query=>{

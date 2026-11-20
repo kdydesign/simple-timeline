@@ -1,9 +1,10 @@
 export const helpChannel = 'help:command'
 export const helpOpened = 'help:opened'
-export const helpSectionIds = ['home','planrail','noderail','termrail','settings'] as const
+// Keep the settings entry key so its existing reading position opens in 공통.
+export const helpSectionIds = ['settings','home','planrail','noderail','termrail'] as const
 export type HelpSection = typeof helpSectionIds[number]
 export const isHelpSection = (value:unknown):value is HelpSection => helpSectionIds.some(id=>id===value)
-export const helpTopicIds = ['workrail-home','node-management','ssh-terminal','settings','personal-holidays','app-overview', 'projects', 'schedules', 'gantt-navigation', 'schedule-drag', 'calendar', 'personal-reminders', 'window-tray', 'installation', 'saving-errors', 'help-reading','getting-started','host-start','host-participants','shared-holidays','host-projects','host-access','host-updates','member-connect','member-sync','member-reminders','member-updates','member-disconnect','troubleshoot-connection','troubleshoot-updates','troubleshoot-notifications'] as const
+export const helpTopicIds = ['workrail-start','node-operation-log','ssh-startup-file','workrail-home','node-management','ssh-terminal','settings','personal-holidays','app-overview', 'projects', 'schedules', 'gantt-navigation', 'schedule-drag', 'calendar', 'personal-reminders', 'window-tray', 'installation', 'saving-errors', 'help-reading','getting-started','host-start','host-participants','shared-holidays','host-projects','host-access','host-updates','member-connect','member-sync','member-reminders','member-updates','member-disconnect','troubleshoot-connection','troubleshoot-updates','troubleshoot-notifications'] as const
 export type HelpTopicId = typeof helpTopicIds[number]
 interface LegacyHelpReading {topicId:HelpTopicId;query:string;scrollTop:number}
 export interface HelpReadingState extends LegacyHelpReading {section:HelpSection}

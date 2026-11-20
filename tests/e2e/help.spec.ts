@@ -13,7 +13,7 @@ test('opens contextual help through the title bar, F1 and settings, and reports 
  await help.click()
  await expect.poll(()=>d.app.windows().length).toBe(2)
  const h=d.app.windows().find(w=>w!==p)!
- await expect(h.getByRole('heading',{name:'Planrail 시작하기',exact:true})).toBeVisible()
+ await expect(h.getByRole('heading',{name:'PlanRail 시작하기',exact:true})).toBeVisible()
  expect(await p.evaluate(()=>window.timelineWindow!.command('help','../../outside' as never))).toEqual({ok:false})
  await p.bringToFront()
  await dock.getByRole('button',{name:'Home',exact:true}).click()
@@ -50,7 +50,7 @@ test('offline help isolates capabilities, remembers reading and follows tray wit
  await p.getByRole('button',{name:'프로젝트 추가',exact:true}).click()
  await p.getByLabel('프로젝트 이름',{exact:true}).fill('도움말 중 보존할 입력')
  const h=await openHelp(d)
- await expect(h.getByRole('heading',{name:'Planrail 시작하기'})).toBeVisible()
+ await expect(h.getByRole('heading',{name:'PlanRail 시작하기'})).toBeVisible()
  expect(await h.evaluate(()=>({data:'simpleTimeline'in window,share:'timelineSharing'in window,update:'timelineUpdates'in window,window:'timelineWindow'in window,node:typeof (window as any).require,help:Object.keys(window.planrailHelp!)}))).toEqual({data:false,share:false,update:false,window:false,node:'undefined',help:['command','onOpen']})
  expect(await h.evaluate(()=>window.planrailHelp!.command('deleteProject' as never))).toEqual({ok:false})
  await expect.poll(async()=>{try{return JSON.parse(await readFile(join(d.profile,'help-latest.json'),'utf8')).requests[0]?.readyMs}catch{return undefined}}).toBeDefined()
@@ -86,7 +86,7 @@ test('new app session chooses role again and closes help when the app really exi
  const h=await openHelp(d)
  await h.getByRole('navigation').getByRole('button',{name:'호스트 연결하기',exact:true}).click();await h.getByRole('button',{name:'도움말 닫기'}).click()
  await d.restart();const next=await openHelp(d)
- await expect(next.getByRole('heading',{name:'Planrail 시작하기'})).toBeVisible()
+ await expect(next.getByRole('heading',{name:'PlanRail 시작하기'})).toBeVisible()
  await d.page.getByRole('button',{name:'프로젝트 추가',exact:true}).click();await d.page.getByLabel('프로젝트 이름',{exact:true}).fill('종료 시 폐기');
  const closed=next.waitForEvent('close'),exited=d.app.waitForEvent('close');await d.app.evaluate(()=> (globalThis as any).desktopController.requestQuit());await Promise.all([closed,exited])
 })

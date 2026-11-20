@@ -1,6 +1,7 @@
 import { win32 } from 'node:path'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, randomUUID } from 'node:crypto'
 import { isRemovalConfirmation, type StandaloneRemovalConfirmation } from '../../shared/node-management'
+import type { EnvironmentLogHistory } from './environments'
 import { selectStandaloneTarget, targetFingerprint, type MsiEvidence, type MsiRemovalResult } from './standalone'
 import type { MachineMutationLease } from './mutation-lock'
 import { isNodeVersion, type NodeManagementError, type NodeManagementErrorCode, type NodeManagementState, type NodeOperation, type NodeRelease } from '../../shared/node-management'
@@ -103,10 +104,12 @@ export function createNodeManagementService(options: {
   changed: (state: NodeManagementState) => void
   barrier?: MutationBarrier
   slowAfterMs?: number
+  history?: EnvironmentLogHistory
 }) {
   const { platform, arch, windows, barrier } = options
   const supported = platform === 'win32' && arch === 'x64'
   let state: NodeManagementState = {
+    ...options.history?.log,
     revision: 0,
     platform,
     supported,
@@ -309,6 +312,7 @@ export function createNodeManagementService(options: {
     if (!supported) return { ...state, error: nodeManagementError('unsupported') }
     if (kind !== 'install-manager' && kind !== 'remove-standalone' && !isNodeVersion(version)) return { ...state, error: nodeManagementError('invalid-request') }
 
+    const id = randomUUID()
     let resolveResult!: (value: NodeManagementState) => void
     let rejectResult!: (error: unknown) => void
     const result = new Promise<NodeManagementState>((resolve, reject) => {
@@ -361,22 +365,22 @@ export function createNodeManagementService(options: {
           reason = '설치 폴더와 nvm 설치 목록 또는 기본 버전이 일치하지 않습니다. 환경 다시 검사로 설치 상태를 확인해 주세요.'
         }
         const error = code ? { code, message: reason ?? messages[code] } : null
-        let entry: string | undefined
+        let entry: string
         if (kind === 'install' && attempt.family) {
           const fields = [startedAt, kind, version, attempt.family === 'modern' ? 'nvm 2.x' : 'nvm 1.x', code ?? '성공']
           if (attempt.detail) fields.push(zipIssueText(attempt.detail))
           if (attempt.cleanup) fields.push('추가 정리 실패', zipIssueText(attempt.cleanup))
           entry = fields.join(' · ')
-        } else if (error) entry = [kind, version, error.code].filter(Boolean).join(' · ')
-        const operationLog = entry ? [...(state.operationLog ?? []).slice(-19), entry] : state.operationLog
-        publish({ busy: null, error, operationLog })
+        } else entry = [kind, version, code ?? '성공'].filter(Boolean).join(' · ')
+        const operationLog = [...(state.operationLog ?? []).slice(-19), entry]
+        publish({ busy: null, error, operationLog, operationResult: { id, error } })
         resolveResult(state)
       }
     }
     // Reserve the barrier and the operation synchronously, before another IPC request can start.
     pendingZip = null
     const scheduled = barrier?.run(() => run())
-    publish({ busy: { kind, version, phase: 'checking' }, error: null })
+    publish({ busy: { id, kind, version, phase: 'checking' }, error: null, operationResult: undefined })
     void (scheduled ?? run()).catch(rejectResult)
     return result
   }

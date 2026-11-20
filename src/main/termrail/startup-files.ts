@@ -11,6 +11,11 @@ export interface TermRailStartup {
   body: string
 }
 
+export interface StagedStartupFile {
+  name: string
+  encrypted: Buffer
+}
+
 const sourceLimit = 64 * 1024
 const formatError = () => Error('시작 파일의 UTF-8 형식과 첫 두 줄의 아이디·비밀번호를 확인하세요.')
 
@@ -62,8 +67,7 @@ export class TermRailStartupFiles {
       throw Error()
   }
 
-  async importFile(source: string, endpoint: TermRailEndpoint, current: () => boolean): Promise<TermRailStartupRef> {
-    if (!isTermRailEndpoint(endpoint)) throw Error('시작 파일을 등록할 서버를 확인하세요.')
+  async stage(source: string): Promise<StagedStartupFile> {
     const data = await readBounded(source, sourceLimit).catch(() => {throw Error('시작 파일을 읽을 수 없습니다.')})
     let text: string
     try {
@@ -74,10 +78,21 @@ export class TermRailStartupFiles {
       data.fill(0)
     }
     parseSource(text)
+    try {
+      await this.requireProtection()
+      return {name: basename(source), encrypted: await this.vault.encryptStringAsync(text)}
+    } catch {
+      throw Error('시작 파일을 보호하여 저장할 수 없습니다.')
+    }
+  }
+
+  async bind(draft: StagedStartupFile, endpoint: TermRailEndpoint, current: () => boolean): Promise<TermRailStartupRef> {
+    if (!isTermRailEndpoint(endpoint)) throw Error('시작 파일을 등록할 서버를 확인하세요.')
     const id = randomUUID()
     const file = this.file(id)
     try {
       await this.requireProtection()
+      const {result: text} = await this.vault.decryptStringAsync(draft.encrypted)
       const encrypted = await this.vault.encryptStringAsync(JSON.stringify({id, host: endpoint.host, port: endpoint.port, text}))
       if (!current()) throw Error()
       mkdirSync(this.directory, {recursive: true, mode: 0o700})
@@ -96,7 +111,7 @@ export class TermRailStartupFiles {
     } catch {
       throw Error('시작 파일을 보호하여 저장할 수 없습니다.')
     }
-    return {id, name: basename(source)}
+    return {id, name: draft.name}
   }
 
   async resolve(id: string, endpoint: TermRailEndpoint): Promise<TermRailStartup> {

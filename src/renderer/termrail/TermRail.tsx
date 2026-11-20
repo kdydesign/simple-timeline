@@ -1,5 +1,6 @@
 import {useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type MouseEvent} from 'react'
 import {createPortal} from 'react-dom'
+import {Plus, Save} from 'lucide-react'
 import {libraryKey, readLibrary, type Library, type Profile, type Tab} from './layout'
 import {profileDragType, TerminalTree} from './TerminalTree'
 import {Menu, WorkspaceDialog, type CommandMenu, type Editor} from './WorkspaceControls'
@@ -24,6 +25,11 @@ export function TermRail({active}: {active: boolean}) {
   const desk = useWorkspace(library.profiles, report)
   const {tabs, selected, windows} = desk.workspace
   const current = tabs.find(t => t.id === selected)
+  useEffect(() => {
+    if (initial.error) return
+    const savedIds = initial.library.profiles.flatMap(profile => profile.startup ? [profile.startup.id] : [])
+    void window.termRailSsh?.recoverStartup(savedIds).catch(() => report('이전 편집 창의 시작 파일을 정리할 수 없습니다.'))
+  }, [initial])
   useEffect(() => {if (!active) {setMenu(null); setEditor(null); setTabAction(null)}}, [active])
   useLayoutEffect(() => {
     if (!focusTabList.current) return
@@ -83,7 +89,7 @@ export function TermRail({active}: {active: boolean}) {
   return <>
     <section aria-label="TermRail" inert={!active} className="termrail">
       <aside className="termrail-sidebar">
-        <div className="termrail-side-head">서버<button type="button" aria-label="서버 추가" onClick={e => setEditor({kind: 'add', anchor: e.currentTarget})}>＋ 추가</button></div>
+        <div className="termrail-side-head">서버<button type="button" aria-label="서버 추가" onClick={e => setEditor({kind: 'add', anchor: e.currentTarget})}><Plus size={13} aria-hidden="true"/><span>추가</span></button></div>
         <div className="termrail-servers">{library.profiles.map(profile => {
           const commands = context(anchor => [
             ['서버 수정…', () => setEditor({kind: 'edit', profile, anchor})],
@@ -99,7 +105,7 @@ export function TermRail({active}: {active: boolean}) {
             }}>{profile.name}</button>
         })}</div>
         <div className="termrail-side-head termrail-layout-title">레이아웃<button aria-label="레이아웃 저장" type="button"
-          onClick={e => setEditor({kind: 'layout', name: current ? desk.title(current) : '', anchor: e.currentTarget})}>저장</button></div>
+          onClick={e => setEditor({kind: 'layout', name: current ? desk.title(current) : '', anchor: e.currentTarget})}><Save size={13} aria-hidden="true"/><span>저장</span></button></div>
         <div className="termrail-layouts">{library.layouts.map(saved =>
           <button key={saved.name} type="button" title={saved.name} onClick={() => {report(''); desk.replace(saved.layout)}}>{saved.name}</button>)}</div>
       </aside>

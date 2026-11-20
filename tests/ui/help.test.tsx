@@ -3,6 +3,27 @@ import {act,render,screen,waitFor,fireEvent,within} from '@testing-library/react
 import userEvent from '@testing-library/user-event'
 import {HelpApp} from '../../src/renderer/help/HelpApp'
 import type {HelpApi,HelpReadingState} from '../../src/shared/help'
+it('keeps the common guide first when opening a tool and labels common search results',async()=>{
+ const u=userEvent.setup()
+ render(<HelpApp api={{command:async()=>({ok:true,reading:{section:'termrail',topicId:'ssh-terminal',query:'',scrollTop:0}})}}/>)
+ await screen.findByRole('heading',{name:'SSH 서버 연결과 터미널 배치'})
+ const toc=within(screen.getByRole('navigation',{name:'도움말 목차'}))
+ expect(toc.getAllByRole('heading',{level:2}).map(heading=>heading.textContent)).toEqual(['공통','Home','PlanRail','NodeRail','TermRail'])
+ await u.type(screen.getByRole('searchbox'),'도움말 검색')
+ const result=toc.getByRole('button',{name:/도움말 검색과 화면 확대/})
+ expect(result).toHaveTextContent('공통')
+ await u.click(result)
+ expect(within(screen.getByRole('main')).getByText('공통',{exact:true})).toBeVisible()
+})
+it('continues an existing settings reading in the common guide',async()=>{
+ const reading:HelpReadingState={section:'settings',topicId:'window-tray',query:'트레이',scrollTop:65}
+ render(<HelpApp api={{command:async()=>({ok:true,reading})}}/>)
+ await screen.findByRole('heading',{name:'창·트레이 메뉴와 자동 실행'})
+ const main=screen.getByRole('main')
+ expect(within(main).getByText('공통',{exact:true})).toBeVisible()
+ expect(screen.getByRole('searchbox')).toHaveValue('트레이')
+ expect(main.scrollTop).toBe(65)
+})
 it('restores a section and scroll on reopen even when both menus display the same article',async()=>{
  let opened!:()=>void
  let openId=0

@@ -119,14 +119,14 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     platform: process.platform, arch: process.arch, store: environmentSelectionStore(profile),
     discover: async () => [{ id: 'windows', label: 'Windows', kind: 'windows', running: true }, ...await wsl.discover()],
     start: wsl.start, opener: shell,
-    createWindows: changed => createNodeManagementService({
+    createWindows: (changed, history) => createNodeManagementService({
       platform: process.platform, arch: process.arch,
       windows: createWindowsNodeAdapter(globalThis.fetch, officialNodeTransport), loadCatalog: async manager => loadNodeCatalog(await officialNodeTransport(getDownloadProxy(manager))),
-      changed, barrier: appMutationBarrier,
+      changed, history, barrier: appMutationBarrier,
     }),
-    createWsl: (environment, changed) => createWslService({
+    createWsl: (environment, changed, history) => createWslService({
       environment, runner: wsl, openLog: () => openWslLog(profile), loadCatalog: linuxArch => loadNodeCatalog(nodeFetch, { linuxArch }),
-      changed, barrier: appMutationBarrier,
+      changed, history, barrier: appMutationBarrier,
     }),
     changed: state => nodeIpc?.changed(state), barrier: appMutationBarrier,
   })
@@ -191,7 +191,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const termRailSsh = new TermRailSshService(join(profile, 'termrail-known-hosts.json'))
   const termRailIpc = registerTermRailSshIpc(termRailSsh,
     (event, method) => isTrustedSender(event, window, rendererUrl) &&
-      (method === 'read' || method === 'close' || (!installPending && !appMutationBarrier.blocked())),
+      (method === 'read' || method === 'close' || method === 'finishStartup' || (!installPending && !appMutationBarrier.blocked())),
     new TermRailStartupFiles(profile, safeStorage),
     async () => {
       const choice = await dialog.showOpenDialog(window, {title: 'Bash 시작 파일 가져오기', properties: ['openFile']})

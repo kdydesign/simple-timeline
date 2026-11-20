@@ -55,9 +55,6 @@ test('imports a startup file through the native picker and authenticates only af
     await page.getByRole('button', { name: '서버 선택' }).click()
     await page.getByRole('menuitem', { name: '새 터미널…' }).click()
     const dialog = page.getByRole('dialog', { name: '새 터미널' })
-    await dialog.getByLabel('서버 이름').fill('Startup fixture')
-    await dialog.getByLabel('호스트', { exact: true }).fill('127.0.0.1')
-    await dialog.getByLabel('포트', { exact: true }).fill(String((server.address() as AddressInfo).port))
     await dialog.getByRole('button', { name: '시작 파일 가져오기' }).click()
     if (process.platform === 'win32') expect(secure).toBe(true)
     if (!secure) {
@@ -67,6 +64,13 @@ test('imports a startup file through the native picker and authenticates only af
       return
     }
     await expect(dialog.getByText('startup-fixture.sh', { exact: true })).toBeVisible()
+    await dialog.getByRole('button', { name: '저장하고 연결' }).click()
+    await expect(dialog.getByLabel('서버 이름')).toBeFocused()
+    expect(transports).toBe(0)
+    await expect(dialog.getByText('startup-fixture.sh', { exact: true })).toBeVisible()
+    await dialog.getByLabel('서버 이름').fill('Startup fixture')
+    await dialog.getByLabel('호스트', { exact: true }).fill('127.0.0.1')
+    await dialog.getByLabel('포트', { exact: true }).fill(String((server.address() as AddressInfo).port))
     await dialog.getByRole('button', { name: '저장하고 연결' }).click()
     const trust = page.getByRole('button', { name: '키 신뢰', exact: true })
     await expect(trust).toBeVisible()

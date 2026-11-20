@@ -1,7 +1,7 @@
-import { fireEvent, render, renderHook, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { expect, it, vi } from 'vitest'
 import { NodeScreen } from '../../src/renderer/workrail/NodeScreen'
-import { useNodeManagement } from '../../src/renderer/workrail/useNodeManagement'
+import { useNodeManagement, type NodeManagement } from '../../src/renderer/workrail/useNodeManagement'
 import { TooltipProvider } from '../../src/renderer/components/ui/tooltip'
 import type { NodeEnvironment, NodeManagementState } from '../../src/shared/node-management'
 
@@ -15,15 +15,15 @@ const snapshot: NodeManagementState = {
 }
 
 function showDetail() {
-  const { result } = renderHook(() => useNodeManagement(false))
-  const model = { ...result.current, state: snapshot, environment: windows as NodeEnvironment | undefined,
+  const model = { state: snapshot, environment: windows as NodeEnvironment | undefined,
     available: true, error: null, recheckPending: false, releaseError: null as string | null,
     openingManager: null as 'folder' | 'release' | null, openManagerRelease: vi.fn(async () => {}) }
-  function view(changes: Partial<typeof model> = {}) {
-    return <TooltipProvider><NodeScreen node={{ ...model, ...changes }} onEnvironment={vi.fn()} /></TooltipProvider>
+  function View({ changes }: { changes?: Partial<NodeManagement> }) {
+    const defaults = useNodeManagement(false)
+    return <TooltipProvider><NodeScreen node={{ ...defaults, ...model, ...changes }} onEnvironment={vi.fn()} /></TooltipProvider>
   }
-  const { rerender } = render(view())
-  return { model, update: (changes: Partial<typeof model>) => rerender(view(changes)),
+  const { rerender } = render(<View />)
+  return { model, update: (changes: Partial<NodeManagement>) => rerender(<View changes={changes} />),
     panel: within(screen.getByRole('region', { name: '현재 사용 버전' })) }
 }
 
@@ -146,7 +146,7 @@ it('keeps live WSL cancellation and logs available and exposes recheck when the 
   expect(scope).not.toBeNull()
   fireEvent.click(within(scope!).getByRole('button', { name: '작업 취소' }))
   expect(cancel).toHaveBeenCalledOnce()
-  const logs = within(scope!).getByText('작업 로그')
+  const logs = within(scope!).getByRole('button', { name: '작업 로그 보기' })
   logs.focus()
   fireEvent.click(logs)
   expect(within(scope!).getByText('building')).toBeVisible()
@@ -191,7 +191,7 @@ it('copies only Windows operation history when the screen includes private manag
     return true
   } })
   try {
-    fireEvent.click(screen.getByText('작업 로그'))
+    fireEvent.click(screen.getByRole('button', { name: '작업 로그 보기' }))
     fireEvent.click(screen.getByRole('button', { name: '진단 복사' }))
     expect(copied).toBe(operationLog[0])
     expect(screen.getByText('진단 이력을 복사했습니다.')).toBeVisible()

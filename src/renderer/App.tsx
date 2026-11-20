@@ -77,6 +77,7 @@ export function App({
   const [runtimeVersion, setRuntimeVersion] = useState<string>();
   const planrailActive = tool === "planrail";
   const dockButton = useRef<HTMLButtonElement>(null);
+  const installedHeading = useRef<HTMLHeadingElement>(null);
   const workDate = useLocalWorkDate(today);
   const node = useNodeManagement(tool === "node");
   const environmentPicker = useEnvironmentPicker(node);
@@ -796,14 +797,20 @@ export function App({
           setFilter("all");
           navigateDate(workDate);
           requestAnimationFrame(() => dockButton.current?.focus());
-        }} onNode={() => {
+        }} onNode={target => {
+          if (dockBlocked) return;
           selectTool("node");
-          requestAnimationFrame(() => dockButton.current?.focus());
+          requestAnimationFrame(() => {
+            if (target === "installed" && installedHeading.current) {
+              installedHeading.current.focus({ preventScroll: true });
+              installedHeading.current.scrollIntoView({ block: "start" });
+            } else dockButton.current?.focus();
+          });
         }}/>}
       {openedTermRail && <Suspense fallback={tool === "termrail" ? <div role="status">TermRail 여는 중…</div> : null}>
         <TermRail active={tool === "termrail"} />
       </Suspense>}
-      <div className="workrail-node-seat" aria-hidden={tool!=="node"||undefined} inert={tool!=="node"}><NodeScreen node={node} onEnvironment={environmentPicker.openPicker}/></div>
+      <div className="workrail-node-seat" aria-hidden={tool!=="node"||undefined} inert={tool!=="node"}><NodeScreen node={node} installedHeading={installedHeading} onEnvironment={environmentPicker.openPicker}/></div>
       </div>
       {!dockBlocked && environmentPicker.dialog}
       {planrailActive&&<PlanRailStatus sharing={sharing.error?.code==='IPC_UNAVAILABLE'?null:sharing.state} muted={reminders.muted} loading={reminders.loading}/>}

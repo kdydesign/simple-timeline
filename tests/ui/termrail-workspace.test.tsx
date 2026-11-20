@@ -14,7 +14,7 @@ HTMLDialogElement.prototype.showModal ??= function () { this.open = true }
 HTMLDialogElement.prototype.close ??= function () { this.open = false }
 const ssh = {
   open: vi.fn().mockResolvedValue(undefined), close: vi.fn().mockResolvedValue(undefined),
-  discardStartup: vi.fn().mockResolvedValue(undefined),
+  discardStartup: vi.fn().mockResolvedValue(undefined), recoverStartup: vi.fn().mockResolvedValue(undefined),
 }
 const profiles: Profile[] = [
   {id: 'a', name: '개발', host: 'dev.test', port: 22}, {id: 'b', name: '검증', host: 'qa.test', port: 2222},
@@ -257,6 +257,13 @@ it('counts only live connections when closing a split and preserves the saved la
   expect(ssh.close).toHaveBeenCalledTimes(2)
   fireEvent.click(button('배치'))
   expect(screen.getByRole('tab', {name:'작업 1 · 2'})).toBeVisible()
+})
+
+it('preserves interrupted files when the saved profile library cannot be read', () => {
+  localStorage.setItem(libraryKey, '{')
+  render(<TermRail active/>)
+  expect(screen.getByRole('alert')).toHaveTextContent('읽을 수 없습니다')
+  expect(ssh.recoverStartup).not.toHaveBeenCalled()
 })
 
 it('discards the registered file only after deletion is persisted', () => {

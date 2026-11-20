@@ -44,7 +44,7 @@ export function HelpApp({api}:{api:HelpApi}) {
    <div className="help-toolbar"><button aria-label={toc?'목차 접기':'목차 펼치기'} aria-expanded={toc} onClick={()=>setToc(!toc)}><Icon name="gantt"/>{toc?'목차 접기':'목차 펼치기'}</button><span>인터넷 연결 없이 사용할 수 있습니다.</span></div>
    <div className={`help-layout ${toc?'':'help-toc-hidden'}`}>
     {toc&&<aside ref={sidebar}><label htmlFor="help-search">도움말 검색</label><input ref={search} id="help-search" type="search" maxLength={200} placeholder="예: 승인, 업데이트" value={reading.query} onChange={e=>remember({...reading,scrollTop:pendingReading.current?.scrollTop??reading.scrollTop,query:e.target.value})}/>{reading.query&&<button className="help-clear" onClick={()=>{remember({...reading,scrollTop:pendingReading.current?.scrollTop??reading.scrollTop,query:''});search.current?.focus()}}>검색 지우기</button>}
-    <nav aria-label="도움말 목차">{results.length===0?<p role="status">검색 결과가 없습니다. 다른 검색어를 입력하세요.</p>:[reading.section,...helpSectionIds.filter(id=>id!==reading.section)].map(section=>{
+    <nav aria-label="도움말 목차">{results.length===0?<p role="status">검색 결과가 없습니다. 다른 검색어를 입력하세요.</p>:helpSectionIds.map(section=>{
      const items=results.filter(r=>r.article.menu===section)
      if(!items.length)return null
      return <section key={section}><h2>{helpSectionLabels[section]}</h2>{section==='planrail'&&!querying?planrailHelpGroups.map(group=>{

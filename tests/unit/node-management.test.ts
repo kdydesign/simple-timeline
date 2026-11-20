@@ -705,3 +705,16 @@ it('keeps the failed ZIP stage and cleanup separate from a later verified instal
   expect(retried.operationLog).toEqual([line, expect.stringMatching(/24\.11\.0.*nvm 1\.x.*성공/)])
   expect(retried.operationLog?.join(' ')).not.toContain(home)
 })
+
+it('identifies each completed Windows mutation independently of identical errors and inspections', async () => {
+  const { service } = makeService(adapter({ changeVersion: async () => ({ status: 'zip-permission' }) }))
+  const first = await service.install('24.11.0')
+  expect(first.operationResult).toMatchObject({ id: expect.any(String), error: { code: 'zip-permission' } })
+  expect((await service.getState('recheck')).operationResult).toEqual(first.operationResult)
+  const second = await service.install('24.11.0')
+  expect(second.operationResult?.id).not.toBe(first.operationResult?.id)
+  expect(second.operationResult?.error).toEqual(first.operationResult?.error)
+  const success = await service.use('22.9.0')
+  expect(success.operationResult).toMatchObject({ id: expect.any(String), error: null })
+  expect(success.operationLog?.at(-1)).toContain('성공')
+})

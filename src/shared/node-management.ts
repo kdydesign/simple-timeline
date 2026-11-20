@@ -49,6 +49,7 @@ export function isEnvironmentId(value: unknown): value is string {
 }
 
 export interface NodeOperation {
+  id?: string
   kind: 'install' | 'use' | 'install-manager' | 'remove-standalone'
   version: string | null
   cancellable?: boolean
@@ -67,6 +68,8 @@ export interface StandaloneRemovalState {
 export type NodeCapabilities = Record<'list' | 'install' | 'use', { available: boolean; reason: string | null }>
 export interface NodeManagementState {
   environments?: { status: 'loading' | 'ready' | 'error'; items: NodeEnvironment[]; selectedId: string | null; error: NodeManagementError | null }
+  /** Assigned once when a mutation reaches a confirmed terminal state. */
+  operationResult?: { id: string; error: NodeManagementError | null }
   operationLogPath?: string
   operationLog?: string[]
   capabilities?: NodeCapabilities

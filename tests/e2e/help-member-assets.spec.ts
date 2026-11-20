@@ -19,10 +19,11 @@ test('captures authenticated member toolbar without network addresses or credent
   await expect.poll(async()=>(await sharingState(member)).status).toBe('connected');await m.getByRole('button',{name:'설정 닫기'}).click();await member.page.setViewportSize({width:1440,height:960})
   const runtime=JSON.parse(await readFile('package.json','utf8')).version+'-dev'
   expect((await sharingState(member)).hostVersion).toBe(runtime)
-  const toolbar=await member.page.locator('.toolbar').boundingBox();await mkdir('artifacts/help-assets',{recursive:true});await member.page.screenshot({path:'artifacts/help-assets/member-toolbar.png',clip:{x:0,y:0,width:1440,height:Math.ceil(toolbar!.y+toolbar!.height+8)}})
+  await mkdir('artifacts/help-assets',{recursive:true})
+  await member.page.screenshot({path:'artifacts/help-assets/member-toolbar.png'})
   // The PlanRail entry starts at its first article and keeps the member articles available.
   await member.page.getByRole('button',{name:'도움말',exact:true}).click();await expect.poll(()=>member.app.windows().length).toBe(2);const help=member.app.windows().find(p=>p!==member.page)!
-  await expect(help.getByRole('heading',{name:'Planrail 시작하기'})).toBeVisible()
+  await expect(help.getByRole('heading',{name:'PlanRail 시작하기'})).toBeVisible()
   await help.getByRole('navigation').getByRole('button',{name:'호스트 연결하기',exact:true}).click()
   await expect(help.getByRole('heading',{name:'호스트 연결하기'})).toBeVisible()
  }finally{await member.dispose()}

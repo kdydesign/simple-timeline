@@ -2,7 +2,10 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { termRailSshChannel, type TermRailSshApi } from '../shared/termrail-ssh'
 
 const ssh: TermRailSshApi = {
-  pickStartup: endpoint => ipcRenderer.invoke(termRailSshChannel, 'pickStartup', endpoint),
+  pickStartup: editorId => ipcRenderer.invoke(termRailSshChannel, 'pickStartup', editorId),
+  bindStartup: (editorId, endpoint) => ipcRenderer.invoke(termRailSshChannel, 'bindStartup', editorId, endpoint),
+  finishStartup: (editorId, savedId) => ipcRenderer.invoke(termRailSshChannel, 'finishStartup', editorId, savedId),
+  recoverStartup: savedIds => ipcRenderer.invoke(termRailSshChannel, 'recoverStartup', savedIds),
   discardStartup: id => ipcRenderer.invoke(termRailSshChannel, 'discardStartup', id),
   open: (id, endpoint) => ipcRenderer.invoke(termRailSshChannel, 'open', id, endpoint),
   startProfile: (id, startupId) => ipcRenderer.invoke(termRailSshChannel, 'startProfile', id, startupId),
