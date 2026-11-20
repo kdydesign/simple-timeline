@@ -1,5 +1,8 @@
 # 진행 상태
 
+2026-11-20 **Home·PlanRail과 Electron 성능 1·2차 구현.** 일정 조회·로컬 알림, 릴리즈노트 ×의 창 해제를 반영했다. 공유 인덱스 구현은 Home 준비 시간의 채택 기준에 따라 별도 후보 브랜치에 보관했다. [적용 범위와 측정 결과](../implementation/2026-11-20-electron-performance.md)
+
+
 2026-11-20 **Home·첫 PlanRail 진입 성능 개선 1차 설계 확정 · 구현 보류.** 간트와 달력이 일정 인덱스를 공유하고 Home 준비 시간과 첫 PlanRail 조작 시간을 함께 평가하기로 했다. [확정 설계와 채택 기준](../superpowers/specs/2026-11-20-home-planrail-performance-design.md)
 
 2026-11-20 승인된 PostRail 작업 화면과 Home 즐겨찾기를 제품에 반영했다. 환경별 토큰 재사용, 순차 전송, 회차별 결과 조회와 앱 종료 동작은 [구현·검증 기록](../implementation/2026-11-20-postrail.md)을 따른다.

@@ -86,7 +86,7 @@ test("real production package installs, works offline, updates and retains DB af
     };
   await mkdir(info.outputDir, { recursive: true });
   let app: ElectronApplication | null = null;
-  const launch = async (exe: string, version: string) => {
+  const launch = async (exe: string, version: string, scale?: number) => {
     const env = Object.fromEntries(
       Object.entries(process.env).filter(
         (p): p is [string, string] => typeof p[1] === "string",
@@ -103,11 +103,16 @@ test("real production package installs, works offline, updates and retains DB af
     const instance = await _electron.launch({
       chromiumSandbox: true,
       executablePath: exe,
+      args: scale ? [`--force-device-scale-factor=${scale}`] : [],
       env,
       timeout: 30000,
     });
     app = instance;
     const page = await instance.firstWindow();
+    if (scale) {
+      await expect(page.getByRole('navigation', {name:'WorkRail 도구'}).getByRole('button', {name:'Home', exact:true})).toHaveAttribute('aria-current', 'page');
+      expect(await page.evaluate(() => window.devicePixelRatio)).toBe(scale);
+    }
     await openPackagedPlanrail(page);
     await expect(
       page.getByRole("button", { name: "프로젝트 추가", exact: true }),
@@ -239,7 +244,7 @@ test("real production package installs, works offline, updates and retains DB af
     evidence.system = system;
     console.log("Packaged Windows environment: "+JSON.stringify(system));
 
-    page = await launch(installed, base.version);
+    page = await launch(installed, base.version, 1.5);
     expect(JSON.parse((await page.evaluate(() => localStorage.getItem('simple-timeline.preferences.v1')))!) ).toEqual({...JSON.parse(preferences!),theme:"dark",dayWidth:28});
     expect(await snapshot(page)).toEqual({...before,schedules:before.schedules.map(s=>({...s,reminder:{daysBefore:2,time:'09:00',start:false,end:false}}))});
     const schemaVersion = (await readFile(db)).readUInt32BE(60);
@@ -256,6 +261,8 @@ test("real production package installs, works offline, updates and retains DB af
     await page.getByRole("button", { name: "달력", exact: true }).click();
     await expect(page.locator('[data-segment="1"]')).toHaveCount(2);
     await page.locator('[data-segment="2"]').first().click();
+    await expect(page.getByLabel("일정 이름", {exact:true})).toHaveValue("QA");
+    evidence.homeToPlanrailEditorScale = await page.evaluate(() => window.devicePixelRatio);
     await page
       .getByLabel("일정 이름", { exact: true })
       .fill("QA 오프라인 수정");

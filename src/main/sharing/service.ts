@@ -315,7 +315,7 @@ export function createSharingService(o:Options){
     notifyLocalMutation(){if(!disposed){snapshotRevision++;changed()}},
     requestSettings(){if(disposed)throw failure('FORBIDDEN');settingsRequestToken=randomUUID();changed();return getState()},
     acknowledgeSettings({token}:{token:string}){if(disposed)throw failure('FORBIDDEN');if(settingsRequestToken===token)settingsRequestToken=null;return getState()},
-    suspend,resume,dispose,repository:createSharingRepository(o.storage.repository,store),memberSnapshot:()=>store.getRoleTransition()?{projects:[],schedules:[]}:store.readCache(),memberReminderStore,
+    suspend,resume,dispose,repository:createSharingRepository(o.storage.db,o.storage.repository,store),memberSnapshot:()=>store.getRoleTransition()?{projects:[],schedules:[]}:store.readCache(),memberReminderStore,
   }
 }
 export type SharingService=ReturnType<typeof createSharingService>

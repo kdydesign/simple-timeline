@@ -1,0 +1,120 @@
+{
+  "before": {
+    "home": [
+      {
+        "snapshot": 0,
+        "schedules": 3,
+        "count": 2,
+        "durationsMs": [
+          0.7999999821186066,
+          0
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 3,
+        "count": 2,
+        "durationsMs": [
+          0,
+          0.10000002384185791
+        ]
+      }
+    ],
+    "first": [
+      {
+        "snapshot": 0,
+        "schedules": 3,
+        "count": 2,
+        "durationsMs": [
+          0.7999999821186066,
+          0
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 3,
+        "count": 2,
+        "durationsMs": [
+          0,
+          0.10000002384185791
+        ]
+      }
+    ],
+    "roundTrip": [
+      {
+        "snapshot": 0,
+        "schedules": 3,
+        "count": 2,
+        "durationsMs": [
+          0.7999999821186066,
+          0
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 3,
+        "count": 2,
+        "durationsMs": [
+          0,
+          0.10000002384185791
+        ]
+      }
+    ]
+  },
+  "after": {
+    "home": [
+      {
+        "snapshot": 0,
+        "schedules": 3,
+        "count": 1,
+        "durationsMs": [
+          0.9000000059604645
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 3,
+        "count": 1,
+        "durationsMs": [
+          0.09999999403953552
+        ]
+      }
+    ],
+    "first": [
+      {
+        "snapshot": 0,
+        "schedules": 3,
+        "count": 1,
+        "durationsMs": [
+          0.9000000059604645
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 3,
+        "count": 1,
+        "durationsMs": [
+          0.09999999403953552
+        ]
+      }
+    ],
+    "roundTrip": [
+      {
+        "snapshot": 0,
+        "schedules": 3,
+        "count": 1,
+        "durationsMs": [
+          0.9000000059604645
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 3,
+        "count": 1,
+        "durationsMs": [
+          0.09999999403953552
+        ]
+      }
+    ]
+  }
+}

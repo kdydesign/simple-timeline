@@ -33,6 +33,7 @@ import {createSharingService,type SharingTransport} from './sharing/service'
 import {registerPostRailIpc} from './postrail/ipc'
 import {registerSharingIpc} from './sharing/ipc'
 import type {ProtectedSecrets} from './sharing/secrets'
+import {createReminderSnapshotReader} from './db/repository'
 import {createReminderStore} from './db/reminders'
 import {createReminderEngine,type ReminderSender} from './reminders/engine'
 import {createNativeReminderSender} from './reminders/native'
@@ -304,8 +305,9 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     window.focus()
   }
   let reminderIpc: ReturnType<typeof registerReminderIpc> | undefined
-  const reminderEngine = storage.state === 'ready' ? createReminderEngine({
-    generation:()=>notificationPolicy!.state().generation,muted:()=>notificationPolicy!.state().muted,store:localReminderStore!,snapshot:()=>storage.repository.getSnapshot(),clock:options.reminderClock,
+  const readLocalReminders = storage.state === 'ready' ? createReminderSnapshotReader(storage.db) : undefined
+  const reminderEngine = readLocalReminders ? createReminderEngine({
+    generation:()=>notificationPolicy!.state().generation,muted:()=>notificationPolicy!.state().muted,store:localReminderStore!,snapshot:readLocalReminders,clock:options.reminderClock,
     send:options.reminderSender ?? nativeReminders.send,
     onClick:id=>{if(appMutationBarrier.blocked())return;show();reminderIpc?.open(id)},onChange:()=>reminderIpc?.changed(),
   }) : undefined
@@ -344,7 +346,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     requestClose()
   }
   try {
-    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState(), windowsLoginStartup(app.isPackaged), error => { show(); dialog.showErrorBox('Windows 시작 설정을 변경하지 못했습니다', String(error)) }, {read:()=>{if(!notificationPolicy)throw Error('저장소를 사용할 수 없습니다');return notificationPolicy.state().muted},set:muted=>{if(!notificationPolicy||storage.state!=='ready'||appMutationBarrier.blocked())throw Error('지금 알림 설정을 변경할 수 없습니다');const result=notificationPolicy.setMuted(muted,()=>localReminderStore!.suppress(storage.repository.getSnapshot().schedules.flatMap(s=>dueReminders(s,(options.reminderClock??(()=>new Date()))()))));reminderIpc?.changed();evaluateReminders();if(!muted){void sharing?.sync().catch(()=>{});void updates?.check(true)}return result.muted},error:error=>{show();dialog.showErrorBox('알림 설정을 변경하지 못했습니다',String(error))}})
+    tray = (options.createTray ?? createTray)(desktopIcon, show, requestQuit, showAbout, openSharingSettings, sharing?.getState(), windowsLoginStartup(app.isPackaged), error => { show(); dialog.showErrorBox('Windows 시작 설정을 변경하지 못했습니다', String(error)) }, {read:()=>{if(!notificationPolicy)throw Error('저장소를 사용할 수 없습니다');return notificationPolicy.state().muted},set:muted=>{if(!notificationPolicy||storage.state!=='ready'||appMutationBarrier.blocked())throw Error('지금 알림 설정을 변경할 수 없습니다');const result=notificationPolicy.setMuted(muted,()=>localReminderStore!.suppress(readLocalReminders!().schedules.flatMap(s=>dueReminders(s,(options.reminderClock??(()=>new Date()))()))));reminderIpc?.changed();evaluateReminders();if(!muted){void sharing?.sync().catch(()=>{});void updates?.check(true)}return result.muted},error:error=>{show();dialog.showErrorBox('알림 설정을 변경하지 못했습니다',String(error))}})
   } catch {
     show()
     if (options.notifyTrayFailure) options.notifyTrayFailure()

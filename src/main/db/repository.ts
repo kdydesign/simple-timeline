@@ -46,6 +46,43 @@ export function openDatabase(file: string, mustExist = false): DatabaseHandle {
   }
 }
 type Row = Record<string, string | bigint>
+const scheduleDto = (r: Row): Schedule => ({
+  reminder: {daysBefore:Number(r.reminder_days),time:String(r.reminder_time),start:!!r.reminder_start,end:!!r.reminder_end},
+  id: String(r.id),
+  projectId: String(r.project_id),
+  name: String(r.name),
+  startDate: String(r.start_date),
+  endDate: String(r.end_date),
+  createdAt: String(r.created_at),
+  updatedAt: String(r.updated_at),
+})
+
+function activeProjectFilter(db: DatabaseHandle, column: 'projects.id' | 'schedules.project_id', includeDormant = false) {
+  if (includeDormant || !db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sharing_role_state'").get()) return '1'
+  return `(((SELECT role FROM sharing_config)='host' AND (SELECT target FROM sharing_role_state) IS NULL)
+    OR NOT EXISTS(SELECT 1 FROM sharing_projects WHERE project_id=${column}))`
+}
+
+export function createReminderSnapshotReader(db: DatabaseHandle) {
+  const candidates = db.prepare(`
+    SELECT schedules.*, projects.name AS project_name
+    FROM schedules JOIN projects ON projects.id=schedules.project_id
+    WHERE (reminder_start=1 OR reminder_end=1) AND ${activeProjectFilter(db, 'schedules.project_id')}
+    ORDER BY schedules.project_id, start_date, end_date, schedules.id
+  `)
+  return () => {
+    const projects = new Map<string, Pick<Project, 'id' | 'name'>>()
+    const schedules = (candidates.all() as Row[]).map(row => {
+      const schedule = scheduleDto(row)
+      if (!projects.has(schedule.projectId)) {
+        projects.set(schedule.projectId, {id:schedule.projectId, name:String(row.project_name)})
+      }
+      return schedule
+    })
+    return {projects:[...projects.values()], schedules}
+  }
+}
+
 export function createRepository(
   db: DatabaseHandle,
   clock: () => string = () => new Date().toISOString(),
@@ -64,16 +101,6 @@ export function createRepository(
     name: String(r.name),
     color: String(r.color),
     participants: names,
-    createdAt: String(r.created_at),
-    updatedAt: String(r.updated_at),
-  })
-  const scheduleDto = (r: Row): Schedule => ({
-    reminder: {daysBefore:Number(r.reminder_days),time:String(r.reminder_time),start:!!r.reminder_start,end:!!r.reminder_end},
-    id: String(r.id),
-    projectId: String(r.project_id),
-    name: String(r.name),
-    startDate: String(r.start_date),
-    endDate: String(r.end_date),
     createdAt: String(r.created_at),
     updatedAt: String(r.updated_at),
   })
@@ -111,9 +138,8 @@ export function createRepository(
     inclusiveDays(startDate, endDate)
     return { name: normalizeName(v.name), startDate, endDate }
   }
-  const hasRoles=!!db.prepare("SELECT 1 FROM sqlite_master WHERE type='table' AND name='sharing_role_state'").get()
-  const active=includeDormant||!hasRoles?'1':"((SELECT role FROM sharing_config)='host' AND (SELECT target FROM sharing_role_state) IS NULL) OR NOT EXISTS(SELECT 1 FROM sharing_projects WHERE project_id=projects.id)"
-  const activeSchedule=includeDormant||!hasRoles?'1':"((SELECT role FROM sharing_config)='host' AND (SELECT target FROM sharing_role_state) IS NULL) OR NOT EXISTS(SELECT 1 FROM sharing_projects WHERE project_id=schedules.project_id)"
+  const active = activeProjectFilter(db, 'projects.id', includeDormant)
+  const activeSchedule = activeProjectFilter(db, 'schedules.project_id', includeDormant)
   // Keep all three reads in one transaction; participant queries must not grow with project count.
   const snapshotProjects = db.prepare(`SELECT * FROM projects WHERE ${active} ORDER BY id`)
   const snapshotParticipants = db.prepare(

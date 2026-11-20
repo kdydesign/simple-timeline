@@ -211,7 +211,7 @@ main의 [sharing 서비스](../../src/main/sharing/service.ts)가 SQLite 원본�
 
 ### 정보 창과 저장 확인 (0.8.5)
 
-[승인 설계](release-notes-and-confirmations.md)·[구현 기록](../implementation/2026-11-17-release-notes-confirmations.md)을 따른다. 릴리즈노트는 `release-notes:command`와 전용 비영속 session을 사용하며 파일/DB/공유/업데이트 API를 노출하지 않는다. 명시적 첫 클릭 생성·닫기 재사용으로 시작 시 준비 부하는 늘리지 않는다. 도움말은 기존 사전 준비를 유지하고 숫자 allowlist 진단만 추가한다.
+[승인 설계](release-notes-and-confirmations.md)·[구현 기록](../implementation/2026-11-17-release-notes-confirmations.md)을 따른다. 릴리즈노트는 `release-notes:command`와 전용 비영속 session을 사용하며 파일/DB/공유/업데이트 API를 노출하지 않는다. 릴리즈노트는 첫 클릭에 만들고 ×로 닫으면 해제한다. 전용 preload는 네이티브 닫기 직전 현재 버전·스크롤을 해당 창에만 연결된 IPC로 전달한다. 메인은 창·프레임·URL과 값의 범위를 확인하고 다음 창에 읽기 상태를 전달한다. [창 수명주기 변경](../implementation/2026-11-20-electron-performance.md) 도움말은 기존 사전 준비를 유지하고 숫자 allowlist 진단만 추가한다.
 
 renderer의 저장 확인은 실제 mutation 전에 유효성 검사·사용자 수락·최신 대상 검사를 수행한다. main의 기존 권한과 트랜잭션 검증을 대체하지 않는다. 프로젝트 삭제 확인 이후 하위 일정이 변경되면 새 내용을 다시 확인하도록 저장을 막는다. 확인 취소와 초안 폐기는 서로 다른 동작이다.
 

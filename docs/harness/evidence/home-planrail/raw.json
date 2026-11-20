@@ -1,0 +1,3998 @@
+{
+  "day": "2026-11-20",
+  "pairsPlanned": 24,
+  "system": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "electron": "45.2.1",
+  "bundles": {
+    "before": {
+      "index.cjs": "3216e1859da4e58c200a9b9bf0cf799e553a5f3c892b3cd37eaaa04ef0c4eb06",
+      "main-B1Uu8jX0.js": "ee28146a48989940e125284aae2458b76f164d1d5882ae13522b93b5e0977bef"
+    },
+    "after": {
+      "index.cjs": "3216e1859da4e58c200a9b9bf0cf799e553a5f3c892b3cd37eaaa04ef0c4eb06",
+      "main-LpCUCSmB.js": "e869633f69feae384d51b7d8d5a80c0d7f864da332b8253ca4e03b1937b1a7cb"
+    }
+  },
+  "runs": [
+    {
+      "pair": 1,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 230,
+        "app-ready": 231,
+        "storage-ready": 242,
+        "window-created": 267,
+        "load-requested": 268,
+        "window-shown": 275,
+        "dom-ready": 389,
+        "renderer-loaded": 389,
+        "first-paint-ready": 483,
+        "snapshot-served": 500,
+        "ui-ready": 960
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 766.6999999880791,
+        "barClicked": 816.5,
+        "editorReady": 843.5999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 924.5,
+        "planClicked": 974.0999999940395,
+        "barReady": 986.0999999940395
+      },
+      "homeMs": 960,
+      "snapshotToHomeMs": 460,
+      "firstMs": 76.9,
+      "roundTripMs": 61.6
+    },
+    {
+      "pair": 1,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 220,
+        "app-ready": 220,
+        "storage-ready": 234,
+        "window-created": 259,
+        "load-requested": 260,
+        "window-shown": 268,
+        "dom-ready": 358,
+        "renderer-loaded": 359,
+        "first-paint-ready": 360,
+        "snapshot-served": 473,
+        "ui-ready": 523
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 283.90000000596046,
+        "barClicked": 307.09999999403954,
+        "editorReady": 338.59999999403954
+      },
+      "roundTrip": {
+        "homeClicked": 390.19999998807907,
+        "planClicked": 425.69999998807907,
+        "barReady": 440.69999998807907
+      },
+      "homeMs": 523,
+      "snapshotToHomeMs": 50,
+      "firstMs": 54.7,
+      "roundTripMs": 50.5
+    },
+    {
+      "pair": 1,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 314,
+        "app-ready": 314,
+        "storage-ready": 358,
+        "window-created": 389,
+        "load-requested": 390,
+        "window-shown": 406,
+        "dom-ready": 561,
+        "renderer-loaded": 563,
+        "first-paint-ready": 567,
+        "snapshot-served": 1273,
+        "ui-ready": 1509
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 1205.9000000059605,
+        "barClicked": 1245.4000000059605,
+        "editorReady": 1275.2000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 1344.2000000178814,
+        "planClicked": 1403.0999999940395,
+        "barReady": 1418.0999999940395
+      },
+      "homeMs": 1509,
+      "snapshotToHomeMs": 236,
+      "firstMs": 69.3,
+      "roundTripMs": 73.9
+    },
+    {
+      "pair": 1,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 220,
+        "app-ready": 220,
+        "storage-ready": 255,
+        "window-created": 284,
+        "load-requested": 285,
+        "window-shown": 290,
+        "dom-ready": 410,
+        "renderer-loaded": 411,
+        "first-paint-ready": 413,
+        "snapshot-served": 548,
+        "ui-ready": 692
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 467.2000000178814,
+        "barClicked": 495.80000001192093,
+        "editorReady": 537.2000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 587.5,
+        "planClicked": 617.6000000238419,
+        "barReady": 635
+      },
+      "homeMs": 692,
+      "snapshotToHomeMs": 144,
+      "firstMs": 70.0,
+      "roundTripMs": 47.5
+    },
+    {
+      "pair": 2,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 447,
+        "app-ready": 448,
+        "storage-ready": 469,
+        "window-created": 500,
+        "load-requested": 500,
+        "window-shown": 504,
+        "dom-ready": 615,
+        "renderer-loaded": 615,
+        "first-paint-ready": 616,
+        "snapshot-served": 746,
+        "ui-ready": 896
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 463.19999998807907,
+        "barClicked": 495.39999997615814,
+        "editorReady": 526.5999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 571.0999999940395,
+        "planClicked": 598.8999999761581,
+        "barReady": 613.8999999761581
+      },
+      "homeMs": 896,
+      "snapshotToHomeMs": 150,
+      "firstMs": 63.4,
+      "roundTripMs": 42.8
+    },
+    {
+      "pair": 2,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 214,
+        "app-ready": 215,
+        "storage-ready": 234,
+        "window-created": 269,
+        "load-requested": 274,
+        "window-shown": 281,
+        "dom-ready": 391,
+        "renderer-loaded": 392,
+        "first-paint-ready": 393,
+        "snapshot-served": 535,
+        "ui-ready": 691
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 482.7000000178814,
+        "barClicked": 511.40000000596046,
+        "editorReady": 536.0999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 577.4000000059605,
+        "planClicked": 593.9000000059605,
+        "barReady": 607
+      },
+      "homeMs": 691,
+      "snapshotToHomeMs": 156,
+      "firstMs": 53.4,
+      "roundTripMs": 29.6
+    },
+    {
+      "pair": 2,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 471,
+        "app-ready": 472,
+        "storage-ready": 487,
+        "window-created": 517,
+        "load-requested": 518,
+        "window-shown": 523,
+        "dom-ready": 618,
+        "renderer-loaded": 618,
+        "first-paint-ready": 620,
+        "snapshot-served": 726,
+        "ui-ready": 771
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 272,
+        "barClicked": 294.19999998807907,
+        "editorReady": 318.19999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 364.59999999403954,
+        "planClicked": 390.39999997615814,
+        "barReady": 399.19999998807907
+      },
+      "homeMs": 771,
+      "snapshotToHomeMs": 45,
+      "firstMs": 46.2,
+      "roundTripMs": 34.6
+    },
+    {
+      "pair": 2,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 222,
+        "app-ready": 222,
+        "storage-ready": 234,
+        "window-created": 255,
+        "load-requested": 255,
+        "window-shown": 261,
+        "dom-ready": 341,
+        "renderer-loaded": 342,
+        "first-paint-ready": 343,
+        "snapshot-served": 439,
+        "ui-ready": 483
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 256.30000001192093,
+        "barClicked": 287,
+        "editorReady": 312.60000002384186
+      },
+      "roundTrip": {
+        "homeClicked": 350.5,
+        "planClicked": 365.60000002384186,
+        "barReady": 375.90000000596046
+      },
+      "homeMs": 483,
+      "snapshotToHomeMs": 44,
+      "firstMs": 56.3,
+      "roundTripMs": 25.4
+    },
+    {
+      "pair": 3,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 199,
+        "app-ready": 200,
+        "storage-ready": 211,
+        "window-created": 230,
+        "load-requested": 231,
+        "window-shown": 236,
+        "dom-ready": 318,
+        "renderer-loaded": 318,
+        "first-paint-ready": 321,
+        "snapshot-served": 427,
+        "ui-ready": 488
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 273.90000000596046,
+        "barClicked": 300.2999999821186,
+        "editorReady": 323.40000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 369.59999999403954,
+        "planClicked": 383.40000000596046,
+        "barReady": 393.09999999403954
+      },
+      "homeMs": 488,
+      "snapshotToHomeMs": 61,
+      "firstMs": 49.5,
+      "roundTripMs": 23.5
+    },
+    {
+      "pair": 3,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 285,
+        "app-ready": 285,
+        "storage-ready": 301,
+        "window-created": 342,
+        "load-requested": 343,
+        "window-shown": 349,
+        "dom-ready": 488,
+        "renderer-loaded": 488,
+        "first-paint-ready": 654,
+        "snapshot-served": 697,
+        "ui-ready": 779
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 449.80000001192093,
+        "barClicked": 533.6000000238419,
+        "editorReady": 614.7000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 817.3000000119209,
+        "planClicked": 853.6000000238419,
+        "barReady": 903
+      },
+      "homeMs": 779,
+      "snapshotToHomeMs": 82,
+      "firstMs": 164.9,
+      "roundTripMs": 85.7
+    },
+    {
+      "pair": 3,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 223,
+        "app-ready": 223,
+        "storage-ready": 242,
+        "window-created": 271,
+        "load-requested": 272,
+        "window-shown": 276,
+        "dom-ready": 390,
+        "renderer-loaded": 390,
+        "first-paint-ready": 392,
+        "snapshot-served": 541,
+        "ui-ready": 936
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 730.7999999821186,
+        "barClicked": 760.3999999761581,
+        "editorReady": 785.7999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 870.5,
+        "planClicked": 914.0999999940395,
+        "barReady": 931
+      },
+      "homeMs": 936,
+      "snapshotToHomeMs": 395,
+      "firstMs": 55.0,
+      "roundTripMs": 60.5
+    },
+    {
+      "pair": 3,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 212,
+        "app-ready": 212,
+        "storage-ready": 231,
+        "window-created": 260,
+        "load-requested": 261,
+        "window-shown": 267,
+        "dom-ready": 382,
+        "renderer-loaded": 382,
+        "first-paint-ready": 385,
+        "snapshot-served": 527,
+        "ui-ready": 663
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 462.90000000596046,
+        "barClicked": 496.40000000596046,
+        "editorReady": 531.0999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 584.4000000059605,
+        "planClicked": 611.8000000119209,
+        "barReady": 622.0999999940395
+      },
+      "homeMs": 663,
+      "snapshotToHomeMs": 136,
+      "firstMs": 68.2,
+      "roundTripMs": 37.7
+    },
+    {
+      "pair": 4,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 195,
+        "app-ready": 195,
+        "storage-ready": 209,
+        "window-created": 229,
+        "load-requested": 230,
+        "window-shown": 235,
+        "dom-ready": 341,
+        "renderer-loaded": 342,
+        "first-paint-ready": 343,
+        "snapshot-served": 476,
+        "ui-ready": 756
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 600.0999999940395,
+        "barClicked": 630.8999999761581,
+        "editorReady": 658.5999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 702.7999999821186,
+        "planClicked": 733.3999999761581,
+        "barReady": 751
+      },
+      "homeMs": 756,
+      "snapshotToHomeMs": 280,
+      "firstMs": 58.5,
+      "roundTripMs": 48.2
+    },
+    {
+      "pair": 4,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 223,
+        "app-ready": 223,
+        "storage-ready": 242,
+        "window-created": 270,
+        "load-requested": 271,
+        "window-shown": 277,
+        "dom-ready": 393,
+        "renderer-loaded": 394,
+        "first-paint-ready": 395,
+        "snapshot-served": 551,
+        "ui-ready": 719
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 518,
+        "barClicked": 549.5,
+        "editorReady": 577.3999999761581
+      },
+      "roundTrip": {
+        "homeClicked": 626.8999999761581,
+        "planClicked": 649.2999999821186,
+        "barReady": 660.6999999880791
+      },
+      "homeMs": 719,
+      "snapshotToHomeMs": 168,
+      "firstMs": 59.4,
+      "roundTripMs": 33.8
+    },
+    {
+      "pair": 4,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 197,
+        "app-ready": 197,
+        "storage-ready": 211,
+        "window-created": 238,
+        "load-requested": 239,
+        "window-shown": 247,
+        "dom-ready": 334,
+        "renderer-loaded": 334,
+        "first-paint-ready": 337,
+        "snapshot-served": 451,
+        "ui-ready": 507
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 403.7999999821186,
+        "barClicked": 594.5,
+        "editorReady": 625.0999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 677.3999999761581,
+        "planClicked": 709.0999999940395,
+        "barReady": 720.3999999761581
+      },
+      "homeMs": 507,
+      "snapshotToHomeMs": 56,
+      "firstMs": 221.3,
+      "roundTripMs": 43.0
+    },
+    {
+      "pair": 4,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 208,
+        "app-ready": 208,
+        "storage-ready": 221,
+        "window-created": 246,
+        "load-requested": 247,
+        "window-shown": 253,
+        "dom-ready": 329,
+        "renderer-loaded": 329,
+        "first-paint-ready": 330,
+        "snapshot-served": 454,
+        "ui-ready": 508
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 269.09999999403954,
+        "barClicked": 290.59999999403954,
+        "editorReady": 316
+      },
+      "roundTrip": {
+        "homeClicked": 338.80000001192093,
+        "planClicked": 364,
+        "barReady": 376.40000000596046
+      },
+      "homeMs": 508,
+      "snapshotToHomeMs": 54,
+      "firstMs": 46.9,
+      "roundTripMs": 37.6
+    },
+    {
+      "pair": 5,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 195,
+        "app-ready": 195,
+        "storage-ready": 207,
+        "window-created": 230,
+        "load-requested": 231,
+        "window-shown": 236,
+        "dom-ready": 323,
+        "renderer-loaded": 323,
+        "first-paint-ready": 325,
+        "snapshot-served": 423,
+        "ui-ready": 472
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 260.5,
+        "barClicked": 282.59999999403954,
+        "editorReady": 307.19999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 334.89999997615814,
+        "planClicked": 355.19999998807907,
+        "barReady": 365.59999999403954
+      },
+      "homeMs": 472,
+      "snapshotToHomeMs": 49,
+      "firstMs": 46.7,
+      "roundTripMs": 30.7
+    },
+    {
+      "pair": 5,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 199,
+        "app-ready": 199,
+        "storage-ready": 209,
+        "window-created": 232,
+        "load-requested": 233,
+        "window-shown": 240,
+        "dom-ready": 554,
+        "renderer-loaded": 557,
+        "first-paint-ready": 560,
+        "snapshot-served": 668,
+        "ui-ready": 741
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 516.1999999880791,
+        "barClicked": 537.3999999761581,
+        "editorReady": 567
+      },
+      "roundTrip": {
+        "homeClicked": 616.6999999880791,
+        "planClicked": 650.2999999821186,
+        "barReady": 661.3999999761581
+      },
+      "homeMs": 741,
+      "snapshotToHomeMs": 73,
+      "firstMs": 50.8,
+      "roundTripMs": 44.7
+    },
+    {
+      "pair": 5,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 261,
+        "app-ready": 262,
+        "storage-ready": 279,
+        "window-created": 315,
+        "load-requested": 316,
+        "window-shown": 320,
+        "dom-ready": 450,
+        "renderer-loaded": 454,
+        "first-paint-ready": 455,
+        "snapshot-served": 599,
+        "ui-ready": 757
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 521.5,
+        "barClicked": 553.5999999940395,
+        "editorReady": 590.9000000059605
+      },
+      "roundTrip": {
+        "homeClicked": 650.5999999940395,
+        "planClicked": 679.3000000119209,
+        "barReady": 694.7000000178814
+      },
+      "homeMs": 757,
+      "snapshotToHomeMs": 158,
+      "firstMs": 69.4,
+      "roundTripMs": 44.1
+    },
+    {
+      "pair": 5,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 198,
+        "app-ready": 198,
+        "storage-ready": 217,
+        "window-created": 241,
+        "load-requested": 249,
+        "window-shown": 254,
+        "dom-ready": 365,
+        "renderer-loaded": 365,
+        "first-paint-ready": 366,
+        "snapshot-served": 641,
+        "ui-ready": 791
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 603,
+        "barClicked": 639.7999999821186,
+        "editorReady": 671.3999999761581
+      },
+      "roundTrip": {
+        "homeClicked": 731.5999999940395,
+        "planClicked": 753.8999999761581,
+        "barReady": 773.8999999761581
+      },
+      "homeMs": 791,
+      "snapshotToHomeMs": 150,
+      "firstMs": 68.4,
+      "roundTripMs": 42.3
+    },
+    {
+      "pair": 6,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 297,
+        "app-ready": 298,
+        "storage-ready": 313,
+        "window-created": 343,
+        "load-requested": 344,
+        "window-shown": 351,
+        "dom-ready": 485,
+        "renderer-loaded": 486,
+        "first-paint-ready": 491,
+        "snapshot-served": 657,
+        "ui-ready": 810
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 528.9000000059605,
+        "barClicked": 559.8000000119209,
+        "editorReady": 588.4000000059605
+      },
+      "roundTrip": {
+        "homeClicked": 632,
+        "planClicked": 661,
+        "barReady": 673.3000000119209
+      },
+      "homeMs": 810,
+      "snapshotToHomeMs": 153,
+      "firstMs": 59.5,
+      "roundTripMs": 41.3
+    },
+    {
+      "pair": 6,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 192,
+        "app-ready": 193,
+        "storage-ready": 209,
+        "window-created": 373,
+        "load-requested": 374,
+        "window-shown": 380,
+        "dom-ready": 490,
+        "renderer-loaded": 491,
+        "first-paint-ready": 493,
+        "snapshot-served": 631,
+        "ui-ready": 789
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 478.2999999821186,
+        "barClicked": 507.69999998807907,
+        "editorReady": 540.0999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 586.0999999940395,
+        "planClicked": 610.1999999880791,
+        "barReady": 622.7999999821186
+      },
+      "homeMs": 789,
+      "snapshotToHomeMs": 158,
+      "firstMs": 61.8,
+      "roundTripMs": 36.7
+    },
+    {
+      "pair": 6,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 210,
+        "app-ready": 211,
+        "storage-ready": 225,
+        "window-created": 250,
+        "load-requested": 251,
+        "window-shown": 255,
+        "dom-ready": 342,
+        "renderer-loaded": 342,
+        "first-paint-ready": 343,
+        "snapshot-served": 453,
+        "ui-ready": 516
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 272.40000000596046,
+        "barClicked": 296.7999999821186,
+        "editorReady": 322.90000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 356.19999998807907,
+        "planClicked": 370.40000000596046,
+        "barReady": 380.90000000596046
+      },
+      "homeMs": 516,
+      "snapshotToHomeMs": 63,
+      "firstMs": 50.5,
+      "roundTripMs": 24.7
+    },
+    {
+      "pair": 6,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 206,
+        "app-ready": 206,
+        "storage-ready": 220,
+        "window-created": 251,
+        "load-requested": 252,
+        "window-shown": 256,
+        "dom-ready": 342,
+        "renderer-loaded": 343,
+        "first-paint-ready": 344,
+        "snapshot-served": 441,
+        "ui-ready": 520
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 411,
+        "barClicked": 486.19999998807907,
+        "editorReady": 513.9000000059605
+      },
+      "roundTrip": {
+        "homeClicked": 541.7999999821186,
+        "planClicked": 556.9000000059605,
+        "barReady": 571.6999999880791
+      },
+      "homeMs": 520,
+      "snapshotToHomeMs": 79,
+      "firstMs": 102.9,
+      "roundTripMs": 29.9
+    },
+    {
+      "pair": 7,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 200,
+        "app-ready": 201,
+        "storage-ready": 215,
+        "window-created": 237,
+        "load-requested": 237,
+        "window-shown": 242,
+        "dom-ready": 324,
+        "renderer-loaded": 325,
+        "first-paint-ready": 327,
+        "snapshot-served": 436,
+        "ui-ready": 481
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 257.7000000178814,
+        "barClicked": 273.10000002384186,
+        "editorReady": 293.90000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 327.5,
+        "planClicked": 338.80000001192093,
+        "barReady": 348.2000000178814
+      },
+      "homeMs": 481,
+      "snapshotToHomeMs": 45,
+      "firstMs": 36.2,
+      "roundTripMs": 20.7
+    },
+    {
+      "pair": 7,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 200,
+        "app-ready": 200,
+        "storage-ready": 215,
+        "window-created": 237,
+        "load-requested": 238,
+        "window-shown": 242,
+        "dom-ready": 317,
+        "renderer-loaded": 318,
+        "first-paint-ready": 320,
+        "snapshot-served": 426,
+        "ui-ready": 480
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 257.69999998807907,
+        "barClicked": 280.69999998807907,
+        "editorReady": 305.40000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 332.40000000596046,
+        "planClicked": 368.30000001192093,
+        "barReady": 382.69999998807907
+      },
+      "homeMs": 480,
+      "snapshotToHomeMs": 54,
+      "firstMs": 47.7,
+      "roundTripMs": 50.3
+    },
+    {
+      "pair": 7,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 206,
+        "app-ready": 207,
+        "storage-ready": 225,
+        "window-created": 248,
+        "load-requested": 249,
+        "window-shown": 256,
+        "dom-ready": 580,
+        "renderer-loaded": 580,
+        "first-paint-ready": 672,
+        "snapshot-served": 740,
+        "ui-ready": 882
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 698.7000000178814,
+        "barClicked": 722.6000000238419,
+        "editorReady": 751.3000000119209
+      },
+      "roundTrip": {
+        "homeClicked": 817.9000000059605,
+        "planClicked": 843.7000000178814,
+        "barReady": 859.8000000119209
+      },
+      "homeMs": 882,
+      "snapshotToHomeMs": 142,
+      "firstMs": 52.6,
+      "roundTripMs": 41.9
+    },
+    {
+      "pair": 7,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 203,
+        "app-ready": 203,
+        "storage-ready": 216,
+        "window-created": 240,
+        "load-requested": 241,
+        "window-shown": 245,
+        "dom-ready": 340,
+        "renderer-loaded": 340,
+        "first-paint-ready": 342,
+        "snapshot-served": 480,
+        "ui-ready": 608
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 423.7000000178814,
+        "barClicked": 449.2000000178814,
+        "editorReady": 475.90000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 524.8000000119209,
+        "planClicked": 563.8000000119209,
+        "barReady": 574.8000000119209
+      },
+      "homeMs": 608,
+      "snapshotToHomeMs": 128,
+      "firstMs": 52.2,
+      "roundTripMs": 50.0
+    },
+    {
+      "pair": 8,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 191,
+        "app-ready": 192,
+        "storage-ready": 204,
+        "window-created": 230,
+        "load-requested": 232,
+        "window-shown": 240,
+        "dom-ready": 354,
+        "renderer-loaded": 354,
+        "first-paint-ready": 617,
+        "snapshot-served": 673,
+        "ui-ready": 808
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 638.6999999880791,
+        "barClicked": 666.8000000119209,
+        "editorReady": 700.5
+      },
+      "roundTrip": {
+        "homeClicked": 747.6999999880791,
+        "planClicked": 764.9000000059605,
+        "barReady": 780.9000000059605
+      },
+      "homeMs": 808,
+      "snapshotToHomeMs": 135,
+      "firstMs": 61.8,
+      "roundTripMs": 33.2
+    },
+    {
+      "pair": 8,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 204,
+        "app-ready": 204,
+        "storage-ready": 218,
+        "window-created": 250,
+        "load-requested": 251,
+        "window-shown": 260,
+        "dom-ready": 364,
+        "renderer-loaded": 365,
+        "first-paint-ready": 367,
+        "snapshot-served": 500,
+        "ui-ready": 639
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 452.40000000596046,
+        "barClicked": 480.19999998807907,
+        "editorReady": 504.19999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 573.1999999880791,
+        "planClicked": 589.4000000059605,
+        "barReady": 603.2999999821186
+      },
+      "homeMs": 639,
+      "snapshotToHomeMs": 139,
+      "firstMs": 51.8,
+      "roundTripMs": 30.1
+    },
+    {
+      "pair": 8,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 202,
+        "app-ready": 202,
+        "storage-ready": 216,
+        "window-created": 242,
+        "load-requested": 243,
+        "window-shown": 249,
+        "dom-ready": 329,
+        "renderer-loaded": 329,
+        "first-paint-ready": 331,
+        "snapshot-served": 435,
+        "ui-ready": 503
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 332.90000000596046,
+        "barClicked": 424.19999998807907,
+        "editorReady": 450.7999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 485.90000000596046,
+        "planClicked": 500.5,
+        "barReady": 511.2999999821186
+      },
+      "homeMs": 503,
+      "snapshotToHomeMs": 68,
+      "firstMs": 117.9,
+      "roundTripMs": 25.4
+    },
+    {
+      "pair": 8,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 224,
+        "app-ready": 224,
+        "storage-ready": 240,
+        "window-created": 265,
+        "load-requested": 266,
+        "window-shown": 274,
+        "dom-ready": 352,
+        "renderer-loaded": 352,
+        "first-paint-ready": 354,
+        "snapshot-served": 449,
+        "ui-ready": 507
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 268.19999998807907,
+        "barClicked": 294.09999999403954,
+        "editorReady": 318.40000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 344.5,
+        "planClicked": 355.69999998807907,
+        "barReady": 364
+      },
+      "homeMs": 507,
+      "snapshotToHomeMs": 58,
+      "firstMs": 50.2,
+      "roundTripMs": 19.5
+    },
+    {
+      "pair": 9,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 199,
+        "app-ready": 199,
+        "storage-ready": 210,
+        "window-created": 236,
+        "load-requested": 237,
+        "window-shown": 243,
+        "dom-ready": 329,
+        "renderer-loaded": 329,
+        "first-paint-ready": 330,
+        "snapshot-served": 424,
+        "ui-ready": 471
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 254.5,
+        "barClicked": 277.7999999821186,
+        "editorReady": 304.19999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 343.90000000596046,
+        "planClicked": 359.2999999821186,
+        "barReady": 370.7999999821186
+      },
+      "homeMs": 471,
+      "snapshotToHomeMs": 47,
+      "firstMs": 49.7,
+      "roundTripMs": 26.9
+    },
+    {
+      "pair": 9,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 210,
+        "app-ready": 210,
+        "storage-ready": 223,
+        "window-created": 248,
+        "load-requested": 248,
+        "window-shown": 257,
+        "dom-ready": 398,
+        "renderer-loaded": 399,
+        "first-paint-ready": 404,
+        "snapshot-served": 504,
+        "ui-ready": 566
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 344.59999999403954,
+        "barClicked": 368.2999999821186,
+        "editorReady": 405.59999999403954
+      },
+      "roundTrip": {
+        "homeClicked": 448.2999999821186,
+        "planClicked": 472.2999999821186,
+        "barReady": 489.59999999403954
+      },
+      "homeMs": 566,
+      "snapshotToHomeMs": 62,
+      "firstMs": 61.0,
+      "roundTripMs": 41.3
+    },
+    {
+      "pair": 9,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 198,
+        "app-ready": 198,
+        "storage-ready": 217,
+        "window-created": 239,
+        "load-requested": 240,
+        "window-shown": 244,
+        "dom-ready": 348,
+        "renderer-loaded": 348,
+        "first-paint-ready": 437,
+        "snapshot-served": 481,
+        "ui-ready": 623
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 446.69999998807907,
+        "barClicked": 475.69999998807907,
+        "editorReady": 502.90000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 567.8000000119209,
+        "planClicked": 594.0999999940395,
+        "barReady": 607.0999999940395
+      },
+      "homeMs": 623,
+      "snapshotToHomeMs": 142,
+      "firstMs": 56.2,
+      "roundTripMs": 39.3
+    },
+    {
+      "pair": 9,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 201,
+        "app-ready": 201,
+        "storage-ready": 214,
+        "window-created": 239,
+        "load-requested": 240,
+        "window-shown": 244,
+        "dom-ready": 341,
+        "renderer-loaded": 342,
+        "first-paint-ready": 343,
+        "snapshot-served": 484,
+        "ui-ready": 709
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 529.5,
+        "barClicked": 561.9000000059605,
+        "editorReady": 589.2000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 644.5,
+        "planClicked": 681.8000000119209,
+        "barReady": 695.5
+      },
+      "homeMs": 709,
+      "snapshotToHomeMs": 225,
+      "firstMs": 59.7,
+      "roundTripMs": 51.0
+    },
+    {
+      "pair": 10,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 207,
+        "app-ready": 207,
+        "storage-ready": 221,
+        "window-created": 245,
+        "load-requested": 246,
+        "window-shown": 251,
+        "dom-ready": 366,
+        "renderer-loaded": 367,
+        "first-paint-ready": 369,
+        "snapshot-served": 522,
+        "ui-ready": 662
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 476.39999997615814,
+        "barClicked": 504,
+        "editorReady": 534.7999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 581.7999999821186,
+        "planClicked": 602.5,
+        "barReady": 615.3999999761581
+      },
+      "homeMs": 662,
+      "snapshotToHomeMs": 140,
+      "firstMs": 58.4,
+      "roundTripMs": 33.6
+    },
+    {
+      "pair": 10,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 191,
+        "app-ready": 191,
+        "storage-ready": 204,
+        "window-created": 232,
+        "load-requested": 232,
+        "window-shown": 238,
+        "dom-ready": 357,
+        "renderer-loaded": 357,
+        "first-paint-ready": 359,
+        "snapshot-served": 495,
+        "ui-ready": 650
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 564.6999999880791,
+        "barClicked": 597.6999999880791,
+        "editorReady": 627.4000000059605
+      },
+      "roundTrip": {
+        "homeClicked": 674.4000000059605,
+        "planClicked": 692.0999999940395,
+        "barReady": 704
+      },
+      "homeMs": 650,
+      "snapshotToHomeMs": 155,
+      "firstMs": 62.7,
+      "roundTripMs": 29.6
+    },
+    {
+      "pair": 10,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 204,
+        "app-ready": 205,
+        "storage-ready": 216,
+        "window-created": 247,
+        "load-requested": 252,
+        "window-shown": 255,
+        "dom-ready": 330,
+        "renderer-loaded": 330,
+        "first-paint-ready": 332,
+        "snapshot-served": 433,
+        "ui-ready": 487
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 252.30000001192093,
+        "barClicked": 276.60000002384186,
+        "editorReady": 299.80000001192093
+      },
+      "roundTrip": {
+        "homeClicked": 341.60000002384186,
+        "planClicked": 359.5,
+        "barReady": 370.7000000178814
+      },
+      "homeMs": 487,
+      "snapshotToHomeMs": 54,
+      "firstMs": 47.5,
+      "roundTripMs": 29.1
+    },
+    {
+      "pair": 10,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 200,
+        "app-ready": 200,
+        "storage-ready": 211,
+        "window-created": 233,
+        "load-requested": 234,
+        "window-shown": 237,
+        "dom-ready": 329,
+        "renderer-loaded": 329,
+        "first-paint-ready": 331,
+        "snapshot-served": 439,
+        "ui-ready": 491
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 272.5,
+        "barClicked": 296.5,
+        "editorReady": 322.40000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 362.40000000596046,
+        "planClicked": 378.40000000596046,
+        "barReady": 391.40000000596046
+      },
+      "homeMs": 491,
+      "snapshotToHomeMs": 52,
+      "firstMs": 49.9,
+      "roundTripMs": 29.0
+    },
+    {
+      "pair": 11,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 199,
+        "app-ready": 200,
+        "storage-ready": 214,
+        "window-created": 335,
+        "load-requested": 339,
+        "window-shown": 376,
+        "dom-ready": 460,
+        "renderer-loaded": 461,
+        "first-paint-ready": 462,
+        "snapshot-served": 572,
+        "ui-ready": 631
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 301,
+        "barClicked": 320.80000001192093,
+        "editorReady": 346.19999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 373.09999999403954,
+        "planClicked": 400.09999999403954,
+        "barReady": 410.69999998807907
+      },
+      "homeMs": 631,
+      "snapshotToHomeMs": 59,
+      "firstMs": 45.2,
+      "roundTripMs": 37.6
+    },
+    {
+      "pair": 11,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 213,
+        "app-ready": 213,
+        "storage-ready": 228,
+        "window-created": 262,
+        "load-requested": 267,
+        "window-shown": 271,
+        "dom-ready": 347,
+        "renderer-loaded": 349,
+        "first-paint-ready": 349,
+        "snapshot-served": 458,
+        "ui-ready": 495
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 251.89999997615814,
+        "barClicked": 274.09999999403954,
+        "editorReady": 300.19999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 322.5,
+        "planClicked": 338.59999999403954,
+        "barReady": 349
+      },
+      "homeMs": 495,
+      "snapshotToHomeMs": 37,
+      "firstMs": 48.3,
+      "roundTripMs": 26.5
+    },
+    {
+      "pair": 11,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 204,
+        "app-ready": 205,
+        "storage-ready": 219,
+        "window-created": 239,
+        "load-requested": 240,
+        "window-shown": 244,
+        "dom-ready": 351,
+        "renderer-loaded": 352,
+        "first-paint-ready": 451,
+        "snapshot-served": 507,
+        "ui-ready": 650
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 490.2000000178814,
+        "barClicked": 518.7000000178814,
+        "editorReady": 601
+      },
+      "roundTrip": {
+        "homeClicked": 642.6000000238419,
+        "planClicked": 661.5,
+        "barReady": 672.6000000238419
+      },
+      "homeMs": 650,
+      "snapshotToHomeMs": 143,
+      "firstMs": 110.8,
+      "roundTripMs": 30.0
+    },
+    {
+      "pair": 11,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 221,
+        "app-ready": 221,
+        "storage-ready": 238,
+        "window-created": 262,
+        "load-requested": 263,
+        "window-shown": 268,
+        "dom-ready": 399,
+        "renderer-loaded": 399,
+        "first-paint-ready": 494,
+        "snapshot-served": 547,
+        "ui-ready": 694
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 492.5,
+        "barClicked": 523,
+        "editorReady": 549
+      },
+      "roundTrip": {
+        "homeClicked": 602.7999999821186,
+        "planClicked": 634.5,
+        "barReady": 646.7999999821186
+      },
+      "homeMs": 694,
+      "snapshotToHomeMs": 147,
+      "firstMs": 56.5,
+      "roundTripMs": 44.0
+    },
+    {
+      "pair": 12,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 217,
+        "app-ready": 218,
+        "storage-ready": 237,
+        "window-created": 261,
+        "load-requested": 262,
+        "window-shown": 266,
+        "dom-ready": 395,
+        "renderer-loaded": 395,
+        "first-paint-ready": 483,
+        "snapshot-served": 527,
+        "ui-ready": 678
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 472.90000000596046,
+        "barClicked": 499.5,
+        "editorReady": 528.2999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 584.5,
+        "planClicked": 654.5,
+        "barReady": 675.5
+      },
+      "homeMs": 678,
+      "snapshotToHomeMs": 151,
+      "firstMs": 55.4,
+      "roundTripMs": 91.0
+    },
+    {
+      "pair": 12,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 252,
+        "app-ready": 253,
+        "storage-ready": 287,
+        "window-created": 310,
+        "load-requested": 311,
+        "window-shown": 317,
+        "dom-ready": 427,
+        "renderer-loaded": 428,
+        "first-paint-ready": 428,
+        "snapshot-served": 559,
+        "ui-ready": 713
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 469,
+        "barClicked": 498.19999998807907,
+        "editorReady": 526.5999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 576.9000000059605,
+        "planClicked": 611.5999999940395,
+        "barReady": 631.6999999880791
+      },
+      "homeMs": 713,
+      "snapshotToHomeMs": 154,
+      "firstMs": 57.6,
+      "roundTripMs": 54.8
+    },
+    {
+      "pair": 12,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 207,
+        "app-ready": 207,
+        "storage-ready": 223,
+        "window-created": 249,
+        "load-requested": 250,
+        "window-shown": 254,
+        "dom-ready": 351,
+        "renderer-loaded": 351,
+        "first-paint-ready": 441,
+        "snapshot-served": 458,
+        "ui-ready": 515
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 282,
+        "barClicked": 311.5,
+        "editorReady": 336.69999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 374,
+        "planClicked": 390,
+        "barReady": 402
+      },
+      "homeMs": 515,
+      "snapshotToHomeMs": 57,
+      "firstMs": 54.7,
+      "roundTripMs": 28
+    },
+    {
+      "pair": 12,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 393,
+        "app-ready": 394,
+        "storage-ready": 406,
+        "window-created": 436,
+        "load-requested": 437,
+        "window-shown": 442,
+        "dom-ready": 541,
+        "renderer-loaded": 542,
+        "first-paint-ready": 543,
+        "snapshot-served": 654,
+        "ui-ready": 713
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 287.80000001192093,
+        "barClicked": 313.69999998807907,
+        "editorReady": 340.80000001192093
+      },
+      "roundTrip": {
+        "homeClicked": 392.59999999403954,
+        "planClicked": 420.19999998807907,
+        "barReady": 430.5
+      },
+      "homeMs": 713,
+      "snapshotToHomeMs": 59,
+      "firstMs": 53.0,
+      "roundTripMs": 37.9
+    },
+    {
+      "pair": 13,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 209,
+        "app-ready": 210,
+        "storage-ready": 224,
+        "window-created": 248,
+        "load-requested": 248,
+        "window-shown": 253,
+        "dom-ready": 343,
+        "renderer-loaded": 344,
+        "first-paint-ready": 345,
+        "snapshot-served": 450,
+        "ui-ready": 508
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 270.69999998807907,
+        "barClicked": 296.19999998807907,
+        "editorReady": 326.40000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 367.5,
+        "planClicked": 394.69999998807907,
+        "barReady": 410.59999999403954
+      },
+      "homeMs": 508,
+      "snapshotToHomeMs": 58,
+      "firstMs": 55.7,
+      "roundTripMs": 43.1
+    },
+    {
+      "pair": 13,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 205,
+        "app-ready": 205,
+        "storage-ready": 218,
+        "window-created": 240,
+        "load-requested": 240,
+        "window-shown": 246,
+        "dom-ready": 330,
+        "renderer-loaded": 331,
+        "first-paint-ready": 333,
+        "snapshot-served": 443,
+        "ui-ready": 608
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 393,
+        "barClicked": 418.2999999821186,
+        "editorReady": 444
+      },
+      "roundTrip": {
+        "homeClicked": 555.9000000059605,
+        "planClicked": 580.7999999821186,
+        "barReady": 592.7999999821186
+      },
+      "homeMs": 608,
+      "snapshotToHomeMs": 165,
+      "firstMs": 51,
+      "roundTripMs": 36.9
+    },
+    {
+      "pair": 13,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 229,
+        "app-ready": 229,
+        "storage-ready": 248,
+        "window-created": 273,
+        "load-requested": 273,
+        "window-shown": 278,
+        "dom-ready": 388,
+        "renderer-loaded": 388,
+        "first-paint-ready": 518,
+        "snapshot-served": 570,
+        "ui-ready": 727
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 519.2000000178814,
+        "barClicked": 560.4000000059605,
+        "editorReady": 592.5
+      },
+      "roundTrip": {
+        "homeClicked": 661,
+        "planClicked": 691.6000000238419,
+        "barReady": 706.6000000238419
+      },
+      "homeMs": 727,
+      "snapshotToHomeMs": 157,
+      "firstMs": 73.3,
+      "roundTripMs": 45.6
+    },
+    {
+      "pair": 13,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 213,
+        "app-ready": 213,
+        "storage-ready": 228,
+        "window-created": 253,
+        "load-requested": 253,
+        "window-shown": 259,
+        "dom-ready": 373,
+        "renderer-loaded": 374,
+        "first-paint-ready": 376,
+        "snapshot-served": 582,
+        "ui-ready": 758
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 574.6999999880791,
+        "barClicked": 606.5999999940395,
+        "editorReady": 643.3000000119209
+      },
+      "roundTrip": {
+        "homeClicked": 701.1999999880791,
+        "planClicked": 720.9000000059605,
+        "barReady": 734.5
+      },
+      "homeMs": 758,
+      "snapshotToHomeMs": 176,
+      "firstMs": 68.6,
+      "roundTripMs": 33.3
+    },
+    {
+      "pair": 14,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 202,
+        "app-ready": 202,
+        "storage-ready": 217,
+        "window-created": 242,
+        "load-requested": 242,
+        "window-shown": 253,
+        "dom-ready": 364,
+        "renderer-loaded": 365,
+        "first-paint-ready": 366,
+        "snapshot-served": 500,
+        "ui-ready": 655
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 470.5,
+        "barClicked": 499.5,
+        "editorReady": 534.1999999880791
+      },
+      "roundTrip": {
+        "homeClicked": 578.5,
+        "planClicked": 599.2999999821186,
+        "barReady": 616.2999999821186
+      },
+      "homeMs": 655,
+      "snapshotToHomeMs": 155,
+      "firstMs": 63.7,
+      "roundTripMs": 37.8
+    },
+    {
+      "pair": 14,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 228,
+        "app-ready": 228,
+        "storage-ready": 247,
+        "window-created": 271,
+        "load-requested": 271,
+        "window-shown": 275,
+        "dom-ready": 390,
+        "renderer-loaded": 390,
+        "first-paint-ready": 392,
+        "snapshot-served": 646,
+        "ui-ready": 925
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 746.6999999880791,
+        "barClicked": 807.5999999940395,
+        "editorReady": 849.5
+      },
+      "roundTrip": {
+        "homeClicked": 1035,
+        "planClicked": 1092.800000011921,
+        "barReady": 1113.199999988079
+      },
+      "homeMs": 925,
+      "snapshotToHomeMs": 279,
+      "firstMs": 102.8,
+      "roundTripMs": 78.2
+    },
+    {
+      "pair": 14,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 198,
+        "app-ready": 198,
+        "storage-ready": 209,
+        "window-created": 228,
+        "load-requested": 229,
+        "window-shown": 236,
+        "dom-ready": 323,
+        "renderer-loaded": 323,
+        "first-paint-ready": 326,
+        "snapshot-served": 426,
+        "ui-ready": 471
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 264.40000000596046,
+        "barClicked": 288.19999998807907,
+        "editorReady": 313.40000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 340.2999999821186,
+        "planClicked": 363.5,
+        "barReady": 373.19999998807907
+      },
+      "homeMs": 471,
+      "snapshotToHomeMs": 45,
+      "firstMs": 49.0,
+      "roundTripMs": 32.9
+    },
+    {
+      "pair": 14,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 221,
+        "app-ready": 221,
+        "storage-ready": 233,
+        "window-created": 263,
+        "load-requested": 270,
+        "window-shown": 273,
+        "dom-ready": 371,
+        "renderer-loaded": 373,
+        "first-paint-ready": 374,
+        "snapshot-served": 584,
+        "ui-ready": 647
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 392.19999998807907,
+        "barClicked": 417.69999998807907,
+        "editorReady": 441.19999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 467,
+        "planClicked": 488.69999998807907,
+        "barReady": 498.40000000596046
+      },
+      "homeMs": 647,
+      "snapshotToHomeMs": 63,
+      "firstMs": 49.0,
+      "roundTripMs": 31.4
+    },
+    {
+      "pair": 15,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 220,
+        "app-ready": 221,
+        "storage-ready": 236,
+        "window-created": 265,
+        "load-requested": 266,
+        "window-shown": 278,
+        "dom-ready": 351,
+        "renderer-loaded": 351,
+        "first-paint-ready": 353,
+        "snapshot-served": 455,
+        "ui-ready": 520
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 277.30000001192093,
+        "barClicked": 303,
+        "editorReady": 329.7000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 371.60000002384186,
+        "planClicked": 387.60000002384186,
+        "barReady": 400.30000001192093
+      },
+      "homeMs": 520,
+      "snapshotToHomeMs": 65,
+      "firstMs": 52.4,
+      "roundTripMs": 28.7
+    },
+    {
+      "pair": 15,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 210,
+        "app-ready": 210,
+        "storage-ready": 221,
+        "window-created": 247,
+        "load-requested": 248,
+        "window-shown": 253,
+        "dom-ready": 347,
+        "renderer-loaded": 347,
+        "first-paint-ready": 348,
+        "snapshot-served": 458,
+        "ui-ready": 509
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 277.09999999403954,
+        "barClicked": 301.5,
+        "editorReady": 330.90000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 364.7000000178814,
+        "planClicked": 377.80000001192093,
+        "barReady": 386.90000000596046
+      },
+      "homeMs": 509,
+      "snapshotToHomeMs": 51,
+      "firstMs": 53.8,
+      "roundTripMs": 22.2
+    },
+    {
+      "pair": 15,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 273,
+        "app-ready": 274,
+        "storage-ready": 304,
+        "window-created": 325,
+        "load-requested": 325,
+        "window-shown": 330,
+        "dom-ready": 443,
+        "renderer-loaded": 444,
+        "first-paint-ready": 535,
+        "snapshot-served": 590,
+        "ui-ready": 741
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 485.5,
+        "barClicked": 521.4000000059605,
+        "editorReady": 552.7999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 600.2999999821186,
+        "planClicked": 631.7999999821186,
+        "barReady": 645.5
+      },
+      "homeMs": 741,
+      "snapshotToHomeMs": 151,
+      "firstMs": 67.3,
+      "roundTripMs": 45.2
+    },
+    {
+      "pair": 15,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 200,
+        "app-ready": 201,
+        "storage-ready": 220,
+        "window-created": 242,
+        "load-requested": 243,
+        "window-shown": 247,
+        "dom-ready": 352,
+        "renderer-loaded": 352,
+        "first-paint-ready": 353,
+        "snapshot-served": 486,
+        "ui-ready": 640
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 459.7000000178814,
+        "barClicked": 490.10000002384186,
+        "editorReady": 518.5
+      },
+      "roundTrip": {
+        "homeClicked": 563.4000000059605,
+        "planClicked": 591.9000000059605,
+        "barReady": 603.6000000238419
+      },
+      "homeMs": 640,
+      "snapshotToHomeMs": 154,
+      "firstMs": 58.8,
+      "roundTripMs": 40.2
+    },
+    {
+      "pair": 16,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 232,
+        "app-ready": 232,
+        "storage-ready": 301,
+        "window-created": 342,
+        "load-requested": 343,
+        "window-shown": 349,
+        "dom-ready": 496,
+        "renderer-loaded": 496,
+        "first-paint-ready": 499,
+        "snapshot-served": 774,
+        "ui-ready": 1072
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 868.5,
+        "barClicked": 942.0999999940395,
+        "editorReady": 1004.3000000119209
+      },
+      "roundTrip": {
+        "homeClicked": 1107.4000000059605,
+        "planClicked": 1133.4000000059605,
+        "barReady": 1156.9000000059605
+      },
+      "homeMs": 1072,
+      "snapshotToHomeMs": 298,
+      "firstMs": 135.8,
+      "roundTripMs": 49.5
+    },
+    {
+      "pair": 16,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 392,
+        "app-ready": 397,
+        "storage-ready": 433,
+        "window-created": 504,
+        "load-requested": 505,
+        "window-shown": 515,
+        "dom-ready": 770,
+        "renderer-loaded": 771,
+        "first-paint-ready": 772,
+        "snapshot-served": 971,
+        "ui-ready": 1148
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 711.5,
+        "barClicked": 742.0999999940395,
+        "editorReady": 771.5
+      },
+      "roundTrip": {
+        "homeClicked": 836.2999999821186,
+        "planClicked": 851.5999999940395,
+        "barReady": 863.5999999940395
+      },
+      "homeMs": 1148,
+      "snapshotToHomeMs": 177,
+      "firstMs": 60.0,
+      "roundTripMs": 27.3
+    },
+    {
+      "pair": 16,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 217,
+        "app-ready": 217,
+        "storage-ready": 229,
+        "window-created": 248,
+        "load-requested": 249,
+        "window-shown": 261,
+        "dom-ready": 339,
+        "renderer-loaded": 339,
+        "first-paint-ready": 341,
+        "snapshot-served": 447,
+        "ui-ready": 489
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 259,
+        "barClicked": 292.69999998807907,
+        "editorReady": 340.40000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 386.69999998807907,
+        "planClicked": 413.19999998807907,
+        "barReady": 422.09999999403954
+      },
+      "homeMs": 489,
+      "snapshotToHomeMs": 42,
+      "firstMs": 81.4,
+      "roundTripMs": 35.4
+    },
+    {
+      "pair": 16,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 205,
+        "app-ready": 206,
+        "storage-ready": 219,
+        "window-created": 243,
+        "load-requested": 244,
+        "window-shown": 250,
+        "dom-ready": 372,
+        "renderer-loaded": 373,
+        "first-paint-ready": 374,
+        "snapshot-served": 617,
+        "ui-ready": 668
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 445.19999998807907,
+        "barClicked": 469.40000000596046,
+        "editorReady": 497.7999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 556,
+        "planClicked": 606.4000000059605,
+        "barReady": 615.1999999880791
+      },
+      "homeMs": 668,
+      "snapshotToHomeMs": 51,
+      "firstMs": 52.6,
+      "roundTripMs": 59.2
+    },
+    {
+      "pair": 17,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 207,
+        "app-ready": 208,
+        "storage-ready": 219,
+        "window-created": 240,
+        "load-requested": 241,
+        "window-shown": 247,
+        "dom-ready": 328,
+        "renderer-loaded": 328,
+        "first-paint-ready": 329,
+        "snapshot-served": 426,
+        "ui-ready": 477
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 256.69999998807907,
+        "barClicked": 277.89999997615814,
+        "editorReady": 303.59999999403954
+      },
+      "roundTrip": {
+        "homeClicked": 350.69999998807907,
+        "planClicked": 367.19999998807907,
+        "barReady": 380.39999997615814
+      },
+      "homeMs": 477,
+      "snapshotToHomeMs": 51,
+      "firstMs": 46.9,
+      "roundTripMs": 29.7
+    },
+    {
+      "pair": 17,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 203,
+        "app-ready": 203,
+        "storage-ready": 214,
+        "window-created": 235,
+        "load-requested": 236,
+        "window-shown": 243,
+        "dom-ready": 323,
+        "renderer-loaded": 323,
+        "first-paint-ready": 409,
+        "snapshot-served": 428,
+        "ui-ready": 485
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 262.40000000596046,
+        "barClicked": 286.69999998807907,
+        "editorReady": 307.7999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 344.09999999403954,
+        "planClicked": 371.69999998807907,
+        "barReady": 383.90000000596046
+      },
+      "homeMs": 485,
+      "snapshotToHomeMs": 57,
+      "firstMs": 45.4,
+      "roundTripMs": 39.8
+    },
+    {
+      "pair": 17,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 499,
+        "app-ready": 499,
+        "storage-ready": 514,
+        "window-created": 541,
+        "load-requested": 541,
+        "window-shown": 544,
+        "dom-ready": 660,
+        "renderer-loaded": 661,
+        "first-paint-ready": 661,
+        "snapshot-served": 790,
+        "ui-ready": 945
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 469.40000000596046,
+        "barClicked": 500.90000000596046,
+        "editorReady": 530.1999999880791
+      },
+      "roundTrip": {
+        "homeClicked": 589.9000000059605,
+        "planClicked": 608.9000000059605,
+        "barReady": 624
+      },
+      "homeMs": 945,
+      "snapshotToHomeMs": 155,
+      "firstMs": 60.8,
+      "roundTripMs": 34.1
+    },
+    {
+      "pair": 17,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 204,
+        "app-ready": 204,
+        "storage-ready": 223,
+        "window-created": 249,
+        "load-requested": 250,
+        "window-shown": 254,
+        "dom-ready": 364,
+        "renderer-loaded": 364,
+        "first-paint-ready": 366,
+        "snapshot-served": 498,
+        "ui-ready": 639
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 446.80000001192093,
+        "barClicked": 479.10000002384186,
+        "editorReady": 503.2000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 559.5,
+        "planClicked": 592.6000000238419,
+        "barReady": 605.4000000059605
+      },
+      "homeMs": 639,
+      "snapshotToHomeMs": 141,
+      "firstMs": 56.4,
+      "roundTripMs": 45.9
+    },
+    {
+      "pair": 18,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 342,
+        "app-ready": 343,
+        "storage-ready": 358,
+        "window-created": 384,
+        "load-requested": 385,
+        "window-shown": 391,
+        "dom-ready": 502,
+        "renderer-loaded": 502,
+        "first-paint-ready": 509,
+        "snapshot-served": 643,
+        "ui-ready": 795
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 469,
+        "barClicked": 497.10000002384186,
+        "editorReady": 528.2000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 569.2000000178814,
+        "planClicked": 595.6000000238419,
+        "barReady": 606.8000000119209
+      },
+      "homeMs": 795,
+      "snapshotToHomeMs": 152,
+      "firstMs": 59.2,
+      "roundTripMs": 37.6
+    },
+    {
+      "pair": 18,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 308,
+        "app-ready": 311,
+        "storage-ready": 346,
+        "window-created": 379,
+        "load-requested": 380,
+        "window-shown": 384,
+        "dom-ready": 524,
+        "renderer-loaded": 524,
+        "first-paint-ready": 525,
+        "snapshot-served": 720,
+        "ui-ready": 881
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 592.9000000059605,
+        "barClicked": 643,
+        "editorReady": 669.9000000059605
+      },
+      "roundTrip": {
+        "homeClicked": 723.6000000238419,
+        "planClicked": 794.8000000119209,
+        "barReady": 815.8000000119209
+      },
+      "homeMs": 881,
+      "snapshotToHomeMs": 161,
+      "firstMs": 77.0,
+      "roundTripMs": 92.2
+    },
+    {
+      "pair": 18,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 199,
+        "app-ready": 200,
+        "storage-ready": 214,
+        "window-created": 239,
+        "load-requested": 240,
+        "window-shown": 246,
+        "dom-ready": 340,
+        "renderer-loaded": 341,
+        "first-paint-ready": 342,
+        "snapshot-served": 452,
+        "ui-ready": 502
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 289.5,
+        "barClicked": 321.60000002384186,
+        "editorReady": 344.5
+      },
+      "roundTrip": {
+        "homeClicked": 371.80000001192093,
+        "planClicked": 396.5,
+        "barReady": 406.7000000178814
+      },
+      "homeMs": 502,
+      "snapshotToHomeMs": 50,
+      "firstMs": 55.0,
+      "roundTripMs": 34.9
+    },
+    {
+      "pair": 18,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 210,
+        "app-ready": 211,
+        "storage-ready": 225,
+        "window-created": 251,
+        "load-requested": 252,
+        "window-shown": 257,
+        "dom-ready": 361,
+        "renderer-loaded": 361,
+        "first-paint-ready": 369,
+        "snapshot-served": 497,
+        "ui-ready": 565
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 327.80000001192093,
+        "barClicked": 355.90000000596046,
+        "editorReady": 380.2000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 425.80000001192093,
+        "planClicked": 443.80000001192093,
+        "barReady": 461.90000000596046
+      },
+      "homeMs": 565,
+      "snapshotToHomeMs": 68,
+      "firstMs": 52.4,
+      "roundTripMs": 36.1
+    },
+    {
+      "pair": 19,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 467,
+        "app-ready": 469,
+        "storage-ready": 502,
+        "window-created": 532,
+        "load-requested": 533,
+        "window-shown": 540,
+        "dom-ready": 645,
+        "renderer-loaded": 645,
+        "first-paint-ready": 737,
+        "snapshot-served": 752,
+        "ui-ready": 800
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 287.5,
+        "barClicked": 319.09999999403954,
+        "editorReady": 346.09999999403954
+      },
+      "roundTrip": {
+        "homeClicked": 391.59999999403954,
+        "planClicked": 406.69999998807907,
+        "barReady": 418.7999999821186
+      },
+      "homeMs": 800,
+      "snapshotToHomeMs": 48,
+      "firstMs": 58.6,
+      "roundTripMs": 27.2
+    },
+    {
+      "pair": 19,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 202,
+        "app-ready": 202,
+        "storage-ready": 212,
+        "window-created": 249,
+        "load-requested": 250,
+        "window-shown": 263,
+        "dom-ready": 351,
+        "renderer-loaded": 351,
+        "first-paint-ready": 353,
+        "snapshot-served": 458,
+        "ui-ready": 505
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 276.69999998807907,
+        "barClicked": 304.09999999403954,
+        "editorReady": 327.59999999403954
+      },
+      "roundTrip": {
+        "homeClicked": 351.5,
+        "planClicked": 398.19999998807907,
+        "barReady": 437.2999999821186
+      },
+      "homeMs": 505,
+      "snapshotToHomeMs": 47,
+      "firstMs": 50.9,
+      "roundTripMs": 85.8
+    },
+    {
+      "pair": 19,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 215,
+        "app-ready": 215,
+        "storage-ready": 233,
+        "window-created": 261,
+        "load-requested": 261,
+        "window-shown": 267,
+        "dom-ready": 388,
+        "renderer-loaded": 388,
+        "first-paint-ready": 390,
+        "snapshot-served": 577,
+        "ui-ready": 954
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 785.1000000238419,
+        "barClicked": 816.3000000119209,
+        "editorReady": 870.3000000119209
+      },
+      "roundTrip": {
+        "homeClicked": 977.2000000178814,
+        "planClicked": 1018.6000000238419,
+        "barReady": 1030.5
+      },
+      "homeMs": 954,
+      "snapshotToHomeMs": 377,
+      "firstMs": 85.2,
+      "roundTripMs": 53.3
+    },
+    {
+      "pair": 19,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 204,
+        "app-ready": 205,
+        "storage-ready": 223,
+        "window-created": 250,
+        "load-requested": 251,
+        "window-shown": 256,
+        "dom-ready": 369,
+        "renderer-loaded": 369,
+        "first-paint-ready": 470,
+        "snapshot-served": 531,
+        "ui-ready": 687
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 498.09999999403954,
+        "barClicked": 527.5999999940395,
+        "editorReady": 552.0999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 598.6999999880791,
+        "planClicked": 615.6999999880791,
+        "barReady": 641.1999999880791
+      },
+      "homeMs": 687,
+      "snapshotToHomeMs": 156,
+      "firstMs": 54.0,
+      "roundTripMs": 42.5
+    },
+    {
+      "pair": 20,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 226,
+        "app-ready": 226,
+        "storage-ready": 240,
+        "window-created": 270,
+        "load-requested": 271,
+        "window-shown": 274,
+        "dom-ready": 514,
+        "renderer-loaded": 515,
+        "first-paint-ready": 516,
+        "snapshot-served": 668,
+        "ui-ready": 821
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 616.4000000059605,
+        "barClicked": 646.3000000119209,
+        "editorReady": 670.7000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 715.2000000178814,
+        "planClicked": 747.9000000059605,
+        "barReady": 765.4000000059605
+      },
+      "homeMs": 821,
+      "snapshotToHomeMs": 153,
+      "firstMs": 54.3,
+      "roundTripMs": 50.2
+    },
+    {
+      "pair": 20,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 247,
+        "app-ready": 247,
+        "storage-ready": 272,
+        "window-created": 313,
+        "load-requested": 314,
+        "window-shown": 318,
+        "dom-ready": 434,
+        "renderer-loaded": 434,
+        "first-paint-ready": 435,
+        "snapshot-served": 556,
+        "ui-ready": 696
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 454.2000000178814,
+        "barClicked": 485.30000001192093,
+        "editorReady": 510.5
+      },
+      "roundTrip": {
+        "homeClicked": 558.3000000119209,
+        "planClicked": 577,
+        "barReady": 589
+      },
+      "homeMs": 696,
+      "snapshotToHomeMs": 140,
+      "firstMs": 56.3,
+      "roundTripMs": 30.7
+    },
+    {
+      "pair": 20,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 232,
+        "app-ready": 233,
+        "storage-ready": 265,
+        "window-created": 390,
+        "load-requested": 393,
+        "window-shown": 475,
+        "dom-ready": 575,
+        "renderer-loaded": 575,
+        "first-paint-ready": 701,
+        "snapshot-served": 721,
+        "ui-ready": 767
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 393.2999999821186,
+        "barClicked": 419.69999998807907,
+        "editorReady": 452.19999998807907
+      },
+      "roundTrip": {
+        "homeClicked": 527.2999999821186,
+        "planClicked": 570,
+        "barReady": 581.0999999940395
+      },
+      "homeMs": 767,
+      "snapshotToHomeMs": 46,
+      "firstMs": 58.9,
+      "roundTripMs": 53.8
+    },
+    {
+      "pair": 20,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 232,
+        "app-ready": 232,
+        "storage-ready": 244,
+        "window-created": 267,
+        "load-requested": 267,
+        "window-shown": 272,
+        "dom-ready": 359,
+        "renderer-loaded": 360,
+        "first-paint-ready": 360,
+        "snapshot-served": 498,
+        "ui-ready": 575
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 325.09999999403954,
+        "barClicked": 351.59999999403954,
+        "editorReady": 375.7999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 400.90000000596046,
+        "planClicked": 417.40000000596046,
+        "barReady": 429.09999999403954
+      },
+      "homeMs": 575,
+      "snapshotToHomeMs": 77,
+      "firstMs": 50.7,
+      "roundTripMs": 28.2
+    },
+    {
+      "pair": 21,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 216,
+        "app-ready": 216,
+        "storage-ready": 228,
+        "window-created": 252,
+        "load-requested": 253,
+        "window-shown": 259,
+        "dom-ready": 348,
+        "renderer-loaded": 348,
+        "first-paint-ready": 349,
+        "snapshot-served": 459,
+        "ui-ready": 596
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 361.89999997615814,
+        "barClicked": 388.09999999403954,
+        "editorReady": 413.09999999403954
+      },
+      "roundTrip": {
+        "homeClicked": 461.39999997615814,
+        "planClicked": 508.39999997615814,
+        "barReady": 532.6999999880791
+      },
+      "homeMs": 596,
+      "snapshotToHomeMs": 137,
+      "firstMs": 51.2,
+      "roundTripMs": 71.3
+    },
+    {
+      "pair": 21,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 238,
+        "app-ready": 238,
+        "storage-ready": 250,
+        "window-created": 278,
+        "load-requested": 279,
+        "window-shown": 289,
+        "dom-ready": 393,
+        "renderer-loaded": 393,
+        "first-paint-ready": 502,
+        "snapshot-served": 524,
+        "ui-ready": 601
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 340.10000002384186,
+        "barClicked": 368.2000000178814,
+        "editorReady": 405.60000002384186
+      },
+      "roundTrip": {
+        "homeClicked": 447.80000001192093,
+        "planClicked": 464,
+        "barReady": 477.40000000596046
+      },
+      "homeMs": 601,
+      "snapshotToHomeMs": 77,
+      "firstMs": 65.5,
+      "roundTripMs": 29.6
+    },
+    {
+      "pair": 21,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 219,
+        "app-ready": 219,
+        "storage-ready": 234,
+        "window-created": 262,
+        "load-requested": 263,
+        "window-shown": 266,
+        "dom-ready": 374,
+        "renderer-loaded": 374,
+        "first-paint-ready": 376,
+        "snapshot-served": 514,
+        "ui-ready": 672
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 551.2000000178814,
+        "barClicked": 594.2000000178814,
+        "editorReady": 640.3000000119209
+      },
+      "roundTrip": {
+        "homeClicked": 694.5,
+        "planClicked": 709.7000000178814,
+        "barReady": 720.4000000059605
+      },
+      "homeMs": 672,
+      "snapshotToHomeMs": 158,
+      "firstMs": 89.1,
+      "roundTripMs": 25.9
+    },
+    {
+      "pair": 21,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 299,
+        "app-ready": 300,
+        "storage-ready": 314,
+        "window-created": 351,
+        "load-requested": 352,
+        "window-shown": 365,
+        "dom-ready": 546,
+        "renderer-loaded": 546,
+        "first-paint-ready": 549,
+        "snapshot-served": 711,
+        "ui-ready": 892
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 598.3000000119209,
+        "barClicked": 633.4000000059605,
+        "editorReady": 659.3000000119209
+      },
+      "roundTrip": {
+        "homeClicked": 738.3000000119209,
+        "planClicked": 767.7000000178814,
+        "barReady": 780.4000000059605
+      },
+      "homeMs": 892,
+      "snapshotToHomeMs": 181,
+      "firstMs": 61.0,
+      "roundTripMs": 42.1
+    },
+    {
+      "pair": 22,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 237,
+        "app-ready": 238,
+        "storage-ready": 252,
+        "window-created": 280,
+        "load-requested": 281,
+        "window-shown": 285,
+        "dom-ready": 647,
+        "renderer-loaded": 647,
+        "first-paint-ready": 648,
+        "snapshot-served": 796,
+        "ui-ready": 947
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 735.5,
+        "barClicked": 768.6999999880791,
+        "editorReady": 818.4000000059605
+      },
+      "roundTrip": {
+        "homeClicked": 898.7999999821186,
+        "planClicked": 927.5999999940395,
+        "barReady": 941.5
+      },
+      "homeMs": 947,
+      "snapshotToHomeMs": 151,
+      "firstMs": 82.9,
+      "roundTripMs": 42.7
+    },
+    {
+      "pair": 22,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 212,
+        "app-ready": 212,
+        "storage-ready": 228,
+        "window-created": 254,
+        "load-requested": 255,
+        "window-shown": 261,
+        "dom-ready": 366,
+        "renderer-loaded": 367,
+        "first-paint-ready": 370,
+        "snapshot-served": 503,
+        "ui-ready": 666
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 479.39999997615814,
+        "barClicked": 525.0999999940395,
+        "editorReady": 553.3999999761581
+      },
+      "roundTrip": {
+        "homeClicked": 601.2999999821186,
+        "planClicked": 620,
+        "barReady": 632.8999999761581
+      },
+      "homeMs": 666,
+      "snapshotToHomeMs": 163,
+      "firstMs": 74.0,
+      "roundTripMs": 31.6
+    },
+    {
+      "pair": 22,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 377,
+        "app-ready": 378,
+        "storage-ready": 390,
+        "window-created": 415,
+        "load-requested": 416,
+        "window-shown": 422,
+        "dom-ready": 517,
+        "renderer-loaded": 518,
+        "first-paint-ready": 658,
+        "snapshot-served": 665,
+        "ui-ready": 756
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 374,
+        "barClicked": 425,
+        "editorReady": 456.39999997615814
+      },
+      "roundTrip": {
+        "homeClicked": 532.5999999940395,
+        "planClicked": 564.5,
+        "barReady": 583.0999999940395
+      },
+      "homeMs": 756,
+      "snapshotToHomeMs": 91,
+      "firstMs": 82.4,
+      "roundTripMs": 50.5
+    },
+    {
+      "pair": 22,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 281,
+        "app-ready": 282,
+        "storage-ready": 293,
+        "window-created": 324,
+        "load-requested": 325,
+        "window-shown": 364,
+        "dom-ready": 508,
+        "renderer-loaded": 515,
+        "first-paint-ready": 676,
+        "snapshot-served": 694,
+        "ui-ready": 800
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 496.90000000596046,
+        "barClicked": 557.2999999821186,
+        "editorReady": 592.5999999940395
+      },
+      "roundTrip": {
+        "homeClicked": 674.4000000059605,
+        "planClicked": 779,
+        "barReady": 802.7999999821186
+      },
+      "homeMs": 800,
+      "snapshotToHomeMs": 106,
+      "firstMs": 95.7,
+      "roundTripMs": 128.4
+    },
+    {
+      "pair": 23,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 213,
+        "app-ready": 214,
+        "storage-ready": 228,
+        "window-created": 258,
+        "load-requested": 259,
+        "window-shown": 263,
+        "dom-ready": 344,
+        "renderer-loaded": 344,
+        "first-paint-ready": 346,
+        "snapshot-served": 442,
+        "ui-ready": 486
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 243.7000000178814,
+        "barClicked": 265.60000002384186,
+        "editorReady": 294.2000000178814
+      },
+      "roundTrip": {
+        "homeClicked": 328.80000001192093,
+        "planClicked": 344.60000002384186,
+        "barReady": 355.5
+      },
+      "homeMs": 486,
+      "snapshotToHomeMs": 44,
+      "firstMs": 50.5,
+      "roundTripMs": 26.7
+    },
+    {
+      "pair": 23,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 195,
+        "app-ready": 196,
+        "storage-ready": 210,
+        "window-created": 239,
+        "load-requested": 239,
+        "window-shown": 250,
+        "dom-ready": 327,
+        "renderer-loaded": 328,
+        "first-paint-ready": 328,
+        "snapshot-served": 419,
+        "ui-ready": 460
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 239.09999999403954,
+        "barClicked": 261,
+        "editorReady": 282.40000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 303.7999999821186,
+        "planClicked": 324.5,
+        "barReady": 332.7999999821186
+      },
+      "homeMs": 460,
+      "snapshotToHomeMs": 41,
+      "firstMs": 43.3,
+      "roundTripMs": 29.0
+    },
+    {
+      "pair": 23,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 202,
+        "app-ready": 203,
+        "storage-ready": 218,
+        "window-created": 238,
+        "load-requested": 238,
+        "window-shown": 243,
+        "dom-ready": 365,
+        "renderer-loaded": 366,
+        "first-paint-ready": 368,
+        "snapshot-served": 651,
+        "ui-ready": 788
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 612.5,
+        "barClicked": 640.6999999880791,
+        "editorReady": 664.2999999821186
+      },
+      "roundTrip": {
+        "homeClicked": 712,
+        "planClicked": 753.2999999821186,
+        "barReady": 785.2999999821186
+      },
+      "homeMs": 788,
+      "snapshotToHomeMs": 137,
+      "firstMs": 51.8,
+      "roundTripMs": 73.3
+    },
+    {
+      "pair": 23,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 207,
+        "app-ready": 208,
+        "storage-ready": 221,
+        "window-created": 245,
+        "load-requested": 245,
+        "window-shown": 250,
+        "dom-ready": 356,
+        "renderer-loaded": 357,
+        "first-paint-ready": 358,
+        "snapshot-served": 492,
+        "ui-ready": 626
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 438,
+        "barClicked": 468.90000000596046,
+        "editorReady": 495.90000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 545.2000000178814,
+        "planClicked": 569,
+        "barReady": 581.3000000119209
+      },
+      "homeMs": 626,
+      "snapshotToHomeMs": 134,
+      "firstMs": 57.9,
+      "roundTripMs": 36.1
+    },
+    {
+      "pair": 24,
+      "count": 10000,
+      "build": "after",
+      "stages": {
+        "bootstrap": 211,
+        "app-ready": 211,
+        "storage-ready": 229,
+        "window-created": 257,
+        "load-requested": 258,
+        "window-shown": 263,
+        "dom-ready": 373,
+        "renderer-loaded": 373,
+        "first-paint-ready": 375,
+        "snapshot-served": 648,
+        "ui-ready": 790
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 587.1000000238419,
+        "barClicked": 612,
+        "editorReady": 638.3000000119209
+      },
+      "roundTrip": {
+        "homeClicked": 686.8000000119209,
+        "planClicked": 721.6000000238419,
+        "barReady": 740
+      },
+      "homeMs": 790,
+      "snapshotToHomeMs": 142,
+      "firstMs": 51.2,
+      "roundTripMs": 53.2
+    },
+    {
+      "pair": 24,
+      "count": 10000,
+      "build": "before",
+      "stages": {
+        "bootstrap": 205,
+        "app-ready": 205,
+        "storage-ready": 223,
+        "window-created": 262,
+        "load-requested": 262,
+        "window-shown": 266,
+        "dom-ready": 373,
+        "renderer-loaded": 373,
+        "first-paint-ready": 374,
+        "snapshot-served": 503,
+        "ui-ready": 641
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 441.5,
+        "barClicked": 468.10000002384186,
+        "editorReady": 495.10000002384186
+      },
+      "roundTrip": {
+        "homeClicked": 553.1000000238419,
+        "planClicked": 582.4000000059605,
+        "barReady": 594
+      },
+      "homeMs": 641,
+      "snapshotToHomeMs": 138,
+      "firstMs": 53.6,
+      "roundTripMs": 40.9
+    },
+    {
+      "pair": 24,
+      "count": 3,
+      "build": "after",
+      "stages": {
+        "bootstrap": 219,
+        "app-ready": 220,
+        "storage-ready": 234,
+        "window-created": 256,
+        "load-requested": 257,
+        "window-shown": 261,
+        "dom-ready": 337,
+        "renderer-loaded": 337,
+        "first-paint-ready": 339,
+        "snapshot-served": 448,
+        "ui-ready": 512
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 389.40000000596046,
+        "barClicked": 441.5,
+        "editorReady": 481.60000002384186
+      },
+      "roundTrip": {
+        "homeClicked": 534.7000000178814,
+        "planClicked": 596.6000000238419,
+        "barReady": 605.2000000178814
+      },
+      "homeMs": 512,
+      "snapshotToHomeMs": 64,
+      "firstMs": 92.2,
+      "roundTripMs": 70.5
+    },
+    {
+      "pair": 24,
+      "count": 3,
+      "build": "before",
+      "stages": {
+        "bootstrap": 214,
+        "app-ready": 215,
+        "storage-ready": 226,
+        "window-created": 266,
+        "load-requested": 267,
+        "window-shown": 271,
+        "dom-ready": 353,
+        "renderer-loaded": 354,
+        "first-paint-ready": 355,
+        "snapshot-served": 473,
+        "ui-ready": 536
+      },
+      "context": {
+        "selected": "2026-11-20",
+        "width": 1440,
+        "height": 890,
+        "scale": 1,
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) WorkRail/0.0 Chrome/156.0.8078.75 Electron/45.2.1 Safari/537.36",
+        "initialMenu": "page"
+      },
+      "first": {
+        "planClicked": 281.59999999403954,
+        "barClicked": 304.80000001192093,
+        "editorReady": 330.90000000596046
+      },
+      "roundTrip": {
+        "homeClicked": 357,
+        "planClicked": 385.09999999403954,
+        "barReady": 395.30000001192093
+      },
+      "homeMs": 536,
+      "snapshotToHomeMs": 63,
+      "firstMs": 49.3,
+      "roundTripMs": 38.3
+    }
+  ],
+  "summaryMedianMinMax": {
+    "3": {
+      "before": {
+        "homeMs": [
+          520.0,
+          471,
+          960
+        ],
+        "firstMs": [
+          50.6,
+          36.2,
+          102.9
+        ],
+        "roundTripMs": [
+          30.299999999999997,
+          19.5,
+          128.4
+        ],
+        "snapshotToHomeMs": [
+          58.5,
+          44,
+          460
+        ]
+      },
+      "after": {
+        "homeMs": [
+          510.5,
+          460,
+          779
+        ],
+        "firstMs": [
+          54.25,
+          43.3,
+          221.3
+        ],
+        "roundTripMs": [
+          36.15,
+          22.2,
+          85.8
+        ],
+        "snapshotToHomeMs": [
+          55.0,
+          37,
+          165
+        ]
+      }
+    },
+    "10000": {
+      "before": {
+        "homeMs": [
+          734.0,
+          623,
+          1509
+        ],
+        "firstMs": [
+          61.3,
+          51.8,
+          110.8
+        ],
+        "roundTripMs": [
+          40.099999999999994,
+          25.9,
+          92.2
+        ],
+        "snapshotToHomeMs": [
+          156.5,
+          137,
+          395
+        ]
+      },
+      "after": {
+        "homeMs": [
+          732.5,
+          608,
+          1072
+        ],
+        "firstMs": [
+          59.35,
+          51.2,
+          135.8
+        ],
+        "roundTripMs": [
+          42.6,
+          33.2,
+          91.0
+        ],
+        "snapshotToHomeMs": [
+          151.0,
+          128,
+          298
+        ]
+      }
+    }
+  },
+  "paired": {
+    "3": {
+      "homeMs": {
+        "pairs": 24,
+        "candidateFaster": 16,
+        "medianAfterMinusBeforeMs": -4.0
+      },
+      "firstMs": {
+        "pairs": 24,
+        "candidateFaster": 9,
+        "medianAfterMinusBeforeMs": 2.15
+      },
+      "roundTripMs": {
+        "pairs": 24,
+        "candidateFaster": 10,
+        "medianAfterMinusBeforeMs": 1.9
+      },
+      "snapshotToHomeMs": {
+        "pairs": 24,
+        "candidateFaster": 13,
+        "medianAfterMinusBeforeMs": -1.5
+      }
+    },
+    "10000": {
+      "homeMs": {
+        "pairs": 24,
+        "candidateFaster": 11,
+        "medianAfterMinusBeforeMs": 16.5
+      },
+      "firstMs": {
+        "pairs": 24,
+        "candidateFaster": 16,
+        "medianAfterMinusBeforeMs": -2.1
+      },
+      "roundTripMs": {
+        "pairs": 24,
+        "candidateFaster": 9,
+        "medianAfterMinusBeforeMs": 6.35
+      },
+      "snapshotToHomeMs": {
+        "pairs": 24,
+        "candidateFaster": 15,
+        "medianAfterMinusBeforeMs": -4.5
+      }
+    }
+  }
+}

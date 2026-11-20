@@ -1,5 +1,5 @@
 import {releaseNotes} from './release-content'
-export const releaseChannel='release-notes:command',releaseOpened='release-notes:opened'
+export const releaseChannel='release-notes:command',releaseOpened='release-notes:opened',releaseUnload='release-notes:unload'
 export interface ReleaseReading {version:string;scrollTop:number}
 export type ReleaseCommand='state'|'remember'|'minimize'|'toggle-maximize'|'close'
 export interface ReleaseReply {ok:boolean;reading?:ReleaseReading;version?:string;maximized?:boolean}

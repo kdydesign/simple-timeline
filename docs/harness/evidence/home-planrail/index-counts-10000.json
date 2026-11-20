@@ -1,0 +1,112 @@
+{
+  "before": {
+    "home": [
+      {
+        "snapshot": 0,
+        "schedules": 10000,
+        "count": 2,
+        "durationsMs": [
+          8.800000011920929,
+          7
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 10000,
+        "count": 2,
+        "durationsMs": [
+          7.5,
+          7.899999976158142
+        ]
+      }
+    ],
+    "first": [
+      {
+        "snapshot": 0,
+        "schedules": 10000,
+        "count": 2,
+        "durationsMs": [
+          8.800000011920929,
+          7
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 10000,
+        "count": 2,
+        "durationsMs": [
+          7.5,
+          7.899999976158142
+        ]
+      }
+    ],
+    "roundTrip": [
+      {
+        "snapshot": 0,
+        "schedules": 10000,
+        "count": 2,
+        "durationsMs": [
+          8.800000011920929,
+          7
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 10000,
+        "count": 2,
+        "durationsMs": [
+          7.5,
+          7.899999976158142
+        ]
+      }
+    ]
+  },
+  "after": {
+    "home": [
+      {
+        "snapshot": 0,
+        "schedules": 10000,
+        "count": 1,
+        "durationsMs": [
+          9.900000005960464
+        ]
+      }
+    ],
+    "first": [
+      {
+        "snapshot": 0,
+        "schedules": 10000,
+        "count": 1,
+        "durationsMs": [
+          9.900000005960464
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 10000,
+        "count": 1,
+        "durationsMs": [
+          12.700000017881393
+        ]
+      }
+    ],
+    "roundTrip": [
+      {
+        "snapshot": 0,
+        "schedules": 10000,
+        "count": 1,
+        "durationsMs": [
+          9.900000005960464
+        ]
+      },
+      {
+        "snapshot": 1,
+        "schedules": 10000,
+        "count": 1,
+        "durationsMs": [
+          12.700000017881393
+        ]
+      }
+    ]
+  }
+}

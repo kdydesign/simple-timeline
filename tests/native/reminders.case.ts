@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import {join} from 'node:path'
 import {initializeStorage} from '../../src/main/db/lifecycle'
 import {migrations} from '../../src/main/db/migrations'
+import {createReminderSnapshotReader} from '../../src/main/db/repository'
+import {createSharingStore} from '../../src/main/db/sharing/store'
 import {createReminderStore} from '../../src/main/db/reminders'
 import {dueReminders} from '../../src/domain/reminder'
 import type {NativeCase} from './helpers'
@@ -51,3 +53,31 @@ export const cases:NativeCase[]=[{name:'quick reminder mutation validates stored
  store.finish(occ.map(x=>x.key),'submitted');assert.equal(createReminderStore(state.db).claim(occ,true).length,0)
  store.finish(occ.map(x=>x.key),'failed');assert.equal(store.issues().failed,1);assert.equal(store.claim(occ,false).length,0);assert.equal(store.claim(occ,true).length,1)
 }}]
+
+cases.push({
+  name: 'local reminder candidates follow current flags and sharing visibility on every read',
+  async run(ctx) {
+    const state = await initializeStorage(ctx.tempDir)
+    assert.equal(state.state, 'ready')
+    if (state.state !== 'ready') return
+    ctx.defer(() => state.db.close())
+    const {db, repository} = state
+    const sharing = createSharingStore(db)
+    sharing.configureHost({address:'127.0.0.1', port:47831})
+    const member = sharing.saveDevice({name:'Member', ip:'127.0.0.2'})
+    const shared = sharing.saveProject({name:'Host', color:'#2563EB', participants:[{name:member.name, deviceId:member.id}]})
+    const personal = repository.createProject({name:'Personal', color:'#2563EB', participants:[]})
+    const dates = {startDate:'2026-11-20', endDate:'2026-11-21'}
+    const off = {daysBefore:0, time:'09:00', start:false, end:false}
+    const a = repository.createSchedule({...dates, name:'Start', projectId:shared.id, reminder:{...off,start:true}})
+    const b = repository.createSchedule({...dates, name:'End', projectId:personal.id, reminder:{...off,end:true}})
+    repository.createSchedule({...dates, name:'Silent', projectId:personal.id})
+    const read = createReminderSnapshotReader(db)
+    assert.deepEqual(read().schedules, [a,b])
+    sharing.beginRoleTransition({role:'member', confirmed:true})
+    assert.deepEqual(read().schedules, [b])
+    assert.deepEqual(read().projects, [{id:personal.id, name:personal.name}])
+    repository.updateScheduleReminder({id:b.id, reminder:off})
+    assert.deepEqual(read(), {projects:[], schedules:[]})
+  },
+})

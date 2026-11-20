@@ -1,10 +1,20 @@
-import type {TimelineSnapshot} from '../../shared/types'
+import type {Project, Schedule} from '../../shared/types'
 import {dueReminders,localClock} from '../../domain/reminder'
 import {toOrdinal} from '../../domain/date'
 import type {ReminderStore} from '../db/reminders'
 export interface ReminderMessage {title:string;body:string}
 export type ReminderSender=(message:ReminderMessage,onClick:()=>void,onFailure?:()=>void)=>Promise<'submitted'|'failed'|'unknown'>
-interface Options {generation?:()=>number;muted?:()=>boolean;store:ReminderStore;snapshot:()=>TimelineSnapshot;clock?:()=>Date;send:ReminderSender;onClick:(id:string)=>void;onChange:()=>void;beforeSchedule?:(id:string)=>Promise<boolean>}
+interface Options {
+  generation?: () => number
+  muted?: () => boolean
+  store: ReminderStore
+  snapshot: () => { projects: Pick<Project, 'id' | 'name'>[]; schedules: Schedule[] }
+  clock?: () => Date
+  send: ReminderSender
+  onClick: (id: string) => void
+  onChange: () => void
+  beforeSchedule?: (id: string) => Promise<boolean>
+}
 export function createReminderEngine(o:Options) {
  const clock=o.clock??(()=>new Date())
  let running:Promise<void>|undefined,pending=false,stopped=false,storageError=false

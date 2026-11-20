@@ -116,7 +116,7 @@ completed와 passed, 개별 검사 결과를 함께 읽는다. dirty 보고서�
 최적화 전에 같은 빌드·데이터·뷰포트·조작으로 기준선을 수집한다. 제품 코드에 계측기를 추가하지 않고도 기존 Electron 테스트 빌드, 일회성 프로필과 CDP로 CPU·힙·DOM·IPC를 볼 수 있다. 원시 프로파일은 저장소 밖에 보관하고 보고서에 기준 SHA, 반복 수, 측정 단위, 미측정 항목을 남긴다. 코드 변경이 승인된 뒤에만 같은 조건에서 전후를 비교한다.
 
 [2026-11-20 WorkRail 성능 기준선](performance-baseline-2026-11-20.md)에 조작별 수치, 원인 후보와 회귀 검증 조건을 기록했다.
-[Electron 2차 분석](electron-phase2-2026-11-20.md)은 대량 조회 중 메인 이벤트 루프와 보조 창의 시간·메모리를 측정했다.
+[Electron 2차 분석](electron-phase2-2026-11-20.md)은 대량 조회 중 메인 이벤트 루프와 보조 창의 시간·메모리를 측정했다. [1·2차 구현과 전후 비교](../implementation/2026-11-20-electron-performance.md)에서 변경 후 결과를 확인할 수 있다.
 
 ## 변경 시 검토할 실패 경로
 
@@ -138,7 +138,7 @@ completed와 passed, 개별 검사 결과를 함께 읽는다. dirty 보고서�
 0.8.4의 사전 준비/재사용 및 전체 도움말 검사 확장 후 Linux 전체 Electron 실행은84개 통과 단계에서360초 제한에 도달했다. 한 건의 구형 확인창 기대도 함께 수정했으며, 전체 E2E 예산만600초로 늘려 남은 공유·업데이트 시나리오를 수행한다. 개별 케이스45초 및 IPC/저장 제한은 유지한다. 전체 멈춤 감지는 최대240초 늦어질 수 있으며 성공 여부는 최종 전체 실행으로 확인한다.
 
 
-0.8.5는 [릴리즈노트·저장 확인 검증](../implementation/2026-11-17-release-notes-confirmations.md)을 추가한다. `tests/e2e/release-notes.spec.ts`는 도움말과의 독립 IPC·동시 표시·닫기 재사용·트레이 복원을 검사한다. `tests/e2e/help.spec.ts`는 schema2의 main/request/preload/navigation/module 기록을 실제 격리 Electron에서 검사한다. 회사PC 첫 열기 지연은 새 `help-latest.json`과 같은 실행의 `startup-latest.json`으로 별도 확인하며 Linux 시간으로 해결 판정하지 않는다.
+0.8.5는 [릴리즈노트·저장 확인 검증](../implementation/2026-11-17-release-notes-confirmations.md)을 추가한다. `tests/e2e/release-notes.spec.ts`는 도움말과의 독립 IPC·동시 표시·명시적 닫기 후 새 창의 읽기 위치·트레이 복원을 검사한다. `tests/e2e/help.spec.ts`는 schema2의 main/request/preload/navigation/module 기록을 실제 격리 Electron에서 검사한다. 회사PC 첫 열기 지연은 새 `help-latest.json`과 같은 실행의 `startup-latest.json`으로 별도 확인하며 Linux 시간으로 해결 판정하지 않는다.
 
 
 ## 개발 멤버 실행 (0.8.8)
