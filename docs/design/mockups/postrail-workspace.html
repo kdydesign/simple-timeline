@@ -74,6 +74,14 @@ body:has(#post:not([hidden])){height:100dvh}
 .workrail-widget-meta{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 8px;padding-top:6px;border-top:1px solid #b4bfc430;color:#c0c5cb;font-size:11px}
 .workrail-link{width:fit-content;justify-self:end;margin:0;padding:0 1px;border:0;background:transparent;color:inherit;font-size:inherit;text-align:start}
 .workrail-link:hover:enabled{background:transparent;color:#f1f2f3;text-decoration:underline}
+.json-key{color:#9cdafa}.json-string{color:#badaaa}.json-number{color:#ffc285}
+.json-boolean{color:#d6b1fa}.json-null{color:#95cecb}.json-variable{color:#ffd875}
+.json-input{position:relative;overflow:hidden;flex:1;min-height:90px}
+.code-pane .json-input pre,.code-pane .json-input textarea{margin:0;padding:0;border:0;tab-size:4;font-variant-ligatures:none;white-space:pre;overflow-wrap:normal}
+.json-input pre{position:absolute;top:0;left:0;width:max-content;pointer-events:none;user-select:none}
+.code-pane .json-input textarea{position:absolute;inset:0;width:100%;height:100%;min-height:0;overflow:auto;color:transparent;caret-color:#f1f2f3;background:transparent}
+.json-input textarea::selection{background:#6489af80}
+@media(forced-colors:active){.json-input pre{display:none}.code-pane .json-input textarea{color:CanvasText;caret-color:CanvasText}}
 </style>
 <header><div class="brand"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgdmlld0JveD0iMCAwIDE2IDE2IiByb2xlPSJpbWciIGFyaWEtbGFiZWxsZWRieT0idGl0bGUiPgogIDx0aXRsZSBpZD0idGl0bGUiPldvcmtSYWlsPC90aXRsZT4KICA8ZGVmcz48bGluZWFyR3JhZGllbnQgaWQ9ImluayIgeDI9Ii42NSIgeTI9IjEiPjxzdG9wIHN0b3AtY29sb3I9IiMyYjQzNTEiLz48c3RvcCBvZmZzZXQ9IjEiIHN0b3AtY29sb3I9IiMxNTI3MzIiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz4KICA8cmVjdCB3aWR0aD0iMTYiIGhlaWdodD0iMTYiIHJ4PSIyIiBmaWxsPSIjNTI2Yjc5Ii8+CiAgPHJlY3QgeD0iLjQiIHk9Ii40IiB3aWR0aD0iMTUuMiIgaGVpZ2h0PSIxNS4yIiByeD0iMS42IiBmaWxsPSJ1cmwoI2luaykiLz4KICA8cGF0aCBmaWxsPSIjZjJmN2ZhIiBkPSJNMSA0aDhMNi42IDdIMXogTTEgOGg0LjVMMyAxMUgxeiIvPgogIDxwYXRoIGZpbGw9IiM5MWQxZjEiIGQ9Ik0zLjUgMTIuNSAxMC40IDRoMy4zbC02LjkgOC41eiBNOC4xNSAxMi41IDEyLjY1IDdoMi43bC00LjUgNS41eiIvPgo8L3N2Zz4K" alt="">WorkRail <span class="auto demo">디자인 시안 · 예시 데이터</span></div><nav aria-label="도구"><button id="homeTab"><span class="mark">⌂</span>Home</button><button disabled>PlanRail</button><button disabled>NodeRail</button><button disabled>TermRail</button><button id="postTab" class="active"><span class="mark">⇄</span>PostRail</button></nav></header>
 <main id="post">
@@ -102,7 +110,7 @@ const group = (name,open=true) => ({name,open});
 const loose = group('미분류');
 let groups = [group('샘플 API'),group('장비 상태',false),loose];
 function request(name,method,path,folder) {
-  return {name,method,url:'${deviceUrl}'+path,folder,index:1n,body:method==='POST'?JSON.stringify({name:'test_${index}',site:'${site}',enabled:true},null,2):''};
+  return {name,method,url:'${deviceUrl}'+path,folder,index:1n,body:method==='POST'?JSON.stringify({name:'test_${index}',site:'${site}',priority:2,enabled:true,note:null},null,2):''};
 }
 let requests = [request('샘플 생성','POST','/api/samples',groups[0]),request('샘플 조회','GET','/api/samples',groups[0]),request('샘플 삭제','DELETE','/api/samples/42',groups[0]),request('상태 확인','GET','/health',groups[1]),request('장비 목록','GET','/devices',groups[1]),request('연결 점검','GET','/ready',groups[1]),request('장비 버전','GET','/version',groups[1])];
 for(const r of requests)r.favorite=r.method!=='DELETE';
@@ -254,11 +262,50 @@ function range(){
   $('send').textContent=!$('countControl').hidden&&n>0n?n+'회 보내기':'보내기';
   $('range').textContent=!current?'':!n?'횟수는 양의 정수로 입력하세요.':indexUsed(current,values(current).body)?'인덱스 '+current.index+(n>1n?' – '+(current.index+n-1n):''):n>1n?'같은 요청을 반복합니다.':'';
 }
+// Keep the original text nodes so copy, escapes and indentation survive highlighting.
+function paintJson(host, source, templateValues=false) {
+  if(source.length>65536){host.textContent=source;return}
+  const fragment=document.createDocumentFragment();
+  const tokens=/"(?:\\[^\n]|[^"\\\n])*"?|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?|\b(?:true|false|null)\b/g;
+  let end=0;
+  for(const match of source.matchAll(tokens)){
+    const token=match[0];
+    fragment.append(source.slice(end,match.index));
+    end=match.index+token.length;
+    if(token.startsWith('"')){
+      const key=/^\s*:/.test(source.slice(end))&&token.endsWith('"');
+      const span=node('span',undefined,key?'json-key':'json-string');
+      if(templateValues&&!key){
+        let pos=0;
+        for(const variable of token.matchAll(/\$\{[^{}"\s]+\}/g)){
+          span.append(token.slice(pos,variable.index),node('span',variable[0],'json-variable'));
+          pos=variable.index+variable[0].length;
+        }
+        span.append(token.slice(pos));
+      }else span.textContent=token;
+      fragment.append(span);
+    }else{
+      const kind=token==='null'?'null':token==='true'||token==='false'?'boolean':'number';
+      fragment.append(node('span',token,'json-'+kind));
+    }
+  }
+  fragment.append(source.slice(end));host.replaceChildren(fragment);
+}
+function requestBodyEditor(){
+  const frame=node('div',undefined,'json-input');
+  const ink=node('pre');ink.setAttribute('aria-hidden','true');
+  const input=node('textarea');input.setAttribute('aria-label','JSON 요청 본문');
+  input.spellcheck=false;input.wrap='off';input.value=values(current).body;
+  function align(){ink.style.transform='translate('+(-input.scrollLeft)+'px,'+(-input.scrollTop)+'px)'}
+  function paint(){paintJson(ink,input.value,true);align()}
+  input.oninput=()=>{edit('body',input.value);paint()};input.onscroll=align;
+  frame.append(ink,input);paint();return frame;
+}
 function requestPane() {
   const panel=$('reqContent');panel.replaceChildren();
   [...$('reqTabs').children].forEach((b,i)=>{b.classList.toggle('active',i===requestTab);b.disabled=!current||(i===0&&current.method==='GET')});
   if(!current)return;
-  if(requestTab===0){const t=node('textarea');t.setAttribute('aria-label','JSON 요청 본문');t.value=values(current).body;t.oninput=()=>edit('body',t.value);panel.append(t)}
+  if(requestTab===0)panel.append(requestBodyEditor());
   if(requestTab===1)panel.append(node('pre','Accept: application/json'));
   if(requestTab===2)panel.append(node('p','환경 로그인 사용'),node('small','같은 환경·계정에서 발급받은 유효한 토큰을 헤더에 사용합니다.'));
 }
@@ -308,8 +355,11 @@ function results() {
   $('status').className='auto '+(status.startsWith('4')?'bad':'good');
   $('bodyTab').classList.toggle('active',!responseHeaders);$('hdrTab').classList.toggle('active',responseHeaders);
   const resultName='test_'+(run.start+selected-1n);
-  const content=status.startsWith('4')?{message:'이미 등록된 샘플입니다.'}:run.method==='GET'?[{name:'sample'}]:run.indexed?{name:resultName,created:true}:{created:true};
-  $('response').textContent=responseHeaders?(status.startsWith('204')?'응답 헤더 없음':'Content-Type: application/json'):status.startsWith('204')?'응답 본문 없음':JSON.stringify(content,null,2);
+  const content=status.startsWith('4')?{message:'이미 등록된 샘플입니다.'}:run.method==='GET'?[{name:'sample'}]:run.indexed?{name:resultName,created:true,count:1,note:null}:{created:true};
+  const empty=status.startsWith('204');
+  if(responseHeaders)$('response').textContent=empty?'응답 헤더 없음':'Content-Type: '+(run.plain?'text/plain':'application/json');
+  else if(empty||run.plain)$('response').textContent=empty?'응답 본문 없음':'OK';
+  else paintJson($('response'),JSON.stringify(content,null,2));
   if(!$('drawer').hidden)renderLog();
   $('footStatus').textContent='실행 완료　·　'+run.count+'회'+(run.example?'　·　실패 1건':'');
   $('homeEnv').textContent=$('env').value;$('homeAuth').textContent=env().logged?'인증됨':'로그인 필요';
@@ -327,7 +377,7 @@ function sendRequest(r,n,input=r){
   let ok=false;try{ok=new URL(expanded).origin===env().api&&!expanded.includes('${')}catch{}
   if(!ok){modal('요청 주소 확인');$('dialogBody').textContent='환경 변수와 토큰을 받을 API 주소를 확인하세요. 본 요청을 보내지 않았습니다.';return}
   // A change of environment never transfers the previous environment's login state.
-  env().logged=true;run={name:r.name,env:$('env').value,method:r.method,count:n,start:r.index,indexed:indexUsed(r,input.body),example:false};
+  env().logged=true;run={name:r.name,env:$('env').value,method:r.method,count:n,plain:r.method==='GET'&&new URL(expanded).pathname==='/health',start:r.index,indexed:indexUsed(r,input.body),example:false};
   if(run.indexed)r.index+=run.count;
   selected=run.count;$('iteration').value=selected;$('iteration').setCustomValidity('');page=(selected-1n)/logPageSize;responseHeaders=false;draw();
 }

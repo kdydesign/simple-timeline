@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 PostRail 요청·응답 JSON 본문의 타입별 구문 강조와 요청 변수 표시를 [작업 화면 시안](../design/postrail-workspace.md)에 반영했다. 제품 구현 전이다.
+
 2026-11-20 PostRail 후속 시안에 하단에서 펼치는 일반 텍스트 로그, Home 즐겨찾기 최대 5개와 공유 설정 관리 링크 스타일을 반영했다. [설계와 두 화면](../design/postrail-workspace.md) · 제품 구현 전.
 
 2026-11-20 PostRail 화면을 코드 편집 중심으로 조정하고 PlanRail과 같은 하단 상태 바 및 Home 즐겨찾기 즉시 실행을 [후속 설계와 시안](../design/postrail-workspace.md)에 반영했다. Home에서는 현재 환경으로 실행하며 POST는 기본 단건 및 명시적 반복 실행을 모두 지원하는 설계로 합의했다. 제품 구현 전이다.
