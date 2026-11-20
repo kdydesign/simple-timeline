@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-20 **Home·첫 PlanRail 진입 성능 개선 1차 설계 확정 · 구현 보류.** 간트와 달력이 일정 인덱스를 공유하고 Home 준비 시간과 첫 PlanRail 조작 시간을 함께 평가하기로 했다. [확정 설계와 채택 기준](../superpowers/specs/2026-11-20-home-planrail-performance-design.md)
+
 2026-11-20 승인된 PostRail 작업 화면과 Home 즐겨찾기를 제품에 반영했다. 환경별 토큰 재사용, 순차 전송, 회차별 결과 조회와 앱 종료 동작은 [구현·검증 기록](../implementation/2026-11-20-postrail.md)을 따른다.
 
 2026-11-20 **PostRail 최종 설계 승인 · 제품 구현 전.** 사용자가 최신 PostRail 작업 화면·환경별 인증·Home 즐겨찾기와 시안을 확정했다. 아래 기록은 협의 이력이다. [최종 설계](../design/postrail-workspace.md) · [승인 시안](../design/mockups/postrail-workspace.html)
