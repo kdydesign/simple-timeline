@@ -41,7 +41,7 @@ try{
  for(const mode of ['installer','uninstaller']){
   const flags={...defines,...(mode==='uninstaller'?{BUILD_UNINSTALLER:null}:{})}
   const args=['-WX','-INPUTCHARSET','UTF8',...Object.entries(flags).map(([key,value])=>`-D${key}${value===null?'':'='+value}`),'-XUnicode true',`-XOutFile "${join(directory,mode+'.exe')}"`,'-']
-  const result=spawnSync(compiler.path,args,{input:source,cwd:nsisTemplatesDir,env:{...process.env,...compiler.env,ST_SHELL_ICON_NAME:shellIconName},encoding:'utf8',timeout:30000,maxBuffer:2*1024*1024})
+  const result=spawnSync(compiler.path,args,{input:source,cwd:nsisTemplatesDir,env:{...process.env,...compiler.env,ST_SHELL_ICON_NAME:shellIconName,ST_START_ICON_HELPER:uninstaller},encoding:'utf8',timeout:30000,maxBuffer:2*1024*1024})
   if(result.error||result.status!==0){process.stderr.write(`${mode} compile failed\n${result.stdout??''}\n${result.stderr??''}\n`);throw result.error??Error(`${mode} makensis exit ${result.status}`)}
   console.log(`PASS compile-only actual builder ${mode} template with custom include before plugin directory`)
  }

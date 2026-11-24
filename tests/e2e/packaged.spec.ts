@@ -294,10 +294,19 @@ test("real production package installs, works offline, updates and retains DB af
       "$link.Description='WorkRail upgrade fixture'",
       "$link.Save()",
     ].join(";")]);
-    run(resolve("artifacts/windows-update", update.installer), [
-      "/S",
-      "/D=" + installDir,
-    ]);
+    const updatePath = resolve("artifacts/windows-update", update.installer);
+    try {
+      run(updatePath, ["/S", "/D=" + installDir]);
+    } catch (error) {
+      // Take this before cleanup. WER may have no event for a silent NSIS exit.
+      try {
+        const observed = releaseInfo(updatePath);
+        const state = {installedExecutable:existsSync(installed), registrations:observed.userInstalls, shortcuts:observed.shortcuts};
+        evidence.failedUpgradeState = state;
+        console.error("State after failed installer:", JSON.stringify(state));
+      } catch (diagnosticError) { console.error("Could not inspect failed installer:", diagnosticError); }
+      throw error;
+    }
     const upgraded = releaseInfo(resolve("artifacts/windows-update", update.installer));
     evidence.upgradedIcon = await verifyStartIcon(update, upgraded.shortcuts);
     expect(upgraded.shortcuts.find((link: {startMenu: boolean}) => link.startMenu).description).toBe("WorkRail upgrade fixture");

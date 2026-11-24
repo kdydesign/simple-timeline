@@ -1,6 +1,7 @@
 import { shellIconName } from './shell-icon-name.mjs'
 import { spawnSync } from "node:child_process";
-import { readFile, readdir, writeFile, copyFile } from "node:fs/promises";
+import { readFile, readdir, writeFile, copyFile, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { inspectPackage } from "../testing/packaged-smoke.mjs";
@@ -29,16 +30,29 @@ const args = [
   `--config.extraMetadata.version=${version}`,
   `--config.directories.output=${output}`,
 ];
-const result = spawnSync(process.execPath, args, {
-  stdio: "inherit",
-  env: {
-    ...process.env,
-    ST_SHELL_ICON_NAME: shellIconName,
-    ST_SOURCE_SHA: sha,
-    CSC_IDENTITY_AUTO_DISCOVERY: "false",
-  },
-});
-if (result.status !== 0) process.exit(result.status ?? 1);
+const helperDir = await mkdtemp(join(tmpdir(), "workrail-start-icon-"));
+try {
+  const helper = join(helperDir, "RepairStartIcon.exe");
+  const compiler = join(process.env.SystemRoot, "Microsoft.NET", "Framework64", "v4.0.30319", "csc.exe");
+  const compiled = spawnSync(compiler, ["/nologo", "/target:winexe", "/optimize+", "/reference:Microsoft.CSharp.dll",
+    "/out:" + helper, resolve("scripts/release/RepairStartIcon.cs")], { stdio: "inherit" });
+  if (compiled.error) throw compiled.error;
+  if (compiled.status !== 0) throw Error("Start shortcut helper compilation failed: " + compiled.status);
+  const result = spawnSync(process.execPath, args, {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      ST_START_ICON_HELPER: helper,
+      ST_SHELL_ICON_NAME: shellIconName,
+      ST_SOURCE_SHA: sha,
+      CSC_IDENTITY_AUTO_DISCOVERY: "false",
+    },
+  });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw Error("Windows installer build failed: " + result.status);
+} finally {
+  await rm(helperDir, { recursive: true, force: true });
+}
 const inspection = await inspectPackage(join(output, "win-unpacked"), {
   sourceSha: sha,
   version,

@@ -1,6 +1,4 @@
 !include nsDialogs.nsh
-!include Win\COM.nsh
-!include Win\Propkey.nsh
 
 # Inline commands work with the Windows default script-file policy without
 # changing policy, requesting elevation, or bypassing language/application controls.
@@ -45,60 +43,18 @@ Var PlanrailStartupChoice
 Function WorkRailRepairStartIcon
   IfFileExists "$newStartMenuLink" 0 done
   IfFileExists "$INSTDIR\resources\$%ST_SHELL_ICON_NAME%" 0 done
-  System::Store S
-  # NSIS has an apartment already. Balance our own successful COM initialization.
-  System::Call 'ole32::CoInitializeEx(p 0, i 2) i.r9'
-  !insertmacro ComHlpr_CreateInProcInstance ${CLSID_ShellLink} ${IID_IShellLink} r0 ""
-  StrCmp $0 0 cleanup
-  ${IUnknown::QueryInterface} $0 '("${IID_IPersistFile}",.r1).r5'
-  StrCmp $5 0 0 releaseLink
-  ${IPersistFile::Load} $1 '("$newStartMenuLink",2).r5'
-  StrCmp $5 0 0 releaseFile
-  ${IShellLink::GetPath} $0 '(.r4,${NSIS_MAX_STRLEN},0,0).r5'
-  StrCmp $5 0 0 releaseFile
-  StrCmp $4 "$appExe" 0 releaseFile
-
-  ${IUnknown::QueryInterface} $0 '("${IID_IPropertyStore}",.r2).r5'
-  StrCmp $5 0 0 releaseFile
-  System::Call '*${SYSSTRUCT_PROPERTYKEY}(${PKEY_AppUserModel_ID})p.r3'
-  System::Call '*${SYSSTRUCT_PROPVARIANT}(${VT_EMPTY})p.r6'
-  StrCpy $4 ""
-  ${If} $3 P<> 0
-  ${AndIf} $6 P<> 0
-    ${IPropertyStore::GetValue} $2 '($3,$6).r5'
-    ${If} $5 == 0
-      System::Call 'propsys::PropVariantToString(p r6, w .r4, i ${NSIS_MAX_STRLEN}) i.r5'
-      System::Call 'ole32::PropVariantClear(p r6)'
-    ${EndIf}
-  ${EndIf}
-  System::Free $6
-  System::Free $3
-  ${IUnknown::Release} $2 ""
-  StrCmpS $4 "${APP_ID}" 0 releaseFile
-
-  StrCpy $7 "$INSTDIR\resources\$%ST_SHELL_ICON_NAME%"
-  ${IShellLink::GetIconLocation} $0 '(.r4,${NSIS_MAX_STRLEN},.r6).r5'
-  ${If} $5 == 0
-  ${AndIf} $4 == $7
-  ${AndIf} $6 == 0
-    Goto releaseFile
-  ${EndIf}
-  ${IShellLink::SetIconLocation} $0 '("$7",0).r5'
-  StrCmp $5 0 0 releaseFile
-  ${IPersistFile::Save} $1 '("$newStartMenuLink",1).r5'
-  ${If} $5 == 0
-    # SHCNE_UPDATEITEM / SHCNF_PATHW for this shortcut only.
-    System::Call 'shell32::SHChangeNotify(i 0x2000, i 5, w "$newStartMenuLink", p 0)'
-  ${EndIf}
-releaseFile:
-  ${IUnknown::Release} $1 ""
-releaseLink:
-  ${IUnknown::Release} $0 ""
-cleanup:
-  ${If} $9 >= 0
-    System::Call 'ole32::CoUninitialize()'
-  ${EndIf}
-  System::Store L
+  InitPluginsDir
+  File /oname=$PLUGINSDIR\workrail-repair-start-icon.exe "$%ST_START_ICON_HELPER%"
+  Push $0
+  ClearErrors
+  ExecWait '"$PLUGINSDIR\workrail-repair-start-icon.exe" "$newStartMenuLink" "$appExe" "$INSTDIR\resources\$%ST_SHELL_ICON_NAME%" "${APP_ID}"' $0
+  IfErrors repairFailed
+  StrCmp $0 0 repairDone
+repairFailed:
+  DetailPrint "Start shortcut icon repair did not complete ($0)."
+repairDone:
+  Pop $0
+  ClearErrors
 done:
 FunctionEnd
 
