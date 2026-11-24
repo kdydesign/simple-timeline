@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
+  "version": "1.2.0",
   "previousCaptures": [
     {
       "source": "215622ceb9a89262944718941dce5961cf144a39",
@@ -61,16 +61,30 @@
           }
         }
       ]
+    },
+    {
+      "version": "1.1.0",
+      "scope": "Home result summary and separate result link after a completed request, with two repetitions selected. Isolated Electron profile and local loopback server.",
+      "source": "1510a02b9d16fb13454d1e4feca0c48ae9d0ec19",
+      "dirty": true,
+      "platform": "linux",
+      "recordedAt": "2026-11-20T15:58:20.474376+00:00",
+      "command": "tests/e2e/postrail.spec.ts",
+      "synthetic": true,
+      "files": [
+        "postrail-repeat.png"
+      ]
     }
   ],
-  "scope": "Home result summary and separate result link after a completed request, with two repetitions selected. Isolated Electron profile and local loopback server.",
-  "source": "1510a02b9d16fb13454d1e4feca0c48ae9d0ec19",
+  "scope": "Isolated Electron renderer using synthetic device data and loopback SSH and HTTP servers. The status screen shows SSH responding and HTTP 503. The Home widget shows the same favorite after HTTP 204. Earlier illustrations retain their original capture records.",
+  "files": [
+    "device-status.png",
+    "device-favorites.png"
+  ],
+  "source": "3a0d94573f396b4ebd0a2da2f3c762b8cd86c8bf",
   "dirty": true,
   "platform": "linux",
-  "recordedAt": "2026-11-20T15:58:20.474376+00:00",
-  "command": "tests/e2e/postrail.spec.ts",
-  "synthetic": true,
-  "files": [
-    "postrail-repeat.png"
-  ]
+  "recordedAt": "2026-11-24T15:07:36.692328+00:00",
+  "command": "tests/e2e/devicerail.spec.ts",
+  "synthetic": true
 }

@@ -1,6 +1,6 @@
 {
   "name": "simple-timeline",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "WorkRail team toolkit for scheduling, Node version management and SSH terminals",
   "main": "out/main/index.cjs",

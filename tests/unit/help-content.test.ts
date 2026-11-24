@@ -32,3 +32,10 @@ it('opens PostRail at the request editor guide and finds instructions for number
   expect(searchHelp(query).some(result=>result.article.menu==='postrail')).toBe(true)
  }
 })
+
+it('finds the device status guide, TermRail connection and macro results offline',()=>{
+ expect(initialHelpTopic('personal','devicerail')).toBe('device-status')
+ for (const [query,topic] of [['30초','device-status'],['임시 탭','device-ssh'],['표준 오류','device-macros']]) {
+  expect(searchHelp(query).map(result=>result.article.id)).toContain(topic)
+ }
+})

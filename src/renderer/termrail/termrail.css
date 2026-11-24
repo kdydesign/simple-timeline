@@ -64,6 +64,7 @@
   background: var(--surface); color: var(--muted); font-size: 10.5px; line-height: 17px;
 }
 .termrail-caption span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.termrail-caption small { white-space: nowrap; color: var(--muted); }
 .termrail-caption::before { content: ''; flex: 0 0 5px; height: 5px; border-radius: 50%; background: #ccab67; }
 .termrail-leaf:has([data-state="connected"]) > .termrail-caption::before { background: #86b9a1; }
 .termrail-leaf:has([data-state="failed"], [data-state="closed"], .termrail-session-error) > .termrail-caption::before { background: #d47d77; }

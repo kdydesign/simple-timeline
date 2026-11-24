@@ -1,6 +1,6 @@
 # DeviceRail · 장비 접속 상태와 SSH 작업
 
-**1차 설계 확정 · 구현 대기.** 승인된 화면은 [DeviceRail A안](mockups/device-monitor/index.html#page-1)과 [Home B안](mockups/device-monitor/index.html#home-2)이다. [장비 화면 4안](mockups/device-monitor/page.png) · [Home 위젯 4안](mockups/device-monitor/home.png) · [조작 시안](mockups/device-monitor/index.html)
+**1차 설계 확정.** 구현 상태와 확인 범위는 [1.2.0 구현 기록](../implementation/2026-11-24-devicerail.md)에서 확인한다. 승인된 화면은 [DeviceRail A안](mockups/device-monitor/index.html#page-1)과 [Home B안](mockups/device-monitor/index.html#home-2)이다. [장비 화면 4안](mockups/device-monitor/page.png) · [Home 위젯 4안](mockups/device-monitor/home.png) · [조작 시안](mockups/device-monitor/index.html)
 
 ## 요청과 합의
 
@@ -65,7 +65,7 @@ WorkRail 상단 도구 메뉴의 높이와 14px 페이지 여백을 유지한다
 - 재시작처럼 명령 직후 연결이 끊어지는 작업은 ‘연결 종료 · 결과 확인 필요’로 남긴다. 이후 SSH·서비스 상태 변화와 명령 자체의 성공은 별도로 취급한다. 중간에 연결이 끊긴 매크로는 자동 재전송하지 않는다.
 - 장비 감시와 매크로는 독립적이다. 상태 검사 또는 Home 위젯 열기가 매크로를 실행하지 않는다. Home에서 장비를 선택하면 해당 장비 상세로 이동한다.
 
-## 구현 전 확인 시나리오
+## 인수 시나리오
 
 1. SSH만 성공, 서비스만 성공, 양쪽 실패, 서비스 미설정, 오래된 결과를 각각 재현한다. Home 집계와 메뉴 결과가 일치해야 한다.
 2. 저장 서버가 있는 장비와 없는 장비를 번갈아 연다. 임시 탭을 닫고 앱을 재시작한 뒤 저장 서버 목록과 저장 레이아웃이 보존되는지 확인한다.

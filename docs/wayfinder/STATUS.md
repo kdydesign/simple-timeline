@@ -1,6 +1,6 @@
 # 진행 상태
 
-**DeviceRail 1차 설계 확정 · 구현 대기.** 장비 메뉴는 A안(표와 상세), Home은 B안(즐겨찾는 장비)이다. 앱 실행 중에는 트레이에서도 30초마다 SSH와 제품 서비스를 각각 검사한다. Linux 매크로는 선택한 장비에서 순서대로 실행하고 명령 실패 시 남은 줄을 중지하며 같은 장비의 중복 실행을 막는다. [확정 설계와 시안](../design/device-monitor.md)
+2026-11-24 **WorkRail 1.2.0 · DeviceRail 구현.** 장비 표와 상세, Home 즐겨찾기, SSH·서비스 관측, TermRail 연결과 Linux 매크로를 추가했다. 장비 등록부터 Home 즐겨찾기·임시 탭까지 일회성 Electron 프로필에서 검증했다. 검사 범위와 남은 확인은 [구현 기록](../implementation/2026-11-24-devicerail.md)을 따른다. [확정 설계와 시안](../design/device-monitor.md)
 
 2026-11-21 **WorkRail 1.1.0 설치 후 피드백 반영.** 쿼리·헤더의 즉시 입력, 응답 모드, 서버 오류 본문, 메뉴·툴팁, Home 결과와 TermRail 분할선을 수정했다. [변경과 검증](../implementation/2026-11-21-postrail-editor.md#110-현장-피드백-반영)
 

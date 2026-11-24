@@ -1,6 +1,15 @@
 export const releaseTypes={Feat:'기능 추가',Fix:'오류 수정',Perf:'성능 개선',Docs:'도움말·문서'} as const
 export interface ReleaseNote {version:string;summary:string;sections:{type:keyof typeof releaseTypes;items:string[]}[];notes?:string[]}
 export const releaseNotes:ReleaseNote[]=[
+ {version:'1.2.0',summary:'DeviceRail 장비 상태와 SSH 작업',sections:[
+  {type:'Feat',items:[
+   'DeviceRail에서 직접 등록한 장비의 SSH와 제품 서비스 상태를 각각 확인합니다. 제품 서비스는 HTTP(S) URL이나 TCP 포트로 검사합니다. 트레이에서도 30초마다 갱신합니다.',
+   'Home의 즐겨찾는 장비에서 두 상태를 확인하고 장비를 눌러 상세를 엽니다.',
+   'SSH 열기로 일치하는 TermRail 저장 서버 또는 임시 탭에 연결합니다. 임시 탭은 서버를 등록한 뒤 레이아웃에 저장할 수 있습니다.',
+   '장비별 Linux 매크로는 실행 전에 대상과 명령을 확인합니다. 실행 후 종료 상태와 표준 출력·표준 오류를 확인할 수 있습니다.',
+  ]},
+  {type:'Docs',items:['DeviceRail에서 F1을 누르면 장비 등록, 검사 결과, TermRail 연결, 매크로 실행 도움말을 엽니다.']},
+ ]},
  {version:'1.1.0',summary:'PostRail 요청 편집기와 Home 즐겨찾기 실행',sections:[
   {type:'Feat',items:['요청의 쿼리·경로·헤더와 POST 폼·파일을 편집하고, 환경별 로그인과 변수를 관리합니다.','응답 본문을 직접 편집·검색·정렬·복사하고 원문으로 전환할 수 있습니다. 전송 오류는 주소 옆 느낌표와 console에서 확인합니다.','Home 즐겨찾기에서 저장한 반복 POST의 횟수를 조절하고 마지막으로 처리한 회차의 응답을 엽니다.']},
   {type:'Fix',items:['쿼리·헤더는 빈 행에서 바로 입력하고, 응답 편집본과 원문은 선택한 상태로 구분합니다.','console에서 HTTP 오류 본문과 연결 오류를 확인할 수 있습니다. 요청 목록과 드롭다운을 줄이고 Home 결과와 터미널 분할선을 정리했습니다.']}]},

@@ -31,6 +31,7 @@ import { homedir } from 'node:os'
 import { SharingNetworkError } from './sharing/transport'
 import {createSharingService,type SharingTransport} from './sharing/service'
 import {registerPostRailIpc} from './postrail/ipc'
+import {registerDeviceRailIpc} from './devicerail/ipc'
 import {registerSharingIpc} from './sharing/ipc'
 import type {ProtectedSecrets} from './sharing/secrets'
 import {createReminderSnapshotReader} from './db/repository'
@@ -191,6 +192,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
   const postRailIpc = registerPostRailIpc(window, rendererUrl, profile, () => installPending || appMutationBarrier.blocked())
+  const deviceRailIpc = registerDeviceRailIpc(window, rendererUrl, profile, () => installPending || appMutationBarrier.blocked())
   const termRailSsh = new TermRailSshService(join(profile, 'termrail-known-hosts.json'))
   const termRailIpc = registerTermRailSshIpc(termRailSsh,
     (event, method) => isTrustedSender(event, window, rendererUrl) &&
@@ -322,8 +324,16 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   reminderIpc=registerReminderIpc(window,rendererUrl,reminderIssues,async()=>{await Promise.all([reminderEngine?.evaluate(true),sharedReminderEngine?.evaluate(true)])})
   evaluateReminders=()=>{if(appMutationBarrier.blocked())return;void reminderEngine?.evaluate();void sharedReminderEngine?.evaluate()}
   const reminderTimer=setInterval(evaluateReminders,30000)
-  const resume=()=>{if(appMutationBarrier.blocked())return;void reminderEngine?.evaluate();void sharing?.resume().then(()=>sharedReminderEngine?.evaluate())}
-  const suspend=()=>{if(appMutationBarrier.blocked())return;void sharing?.suspend()}
+  const resume=()=>{
+    deviceRailIpc.resume()
+    if(appMutationBarrier.blocked())return
+    void reminderEngine?.evaluate()
+    void sharing?.resume().then(()=>sharedReminderEngine?.evaluate())
+  }
+  const suspend=()=>{
+    deviceRailIpc.suspend()
+    if(!appMutationBarrier.blocked())void sharing?.suspend()
+  }
   powerMonitor.on('resume',resume)
   powerMonitor.on('suspend',suspend)
   evaluateReminders()
@@ -331,6 +341,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const stopServices=()=>{
     if(!shutdown){
       clearInterval(reminderTimer)
+      deviceRailIpc.shutdown()
       updateNotifications?.dispose()
       shutdown=Promise.all([postRailIpc.shutdown(),reminderEngine?.dispose(),sharedReminderEngine?.dispose(),sharing?.dispose()]).then(()=>{})
     }
@@ -387,6 +398,7 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   })
   app.on('window-all-closed', () => { if (exiting) app.quit() })
   async function finishShutdown(){
+    deviceRailIpc.dispose()
     postRailIpc.dispose()
     termRailIpc.unregister()
     help?.dispose();releases.dispose()

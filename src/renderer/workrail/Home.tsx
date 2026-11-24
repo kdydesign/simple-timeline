@@ -1,6 +1,6 @@
 import { ArrowRight, CalendarDays, FolderOpen } from 'lucide-react'
 import { toOrdinal } from '../../domain/date'
-import { useMemo } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import type { ApiError, TimelineSnapshot } from '../../shared/types'
 import type { SharingState } from '../../shared/sharing'
 import type { TimelinePhase } from '../state/useTimeline'
@@ -25,7 +25,7 @@ const todayFormat = (date: string) => {
   return dateFormat.format(value)
 }
 
-export function Home({ date, snapshot, phase, timelineError, sharing, sharingError, node, onRefresh, onPlanrail, onNode, onEnvironment, onSettings, postrail, onPostRail, onPostRailResult, version }: {
+export function Home({ date, snapshot, phase, timelineError, sharing, sharingError, node, onRefresh, onPlanrail, onNode, onEnvironment, onSettings, postrail, onPostRail, onPostRailResult, deviceWidget, version }: {
   date: string
   snapshot: TimelineSnapshot | null
   phase: TimelinePhase
@@ -37,6 +37,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
   onPlanrail: () => void
   onNode: OpenNode
   onEnvironment: OpenEnvironment
+  deviceWidget?: ReactNode
   postrail?: HomePostRail
   onPostRail?: () => void
   onPostRailResult?: (target:PostRailResultTarget)=>void
@@ -144,6 +145,7 @@ export function Home({ date, snapshot, phase, timelineError, sharing, sharingErr
           <SharingWidget sharing={sharing} error={sharingError} onSettings={onSettings} version={version} />
           <HomeNodeWidget node={node} inventory={inventory} working={working} onNode={onNode} />
           {postrail && <PostRailWidget postrail={postrail} onOpen={onPostRail} onResult={onPostRailResult} />}
+          {deviceWidget}
         </div>
       </div>
     </main>

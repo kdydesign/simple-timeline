@@ -3,7 +3,7 @@ import {termRailSessionLimit} from '../../shared/termrail-ssh'
 import {hostError, portError} from '../../shared/termrail-endpoint'
 import {openTermWindow} from './detach'
 import {
-  checkLayout, editBranch, firstPane, newTab, paneList, restoreTab, saveTab, splitPane,
+  checkLayout, editBranch, firstPane, mapTree, newTab, paneList, restoreTab, saveTab, splitPane,
   type Bounds, type Branch, type Profile, type SavedLayout, type SavedTab, type Session, type Side, type Tab,
 } from './layout'
 
@@ -130,11 +130,11 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
     report(`터미널은 최대 ${termRailSessionLimit}개까지 열 수 있습니다.`)
     return false
   }
-  function connect(profile: Profile) {
+  function connect(profile: Profile, temporary = false) {
     const error = endpointError(profile)
     if (error) {report(error); return}
     if (!hasCapacity()) return
-    const pane = {id: crypto.randomUUID(), profile}
+    const pane = {id: crypto.randomUUID(), profile, temporary}
     const usedNames = new Set(workspaceTabs(current.current).map(tab => tab.workName))
     const tab = newTab({kind: 'pane', pane}, nextName(usedNames))
     start(pane)
@@ -214,11 +214,31 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
       floating.win.focus()
     } catch { report('별도 창을 열 수 없습니다.') }
   }
-  function snapshot(): SavedLayout {
+  function temporaryProfiles(): Profile[] {
+    const pending = new Map<string, Profile>()
+    for (const tab of workspaceTabs(current.current)) {
+      for (const pane of paneList(tab.tree)) {
+        if (pane.temporary) pending.set(pane.profile.id, pane.profile)
+      }
+    }
+    return [...pending.values()]
+  }
+  function bindProfiles(registered: ReadonlyMap<string, Profile>) {
+    if (!registered.size) return
+    function bind(tab: Tab): Tab {
+      return {...tab, tree: mapTree(tab.tree, pane => {
+        const profile = registered.get(pane.profile.id)
+        return profile && pane.temporary ? {...pane, profile, temporary:false} : pane
+      })}
+    }
     const state = current.current
-    const layout = {tabs: state.tabs.map(saveTab), selected: state.tabs.findIndex(t => t.id === state.selected),
-      windows: state.windows.map(w => ({tab: saveTab(w.tab), bounds: windowBounds(w.win)}))}
-    checkLayout(layout, profiles)
+    update({...state, tabs: state.tabs.map(bind), windows: state.windows.map(w => ({...w, tab:bind(w.tab)}))})
+  }
+  function snapshot(available: Profile[]): SavedLayout {
+    const state = current.current
+    const layout = {tabs: state.tabs.map(tab => saveTab(tab, available)), selected: state.tabs.findIndex(t => t.id === state.selected),
+      windows: state.windows.map(w => ({tab: saveTab(w.tab, available), bounds: windowBounds(w.win)}))}
+    checkLayout(layout, available)
     return layout
   }
   function replace(layout: unknown) {
@@ -262,5 +282,6 @@ export function useWorkspace(profiles: Profile[], report: (error: string) => voi
   useEffect(() => {
     for (const entry of workspace.windows) entry.mount.ownerDocument.title = 'TermRail · ' + title(entry.tab)
   }, [profiles, workspace.windows])
-  return {workspace, errors, selected, title, focus, connect, detach, resize, drop, closePane, closeTab, liveCount, sessionEnded, rename, snapshot, replace}
+  return {workspace, errors, selected, title, focus, connect, detach, resize, drop, closePane, closeTab, liveCount, sessionEnded, rename,
+    temporaryProfiles, bindProfiles, snapshot, replace}
 }

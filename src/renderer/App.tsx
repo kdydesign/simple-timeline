@@ -42,6 +42,9 @@ import { PlanWarning, StatusNotice } from "./components/StatusNotice";
 import {PlanRailStatus} from "./workrail/PlanRailStatus";
 import "./workrail/status.css";
 import type {PostRailResultTarget} from './workrail/PostRailWidget'
+import {DeviceWidget} from './devicerail/DeviceWidget'
+import {useDeviceRail} from './devicerail/useDeviceRail'
+import type {RailDevice} from '../shared/device-rail'
 import {usePostRail} from './postrail/usePostRail'
 import { Home } from "./workrail/Home";
 import { NodeScreen } from "./workrail/NodeScreen";
@@ -55,6 +58,7 @@ import "./flat-glass.css";
 import "./planrail.css";
 import "./forest-crystal.css";
 import "./workrail.css";
+const DeviceRail = lazy(() => import('./devicerail/DeviceRail').then(({DeviceRail}) => ({default:DeviceRail})))
 const PostRail = lazy(() => import('./postrail/PostRail').then(({PostRail}) => ({default:PostRail})))
 const TermRail = lazy(() => import('./termrail/TermRail').then(({ TermRail }) => ({ default: TermRail })));
 
@@ -76,6 +80,8 @@ export function App({
   initialTool?: WorkRailTool;
 }) {
   const [tool, setTool] = useState(initialTool);
+  const deviceRail = useDeviceRail(tool === 'home' || tool === 'devicerail')
+  const [deviceSsh,setDeviceSsh] = useState<(Pick<RailDevice,'name'|'host'|'port'> & {requestId:string})|null>(null)
   const [postRailResult,setPostRailResult]=useState<PostRailResultTarget|null>(null);
   const [openedPostRail, setOpenedPostRail] = useState(initialTool === 'postrail');
   const postrail = usePostRail(tool === 'home' || openedPostRail);
@@ -180,6 +186,11 @@ export function App({
     if (next === 'termrail') setOpenedTermRail(true);
     setTool(next);
   };
+  const openDeviceSsh = (device:RailDevice) => {
+    if (dockBlocked) return
+    setDeviceSsh({requestId:crypto.randomUUID(),name:device.name,host:device.host,port:device.port})
+    selectTool('termrail')
+  }
   useEffect(()=>{setFieldErrors({});serverFieldErrors.current={};pendingFieldFocus.current=null;setValidationActive(false)},[model?.session]);
   const patchForm:typeof editor.patch=(update)=>{
     editor.patch(update);
@@ -798,7 +809,7 @@ export function App({
       {warning&&<div className="toast warning-toast" role="alert">{warning.message}</div>}
       <div className="toast" hidden={!!warning} role="status" aria-live="polite">{timeline.phase === "ready" && !timeline.error && !formError ? notice : ""}</div>
       </div>
-      {tool === "home" && <Home postrail={postrail} onPostRail={()=>selectTool("postrail")}
+      {tool === "home" && <Home deviceWidget={<DeviceWidget rail={deviceRail} onOpen={()=>selectTool('devicerail')}/>} postrail={postrail} onPostRail={()=>selectTool("postrail")}
         onPostRailResult={target=>{if(!dockBlocked){setPostRailResult(target);selectTool("postrail")}}} date={workDate} snapshot={timeline.snapshot} phase={timeline.phase} timelineError={timeline.error}
         sharing={sharing.state} sharingError={sharing.error} node={node} version={runtimeVersion} onRefresh={() => void timeline.refresh()}
         onEnvironment={environmentPicker.openPicker} onSettings={sharing.state&&sharing.api?()=>sharing.openSettings('sharing'):undefined}
@@ -820,8 +831,11 @@ export function App({
       {openedPostRail && <Suspense fallback={tool === "postrail" ? <div role="status">PostRail 여는 중…</div> : null}>
         <PostRail postrail={postrail} active={tool === "postrail"} onDirtyChange={setPostRailDirty} resultTarget={postRailResult} onResultOpened={()=>setPostRailResult(null)}/>
       </Suspense>}
+      {tool === 'devicerail' && <Suspense fallback={<div role="status">DeviceRail 여는 중…</div>}>
+        <DeviceRail rail={deviceRail} onOpenSsh={openDeviceSsh}/>
+      </Suspense>}
       {openedTermRail && <Suspense fallback={tool === "termrail" ? <div role="status">TermRail 여는 중…</div> : null}>
-        <TermRail active={tool === "termrail"} />
+        <TermRail active={tool === "termrail"} deviceTarget={deviceSsh} onDeviceOpened={()=>setDeviceSsh(null)} />
       </Suspense>}
       <div className="workrail-node-seat" aria-hidden={tool!=="node"||undefined} inert={tool!=="node"}><NodeScreen node={node} installedHeading={installedHeading} onEnvironment={environmentPicker.openPicker}/></div>
       </div>

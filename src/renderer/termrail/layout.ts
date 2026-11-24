@@ -9,7 +9,7 @@ export type Tree<T> = {kind: 'pane'; pane: T} | {
 export type SavedTab = {titleProfileId: string; title: string; workName?: string; tree: Tree<string>}
 export type SavedLayout = {tabs: SavedTab[]; selected: number; windows: {tab: SavedTab; bounds: Bounds}[]}
 export type Library = {profiles: Profile[]; layouts: {name: string; layout: unknown}[]}
-export type Session = {id: string; profile: Profile; restored?: boolean}
+export type Session = {id: string; profile: Profile; restored?: boolean; temporary?: boolean}
 export type Tab = {id: string; workName: string; tree: Tree<Session>; focused: string}
 export const libraryKey = 'workrail.termrail.v1'
 
@@ -89,9 +89,9 @@ export function restoreTab(saved: SavedTab, profiles: Profile[], workName: strin
   return newTab(tree, workName)
 }
 
-export function saveTab(tab: Tab): SavedTab {
+export function saveTab(tab: Tab, profiles: Profile[]): SavedTab {
   const {profile} = firstPane(tab.tree)
-  return {titleProfileId: profile.id, title: profile.name, workName: tab.workName,
+  return {titleProfileId: profile.id, title: profiles.find(p => p.id === profile.id)?.name ?? profile.name, workName: tab.workName,
     tree: mapTree(tab.tree, session => session.profile.id)}
 }
 

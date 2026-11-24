@@ -4,7 +4,7 @@ import type {Profile} from './layout'
 import {useStartupFile} from './useStartupFile'
 import './workspace-dialog.css'
 
-export type CommandMenu = {anchor: HTMLElement; x: number; y: number; items: [string, () => void][]}
+export type CommandMenu = {anchor: HTMLElement; x: number; y: number; label?: string; items: [string, () => void][]}
 export function Menu({menu, dismiss}: {menu: CommandMenu; dismiss: () => void}) {
   const ref = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
@@ -17,7 +17,7 @@ export function Menu({menu, dismiss}: {menu: CommandMenu; dismiss: () => void}) 
     document.addEventListener('pointerdown', outside)
     return () => document.removeEventListener('pointerdown', outside)
   }, [menu])
-  return <div className="termrail-menu" role="menu" aria-label="작업 메뉴" ref={ref}
+  return <div className="termrail-menu" role="menu" aria-label={menu.label ?? '작업 메뉴'} ref={ref}
     onBlur={e => {if (e.relatedTarget && !e.currentTarget.contains(e.relatedTarget)) dismiss()}}
     onKeyDown={e => {
       const buttons = [...e.currentTarget.querySelectorAll('button')]
@@ -28,6 +28,7 @@ export function Menu({menu, dismiss}: {menu: CommandMenu; dismiss: () => void}) 
         : e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1 : -1
       if (next !== -1) {e.preventDefault(); buttons[next].focus()}
     }}>
+    {menu.label && <span className="termrail-menu-heading">{menu.label}</span>}
     {menu.items.map(([label, action], index) => <button key={index} role="menuitem" type="button" onClick={() => {dismiss(); action()}}>{label}</button>)}
   </div>
 }
@@ -39,9 +40,9 @@ export type Editor =
 
 type Field = 'name' | 'host' | 'port'
 
-export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayout, removeProfile, report}: {
-  editor: Editor; profiles: Profile[]; close: () => void
-  saveProfile: (profile: Profile, connect: boolean) => void; saveLayout: (name: string) => void
+export function WorkspaceDialog({editor, profiles, temporaryProfiles = [], close, saveProfile, saveLayout, removeProfile, report}: {
+  editor: Editor; profiles: Profile[]; temporaryProfiles?: Profile[]; close: () => void
+  saveProfile: (profile: Profile, connect: boolean) => void; saveLayout: (name: string, registrations: Profile[]) => void
   removeProfile: (profile: Profile) => void; report?: (message: string) => void
 }) {
   const source = 'profile' in editor ? editor.profile : undefined
@@ -52,11 +53,13 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
   const [port, setPort] = useState(String(source?.port ?? 22))
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({})
   const [error, setError] = useState('')
+  const [registrationNames, setRegistrationNames] = useState<Record<string,string>>({})
   const ref = useRef<HTMLDialogElement>(null)
   const heading = layout ? '레이아웃 저장' : editor.kind === 'edit' ? '서버 수정'
     : editor.kind === 'delete' ? '서버 삭제' : editor.kind === 'connect' ? '새 터미널' : '서버 추가'
   const endpoint = {host: host.trim(), port: Number(port)}
   const startup = useStartupFile(source, endpoint, report ?? setError)
+  const registrationName = (profile: Profile) => registrationNames[profile.id] ?? profile.name.slice(0, 60)
 
   useLayoutEffect(() => {
     const dialog = ref.current!
@@ -100,7 +103,15 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
       if (editor.kind === 'delete') removeProfile(editor.profile)
       else if (layout) {
         if (!validate(['name'])) return
-        saveLayout(name.trim())
+        const names = new Set(profiles.map(p => p.name))
+        const registrations = temporaryProfiles.map(profile => {
+          const name = registrationName(profile).trim()
+          if (!name) throw Error('‘' + profile.name + '’ 서버의 등록 이름을 입력하세요.')
+          if (names.has(name)) throw Error('‘' + name + '’ 이름을 이미 사용 중입니다. 다른 서버 이름을 입력하세요.')
+          names.add(name)
+          return {...profile, name}
+        })
+        saveLayout(name.trim(), registrations)
       } else {
         if (!validate(['name', 'host', 'port'])) return
         await startup.save(file => {
@@ -120,6 +131,15 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
       {editor.kind === 'delete' ? <p>‘{editor.profile.name}’ 서버를 삭제할까요? 이 서버를 사용하는 저장된 레이아웃은 열 수 없게 됩니다.</p>
         : input('name', layout ? '레이아웃 이름' : '서버 이름', name, setName, layout ? 40 : 60)}
       {layout && <p className="termrail-layout-description">모든 작업 탭, 분할 비율, 별도 창 배치를 함께 저장합니다.</p>}
+      {layout && temporaryProfiles.length > 0 && <fieldset className="termrail-registrations">
+        <legend>레이아웃에 포함할 임시 서버 등록</legend>
+        {temporaryProfiles.map(profile => <div className="termrail-field" key={profile.id}>
+          <label htmlFor={'register-' + profile.id}>{profile.name} 등록 이름</label>
+          <small>{profile.host} · 포트 {profile.port}</small>
+          <input id={'register-' + profile.id} required maxLength={60} value={registrationName(profile)}
+            onChange={e => setRegistrationNames({...registrationNames, [profile.id]:e.target.value})}/>
+        </div>)}
+      </fieldset>}
       {server && <>
         <div className="termrail-endpoint">
           {input('host', '호스트', host, setHost)}
@@ -138,7 +158,8 @@ export function WorkspaceDialog({editor, profiles, close, saveProfile, saveLayou
       </>}
       {error && <p role="alert">{error}</p>}
       <div className="termrail-actions"><button type="button" onClick={dismiss}>취소</button>
-        <button type="submit" disabled={startup.busy}>{editor.kind === 'connect' ? '저장하고 연결' : editor.kind === 'delete' ? '삭제' : '저장'}</button></div>
+        <button type="submit" disabled={startup.busy}>{editor.kind === 'connect' ? '저장하고 연결' : editor.kind === 'delete' ? '삭제'
+          : layout && temporaryProfiles.length ? '서버 등록 및 레이아웃 저장' : '저장'}</button></div>
     </form>
   </dialog>
 }

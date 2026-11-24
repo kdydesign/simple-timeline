@@ -326,3 +326,118 @@ it('opens every saved transport with manual authentication and gives each script
   fireEvent.doubleClick(button('개발'))
   expect(ssh.open.mock.calls[3][1]).toEqual({host:'dev.test',port:22,startupId:scripted.startup.id})
 })
+
+const device = {requestId:'first', name:'시험 장비', host:'127.0.0.1', port:22022}
+
+it('opens a matching saved device profile once and honors its startup settings', () => {
+  const profile = {...profiles[0], host:device.host, port:device.port, startup:{id:'startup-file', name:'시험.sh'}}
+  localStorage.setItem(libraryKey, JSON.stringify({profiles:[profile], layouts:[]}))
+  const consumed = vi.fn()
+  const app = render(<TermRail active deviceTarget={device} onDeviceOpened={consumed}/>)
+  app.rerender(<TermRail active deviceTarget={{...device}} onDeviceOpened={consumed}/>)
+  expect(screen.getByRole('tab', {name:'개발'})).toBeVisible()
+  expect(ssh.open).toHaveBeenCalledExactlyOnceWith(expect.any(String), {host:device.host, port:device.port, startupId:'startup-file'})
+  expect(consumed).toHaveBeenCalledOnce()
+})
+
+it('waits for a choice when several saved profiles match the device address and port', () => {
+  localStorage.setItem(libraryKey, JSON.stringify({profiles:profiles.map(profile => ({...profile, host:device.host, port:device.port})), layouts:[]}))
+  const app = render(<TermRail active deviceTarget={device}/>)
+  expect(ssh.open).not.toHaveBeenCalled()
+  const choice = screen.getByRole('menuitem', {name:'검증'})
+  fireEvent.keyDown(choice, {key:'Escape'})
+  expect(ssh.open).not.toHaveBeenCalled()
+  app.rerender(<TermRail active deviceTarget={{...device, requestId:'second'}}/>)
+  fireEvent.click(screen.getByRole('menuitem', {name:'검증'}))
+  expect(screen.getByRole('tab', {name:'검증'})).toBeVisible()
+  expect(ssh.open).toHaveBeenCalledTimes(1)
+})
+
+it('registers temporary servers from every window only on explicit save and preserves live connections on cancel or write failure', () => {
+  const win = popup()
+  vi.mocked(openTermWindow).mockReturnValue(win)
+  const tab = {titleProfileId:'a', title:'개발', tree:{kind:'pane', pane:'a'}}
+  seed([{name:'기존 배치',layout:{tabs:[tab],selected:0,windows:[]}}])
+  const original = localStorage.getItem(libraryKey)
+  const app = render(<TermRail active deviceTarget={device}/>)
+  const session = screen.getByTestId('session').textContent
+  expect(ssh.open).toHaveBeenCalledExactlyOnceWith(session, {host:device.host,port:device.port})
+  tabCommand(device.name, '별도 창으로 열기')
+  app.rerender(<TermRail active={false}/>)
+  app.rerender(<TermRail active deviceTarget={{...device,host:'127.0.0.2',name:'두 번째',requestId:'second'}}/>)
+  const secondSession = screen.getByTestId('session').textContent
+  expect(localStorage.getItem(libraryKey)).toEqual(original)
+  const openSave = () => {
+    fireEvent.click(button('레이아웃 저장'))
+    const dialog = screen.getByRole('dialog', {name:'레이아웃 저장'})
+    fireEvent.change(within(dialog).getByLabelText('레이아웃 이름'), {target:{value:'기존 배치'}})
+    return within(dialog)
+  }
+  fireEvent.click(openSave().getByRole('button', {name:'취소'}))
+  expect(localStorage.getItem(libraryKey)).toEqual(original)
+  expect(within(win.document.body).getByTestId('session')).toHaveTextContent(session!)
+  const dialog = openSave()
+  fireEvent.change(dialog.getByLabelText('시험 장비 등록 이름'), {target:{value:'등록한 장비'}})
+  const register = dialog.getByRole('button', {name:'서버 등록 및 레이아웃 저장'})
+  const write = vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {throw Error('저장 실패')})
+  try {
+    fireEvent.click(register)
+    expect(dialog.getByRole('alert')).toHaveTextContent('저장할 수 없습니다')
+    expect(localStorage.getItem(libraryKey)).toEqual(original)
+  } finally {write.mockRestore()}
+  fireEvent.click(register)
+  const saved = JSON.parse(localStorage.getItem(libraryKey)!)
+  const registered = saved.profiles.find((p:Profile) => p.name === '등록한 장비')
+  const second = saved.profiles.find((p:Profile) => p.name === '두 번째')
+  expect(saved.layouts[0].layout.windows[0].tab.tree.pane).toBe(registered.id)
+  expect(saved.layouts[0].layout.tabs[0].tree.pane).toBe(second.id)
+  expect(saved.profiles).toHaveLength(4)
+  expect(registered.id).not.toBe(session)
+  expect(ssh.open).toHaveBeenCalledTimes(2)
+  expect(ssh.close).not.toHaveBeenCalled()
+  expect(screen.getByTestId('session')).toHaveTextContent(secondSession!)
+  act(() => win.close())
+  expect(screen.getByRole('tab', {name:'등록한 장비'})).toBeVisible()
+  const restored = popup()
+  vi.mocked(openTermWindow).mockReturnValue(restored)
+  fireEvent.click(button('기존 배치'))
+  expect(ssh.open.mock.calls.slice(2).map(([,endpoint]) => endpoint)).toEqual([
+    {host:'127.0.0.2',port:22022}, {host:'127.0.0.1',port:22022},
+  ])
+  act(() => restored.close())
+})
+
+it('discards a closed temporary session across app restarts', () => {
+  const original = localStorage.getItem(libraryKey)
+  const app = render(<TermRail active deviceTarget={device}/>)
+  const session = screen.getByTestId('session').textContent
+  fireEvent.click(button('시험 장비 터미널 닫기'))
+  expect(ssh.close).toHaveBeenCalledExactlyOnceWith(session)
+  app.unmount()
+  render(<TermRail active/>)
+  expect(screen.queryByRole('tab')).toBeNull()
+  expect(localStorage.getItem(libraryKey)).toEqual(original)
+})
+
+it('binds an open temporary connection to a server explicitly added at the same endpoint', () => {
+  render(<TermRail active deviceTarget={device}/>)
+  const session = screen.getByTestId('session').textContent
+  expect(screen.getByText('임시 연결')).toBeVisible()
+  fireEvent.click(button('서버 추가'))
+  const add = within(screen.getByRole('dialog', {name:'서버 추가'}))
+  fireEvent.change(add.getByLabelText('서버 이름'), {target:{value:'직접 등록'}})
+  fireEvent.change(add.getByLabelText('호스트'), {target:{value:device.host}})
+  fireEvent.change(add.getByLabelText('포트'), {target:{value:String(device.port)}})
+  fireEvent.click(add.getByRole('button', {name:'저장'}))
+  expect(screen.getByRole('tab', {name:'직접 등록'})).toBeVisible()
+  expect(screen.queryByText('임시 연결')).toBeNull()
+  expect(screen.getByTestId('session')).toHaveTextContent(session!)
+  fireEvent.click(button('레이아웃 저장'))
+  const save = within(screen.getByRole('dialog', {name:'레이아웃 저장'}))
+  fireEvent.click(save.getByRole('button', {name:'저장'}))
+  const library = JSON.parse(localStorage.getItem(libraryKey)!)
+  expect(library.layouts[0].layout.tabs[0].tree.pane).toBe(library.profiles[2].id)
+  expect(library.profiles).toHaveLength(3)
+  expect(ssh.open).toHaveBeenCalledTimes(1)
+  expect(ssh.close).not.toHaveBeenCalled()
+})

@@ -1,6 +1,7 @@
 import type { TimelineApi } from '../shared/api'
 declare global {
   interface Window {
+    deviceRail?: import('../shared/device-rail').DeviceRailApi
     postRail?: import('../shared/postrail-api').PostRailApi
     workrailTermWindow?: import('../shared/term-window').TermWindowApi
     termRailSsh: import('../shared/termrail-ssh').TermRailSshApi

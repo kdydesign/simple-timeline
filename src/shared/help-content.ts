@@ -1,5 +1,5 @@
 import type {HelpSection,HelpTopicId} from './help'
-export const helpSectionLabels:Record<HelpSection,string>={home:'Home',planrail:'PlanRail',noderail:'NodeRail',termrail:'TermRail',postrail:'PostRail',settings:'공통'}
+export const helpSectionLabels:Record<HelpSection,string>={home:'Home',planrail:'PlanRail',noderail:'NodeRail',termrail:'TermRail',postrail:'PostRail',devicerail:'DeviceRail',settings:'공통'}
 export const planrailHelpGroups=['시작하기','기본 사용법','간트·달력','알림·창','호스트 사용법','멤버 사용법','문제 해결'] as const
 export interface HelpArticle {
  id:HelpTopicId;menu:HelpSection;section:typeof planrailHelpGroups[number];title:string;intro:string
@@ -309,7 +309,7 @@ const coreHelpArticles:HelpArticle[]=[
 ]
 export const helpArticles:HelpArticle[]=[
  {id:'workrail-start',menu:'settings',section:'시작하기',title:'WorkRail 시작과 메뉴 이동',intro:'WorkRail을 실행하면 Home에서 오늘의 일정과 내 PC의 개발 환경을 볼 수 있습니다. Windows 로그인 때 트레이에서 시작한 경우 트레이 메뉴에서 Open을 누르세요.',steps:[
-  {title:'할 일에 맞는 도구를 엽니다',text:'상단의 PlanRail에서 일정과 사내 공유를 관리하고, NodeRail에서 Node 버전을 설치하거나 전환합니다. TermRail에서는 SSH 서버에 연결하고 PostRail에서는 HTTP 요청을 보냅니다. 상단의 Home으로 돌아가면 각 작업의 현황을 볼 수 있습니다.'},
+  {title:'할 일에 맞는 도구를 엽니다',text:'상단의 PlanRail에서 일정과 사내 공유를 관리하고, NodeRail에서 Node 버전을 설치하거나 전환합니다. TermRail에서는 SSH 서버에 연결하고 PostRail에서는 HTTP 요청을 보냅니다. DeviceRail에서는 등록한 장비의 접속 상태를 확인합니다. 상단의 Home으로 돌아가면 각 작업의 현황을 볼 수 있습니다.'},
   {title:'메뉴 사이를 이동합니다',text:'상단의 도구 이름을 누르세요. 키보드로는 F6을 눌러 현재 도구의 메뉴 버튼으로 이동한 뒤 Tab과 Enter로 다른 도구를 열 수 있습니다. 메뉴를 옮겨도 PlanRail의 편집 입력과 날짜·화면 위치가 유지됩니다.'},
   {title:'설정과 도움말을 엽니다',text:'제목 표시줄 오른쪽의 톱니바퀴로 휴일과 사내 공유를 설정합니다. 물음표나 F1은 현재 화면의 도움말을 엽니다. 문서 아이콘을 누르면 버전별 릴리즈노트를 읽을 수 있습니다.'},
  ],related:['workrail-home','settings','window-tray','help-reading']},
@@ -319,7 +319,47 @@ export const helpArticles:HelpArticle[]=[
   {title:'설치된 Node 버전을 확인합니다',text:'Node 작업에는 선택한 환경의 설치 버전이 다섯 개까지 보이며 현재 사용 중인 버전이 맨 위에 표시됩니다. 여섯 개 이상이면 외 N개를 누르세요. 같은 환경의 NodeRail 설치된 버전 목록으로 이동하며 목록 제목에 키보드 포커스가 놓입니다. 다른 버전으로 전환하려면 해당 행에서 사용을 누르세요.'},
   {title:'개발 환경 폴더와 작업 상태를 확인합니다',text:'내 개발 환경의 폴더 버튼을 누르면 선택한 Windows nvm의 버전 저장 위치 또는 실행 중인 WSL 기본 사용자의 nodenv 루트가 열립니다. 버전 전환 중에는 Node 작업 위젯에서 진행 상태와 결과를 확인하세요.'},
   {title:'PostRail 즐겨찾기를 실행합니다',text:'PostRail에서 별표를 켠 요청 중 목록 순서로 최대 다섯 개가 표시됩니다. 위젯의 환경을 확인한 뒤 실행을 누르면 저장된 요청을 한 번 보냅니다. 반복으로 저장한 POST는 실행 버튼 아래에 반복 보내기와 저장 횟수가 보입니다. 체크하면 횟수를 바꿔 보낼 수 있습니다. 최근 결과에서 요청 이름 아래의 실행 환경과 처리 건수를 확인하세요. 오른쪽의 결과 보기는 마지막 처리 회차를 엽니다.'},
- ],related:['app-overview','node-management','node-operation-log','postrail-requests','workrail-start']},
+  {title:'즐겨찾는 장비를 확인합니다',text:'장비 상태 위젯에서 즐겨찾기에 추가한 장비의 SSH와 제품 서비스 상태를 확인하세요. 장비 이름을 누르면 DeviceRail에서 해당 장비의 상세가 열립니다.'},
+ ],related:['app-overview','node-management','node-operation-log','postrail-requests','device-favorites','workrail-start']},
+ {
+  id:'device-favorites', menu:'home', section:'기본 사용법', title:'Home에서 즐겨찾는 장비 보기',
+  image:{width:303,file:'device-favorites.png',alt:'Home 장비 상태 위젯에 검증 장비의 SSH 가능과 서비스 가능이 표시된 모습',caption:'제품 서비스가 HTTP 204로 응답한 뒤의 즐겨찾기',points:[]},
+  intro:'자주 확인하는 장비를 즐겨찾기에 추가하면 Home에서 SSH와 제품 서비스의 상태를 한눈에 볼 수 있습니다.',
+  steps:[
+   {title:'장비를 즐겨찾기에 추가합니다',text:'장비 등록 시 Home 즐겨찾기를 켜거나 DeviceRail의 장비 상세에서 별표를 누르세요.'},
+   {title:'두 상태를 확인합니다',text:'Home의 장비 상태 위젯에서 SSH와 제품 서비스를 따로 확인하세요. 제품 서비스 검사를 설정하지 않은 장비에는 미설정이 표시됩니다.'},
+   {title:'장비 상세를 엽니다',text:'위젯에서 장비 이름을 누르면 DeviceRail에서 해당 장비가 열립니다. 마지막 검사 시각과 결과를 확인하세요.'},
+  ], related:['device-status','workrail-home'],
+ },
+ {
+  id:'device-status', menu:'devicerail', section:'시작하기', title:'장비 등록과 상태 확인',
+  image:{file:'device-status.png',alt:'등록 장비 표에 SSH 가능·제품 서비스 불가가 표시되고 오른쪽 상세에 HTTP 503이 보이는 화면',caption:'검증 장비에서 SSH는 응답했고 제품 서비스는 HTTP 503을 반환한 예시',points:[]},
+  intro:'DeviceRail에서 이 PC로 확인할 장비를 직접 등록합니다. 왼쪽 표에서 SSH와 제품 서비스 상태를 각각 보고, 장비를 선택해 오른쪽에서 검사 시각과 결과를 확인하세요.',
+  steps:[
+   {title:'장비와 검사 대상을 등록합니다',text:'장비 이름, 주소, SSH 포트를 입력합니다. 위치와 설명은 선택 사항입니다. 제품 서비스는 HTTP(S) 상태 URL이나 TCP 포트를 지정하세요. 검사를 사용하지 않으면 서비스 상태에 미설정이 표시됩니다.'},
+   {title:'두 검사 결과를 따로 읽습니다',text:'SSH의 가능은 로그인 전에 SSH 프로토콜 응답을 확인했다는 뜻입니다. HTTP(S)는 본문 없는 204를 포함해 200~299이면 가능으로 표시합니다. 401·403이면 서비스의 인증·권한을, TLS 오류라면 인증서를 확인하세요. TCP의 가능은 지정한 포트에 연결됐다는 뜻입니다.'},
+   {title:'관측 시각을 확인합니다',text:'WorkRail은 다른 메뉴나 트레이에서도 30초마다 등록 장비를 검사합니다. 검사 중에는 직전 결과를 볼 수 있습니다. 오래됨이 표시되면 마지막 검사와 마지막 성공 시각을 확인하거나 다시 검사를 누르세요. 앱을 완전히 종료하면 검사가 끝납니다.'},
+  ], related:['device-favorites','device-ssh','device-macros'],
+ },
+ {
+  id:'device-ssh', menu:'devicerail', section:'기본 사용법', title:'장비를 TermRail에서 열기',
+  intro:'장비 상세에서 SSH 열기를 누르면 선택한 장비에 연결하는 TermRail 작업 탭이 열립니다.',
+  steps:[
+   {title:'저장 서버를 확인합니다',text:'주소와 SSH 포트가 일치하는 TermRail 서버를 사용합니다. 일치하는 프로필이 여러 개면 이번에 사용할 서버를 고르세요.'},
+   {title:'임시 탭에서 로그인합니다',text:'일치하는 저장 서버가 없으면 임시 탭이 열립니다. 처음 보거나 바뀐 서버 지문은 장비 관리자에게 확인한 뒤 승인하고 로그인하세요. 탭을 닫거나 앱을 종료하면 임시 탭 정보가 사라집니다.'},
+   {title:'레이아웃에 사용할 서버를 등록합니다',text:'임시 탭을 포함한 레이아웃을 저장하려면 안내에 따라 서버를 등록한 뒤 배치를 저장하세요. 등록을 취소해도 현재 연결은 계속 사용할 수 있습니다.'},
+  ], related:['ssh-terminal','device-status','device-macros'],
+ },
+ {
+  id:'device-macros', menu:'devicerail', section:'기본 사용법', title:'장비별 Linux 매크로 실행과 결과',
+  intro:'장비 상세에서 반복해서 쓰는 Linux 셸 명령에 이름을 붙여 저장합니다. 매크로는 직접 실행할 때만 선택한 장비 한 대에서 동작합니다.',
+  steps:[
+   {title:'명령을 작성하고 대상을 확인합니다',text:'이름과 여러 줄의 명령을 저장하세요. 실행할 때 장비 이름, 주소와 명령 본문을 확인합니다. 같은 장비에서 한 매크로가 실행 중이면 그 실행이 끝날 때까지 기다리세요.'},
+   {title:'서버 지문과 계정을 확인합니다',text:'처음 보거나 바뀐 지문을 확인한 뒤 로그인합니다. 연결이 유지되는 동안 이번 앱 실행에서 인증을 재사용합니다. 연결을 해제하거나 장비 주소를 바꾸면 다시 로그인해야 합니다.'},
+   {title:'실행 결과를 확인합니다',text:'한 매크로의 명령은 같은 셸에서 순서대로 실행합니다. 명령이 실패하면 남은 줄을 중지합니다. 종료 상태와 표준 출력·표준 오류를 확인하세요. 다음 실행은 새 셸에서 시작합니다.'},
+   {title:'연결이 끊긴 경우 장비를 확인합니다',text:'종료 상태를 받기 전에 연결이 끊기면 결과 확인 필요로 표시합니다. 이미 실행된 명령이 있을 수 있습니다. 장비를 확인한 뒤 다시 실행할지 결정하세요. WorkRail은 끊긴 실행을 자동으로 다시 보내지 않습니다.'},
+  ], related:['device-status','device-ssh'],
+ },
  {id:'postrail-requests',menu:'postrail',section:'기본 사용법',title:'PostRail에서 요청 보내기',intro:'처음에는 우측 하단의 환경 관리를 열고 환경 이름을 입력해 저장하세요. 화면 왼쪽에서 환경과 요청을 선택하고 오른쪽에서 내용을 편집해 보냅니다.',steps:[
   {title:'요청을 만듭니다',text:'왼쪽 목록 위의 ＋에서 요청 추가를 선택하고 이름·URL·그룹을 저장합니다. 그룹 옆의 …에서 요청 추가를 누르면 그 그룹에 들어갑니다. 그룹을 삭제해도 안에 있던 요청은 미분류에서 찾을 수 있습니다.'},
   {title:'메서드와 내용을 정합니다',text:'URL 왼쪽에서 GET·POST·DELETE를 고릅니다. 헤더와 인증을 확인하고, POST와 본문이 필요한 DELETE에는 JSON 본문을 입력합니다. 보내기는 편집 중인 내용으로 실행합니다. 변경 저장을 누르면 다음에 열 때와 Home에서 실행할 때도 이 내용을 사용합니다.'},
@@ -343,7 +383,7 @@ export const helpArticles:HelpArticle[]=[
   {title:'서버를 등록하고 연결합니다',text:'왼쪽 서버 옆의 ＋ 추가에서 이름·호스트·포트를 입력하고 저장합니다. 목록에서 이름을 더블클릭하거나 Enter를 눌러 연결하세요. 우클릭하면 서버를 수정할 수 있습니다. 탭 옆 ＋의 새 터미널에서는 저장하고 연결을 한 번에 실행합니다. 처음 연결할 때는 관리자에게 받은 서버 지문을 확인한 뒤 로그인하세요.'},
   {title:'작업 탭을 분할합니다',text:'왼쪽의 서버 이름을 터미널 가장자리로 끌어 분할하고 경계를 움직여 크기를 조절합니다. 분할한 탭에는 작업 이름과 터미널 수가 표시됩니다. 탭을 우클릭해 별도 창으로 옮길 수 있으며 그 창을 닫으면 연결된 탭이 메인 창으로 돌아옵니다. 작업 탭 닫기는 그 탭의 모든 세션을 종료합니다.'},
   {title:'레이아웃을 저장하고 다시 엽니다',text:'왼쪽 레이아웃 옆의 저장을 누르고 이름을 입력해 현재 창과 분할 비율을 기록합니다. 목록에서 저장한 레이아웃을 누르면 현재 세션이 종료되고 저장된 서버에 새 연결을 시작합니다. 시작 파일을 등록했다면 복원된 터미널에서 시작 파일로 로그인을 눌러 인증과 명령 실행을 이어갈 수 있습니다.'},
- ],related:['ssh-startup-file','workrail-start','window-tray']},
+ ],related:['ssh-startup-file','device-ssh','workrail-start','window-tray']},
  {id:'ssh-startup-file',menu:'termrail',section:'기본 사용법',title:'서버에 시작 파일 등록하기',image:{width:460,file:'termrail-server.png',alt:'서버 추가 창의 시작 파일 가져오기와 서버 저장 버튼',caption:'새 서버에서 이름과 호스트를 입력하기 전의 화면',points:[{step:1,x:72,y:72},{step:2,x:91,y:84}]},intro:'새 서버에서는 이름과 호스트를 입력하기 전에도 시작 파일을 선택할 수 있습니다. 파일을 선택한 시점에는 서버에 접속하거나 명령을 실행하지 않습니다.',steps:[
   {title:'시작 파일을 가져옵니다',text:'서버 추가 또는 서버 수정 창의 시작 파일 옆 가져오기를 누릅니다. UTF-8 파일의 첫 줄은 # workrail-user: 다음에 아이디를, 둘째 줄은 # workrail-password: 다음에 비밀번호를 적습니다. 셋째 줄부터 기본 터미널에 입력할 명령을 한 줄씩 적습니다. 두 줄만 있으면 로그인 후 직접 입력할 수 있습니다. 원본 파일에는 비밀번호가 남으므로 보관 위치를 확인하세요.'},
   {title:'대상 서버를 확인해 저장합니다',text:'이름·호스트·포트를 확인하고 저장을 누릅니다. 입력 오류가 표시되면 첫 오류 필드부터 수정한 뒤 다시 저장하세요. 선택한 파일은 유지됩니다. 취소하거나 창을 닫으면 이번 선택을 버립니다.'},

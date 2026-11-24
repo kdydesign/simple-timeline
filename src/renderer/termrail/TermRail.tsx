@@ -6,6 +6,7 @@ import {profileDragType, TerminalTree} from './TerminalTree'
 import {Menu, WorkspaceDialog, type CommandMenu, type Editor} from './WorkspaceControls'
 import {WorkTabDialog, type WorkTabAction} from './WorkTabDialog'
 import {useWorkspace} from './useWorkspace'
+import type {TermRailEndpoint} from '../../shared/termrail-ssh'
 import './termrail.css'
 
 function load() {
@@ -13,7 +14,17 @@ function load() {
   catch {return {library: {profiles: [], layouts: []} as Library, error: '저장된 서버와 레이아웃을 읽을 수 없습니다.'}}
 }
 
-export function TermRail({active}: {active: boolean}) {
+type DeviceTarget = {requestId: string; name: string; host: string; port: number}
+
+function sameEndpoint(left: TermRailEndpoint, right: TermRailEndpoint) {
+  if (left.port !== right.port) return false
+  // A scoped IPv6 address includes a local interface name, which can be case-sensitive.
+  return left.host.includes('%') ? left.host === right.host : left.host.toLowerCase() === right.host.toLowerCase()
+}
+
+export function TermRail({active, deviceTarget, onDeviceOpened}: {
+  active: boolean; deviceTarget?: DeviceTarget | null; onDeviceOpened?: () => void
+}) {
   const [initial] = useState(load)
   const [library, setLibrary] = useState(initial.library)
   const [notice, report] = useState(initial.error)
@@ -22,6 +33,7 @@ export function TermRail({active}: {active: boolean}) {
   const [tabAction, setTabAction] = useState<WorkTabAction | null>(null)
   const focusTabList = useRef(false)
   const addTab = useRef<HTMLButtonElement>(null)
+  const lastDeviceRequest = useRef<string | null>(null)
   const desk = useWorkspace(library.profiles, report)
   const {tabs, selected, windows} = desk.workspace
   const current = tabs.find(t => t.id === selected)
@@ -31,6 +43,28 @@ export function TermRail({active}: {active: boolean}) {
     void window.termRailSsh?.recoverStartup(savedIds).catch(() => report('이전 편집 창의 시작 파일을 정리할 수 없습니다.'))
   }, [initial])
   useEffect(() => {if (!active) {setMenu(null); setEditor(null); setTabAction(null)}}, [active])
+  useEffect(() => {
+    if (!active || !deviceTarget || lastDeviceRequest.current === deviceTarget.requestId) return
+    lastDeviceRequest.current = deviceTarget.requestId
+    onDeviceOpened?.()
+    if (initial.error) {report(initial.error); return}
+    const {name, host, port} = deviceTarget
+    const matches = (profile: Profile) => sameEndpoint(profile, deviceTarget)
+    const choices = library.profiles.filter(matches)
+    const anchor = addTab.current!
+    setMenu(null)
+    setEditor(null)
+    setTabAction(null)
+    if (choices.length > 1) {
+      const rect = anchor.getBoundingClientRect()
+      setMenu({anchor, label: name + '에 연결할 서버 선택', x:rect.left, y:rect.bottom,
+        items:choices.map(profile => [profile.name, () => desk.connect(profile)])})
+    } else if (choices.length) desk.connect(choices[0])
+    else {
+      const pending = desk.temporaryProfiles().find(profile => matches(profile) && profile.name === name)
+      desk.connect(pending ?? {id:crypto.randomUUID(), name, host, port}, true)
+    }
+  }, [active, deviceTarget, onDeviceOpened, initial.error, library.profiles, desk])
   useLayoutEffect(() => {
     if (!focusTabList.current) return
     focusTabList.current = false
@@ -55,12 +89,18 @@ export function TermRail({active}: {active: boolean}) {
   function saveProfile(profile: Profile, connect: boolean) {
     const existing = library.profiles.some(p => p.id === profile.id)
     persist({...library, profiles: existing ? library.profiles.map(p => p.id === profile.id ? profile : p) : [...library.profiles, profile]})
+    if (!existing && !library.profiles.some(p => sameEndpoint(p, profile))) {
+      const matches = desk.temporaryProfiles().filter(p => sameEndpoint(p, profile))
+      desk.bindProfiles(new Map(matches.map(p => [p.id, profile])))
+    }
     if (connect) desk.connect(profile)
   }
-  function saveLayout(name: string) {
-    const saved = {name, layout: desk.snapshot()}
+  function saveLayout(name: string, registrations: Profile[]) {
+    const profiles = [...library.profiles, ...registrations]
+    const saved = {name, layout: desk.snapshot(profiles)}
     const exists = library.layouts.some(l => l.name === name)
-    persist({...library, layouts: exists ? library.layouts.map(l => l.name === name ? saved : l) : [...library.layouts, saved]})
+    persist({profiles, layouts: exists ? library.layouts.map(l => l.name === name ? saved : l) : [...library.layouts, saved]})
+    desk.bindProfiles(new Map(registrations.map(p => [p.id, p])))
   }
   function popup(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, items: CommandMenu['items']) {
     event.preventDefault()
@@ -153,7 +193,7 @@ export function TermRail({active}: {active: boolean}) {
         else {desk.rename(tabAction.id, name); tabAction.anchor.focus()}
       }}/>}
       {editor && active && <WorkspaceDialog report={report} editor={editor} profiles={library.profiles} close={() => setEditor(null)}
-        saveProfile={saveProfile} saveLayout={saveLayout}
+        saveProfile={saveProfile} saveLayout={saveLayout} temporaryProfiles={editor.kind === 'layout' ? desk.temporaryProfiles() : undefined}
         removeProfile={profile => persist({...library, profiles: library.profiles.filter(p => p.id !== profile.id)})}/>}
     </section>
     {windows.map(entry => createPortal(stage(entry.tab, true), entry.mount, entry.tab.id))}

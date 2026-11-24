@@ -8,7 +8,7 @@
 | PostRail REST 요청·환경별 인증·반복 POST·Home 즐겨찾기 | [1.1.0 구현·검증](../implementation/2026-11-21-postrail-editor.md) · [편집기·Home 승인 설계](../superpowers/specs/2026-11-20-postrail-editor-design.md) · [기존 작업 화면 설계](../design/postrail-workspace.md) · [확정 시안](../design/mockups/postrail-workspace.html) · [첫 버전 Q1~Q12와 인수 기준](../design/postrail.md) · [구현과 검증](../implementation/2026-11-20-postrail.md). |
 | NodeRail 로그·Home 5개 목록·TermRail 입력·도움말 | [승인 설계 및 Q1~Q3 결정](../design/workrail-log-home-termrail-help.md) · [구현 및 검사 범위](../implementation/2026-11-20-workrail-log-home-termrail-help.md) |
 | 설치본 NodeRail·TermRail 피드백 | [ZIP 권한 진단, 터미널 표시와 작업 탭 설계](../design/noderail-termrail-installed-feedback.md) · [구현과 검사 범위](../implementation/2026-11-20-installed-feedback.md) |
-| DeviceRail 장비 상태·Linux 매크로 | [1차 확정 설계와 인수 시나리오](../design/device-monitor.md) · 구현 대기 |
+| DeviceRail 장비 상태·Linux 매크로 | [1차 확정 설계와 인수 시나리오](../design/device-monitor.md) · [1.2.0 구현·검증](../implementation/2026-11-24-devicerail.md) · [사용 안내](../release/user-guide.md#devicerail에서-장비-확인하기) |
 | TermRail SSH 터미널 | [승인된 화면·동작과 후속 검토 항목](../design/ssh-terminal-menu.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |
 | Windows 전 버전 공식 ZIP 설치·내부 로고 축소 | [후속 설계 초안·시안](../design/windows-node-zip-all-versions.md). [구현·검증 기록](../implementation/2026-11-19-termrail-and-windows-zip.md). |
 | Node 공식 ZIP 설치·실패 후 환경 다시 검사·Windows 셸 아이콘 | [설계](../design/noderail-zip-recovery-shell-icons.md) · [구현 및 검증](../implementation/2026-11-19-windows-node-zip.md). Windows nvm 1.1.10·1.1.11 직접 설치, 종료 확인 후 재검사, 시작 메뉴와 작업 표시줄 아이콘. |

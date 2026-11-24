@@ -1,4 +1,5 @@
 import './postrail'
+import './device-rail'
 import './term-window'
 import './termrail-ssh'
 import {updatesChannel,updatesChanged,updatesGuard,updatesGuardReply,type UpdateApi,type UpdateState,type UpdateGuardRequest} from '../shared/updates'

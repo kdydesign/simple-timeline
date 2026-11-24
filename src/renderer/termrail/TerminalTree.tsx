@@ -53,6 +53,7 @@ function Pane({node, path, stage}: {node: Session | null; path: Branch; stage: S
     {node ? <>
       <div className="termrail-caption" title={node.profile.host + ':' + node.profile.port}>
         <span>{title}</span>
+        {node.temporary && <small>임시 연결</small>}
         <button type="button" title={title + ' 터미널 닫기'} aria-label={title + ' 터미널 닫기'} onClick={close}>×</button>
       </div>
       {stage.errors.has(node.id)

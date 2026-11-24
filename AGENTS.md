@@ -2,7 +2,7 @@
 
 ## 프로젝트
 
-WorkRail — PlanRail 일정·사내 LAN 공유, NodeRail 버전 관리, TermRail SSH 터미널과 PostRail REST 요청 도구를 제공하는 Windows 팀 도구. Electron + React + SQLite.
+WorkRail — PlanRail 일정·사내 LAN 공유, NodeRail 버전 관리, TermRail SSH 터미널, PostRail REST 요청과 DeviceRail 장비 상태·매크로를 제공하는 Windows 팀 도구. Electron + React + SQLite.
 사용자와 한국어로 소통한다. Teams·모바일은 범위 밖이며 현재 구현·인수 상태는 아래 문서에서 확인한다.
 
 ## 시작 순서
