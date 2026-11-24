@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="ko">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  /><title>WorkRail · 장비 상태 시안</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --paper: #20272e;
+      --panel: #242d35;
+      --line: #43515c;
+      --ink: #e4ecf5;
+      --dim: #adbdc9;
+      --blue: #95cffa;
+      --ok: #8dd6ba;
+      --bad: #ffaea7;
+      --idle: #bdc4cd;
+      font:
+        14px/1.55 "Noto Sans CJK KR",
+        "Malgun Gothic",
+        sans-serif;
+      color: var(--ink);
+      background: #181e23;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+    }
+    button,
+    select {
+      font: inherit;
+      color: inherit;
+      background: #303b46;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      cursor: pointer;
+      padding: 4px 9px;
+    }
+    button:hover,
+    select:hover {
+      background: #384752;
+    }
+    button:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 2px;
+    }
+    button[aria-pressed="true"],
+    .primary {
+      background: #294658;
+      border-color: #628dac;
+      color: #def0ff;
+    }
+    .lab {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 9px;
+      max-width: 1120px;
+      margin: 18px auto;
+      padding: 0 12px;
+    }
+    .lab b {
+      margin-right: auto;
+    }
+    .board {
+      max-width: 1120px;
+      margin: 0 auto 22px;
+      padding: 0 12px;
+    }
+    .caption {
+      font-size: 22px;
+      margin: 0 0 10px;
+    }
+    .caption small {
+      font-size: 14px;
+      color: var(--dim);
+      font-weight: 400;
+      margin-left: 10px;
+    }
+    .window,
+    .widget {
+      border: 1px solid var(--line);
+      border-radius: 11px;
+      overflow: hidden;
+      background: linear-gradient(110deg, #26333c, #252b32 63%, #2c2c37);
+    }
+    .chrome {
+      display: flex;
+      align-items: center;
+      padding: 9px 15px 0;
+      gap: 20px;
+      border-bottom: 1px solid var(--line);
+      background: #ffffff04;
+    }
+    .brand {
+      font-weight: 750;
+      letter-spacing: -0.4px;
+      padding-bottom: 9px;
+    }
+    .nav {
+      display: flex;
+      gap: 14px;
+      overflow-x: auto;
+      font-size: 12px;
+      color: var(--dim);
+    }
+    .nav span {
+      padding: 3px 0 10px;
+    }
+    .nav .sel {
+      border-bottom: 2px solid var(--blue);
+      color: var(--ink);
+      font-weight: 700;
+    }
+    .page {
+      min-height: 315px;
+      padding: 14px;
+    }
+    .toolbar,
+    .sectionhead,
+    .actionbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .toolbar {
+      margin-bottom: 13px;
+    }
+    .toolbar h2,
+    .sectionhead h3 {
+      margin: 0 auto 0 0;
+    }
+    .toolbar h2 {
+      font-size: 19px;
+    }
+    .sectionhead h3 {
+      font-size: 16px;
+    }
+    .actionbar {
+      margin-top: 11px;
+    }
+    .small,
+    .sub,
+    footer {
+      font-size: 12px;
+      color: var(--dim);
+    }
+    .sub {
+      display: block;
+    }
+    .surface,
+    .group,
+    .tile,
+    .widget {
+      background-color: #20282fe6;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+    .surface,
+    .group,
+    .tile {
+      padding: 11px;
+    }
+    .tile {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
+    }
+    .selected {
+      border-color: #739bb6;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+      font-size: 12px;
+    }
+    .status i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+    .ok {
+      color: var(--ok);
+    }
+    .bad {
+      color: var(--bad);
+    }
+    .idle {
+      color: var(--idle);
+    }
+    .idle i {
+      background: transparent;
+      border: 1px solid currentColor;
+    }
+    .name {
+      background: none;
+      border: 0;
+      font-weight: 650;
+      text-align: left;
+      padding: 0;
+    }
+    .mono {
+      font-family: Consolas, monospace;
+      letter-spacing: 0.02em;
+    }
+    .scroll {
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+    th {
+      font-size: 11px;
+      color: var(--dim);
+      font-weight: 500;
+    }
+    td,
+    th {
+      padding: 7px 6px;
+      border-bottom: 1px solid #ffffff12;
+      white-space: nowrap;
+    }
+    tr:last-child td {
+      border-bottom: 0;
+    }
+    .cols {
+      display: grid;
+      grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr);
+      gap: 10px;
+    }
+    .groups {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .lanes {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 9px;
+    }
+    .group h3 {
+      font-size: 13px;
+      margin: 0 0 8px;
+    }
+    .group .tile + .tile {
+      margin-top: 6px;
+    }
+    .laneitem,
+    .info,
+    .wrow {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      border-top: 1px solid #ffffff12;
+      padding: 6px 0;
+    }
+    .info span:first-child {
+      color: var(--dim);
+    }
+    .short {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .notice {
+      margin-top: 11px;
+      color: var(--bad);
+    }
+    .detailgrid {
+      display: grid;
+      grid-template-columns: minmax(155px, 0.65fr) 2fr;
+      gap: 10px;
+    }
+    .devices {
+      display: grid;
+      align-content: start;
+      gap: 4px;
+    }
+    .devices button {
+      text-align: left;
+    }
+    .cards {
+      display: flex;
+      gap: 8px;
+      margin: 9px 0;
+    }
+    .metric {
+      flex: 1;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #121a204f;
+    }
+    .metric b {
+      display: block;
+      font-size: 19px;
+    }
+    .metric span {
+      font-size: 12px;
+      color: var(--dim);
+    }
+    footer {
+      display: flex;
+      justify-content: space-between;
+      border-top: 1px solid var(--line);
+      padding: 5px 14px;
+    }
+    .widget {
+      max-width: 400px;
+      padding: 13px 15px;
+    }
+    .widget h3 {
+      font-size: 15px;
+    }
+    .widget .sectionhead {
+      margin-bottom: 8px;
+    }
+    .widget .open {
+      font-size: 11px;
+      color: var(--blue);
+      padding: 2px 4px;
+      border: 0;
+      background: none;
+    }
+    .widget .wrow {
+      font-size: 13px;
+    }
+    .widget p {
+      margin: 6px 0;
+    }
+    .widget .status {
+      font-size: 11px;
+    }
+    .groups .line {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      padding: 6px 0;
+      border-top: 1px solid #ffffff14;
+    }
+    .groups .line .name {
+      margin-right: auto;
+    }
+    .board[data-view="home"] {
+      max-width: 620px;
+    }
+    .board[data-view="home"] .widget {
+      margin-inline: auto;
+    }
+    .compare {
+      padding: 16px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .compare .board {
+      min-width: 0;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+    }
+    .compare .caption,
+    .compact-caption {
+      font-size: 17px;
+      margin: 0 0 7px;
+    }
+    .compare .caption small {
+      display: block;
+      font-size: 12px;
+      margin: 1px 0 0;
+    }
+    .compare .widget {
+      max-width: none;
+    }
+    .compare .window {
+      height: 100%;
+    }
+    .compare .chrome {
+      gap: 14px;
+    }
+    .compare .cols {
+      grid-template-columns: minmax(0, 1.35fr) minmax(202px, 1fr);
+    }
+    dialog {
+      color: var(--ink);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 9px;
+      max-width: 420px;
+      width: 90%;
+      padding: 16px;
+    }
+    dialog::backdrop {
+      background: #0008;
+    }
+    dialog h3 {
+      margin-top: 0;
+    }
+    pre {
+      background: #172027;
+      padding: 12px;
+      border-radius: 4px;
+      white-space: pre-wrap;
+    }
+    dialog button {
+      float: right;
+    }
+    .lab-note {
+      color: var(--dim);
+      font-size: 12px;
+    }
+    .widget a {
+      color: var(--blue);
+    }
+    @media (max-width: 760px) {
+      .compare {
+        grid-template-columns: 1fr;
+      }
+      .cols,
+      .lanes,
+      .groups {
+        grid-template-columns: 1fr;
+      }
+      .nav {
+        gap: 10px;
+      }
+      .caption small {
+        display: block;
+        margin-left: 0;
+      }
+      .detailgrid {
+        grid-template-columns: 1fr;
+      }
+      .devices {
+        display: flex;
+        flex-wrap: wrap;
+      }
+      .toolbar h2 {
+        flex: 1 1 100%;
+      }
+    }
+  </style>
+  <body>
+    <header class="lab">
+      <b>장비 상태 · 디자인 검토</b
+      ><label
+        >화면
+        <select id="view">
+          <option value="page">장비 메뉴</option>
+          <option value="home">Home 위젯</option>
+        </select></label
+      ><label
+        >시안
+        <select id="variant"></select></label
+      ><button id="compare">4안 비교</button
+      ><span class="lab-note">예시 데이터</span>
+    </header>
+    <main id="stage"></main>
+    <dialog id="pop">
+      <h3></h3>
+      <div></div>
+      <form method="dialog"><button>닫기</button></form>
+    </dialog>
+    <script>
+      const data = [
+        {
+          n: "검증 API",
+          a: "api-qa.example",
+          g: "검증실",
+          s: 1,
+          p: 0,
+          why: "제품 서비스 응답 시간 초과",
+          m: ["상태 조회", "작업 경로 확인"],
+        },
+        {
+          n: "배포 캐시",
+          a: "cache.example",
+          g: "개발실",
+          s: 1,
+          p: 1,
+          why: "두 접속 경로 모두 응답",
+          m: ["상태 조회"],
+        },
+        {
+          n: "제품 게이트웨이",
+          a: "edge.example",
+          g: "검증실",
+          s: 0,
+          p: 1,
+          why: "SSH 연결 거부",
+          m: ["상태 조회"],
+        },
+        {
+          n: "수집 서버",
+          a: "collect.example",
+          g: "개발실",
+          s: 2,
+          p: 2,
+          why: "첫 검사 대기",
+          m: [],
+        },
+      ];
+      const labels = {
+          page: [
+            "A · 장비 표와 상세",
+            "B · 위치별 장비 목록",
+            "C · 조치 우선 보드",
+            "D · 장비 작업 공간",
+          ],
+          home: [
+            "A · 이상 장비 요약",
+            "B · 즐겨찾는 장비",
+            "C · 최근 상태 변화",
+            "D · 위치별 요약",
+          ],
+        },
+        desc = {
+          page: [
+            "두 상태를 비교하고 선택한 장비에서 작업",
+            "같은 장소의 장비를 함께 점검",
+            "이상·미확인·정상 순으로 분류",
+            "장비 한 대의 검사 결과와 작업 버튼에 집중",
+          ],
+          home: [
+            "문제가 있는 장비부터 확인",
+            "자주 쓰는 장비의 두 상태 확인",
+            "새로 발생한 장애와 복구부터 확인",
+            "장소별로 어디를 점검할지 선택",
+          ],
+        };
+      let view = "page",
+        v = 0,
+        all = false,
+        idx = 0;
+      const stage = document.querySelector("#stage"),
+        dlg = document.querySelector("#pop");
+      const name = (i) =>
+        '<button class="name" data-pick="' + i + '">' + data[i].n + "</button>";
+      const stat = (x, p = "") =>
+        '<span class="status ' +
+        ["bad", "ok", "idle"][x] +
+        '"><i></i>' +
+        p +
+        ["불가", "가능", "미확인"][x] +
+        "</span>";
+      const brief = (i) =>
+        '<span class="short">' +
+        stat(data[i].s, "SSH ") +
+        stat(data[i].p, "서비스 ") +
+        "</span>";
+      const act = (text, i) =>
+        '<button data-action="' +
+        text +
+        '" data-i="' +
+        i +
+        '">' +
+        text +
+        "</button>";
+      function actions(i) {
+        return (
+          '<div class="actionbar">' +
+          act("SSH 열기", i) +
+          data[i].m.map((m) => act(m, i)).join("") +
+          "</div>"
+        );
+      }
+      function detail(i) {
+        let d = data[i];
+        return (
+          '<section class="surface selected"><div class="sectionhead"><h3>' +
+          d.n +
+          '</h3><span class="small">' +
+          d.g +
+          '</span></div><span class="sub mono">' +
+          d.a +
+          '</span><div class="info"><span>SSH · 22</span>' +
+          stat(d.s) +
+          '</div><div class="info"><span>제품 서비스</span>' +
+          stat(d.p) +
+          '</div><div class="small">' +
+          d.why +
+          "</div>" +
+          actions(i) +
+          "</section>"
+        );
+      }
+      const table = () =>
+        '<div class="surface scroll"><table><thead><tr><th>장비</th><th>SSH</th><th>제품 서비스</th></tr></thead><tbody>' +
+        data
+          .map(
+            (d, i) =>
+              "<tr><td>" +
+              name(i) +
+              '<span class="sub">' +
+              d.g +
+              "</span></td><td>" +
+              stat(d.s) +
+              "</td><td>" +
+              stat(d.p) +
+              "</td></tr>",
+          )
+          .join("") +
+        "</tbody></table></div>";
+      function page(k) {
+        let content;
+        if (k === 0)
+          content = '<div class="cols">' + table() + detail(idx) + "</div>";
+        if (k === 1)
+          content =
+            '<div class="groups">' +
+            ["검증실", "개발실"]
+              .map(
+                (g) =>
+                  '<section class="group"><h3>' +
+                  g +
+                  "</h3>" +
+                  data
+                    .map((d, i) =>
+                      d.g === g
+                        ? '<div class="line">' + name(i) + brief(i) + "</div>"
+                        : "",
+                    )
+                    .join("") +
+                  "</section>",
+              )
+              .join("") +
+            '</div><div class="actionbar"><strong>' +
+            data[idx].n +
+            "</strong>" +
+            actions(idx) +
+            "</div>";
+        if (k === 2)
+          content =
+            '<div class="lanes">' +
+            [
+              ["점검 필요", [0, 2]],
+              ["미확인", [3]],
+              ["정상", [1]],
+            ]
+              .map(
+                ([g, ids]) =>
+                  '<section class="group"><h3>' +
+                  g +
+                  " " +
+                  ids.length +
+                  "</h3>" +
+                  ids
+                    .map(
+                      (i) =>
+                        '<div class="tile ' +
+                        (i === idx ? "selected" : "") +
+                        '">' +
+                        name(i) +
+                        brief(i) +
+                        "</div>",
+                    )
+                    .join("") +
+                  "</section>",
+              )
+              .join("") +
+            '</div><div class="actionbar"><strong>' +
+            data[idx].n +
+            "</strong>" +
+            actions(idx) +
+            "</div>";
+        if (k === 3)
+          content =
+            '<div class="detailgrid"><section class="surface devices">' +
+            data
+              .map(
+                (d, i) =>
+                  '<button data-pick="' +
+                  i +
+                  '" aria-pressed="' +
+                  (i === idx) +
+                  '">' +
+                  d.n +
+                  "</button>",
+              )
+              .join("") +
+            "</section>" +
+            detail(idx) +
+            "</div>";
+        return (
+          '<div class="window"><div class="chrome"><span class="brand">WorkRail</span><div class="nav">' +
+          ["Home", "PlanRail", "NodeRail", "TermRail", "PostRail", "DeviceRail"]
+            .map(
+              (n) =>
+                '<span class="' +
+                (n === "DeviceRail" ? "sel" : "") +
+                '">' +
+                n +
+                "</span>",
+            )
+            .join("") +
+          '</div></div><section class="page"><div class="toolbar"><h2>장비 상태</h2>' +
+          act("다시 검사", idx) +
+          '<button class="primary" data-action="장비 등록">＋ 장비 등록</button></div>' +
+          content +
+          "</section><footer><span>등록 장비 4대</span><span>마지막 검사 09:42</span></footer></div>"
+        );
+      }
+      function widget(k) {
+        let content;
+        const wr = (a, b) => '<div class="wrow">' + a + b + "</div>";
+        if (k === 0)
+          content =
+            '<div class="cards"><div class="metric"><b class="bad">2대</b><span>점검 필요</span></div><div class="metric"><b>1대</b><span>미확인</span></div></div>' +
+            wr(name(0), stat(0, "서비스 ")) +
+            wr(name(2), stat(0, "SSH "));
+        if (k === 1)
+          content =
+            '<p class="small">즐겨찾기</p>' +
+            [0, 1, 2].map((i) => wr(name(i), brief(i))).join("");
+        if (k === 2)
+          content =
+            '<p class="small">최근 변화</p>' +
+            [
+              ["09:42", 0, "서비스 불가"],
+              ["09:39", 2, "SSH 불가"],
+              ["09:35", 1, "서비스 복구"],
+            ]
+              .map(([t, i, s]) =>
+                wr(
+                  '<span class="small mono">' + t + "</span>" + name(i),
+                  '<span class="' +
+                    (i === 1 ? "ok" : "bad") +
+                    '">' +
+                    s +
+                    "</span>",
+                ),
+              )
+              .join("");
+        if (k === 3)
+          content =
+            '<div class="scroll"><table><thead><tr><th>위치</th><th>등록</th><th>점검 필요</th><th>미확인</th></tr></thead><tbody><tr><td>검증실</td><td>2</td><td class="bad">2</td><td>0</td></tr><tr><td>개발실</td><td>2</td><td>0</td><td>1</td></tr></tbody></table></div>';
+        return (
+          '<section class="widget"><div class="sectionhead"><h3>장비 상태</h3><button class="open" data-open>DeviceRail 열기 ›</button></div>' +
+          content +
+          "</section>"
+        );
+      }
+      function block(k) {
+        return (
+          '<section class="board" data-view="' +
+          view +
+          '"><h2 class="caption">' +
+          labels[view][k] +
+          "<small>" +
+          desc[view][k] +
+          "</small></h2>" +
+          (view === "page" ? page(k) : widget(k)) +
+          "</section>"
+        );
+      }
+      function draw() {
+        document.querySelector("#view").value = view;
+        let sel = document.querySelector("#variant");
+        sel.innerHTML = labels[view]
+          .map((n, i) => '<option value="' + i + '">' + n + "</option>")
+          .join("");
+        sel.value = v;
+        stage.className = all ? "compare" : "";
+        stage.innerHTML = all ? [0, 1, 2, 3].map(block).join("") : block(v);
+        document.querySelector("#compare").textContent = all
+          ? "한 안 크게 보기"
+          : "4안 비교";
+        history.replaceState(
+          null,
+          "",
+          "#" + view + "-" + (all ? "all" : v + 1),
+        );
+      }
+      function read() {
+        const [t, k] = location.hash.slice(1).split("-");
+        view = t === "home" ? "home" : "page";
+        all = k === "all";
+        v = Math.max(0, Math.min(3, Number(k) - 1 || 0));
+        draw();
+      }
+      document.querySelector("#view").onchange = (e) => {
+        view = e.target.value;
+        draw();
+      };
+      document.querySelector("#variant").onchange = (e) => {
+        v = Number(e.target.value);
+        all = false;
+        draw();
+      };
+      document.querySelector("#compare").onclick = () => {
+        all = !all;
+        draw();
+      };
+      window.onhashchange = read;
+      stage.onclick = (e) => {
+        let b = e.target.closest("button");
+        if (!b) return;
+        if (b.hasAttribute("data-open")) {
+          view = "page";
+          all = false;
+          v = 0;
+          draw();
+          return;
+        }
+        if (b.hasAttribute("data-pick")) {
+          idx = +b.dataset.pick;
+          if (view === "home") {
+            view = "page";
+            v = 0;
+            all = false;
+          }
+          draw();
+          return;
+        }
+        let a = b.dataset.action,
+          d = data[Number(b.dataset.i) || 0];
+        dlg.querySelector("h3").textContent = a;
+        dlg.querySelector("div").textContent =
+          a === "장비 등록"
+            ? "이름, 위치, SSH 주소·포트와 제품 서비스 검사 대상을 직접 입력합니다."
+            : a === "다시 검사"
+              ? "등록된 장비의 두 상태를 새로 확인합니다. 이 시안은 예시 데이터로 표시합니다."
+              : a === "SSH 열기"
+                ? d.n +
+                  "의 TermRail 작업 탭을 엽니다. 저장된 서버가 없으면 임시 탭으로 엽니다."
+                : d.n +
+                  " 한 대에서 실행할 매크로입니다. 실행 전 대상과 명령을 확인합니다.";
+        dlg.showModal();
+      };
+      read();
+    </script>
+  </body>
+</html>
