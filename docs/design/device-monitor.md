@@ -1,8 +1,10 @@
-# 장비 접속 상태와 SSH 작업 · 협의 초안
+# DeviceRail · 장비 접속 상태와 SSH 작업
 
 제품 변경 전 검토 문서다. 아래의 사용자 선택과 제안은 구분해서 기록한다. [장비 화면 4안](mockups/device-monitor/page.png) · [Home 위젯 4안](mockups/device-monitor/home.png) · [조작 시안](mockups/device-monitor/index.html)
 
 ## 요청과 합의
+
+새 메뉴 이름은 **DeviceRail**로 확정했다. 장비 화면과 Home 위젯의 배치는 각각 협의 중이다.
 
 - 사용자가 **수동 등록한 장비**만 대상으로 한다. 장비와 장비별 이름 있는 매크로는 각 사용자의 PC에 저장한다.
 - 한 장비의 **SSH 접속 상태**와 **제품 서비스 상태**를 따로 표시한다. 한쪽이 실패해도 다른 쪽의 성공을 표시한다.
@@ -14,7 +16,7 @@
 
 | 이름 | 강조점 |
 | --- | --- |
-| DeviceRail | 서버와 제품 장비를 함께 담는다. 기본 추천. |
+| DeviceRail | 서버와 제품 장비를 함께 담는다. 선택한 메뉴 이름. |
 | FleetRail | 여러 대를 묶어 관리하는 목록 |
 | PulseRail | 접속 상태의 변화와 복구 |
 | WatchRail | 상태 확인 중심 |
