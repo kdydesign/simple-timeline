@@ -37,3 +37,5 @@ Windows 설치·업데이트와 실사용 장비에서의 인수 결과는 각�
 2026-11-25 Linux x64, Node 24.22.1에서 변경 작업본의 `verify:app` 7단계가 통과했다. UI 391개와 Electron E2E 132개가 통과했고 E2E 재시도는 없었다. 절전·종료 직전 다른 검사가 진행 중이어도 이미 확인한 복구를 유지하는 회귀 검사도 포함한다.
 
 첫 원격 Linux 실행에서 두 TermRail 터미널의 로그인 버튼 중 하나만 나타난 시점에 두 번째 버튼을 클릭해 UI 검사가 중단됐다. 각 창이 호스트 키를 확인한 후 왼쪽·오른쪽 순서로 로그인 단계에 진입시키고, 대상 창의 버튼이 나타나면 그 세션만 시작하는지 검사한다. 수정 후 해당 파일의 테스트 11개와 타입 검사가 통과했다. [실패한 검사](https://github.com/kdydesign/simple-timeline/actions/runs/45519482553/job/138887413415) · [세션별 로그인 검사](../../tests/ui/terminal-pane.test.tsx)
+
+후속 Windows 실행에서 `test:ui`가 전체 단계 한도인 180초에 도달했다. UI 테스트 파일 격리를 유지하고 동시 작업자를 1개에서 2개로 조정했다. 동일한 Linux x64 체크아웃에서 41개 파일·391개 테스트가 모두 통과했고 전체 시간은 112.81초에서 62.67초로 줄었다. 앱 검사 순서와 시간 제한은 유지한다. [Windows 검사](https://github.com/kdydesign/simple-timeline/actions/runs/45520581446/job/138891092523) · [UI 검사 설정](../../vitest.ui.config.mts)
