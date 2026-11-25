@@ -35,3 +35,5 @@ Windows 설치·업데이트와 실사용 장비에서의 인수 결과는 각�
 일회성 프로필과 로컬 SSH·HTTP 서비스로 검사하며, 자동 테스트에서는 Windows 알림 발송기를 대체해 발송 횟수·제목·본문을 확인한다. Windows 알림 센터에 표시되는 배너는 사용자의 알림 설정에 따른다. [서비스 통합 검사](../../tests/unit/device-service.test.ts) · [장비 등록 화면과 발송 검사](../../tests/e2e/devicerail.spec.ts)
 
 2026-11-25 Linux x64, Node 24.22.1에서 변경 작업본의 `verify:app` 7단계가 통과했다. UI 391개와 Electron E2E 132개가 통과했고 E2E 재시도는 없었다. 절전·종료 직전 다른 검사가 진행 중이어도 이미 확인한 복구를 유지하는 회귀 검사도 포함한다.
+
+첫 원격 Linux 실행에서 두 TermRail 터미널의 로그인 버튼 중 하나만 나타난 시점에 두 번째 버튼을 클릭해 UI 검사가 중단됐다. 각 창이 호스트 키를 확인한 후 왼쪽·오른쪽 순서로 로그인 단계에 진입시키고, 대상 창의 버튼이 나타나면 그 세션만 시작하는지 검사한다. 수정 후 해당 파일의 테스트 11개와 타입 검사가 통과했다. [실패한 검사](https://github.com/kdydesign/simple-timeline/actions/runs/45519482553/job/138887413415) · [세션별 로그인 검사](../../tests/ui/terminal-pane.test.tsx)

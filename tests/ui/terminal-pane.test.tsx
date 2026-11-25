@@ -1,4 +1,4 @@
-import {act, fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {act, fireEvent, render, screen, waitFor, within} from '@testing-library/react'
 import {afterEach, expect, it, vi} from 'vitest'
 import {TerminalPane} from '../../src/renderer/termrail/TerminalPane'
 import type {TermRailSshApi} from '../../src/shared/termrail-ssh'
@@ -186,16 +186,22 @@ it('drains remaining PTY output when the remote error arrives before its final o
 })
 
 it('offers stored login only after host verification and applies it to one existing session on click', async () => {
-  let phase: Frame['phase'] = 'host-key'
-  const api = bridge(async () => frame(phase, {fingerprint:'SHA256:restored'}))
-  render(<><TerminalPane sessionId="left" startupId="left-file" onClose={vi.fn()}/>
-    <TerminalPane sessionId="right" startupId="right-file" onClose={vi.fn()}/></>)
-  await screen.findAllByText(/SHA256:restored/)
-  expect(screen.queryByRole('button', {name:'시작 파일로 로그인'})).toBeNull()
-  phase = 'login'
-  const buttons = await screen.findAllByRole('button', {name:'시작 파일로 로그인'})
+  const phases: Record<string,Frame['phase']> = {left:'host-key',right:'host-key'}
+  const api = bridge(async id => frame(phases[id], {fingerprint:'SHA256:restored'}))
+  render(<><section aria-label="왼쪽 터미널"><TerminalPane sessionId="left" startupId="left-file" onClose={vi.fn()}/></section>
+    <section aria-label="오른쪽 터미널"><TerminalPane sessionId="right" startupId="right-file" onClose={vi.fn()}/></section></>)
+  const left = within(screen.getByRole('region',{name:'왼쪽 터미널'}))
+  const right = within(screen.getByRole('region',{name:'오른쪽 터미널'}))
+  await Promise.all([left.findByText(/SHA256:restored/),right.findByText(/SHA256:restored/)])
+  const login = {name:'시작 파일로 로그인'}
+  expect(screen.queryByRole('button',login)).toBeNull()
+  phases.left = 'login'
+  await left.findByRole('button',login)
+  expect(right.queryByRole('button',login)).toBeNull()
+  phases.right = 'login'
+  const button = await right.findByRole('button',login)
   expect(api.startProfile).not.toHaveBeenCalled()
-  fireEvent.click(buttons[1])
+  fireEvent.click(button)
   expect(api.startProfile).toHaveBeenCalledExactlyOnceWith('right', 'right-file')
   expect(api.open).not.toHaveBeenCalled()
 })
