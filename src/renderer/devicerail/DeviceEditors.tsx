@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { DeviceCheck, DeviceMacro, RailDevice } from '../../shared/device-rail'
 import { hostError, portError } from '../../shared/termrail-endpoint'
+import { Icon } from '../components/Icon'
+import { Switch } from '../components/ui/switch'
 import { DeviceDialog } from './DeviceDialog'
 
 const blank: RailDevice = { id:'', name:'', host:'', port:22, location:'', description:'', favorite:false, service:{kind:'none'}, macros:[] }
@@ -8,7 +10,7 @@ const blank: RailDevice = { id:'', name:'', host:'', port:22, location:'', descr
 export function DeviceEditor({ device = blank, save, close }: {
   device?: RailDevice; save: (device: RailDevice) => Promise<void>; close: () => void
 }) {
-  const [draft, setDraft] = useState(device)
+  const [draft, setDraft] = useState<RailDevice>(() => ({ ...device, alertsEnabled: device.alertsEnabled ?? false }))
   const [sshPort, setSshPort] = useState(String(device.port))
   const [serviceKind, setServiceKind] = useState(device.service.kind)
   const [url, setUrl] = useState(device.service.kind === 'http' ? device.service.url : '')
@@ -36,6 +38,15 @@ export function DeviceEditor({ device = blank, save, close }: {
       <small id="device-service-hint">HTTP 상태 코드 200~299를 정상으로 표시합니다.</small></div>}
     {serviceKind === 'tcp' && <div className="device-service-field"><label>제품 포트<input aria-describedby="device-service-hint" required type="number" min="1" max="65535" value={productPort} onChange={e => setProductPort(e.target.value)}/></label>
       <small id="device-service-hint">이 포트에 TCP로 연결할 수 있는지 확인합니다.</small></div>}
+    <section className="reminder-fields" aria-labelledby="device-alerts-heading">
+      <h3 id="device-alerts-heading">알림</h3>
+      <div className="reminder-options">
+        <label htmlFor="device-alerts-enabled"><Icon name="bell"/>
+          <Switch className="reminder-switch" id="device-alerts-enabled" checked={draft.alertsEnabled}
+            onCheckedChange={alertsEnabled => update({ alertsEnabled })}/>장비 이상 알림
+        </label>
+      </div>
+    </section>
     <label className="device-check"><input type="checkbox" checked={draft.favorite} onChange={e => update({favorite:e.target.checked})}/>Home 즐겨찾기</label>
   </DeviceDialog>
 }

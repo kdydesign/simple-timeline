@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, expect, it, vi } from 'vitest'
 import type { DeviceMacroRun, DeviceObservation, DeviceRailApi, DeviceSnapshot, RailDevice } from '../../src/shared/device-rail'
 import { DeviceRail } from '../../src/renderer/devicerail/DeviceRail'
@@ -74,6 +75,7 @@ it('registers a TCP service with a separate SSH port and keeps the device dialog
   await screen.findByRole('heading', { name: '검증 API' })
   fireEvent.click(screen.getByRole('button', { name: '장비 등록' }))
   const form = within(screen.getByRole('dialog', { name: '장비 등록' }))
+  expect(form.getByRole('switch', { name: '장비 이상 알림' })).not.toBeChecked()
   fireEvent.change(form.getByLabelText('장비 이름'), { target: { value: '신규 장비' } })
   fireEvent.change(form.getByLabelText('SSH 주소'), { target: { value: 'new.example' } })
   fireEvent.change(form.getByLabelText('SSH 포트'), { target: { value: '2222' } })
@@ -84,7 +86,37 @@ it('registers a TCP service with a separate SSH port and keeps the device dialog
   expect(await form.findByRole('alert')).toHaveTextContent('저장 공간 부족')
   fireEvent.click(form.getByRole('button', { name: '저장' }))
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-  expect(api.save).toHaveBeenLastCalledWith(expect.objectContaining({ host: 'new.example', port: 2222, service: {kind:'tcp', port:8443} }))
+  expect(api.save).toHaveBeenLastCalledWith(expect.objectContaining({ host: 'new.example', port: 2222, service: {kind:'tcp', port:8443}, alertsEnabled: false }))
+})
+
+it('saves keyboard changes to device alerts independently of favorites and discards a cancelled edit', async () => {
+  const user = userEvent.setup()
+  const { api } = setup()
+  const edit = await screen.findByRole('button', { name: '장비 수정' })
+  await user.click(edit)
+  const form = within(screen.getByRole('dialog', { name: '장비 수정' }))
+  const alerts = within(form.getByRole('region', { name: '알림' })).getByRole('switch', { name: '장비 이상 알림' })
+  expect(alerts).not.toBeChecked()
+  form.getByLabelText('상태 URL').focus()
+  await user.tab()
+  expect(alerts).toHaveFocus()
+  await user.keyboard('[Space]')
+  expect(alerts).toBeChecked()
+  expect(form.getByLabelText('Home 즐겨찾기')).toBeChecked()
+  expect(api.save).not.toHaveBeenCalled()
+  await user.click(form.getByRole('button', { name: '저장' }))
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  expect(api.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'qa', alertsEnabled: true, favorite: true }))
+
+  await user.click(edit)
+  const saved = screen.getByRole('switch', { name: '장비 이상 알림' })
+  expect(saved).toBeChecked()
+  await user.click(saved)
+  expect(saved).not.toBeChecked()
+  await user.click(screen.getByRole('button', { name: '취소' }))
+  await user.click(edit)
+  expect(screen.getByRole('switch', { name: '장비 이상 알림' })).toBeChecked()
+  expect(api.save).toHaveBeenCalledOnce()
 })
 
 it('scopes credentials to one pending run and disables another macro on that device', async () => {

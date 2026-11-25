@@ -27,3 +27,11 @@ Windows 설치·업데이트와 실사용 장비에서의 인수 결과는 각�
 첫 원격 검사에서 Windows·Linux 앱 검사와 0.8.0 마이그레이션, 자동 업데이트·재실행은 통과했다. 오프라인 앱을 닫고 구 아이콘 참조를 넣은 뒤 다음 버전 설치본을 수동 업그레이드할 때 설치 프로세스가 접근 위반(`0xC0000005`)으로 종료됐다. Windows 이벤트 1000은 비어 있어 해당 명령의 충돌 모듈을 특정할 수 없었다. [실패 실행](https://github.com/kdydesign/simple-timeline/actions/runs/45423926215)
 
 설치 프로세스에 Shell COM을 로드하던 시작 메뉴 아이콘 갱신을 설치 시 한 번 실행하는 별도 STA 프로세스로 옮겼다. 빌드 머신의 .NET Framework 컴파일러로 도구를 만들고 설치 중에만 임시 폴더에 푼다. 설치 경로와 앱 ID가 맞는 바로가기의 아이콘만 변경하며, Windows 셸 오류가 설치 프로세스까지 종료시키는 경로를 없앴다. 같은 패키지 검사가 사용자 설명과 아이콘, 설치 버전, DB 보존을 확인한다. 다시 실패하면 정리 직전 등록 정보와 바로가기 상태도 수집한다. [아이콘 갱신](../../scripts/release/RepairStartIcon.cs) · [실제 설치 검사](../../tests/e2e/packaged.spec.ts)
+
+## 장비 이상 알림 · 1.2.0
+
+장비 편집기의 종 스위치를 켠 경우에만 SSH와 제품 서비스를 각각 판정한다. 같은 장비에서 두 항목이 같은 회차에 연속 실패 기준에 도달하면 Windows 알림 한 건으로 묶는다. SQLite에 검사 항목별 실패 횟수와 발송 기록을 저장해 트레이 무음과 재시작을 거쳐도 같은 장애를 추적한다. 기존 장비는 알림 꺼짐으로 연다. [승인 설계](../superpowers/specs/2026-11-25-devicerail-alerts-design.md) · [저장소 검증](../../tests/unit/device-store.test.ts) · [장비별 검사 회차](../../tests/unit/device-monitor.test.ts)
+
+일회성 프로필과 로컬 SSH·HTTP 서비스로 검사하며, 자동 테스트에서는 Windows 알림 발송기를 대체해 발송 횟수·제목·본문을 확인한다. Windows 알림 센터에 표시되는 배너는 사용자의 알림 설정에 따른다. [서비스 통합 검사](../../tests/unit/device-service.test.ts) · [장비 등록 화면과 발송 검사](../../tests/e2e/devicerail.spec.ts)
+
+2026-11-25 Linux x64, Node 24.22.1에서 변경 작업본의 `verify:app` 7단계가 통과했다. UI 391개와 Electron E2E 132개가 통과했고 E2E 재시도는 없었다. 절전·종료 직전 다른 검사가 진행 중이어도 이미 확인한 복구를 유지하는 회귀 검사도 포함한다.

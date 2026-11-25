@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-25 **WorkRail 1.2.0 · 장비 이상 알림.** 장비별 선택, 두 회차 연속 실패 판정, 트레이 전체 무음과 재시작 후 중복 방지를 추가했다. [승인 설계와 검증 사례](../superpowers/specs/2026-11-25-devicerail-alerts-design.md)
+
 2026-11-24 **WorkRail 1.2.0 · DeviceRail 구현.** 장비 표와 상세, Home 즐겨찾기, SSH·서비스 관측, TermRail 연결과 Linux 매크로를 추가했다. 장비 등록부터 Home 즐겨찾기·임시 탭까지 일회성 Electron 프로필에서 검증했다. 검사 범위와 남은 확인은 [구현 기록](../implementation/2026-11-24-devicerail.md)을 따른다. [확정 설계와 시안](../design/device-monitor.md)
 
 2026-11-21 **WorkRail 1.1.0 설치 후 피드백 반영.** 쿼리·헤더의 즉시 입력, 응답 모드, 서버 오류 본문, 메뉴·툴팁, Home 결과와 TermRail 분할선을 수정했다. [변경과 검증](../implementation/2026-11-21-postrail-editor.md#110-현장-피드백-반영)

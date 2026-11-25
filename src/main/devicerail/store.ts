@@ -2,8 +2,12 @@ import {randomUUID} from 'node:crypto'
 import {mkdirSync} from 'node:fs'
 import {join} from 'node:path'
 import {DatabaseSync} from 'node:sqlite'
-import type {DeviceCheck, DeviceMacro, RailDevice} from '../../shared/device-rail'
+import type {DeviceCheck, DeviceHealth, DeviceMacro, RailDevice} from '../../shared/device-rail'
 import {hostError} from '../../shared/termrail-endpoint'
+import type {ProbeResult} from './monitor'
+import {probeAxes, sameProbeTarget} from './probe-target'
+
+type Axis = keyof DeviceHealth
 
 export class DeviceInputError extends Error {}
 
@@ -47,6 +51,7 @@ function definition(input: unknown, creatingMacroIds: boolean): RailDevice {
   const invalid = hostError(host)
   if (invalid) throw new DeviceInputError(invalid)
   if (typeof value.favorite !== 'boolean' || !Array.isArray(value.macros)) throw new DeviceInputError('장비 설정을 확인하세요.')
+  if (value.alertsEnabled !== undefined && typeof value.alertsEnabled !== 'boolean') throw new DeviceInputError('장비 알림 설정을 확인하세요.')
   const ids = new Set<string>()
   const macros: DeviceMacro[] = value.macros.map(input => {
     const macro = object(input)
@@ -58,7 +63,7 @@ function definition(input: unknown, creatingMacroIds: boolean): RailDevice {
   })
   return {
     id:text(value.id, '장비 ID', 128), name:text(value.name, '장비 이름', 256, true).trim(),
-    host, port:port(value.port), service:check(value.service), favorite:value.favorite,
+    host, port:port(value.port), service:check(value.service), favorite:value.favorite, alertsEnabled:value.alertsEnabled ?? false,
     location:text(value.location, '위치', 512).trim(), description:text(value.description, '설명', 16384), macros,
   }
 }
@@ -70,11 +75,20 @@ export class DeviceStore {
     mkdirSync(profile, {recursive:true, mode:0o700})
     this.db = new DatabaseSync(join(profile, 'devicerail.sqlite'))
     try {
-      this.db.exec('PRAGMA synchronous = FULL; PRAGMA busy_timeout = 3000; BEGIN IMMEDIATE')
+      this.db.exec('PRAGMA foreign_keys = ON; PRAGMA synchronous = FULL; PRAGMA busy_timeout = 3000; BEGIN IMMEDIATE')
       const version = this.db.prepare('PRAGMA user_version').get()?.user_version
       if (version === 0) {
-        this.db.exec('CREATE TABLE devices (id TEXT PRIMARY KEY, definition TEXT NOT NULL) STRICT; PRAGMA user_version = 1')
-      } else if (version !== 1) throw Error('지원하지 않는 DeviceRail 저장 형식입니다.')
+        this.db.exec('CREATE TABLE devices (id TEXT PRIMARY KEY, definition TEXT NOT NULL) STRICT')
+      }
+      if (version === 0 || version === 1) {
+        this.db.exec(`CREATE TABLE device_alerts (
+          device_id TEXT NOT NULL REFERENCES devices(id) ON DELETE CASCADE,
+          axis TEXT NOT NULL CHECK (axis IN ('ssh','service')),
+          failures INTEGER NOT NULL CHECK (failures IN (1,2)), claim_id TEXT,
+          PRIMARY KEY (device_id, axis)
+        ) STRICT;
+        PRAGMA user_version = 2`)
+      } else if (version !== 2) throw Error('지원하지 않는 DeviceRail 저장 형식입니다.')
       this.db.exec('COMMIT')
     } catch (error) {
       this.db.close()
@@ -94,13 +108,65 @@ export class DeviceStore {
   save(input: unknown): RailDevice {
     const device = definition(input, true)
     if (device.id) {
-      const saved = this.db.prepare('UPDATE devices SET definition = ? WHERE id = ?').run(JSON.stringify(device), device.id)
-      if (!saved.changes) throw new DeviceInputError('수정할 장비를 찾을 수 없습니다.')
+      this.transaction(() => {
+        const old = this.db.prepare('SELECT definition FROM devices WHERE id = ?').get(device.id)
+        if (typeof old?.definition !== 'string') throw new DeviceInputError('수정할 장비를 찾을 수 없습니다.')
+        const previous = definition(JSON.parse(old.definition), false)
+        this.db.prepare('UPDATE devices SET definition = ? WHERE id = ?').run(JSON.stringify(device), device.id)
+        for (const axis of probeAxes) {
+          if (!device.alertsEnabled || !sameProbeTarget(previous, device, axis)) this.clearIncident(device.id, axis)
+        }
+      })
     } else {
       device.id = randomUUID()
       this.db.prepare('INSERT INTO devices (id, definition) VALUES (?, ?)').run(device.id, JSON.stringify(device))
     }
     return device
+  }
+
+  recordObservations(deviceId: string, results: Partial<Record<Axis, ProbeResult>>, canNotify: boolean, claimId: string = randomUUID()): Axis[] {
+    return this.transaction(() => {
+      const device = this.db.prepare(`SELECT json_extract(definition, '$.service.kind') AS service
+        FROM devices WHERE id = ? AND json_type(definition, '$.alertsEnabled') = 'true'`).get(deviceId)
+      const claimed: Axis[] = []
+      if (!device) return claimed
+      for (const axis of probeAxes) {
+        const result = results[axis]
+        if (!result || (axis === 'service' && device.service === 'none')) continue
+        if (result.ok) {
+          this.clearIncident(deviceId, axis)
+          continue
+        }
+        this.db.prepare(`INSERT INTO device_alerts (device_id, axis, failures) VALUES (?, ?, 1)
+          ON CONFLICT (device_id, axis) DO UPDATE SET failures = 2 WHERE failures = 1`).run(deviceId, axis)
+        if (canNotify) {
+          const change = this.db.prepare(`UPDATE device_alerts SET claim_id = ? WHERE device_id = ? AND axis = ?
+            AND failures = 2 AND claim_id IS NULL`).run(claimId, deviceId, axis)
+          if (change.changes) claimed.push(axis)
+        }
+      }
+      return claimed
+    })
+  }
+
+  releaseAlertClaim(deviceId: string, claimId: string) {
+    this.db.prepare('UPDATE device_alerts SET claim_id = NULL WHERE device_id = ? AND claim_id = ?').run(deviceId, claimId)
+  }
+
+  private clearIncident(deviceId: string, axis: Axis) {
+    this.db.prepare('DELETE FROM device_alerts WHERE device_id = ? AND axis = ?').run(deviceId, axis)
+  }
+
+  private transaction<T>(operation: () => T): T {
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const result = operation()
+      this.db.exec('COMMIT')
+      return result
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
   }
 
   remove(id: string) {

@@ -3,7 +3,7 @@ export type DeviceCheck = {kind:'none'} | {kind:'tcp'; port:number} | {kind:'htt
 export interface DeviceMacro {id:string; name:string; commands:string}
 export interface RailDevice {
   id:string; name:string; host:string; port:number; location:string; description:string
-  favorite:boolean; service:DeviceCheck; macros:DeviceMacro[]
+  favorite:boolean; alertsEnabled?:boolean; service:DeviceCheck; macros:DeviceMacro[]
 }
 export interface DeviceObservation {
   state:'unknown'|'ok'|'failed'|'unconfigured'

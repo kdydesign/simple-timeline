@@ -1,4 +1,5 @@
 import type {DeviceHealth, DeviceObservation, RailDevice} from '../../shared/device-rail'
+import {probeAxes as axes, sameProbeTarget} from './probe-target'
 import {get as getHttp} from 'node:http'
 import {get as getHttps} from 'node:https'
 import {createConnection} from 'node:net'
@@ -82,7 +83,6 @@ export function probeHttp(url: string, signal: AbortSignal): Promise<ProbeResult
 }
 
 type Axis = keyof DeviceHealth
-const axes: Axis[] = ['ssh', 'service']
 
 function probeAxis(device: RailDevice, axis: Axis, signal: AbortSignal): Promise<ProbeResult> {
   if (axis === 'ssh') return probeSsh(device.host, device.port, signal)
@@ -95,39 +95,52 @@ function initial(unconfigured = false): DeviceObservation {
   return {state:unconfigured ? 'unconfigured' : 'unknown', checking:false, checkedAt:null, lastSuccessAt:null, message:''}
 }
 
-function sameService(left: RailDevice, right: RailDevice) {
-  if (left.host !== right.host) return false
-  const a = left.service, b = right.service
-  switch (a.kind) {
-    case 'none': return b.kind === 'none'
-    case 'http': return b.kind === 'http' && a.url === b.url
-    case 'tcp': return b.kind === 'tcp' && a.port === b.port
-  }
+type ProbeResults = Partial<Record<Axis, ProbeResult>>
+interface AxisCheck {done: Promise<void>; result?: ProbeResult}
+type RoundChecks = Partial<Record<Axis, AxisCheck>>
+interface MonitorEntry {
+  device: RailDevice
+  health: DeviceHealth
+  round?: {checks: RoundChecks; done: Promise<void>}
 }
 
 export class DeviceMonitor {
-  private readonly entries = new Map<string, {device:RailDevice; health:DeviceHealth}>()
-  private readonly jobs = new Map<DeviceObservation, {controller:AbortController; done:Promise<void>; finish:()=>void}>()
+  private readonly entries = new Map<string, MonitorEntry>()
+  private readonly jobs = new Map<DeviceObservation, {controller:AbortController; finish:()=>void}>()
   private readonly waiting = new Map<DeviceObservation, ()=>void>()
   private active = 0
   private suspended = false
 
-  constructor(private readonly changed: ()=>void, private readonly probe = probeAxis) {}
+  constructor(private readonly changed: ()=>void, private readonly probe = probeAxis,
+    private readonly completed?: (device:RailDevice, results:ProbeResults)=>void) {}
 
   set(device: RailDevice) {
-    const old = this.entries.get(device.id)
-    const keepSsh = old && old.device.host === device.host && old.device.port === device.port
-    const keepService = old && sameService(old.device, device)
-    const health = {
-      ssh:keepSsh ? old.health.ssh : initial(),
-      service:keepService ? old.health.service : initial(device.service.kind === 'none'),
+    let entry = this.entries.get(device.id)
+    if (!entry) {
+      entry = {device, health:{ssh:initial(), service:initial(device.service.kind === 'none')}}
+      this.entries.set(device.id, entry)
+      void this.check(entry, axes)
+      return
     }
-    this.entries.set(device.id, {device, health})
+
+    const previous = entry.device
+    entry.device = device
+    const replaced = axes.filter(axis => !sameProbeTarget(previous, device, axis))
+    const toggled = Boolean(previous.alertsEnabled) !== Boolean(device.alertsEnabled)
+    if (!replaced.length && !toggled) return
+
+    const checks = {...entry.round?.checks}
     for (const axis of axes) {
-      if (old?.health[axis] === health[axis]) continue
-      if (old) this.cancel(old.health[axis])
-      void this.enqueue(device, axis, health[axis])
+      if (replaced.includes(axis)) {
+        this.cancel(entry.health[axis])
+        entry.health[axis] = initial(axis === 'service' && device.service.kind === 'none')
+        delete checks[axis]
+      } else if (toggled && checks[axis]) {
+        // Let an in-flight probe update the UI, but exclude its result after a settings change.
+        checks[axis] = {done:checks[axis].done}
+      }
     }
+    void this.check(entry, replaced, checks)
   }
 
   health(id: string): DeviceHealth {
@@ -140,33 +153,63 @@ export class DeviceMonitor {
     const selected = id === undefined ? this.entries.values() : [this.entries.get(id)]
     const pending: Promise<void>[] = []
     for (const entry of selected) {
-      if (entry) for (const axis of axes) pending.push(this.enqueue(entry.device, axis, entry.health[axis]))
+      if (entry) pending.push(this.check(entry, axes))
     }
     await Promise.all(pending)
   }
 
-  private enqueue(device: RailDevice, axis: Axis, observation: DeviceObservation): Promise<void> {
-    if (this.suspended || observation.state === 'unconfigured') return Promise.resolve()
-    const existing = this.jobs.get(observation)
-    if (existing) return existing.done
+  private check(entry: MonitorEntry, requested: readonly Axis[], checks: RoundChecks = {...entry.round?.checks}) {
+    if (this.suspended) return Promise.resolve()
+    for (const axis of requested) {
+      if (!checks[axis] && entry.health[axis].state !== 'unconfigured') {
+        checks[axis] = this.enqueue(entry.device, axis, entry.health[axis])
+      }
+    }
+    const previous = entry.round
+    if (previous && axes.every(axis => previous.checks[axis] === checks[axis])) return previous.done
+    if (!checks.ssh && !checks.service) {
+      entry.round = undefined
+      return Promise.resolve()
+    }
 
+    // Keep even a finished check in this round until its peer settles. Refreshes
+    // can join the round and endpoint edits can replace just the affected check.
+    const done = Promise.all([checks.ssh?.done, checks.service?.done]).then(() => this.complete(entry, checks))
+    entry.round = {checks, done}
+    return done
+  }
+
+  private complete(entry: MonitorEntry, checks: RoundChecks) {
+    if (entry.round?.checks !== checks) return
+    entry.round = undefined
+    const results: ProbeResults = {}
+    for (const axis of axes) {
+      const result = checks[axis]?.result
+      if (result) results[axis] = result
+    }
+    if (results.ssh || results.service) this.completed?.(entry.device, results)
+  }
+
+  private enqueue(device: RailDevice, axis: Axis, observation: DeviceObservation) {
     const controller = new AbortController()
     let finish!: ()=>void
-    const done = new Promise<void>(resolve => {finish = resolve})
-    this.jobs.set(observation, {controller, done, finish})
+    const check: AxisCheck = {done:new Promise<void>(resolve => {finish = resolve})}
+    this.jobs.set(observation, {controller, finish})
     observation.checking = true
-    this.waiting.set(observation, () => {
+    this.waiting.set(observation, async () => {
       this.active++
-      void this.observe(device, axis, observation, controller).finally(() => {
+      try {
+        await this.observe(device, axis, observation, controller, check)
+      } finally {
         this.active--
         if (this.jobs.get(observation)?.controller === controller) this.jobs.delete(observation)
         finish()
         this.pump()
-      })
+      }
     })
     this.changed()
     this.pump()
-    return done
+    return check
   }
 
   private pump() {
@@ -177,7 +220,7 @@ export class DeviceMonitor {
     }
   }
 
-  private async observe(device: RailDevice, axis: Axis, observation: DeviceObservation, controller: AbortController) {
+  private async observe(device: RailDevice, axis: Axis, observation: DeviceObservation, controller: AbortController, check: AxisCheck) {
     const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(5000)])
     let result: ProbeResult
     try {
@@ -192,6 +235,7 @@ export class DeviceMonitor {
     if (result.ok) observation.lastSuccessAt = now
     observation.message = result.detail
     observation.checking = false
+    check.result = result
     this.changed()
   }
 
@@ -207,6 +251,9 @@ export class DeviceMonitor {
 
   suspend() {
     this.suspended = true
+    for (const entry of this.entries.values()) {
+      if (entry.round) this.complete(entry, entry.round.checks)
+    }
     if (!this.jobs.size) return
     for (const observation of this.jobs.keys()) this.cancel(observation)
     this.changed()
@@ -223,10 +270,12 @@ export class DeviceMonitor {
     const entry = this.entries.get(id)
     if (!entry) return
     this.entries.delete(id)
+    entry.round = undefined
     for (const axis of axes) this.cancel(entry.health[axis])
   }
 
   close() {
-    for (const id of this.entries.keys()) this.remove(id)
+    this.suspend()
+    this.entries.clear()
   }
 }

@@ -5,9 +5,9 @@ import {Server, type Connection} from 'ssh2'
 import {createTestSshHostKey} from '../fixtures/ssh-host-key'
 import {expect,test} from './fixture'
 
-test.use({initialTool:'home'})
+test.use({initialTool:'home',fault:'reminder-test'})
 
-test('registers a device, observes independent services, opens a favorite and an unsaved SSH tab',async ({desktop:{page}}, info)=>{
+test('registers a device, observes independent services, opens a favorite and an unsaved SSH tab',async ({desktop:{app,page}}, info)=>{
   const clients = new Set<Connection>()
   const ssh = new Server({hostKeys:[createTestSshHostKey()]}, client=>{
     clients.add(client)
@@ -30,6 +30,9 @@ test('registers a device, observes independent services, opens a favorite and an
     await dialog.getByLabel('위치',{exact:true}).fill('개발실')
     await dialog.getByRole('combobox',{name:/제품 서비스 검사/}).selectOption('http')
     await dialog.getByLabel(/^상태 URL/).fill('http://127.0.0.1:'+(http.address() as AddressInfo).port+'/health')
+    const alerts = dialog.getByRole('switch',{name:'장비 이상 알림'})
+    await expect(alerts).not.toBeChecked()
+    await alerts.click()
     await dialog.getByLabel('Home 즐겨찾기',{exact:true}).check()
     await dialog.getByRole('button',{name:'저장',exact:true}).click()
     await expect(dialog).toHaveCount(0)
@@ -39,6 +42,12 @@ test('registers a device, observes independent services, opens a favorite and an
       return device && [state.health[device.id]?.ssh.state,state.health[device.id]?.service.state]
     })
     await expect.poll(status).toEqual(['ok','failed'])
+    const messages = () => app.evaluate(() => (globalThis as typeof globalThis & {
+      reminderMessages?: {title:string; body:string}[]
+    }).reminderMessages ?? [])
+    expect(await messages()).toEqual([])
+    await page.getByRole('button',{name:'다시 검사',exact:true}).click()
+    await expect.poll(messages).toEqual([{title:name+' · 장비 이상',body:'제품 서비스 · HTTP 503'}])
     await page.getByRole('button',{name:'매크로 추가',exact:true}).click()
     await dialog.getByLabel('매크로 이름',{exact:true}).fill('작업 경로')
     await dialog.getByLabel('셸 명령',{exact:true}).fill('pwd')
@@ -52,6 +61,7 @@ test('registers a device, observes independent services, opens a favorite and an
     await dock.getByRole('button',{name:'Home',exact:true}).click()
     const widget=page.getByRole('region',{name:'장비 상태',exact:true})
     await expect(widget.getByRole('button',{name})).toBeVisible()
+    expect(await messages()).toHaveLength(1)
     await widget.screenshot({path:info.outputPath('device-favorites.png')})
     await widget.getByRole('button',{name}).click()
     await expect(dock.getByRole('button',{name:'DeviceRail',exact:true})).toHaveAttribute('aria-current','page')

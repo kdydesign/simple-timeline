@@ -192,7 +192,6 @@ export async function bootstrap(options: BootstrapOptions = {}) {
     { hidden: autoStart && storage.state === 'ready' && !pendingShow, mark: startup.mark, observeRequests: w => { stopRequestObservation = observeStartupRequests(w, startup) } },
   )
   const postRailIpc = registerPostRailIpc(window, rendererUrl, profile, () => installPending || appMutationBarrier.blocked())
-  const deviceRailIpc = registerDeviceRailIpc(window, rendererUrl, profile, () => installPending || appMutationBarrier.blocked())
   const termRailSsh = new TermRailSshService(join(profile, 'termrail-known-hosts.json'))
   const termRailIpc = registerTermRailSshIpc(termRailSsh,
     (event, method) => isTrustedSender(event, window, rendererUrl) &&
@@ -216,6 +215,11 @@ export async function bootstrap(options: BootstrapOptions = {}) {
   const notificationPolicy=storage.state==='ready'?createNotificationStore(storage.db):undefined
   const localReminderStore=storage.state==='ready'?createReminderStore(storage.db):undefined
   const nativeReminders = createNativeReminderSender(icon)
+  const deviceRailIpc = registerDeviceRailIpc(window, rendererUrl, profile, () => installPending || appMutationBarrier.blocked(), {
+    muted: () => appMutationBarrier.blocked() || (notificationPolicy?.state().muted ?? true),
+    send: options.reminderSender ?? nativeReminders.send,
+    open: () => { if (!exiting && !appMutationBarrier.blocked()) show() },
+  })
   let evaluateReminders = () => {}
   let tray: ReturnType<typeof createTray> | undefined
   let updates:UpdateService|undefined,updateRoutes:UpdateRoutes|undefined,uiReady=false

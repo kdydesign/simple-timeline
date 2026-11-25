@@ -1,12 +1,20 @@
 import {join} from 'node:path'
-import type {DeviceSnapshot, RailDevice} from '../../shared/device-rail'
+import {randomUUID} from 'node:crypto'
+import type {ReminderSender} from '../reminders/engine'
+import type {DeviceHealth, DeviceSnapshot, RailDevice} from '../../shared/device-rail'
 import {DeviceMacros} from './macros'
-import {DeviceMonitor} from './monitor'
+import {DeviceMonitor, type ProbeResult} from './monitor'
 import {DeviceInputError, DeviceStore} from './store'
 
 const refreshIntervalMs = 30_000
 
-export function createDeviceService(profile: string, onChange: ()=>void) {
+export interface DeviceNotifications {
+  muted: () => boolean
+  send: ReminderSender
+  open: () => void
+}
+
+export function createDeviceService(profile: string, onChange: ()=>void, notifications?: DeviceNotifications) {
   const store = new DeviceStore(profile)
   let devices: Map<string, RailDevice>
   try {
@@ -27,7 +35,29 @@ export function createDeviceService(profile: string, onChange: ()=>void) {
     })
   }
   const macros = new DeviceMacros(join(profile, 'termrail-known-hosts.json'), changed)
-  const monitor = new DeviceMonitor(changed)
+  function completed(device: RailDevice, results: Partial<Record<keyof DeviceHealth, ProbeResult>>) {
+    if (!notifications || !device.alertsEnabled) return
+    const claimId = randomUUID()
+    const release = () => {
+      if (closed) return
+      try { store.releaseAlertClaim(device.id, claimId) }
+      catch { console.warn('DeviceRail 알림 발송 실패를 저장하지 못했습니다.') }
+    }
+    let canNotify = false
+    try { canNotify = !closed && !notifications.muted() }
+    catch { /* A missing mute preference must not enable OS notifications. */ }
+    try {
+      const claimed = store.recordObservations(device.id, results, canNotify, claimId)
+      if (!claimed.length) return
+      const body = claimed.map(axis => (axis === 'ssh' ? 'SSH' : '제품 서비스') + ' · ' + results[axis]!.detail).join('\n')
+      const message = {title:device.name + ' · 장비 이상', body}
+      // An indeterminate delivery remains claimed: Windows may already have shown it.
+      void notifications.send(message, notifications.open, release).then(outcome => {
+        if (outcome === 'failed') release()
+      }).catch(() => console.warn('DeviceRail 알림 전송 결과를 확인하지 못했습니다.'))
+    } catch { console.warn('DeviceRail 알림 처리에 실패했습니다.') }
+  }
+  const monitor = new DeviceMonitor(changed, undefined, completed)
   for (const device of devices.values()) monitor.set(device)
 
   function startTimer() {

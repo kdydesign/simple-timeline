@@ -2,14 +2,14 @@ import {dialog, ipcMain, type BrowserWindow, type IpcMainInvokeEvent} from 'elec
 import {deviceRailChanged, deviceRailChannel} from '../../shared/device-rail'
 import {isTrustedSender} from '../ipc-core'
 import {DeviceMacroError} from './macros'
-import {createDeviceService} from './service'
+import {createDeviceService, type DeviceNotifications} from './service'
 import {DeviceInputError} from './store'
 
 function isId(value:unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= 128 && !value.includes('\0')
 }
 
-export function registerDeviceRailIpc(window:BrowserWindow, rendererUrl:string, profile:string, blocked:()=>boolean) {
+export function registerDeviceRailIpc(window:BrowserWindow, rendererUrl:string, profile:string, blocked:()=>boolean, notifications?:DeviceNotifications) {
   const approvals = new Map<string, AbortController>()
   let closing = false
   let changeTimer: ReturnType<typeof setTimeout> | undefined
@@ -27,7 +27,7 @@ export function registerDeviceRailIpc(window:BrowserWindow, rendererUrl:string, 
     }, 100)
   }
   // A damaged private device database must leave the other WorkRail tools usable.
-  try { service = createDeviceService(profile, changed) } catch { /* Surface the storage error on request. */ }
+  try { service = createDeviceService(profile, changed, notifications) } catch { /* Surface the storage error on request. */ }
 
   function checkOpen(event:IpcMainInvokeEvent, writing:boolean) {
     if (closing || !isTrustedSender(event,window,rendererUrl)) throw new DeviceInputError('DeviceRail 접근이 허용되지 않았습니다.')

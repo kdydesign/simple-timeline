@@ -3,6 +3,7 @@ export interface ReleaseNote {version:string;summary:string;sections:{type:keyof
 export const releaseNotes:ReleaseNote[]=[
  {version:'1.2.0',summary:'DeviceRail 장비 상태와 SSH 작업',sections:[
   {type:'Feat',items:[
+   '장비 등록·수정에서 장비 이상 알림을 켤 수 있습니다. SSH나 제품 서비스가 두 번 연속 실패하면 Windows 알림으로 알려 줍니다.',
    'DeviceRail에서 직접 등록한 장비의 SSH와 제품 서비스 상태를 각각 확인합니다. 제품 서비스는 HTTP(S) URL이나 TCP 포트로 검사합니다. 트레이에서도 30초마다 갱신합니다.',
    'Home의 즐겨찾는 장비에서 두 상태를 확인하고 장비를 눌러 상세를 엽니다.',
    'SSH 열기로 일치하는 TermRail 저장 서버 또는 임시 탭에 연결합니다. 임시 탭은 서버를 등록한 뒤 레이아웃에 저장할 수 있습니다.',
