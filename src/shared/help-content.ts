@@ -319,16 +319,16 @@ export const helpArticles:HelpArticle[]=[
   {title:'설치된 Node 버전을 확인합니다',text:'Node 작업에는 선택한 환경의 설치 버전이 다섯 개까지 보이며 현재 사용 중인 버전이 맨 위에 표시됩니다. 여섯 개 이상이면 외 N개를 누르세요. 같은 환경의 NodeRail 설치된 버전 목록으로 이동하며 목록 제목에 키보드 포커스가 놓입니다. 다른 버전으로 전환하려면 해당 행에서 사용을 누르세요.'},
   {title:'개발 환경 폴더와 작업 상태를 확인합니다',text:'내 개발 환경의 폴더 버튼을 누르면 선택한 Windows nvm의 버전 저장 위치 또는 실행 중인 WSL 기본 사용자의 nodenv 루트가 열립니다. 버전 전환 중에는 Node 작업 위젯에서 진행 상태와 결과를 확인하세요.'},
   {title:'PostRail 즐겨찾기를 실행합니다',text:'PostRail에서 별표를 켠 요청 중 목록 순서로 최대 다섯 개가 표시됩니다. 위젯의 환경을 확인한 뒤 실행을 누르면 저장된 요청을 한 번 보냅니다. 반복으로 저장한 POST는 실행 버튼 아래에 반복 보내기와 저장 횟수가 보입니다. 체크하면 횟수를 바꿔 보낼 수 있습니다. 최근 결과에서 요청 이름 아래의 실행 환경과 처리 건수를 확인하세요. 오른쪽의 결과 보기는 마지막 처리 회차를 엽니다.'},
-  {title:'즐겨찾는 장비를 확인합니다',text:'장비 상태 위젯에서 즐겨찾기에 추가한 장비의 SSH와 제품 서비스 상태를 확인하세요. 장비 이름을 누르면 DeviceRail에서 해당 장비의 상세가 열립니다.'},
+  {title:'즐겨찾는 서버를 확인합니다',text:'서버 상태 즐겨찾기에서 서버 다섯 대까지 SSH와 제품 서비스 상태를 확인하세요. 서버 이름을 누르면 해당 서버의 상세가 열립니다. 오른쪽 아래의 DeviceRail 열기를 누르면 전체 목록으로 이동합니다.'},
  ],related:['app-overview','node-management','node-operation-log','postrail-requests','device-favorites','workrail-start']},
  {
   id:'device-favorites', menu:'home', section:'기본 사용법', title:'Home에서 즐겨찾는 장비 보기',
-  image:{width:303,file:'device-favorites.png',alt:'Home 장비 상태 위젯에 검증 장비의 SSH 가능과 서비스 가능이 표시된 모습',caption:'제품 서비스가 HTTP 204로 응답한 뒤의 즐겨찾기',points:[]},
+  image:{width:303,file:'device-favorites.png',alt:'서버 상태 즐겨찾기에 검증 장비의 SSH와 서비스가 가능으로 표시되고 오른쪽 아래에 DeviceRail 열기가 있는 모습',caption:'제품 서비스가 HTTP 204로 응답한 뒤의 즐겨찾기',points:[]},
   intro:'자주 확인하는 장비를 즐겨찾기에 추가하면 Home에서 SSH와 제품 서비스의 상태를 한눈에 볼 수 있습니다.',
   steps:[
    {title:'장비를 즐겨찾기에 추가합니다',text:'장비 등록 시 Home 즐겨찾기를 켜거나 DeviceRail의 장비 상세에서 별표를 누르세요.'},
-   {title:'두 상태를 확인합니다',text:'Home의 장비 상태 위젯에서 SSH와 제품 서비스를 따로 확인하세요. 제품 서비스 검사를 설정하지 않은 장비에는 미설정이 표시됩니다.'},
-   {title:'장비 상세를 엽니다',text:'위젯에서 장비 이름을 누르면 DeviceRail에서 해당 장비가 열립니다. 마지막 검사 시각과 결과를 확인하세요.'},
+   {title:'두 상태를 확인합니다',text:'Home의 서버 상태 즐겨찾기는 목록 순서로 다섯 대까지 표시합니다. 서버별로 SSH와 제품 서비스 상태를 따로 확인하세요. 제품 서비스 검사를 설정하지 않은 서버에는 미설정이 표시됩니다.'},
+   {title:'장비 상세를 엽니다',text:'서버 이름을 누르면 DeviceRail에서 해당 서버의 마지막 검사 시각과 결과를 볼 수 있습니다. 위젯 하단의 DeviceRail 열기를 누르면 전체 목록으로 이동합니다.'},
   ], related:['device-status','workrail-home'],
  },
  {

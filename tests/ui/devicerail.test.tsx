@@ -47,7 +47,7 @@ afterEach(() => { delete window.deviceRail })
 
 it('shows separate observations, stale times and unconfigured services and opens favorites without running a command', async () => {
   const { open, api } = setup()
-  const home = within(screen.getByRole('region', { name: '장비 상태' }))
+  const home = within(screen.getByRole('region', { name: '서버 상태 즐겨찾기' }))
   const list = within(await screen.findByRole('table', { name: '등록 장비' }))
   expect(home.getByText('SSH 가능')).toBeVisible()
   expect(home.getByText('서비스 불가')).toBeVisible()
@@ -61,6 +61,26 @@ it('shows separate observations, stale times and unconfigured services and opens
   expect(screen.getByRole('heading', { name: '검증 API' })).toBeVisible()
   expect(screen.getByText('HTTP 503')).toBeVisible()
   expect(api.runMacro).not.toHaveBeenCalled()
+})
+
+it('shows at most five favorite servers in saved order and promotes the next one after removal', async () => {
+  const value = snapshot()
+  for (const name of ['서버 2', '서버 3', '서버 4', '서버 5', '서버 6']) {
+    value.devices.push({ ...device, id: name, name })
+  }
+  const { changed, open } = setup(value)
+  const home = within(screen.getByRole('region', { name: '서버 상태 즐겨찾기' }))
+  const favorites = within(await home.findByRole('list'))
+  const names = () => favorites.getAllByRole('button').map(button => button.textContent)
+  expect(names()).toEqual(['검증 API', '서버 2', '서버 3', '서버 4', '서버 5'])
+  value.devices = value.devices.map(item => item.id === device.id ? { ...item, favorite: false } : item)
+  changed()
+  await waitFor(() => expect(names()).toEqual(['서버 2', '서버 3', '서버 4', '서버 5', '서버 6']))
+  value.devices = []
+  changed()
+  await waitFor(() => expect(home.queryByRole('list')).toBeNull())
+  fireEvent.click(home.getByRole('button', { name: 'DeviceRail 열기' }))
+  expect(open).toHaveBeenCalledOnce()
 })
 
 it('only requests the selected macro preview on click, and prompts for credentials only during login', async () => {
@@ -137,7 +157,7 @@ it('saves macros and favorites independently, preserves the device on cancelled 
   const {api} = setup()
   await screen.findByRole('heading', {name:device.name})
   fireEvent.click(screen.getByRole('button', {name:'Home 즐겨찾기'}))
-  const home = within(screen.getByRole('region', {name:'장비 상태'}))
+  const home = within(screen.getByRole('region', {name:'서버 상태 즐겨찾기'}))
   await waitFor(() => expect(home.queryByRole('button', {name:device.name})).toBeNull())
   fireEvent.click(screen.getByRole('button', {name:'매크로 추가'}))
   let form = within(screen.getByRole('dialog', {name:'매크로 추가'}))
@@ -195,7 +215,7 @@ it('counts a device with two failures once and includes non-favorites in the Hom
   value.health.qa = { ssh:observation('failed'), service:observation('failed') }
   value.health.second = { ssh:observation('failed'), service:observation('unconfigured') }
   const {changed} = setup(value)
-  const home = within(screen.getByRole('region', {name:'장비 상태'}))
+  const home = within(screen.getByRole('region', {name:'서버 상태 즐겨찾기'}))
   expect(await home.findByText('전체 장비 중 점검 필요 2대')).toBeVisible()
   expect(screen.getByText('등록 장비 2대 · 점검 필요 2대')).toBeVisible()
   value.health.qa = {ssh:observation('ok'), service:observation('unknown', null)}

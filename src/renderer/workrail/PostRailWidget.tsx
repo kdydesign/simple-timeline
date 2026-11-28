@@ -64,7 +64,7 @@ export function PostRailWidget({postrail,onOpen,onResult}: {
   const failure = environment && attempt && postrail.sendError?.(attempt,environment.id)
   const authenticated = environment && run?.authenticatedEnvironmentIds.includes(environment.id)
   return <section className="workrail-surface workrail-widget postrail-home-widget" aria-labelledby="postrail-home-heading">
-    <header className="workrail-widget-heading">
+    <header className="workrail-widget-heading workrail-favorites-heading">
       <h3 id="postrail-home-heading">PostRail 즐겨찾기</h3><ArrowRightLeft size={17} aria-hidden="true" />
     </header>
     {environment && <div className="postrail-home-environment">

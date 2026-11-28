@@ -3,7 +3,8 @@ import {createPortal} from 'react-dom'
 import {Plus, Save} from 'lucide-react'
 import {libraryKey, readLibrary, type Library, type Profile, type Tab} from './layout'
 import {profileDragType, TerminalTree} from './TerminalTree'
-import {Menu, WorkspaceDialog, type CommandMenu, type Editor} from './WorkspaceControls'
+import {CommandMenu, type CommandMenuState} from '../components/CommandMenu'
+import {WorkspaceDialog, type Editor} from './WorkspaceControls'
 import {WorkTabDialog, type WorkTabAction} from './WorkTabDialog'
 import {useWorkspace} from './useWorkspace'
 import type {TermRailEndpoint} from '../../shared/termrail-ssh'
@@ -28,7 +29,7 @@ export function TermRail({active, deviceTarget, onDeviceOpened}: {
   const [initial] = useState(load)
   const [library, setLibrary] = useState(initial.library)
   const [notice, report] = useState(initial.error)
-  const [menu, setMenu] = useState<CommandMenu | null>(null)
+  const [menu, setMenu] = useState<CommandMenuState | null>(null)
   const [editor, setEditor] = useState<Editor | null>(null)
   const [tabAction, setTabAction] = useState<WorkTabAction | null>(null)
   const focusTabList = useRef(false)
@@ -102,14 +103,14 @@ export function TermRail({active, deviceTarget, onDeviceOpened}: {
     persist({profiles, layouts: exists ? library.layouts.map(l => l.name === name ? saved : l) : [...library.layouts, saved]})
     desk.bindProfiles(new Map(registrations.map(p => [p.id, p])))
   }
-  function popup(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, items: CommandMenu['items']) {
+  function popup(event: MouseEvent<HTMLElement> | KeyboardEvent<HTMLElement>, items: CommandMenuState['items']) {
     event.preventDefault()
     const anchor = event.currentTarget
     const rect = anchor.getBoundingClientRect()
     const pointer = event.type === 'contextmenu' && 'clientX' in event && (event.clientX || event.clientY)
     setMenu({anchor, x: pointer ? event.clientX : rect.left, y: pointer ? event.clientY : rect.bottom, items})
   }
-  function context(items: (anchor: HTMLElement) => CommandMenu['items']) {
+  function context(items: (anchor: HTMLElement) => CommandMenuState['items']) {
     return {
       onContextMenu: (event: MouseEvent<HTMLElement>) => popup(event, items(event.currentTarget)),
       onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
@@ -186,7 +187,7 @@ export function TermRail({active, deviceTarget, onDeviceOpened}: {
           className="termrail-stage" hidden={tab !== current}>{stage(tab, active && tab === current)}</div>)}
       </div>
       {notice && <div role="alert" className="termrail-notice">{notice}<button type="button" aria-label="안내 닫기" onClick={() => report('')}>×</button></div>}
-      {menu && active && <Menu menu={menu} dismiss={() => setMenu(null)}/>}
+      {menu && active && <CommandMenu menu={menu} dismiss={() => setMenu(null)}/>}
       {tabAction && active && <WorkTabDialog action={tabAction} dismiss={() => setTabAction(null)} apply={name => {
         setTabAction(null)
         if (tabAction.kind === 'close') closeTab(tabAction.id)

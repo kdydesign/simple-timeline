@@ -86,5 +86,18 @@
   "platform": "linux",
   "recordedAt": "2026-11-24T15:07:36.692328+00:00",
   "command": "tests/e2e/devicerail.spec.ts",
-  "synthetic": true
+  "synthetic": true,
+  "subsequentCaptures": [
+    {
+      "version": "1.2.0",
+      "date": "2026-11-28",
+      "source": "78fe1a32aaf8f92f4ac7f24f725b8651677748d6",
+      "dirty": true,
+      "platform": "linux",
+      "command": "tests/e2e/devicerail.spec.ts",
+      "synthetic": true,
+      "scope": "Home favorite servers widget with one reachable loopback device and the DeviceRail footer link.",
+      "files": ["device-favorites.png"]
+    }
+  ]
 }

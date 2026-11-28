@@ -6,11 +6,6 @@
   .workrail-home-summaries:has(.postrail-home-widget) > .workrail-node-widget { max-width: 360px; }
 }
 .postrail-home-widget { width: min(100%, 400px); }
-.postrail-home-widget .workrail-widget-heading {
-  display: flex;
-  align-items: center;
-}
-.postrail-home-widget .workrail-widget-heading svg { color: var(--accent); }
 .postrail-home-environment, .postrail-home-list li {
   display: flex;
   align-items: center;

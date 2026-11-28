@@ -4,7 +4,7 @@ import {Star} from 'lucide-react'
 import {postRailCopyName, type PrLibrary, type PrMutation, type PrRequest} from '../../shared/postrail'
 import {Icon} from '../components/Icon'
 import {Select} from '../components/Select'
-import {Menu, type CommandMenu} from '../termrail/WorkspaceControls'
+import {CommandMenu, type CommandMenuState} from '../components/CommandMenu'
 import {PostRailPopup} from './PostRailPopup'
 import {changedAddress} from './request-address'
 import {variableIssue} from './request-fields'
@@ -26,7 +26,7 @@ export function Sidebar({postrail, selectedId, onSelect}: {
   onSelect: (id:string) => void
 }) {
   const library = postrail.library
-  const [menu, setMenu] = useState<CommandMenu | null>(null)
+  const [menu, setMenu] = useState<CommandMenuState | null>(null)
   const [editor, setEditor] = useState<AnchoredEditor | null>(null)
   const [collapsed, setCollapsed] = useState<Set<string | null>>(new Set())
   const [search, setSearch] = useState('')
@@ -103,7 +103,7 @@ export function Sidebar({postrail, selectedId, onSelect}: {
   function showMenu(anchor: HTMLElement, target: 'add' | Group | PrRequest | null, point?: {x:number, y:number}) {
     if (menu?.anchor === anchor && !point) {setMenu(null); return}
     const open = (next:Editor) => setEditor({...next, anchor})
-    let items: CommandMenu['items']
+    let items: CommandMenuState['items']
     if (target === 'add') {
       const groupId = library?.requests.find(r => r.id === selectedId)?.groupId ?? null
       items = [['요청 추가', () => open({kind:'request',groupId})], ['그룹 추가', () => open({kind:'group'})]]
@@ -195,7 +195,7 @@ export function Sidebar({postrail, selectedId, onSelect}: {
       })}
     </div>
     <small role="status" className="pr-copy-status">{copyStatus}</small>
-    {menu && createPortal(<Menu menu={menu} dismiss={() => setMenu(null)}/>, document.body)}
+    {menu && createPortal(<CommandMenu menu={menu} dismiss={() => setMenu(null)}/>, document.body)}
     {editor && library && <LibraryDialog key={editor.kind} editor={editor} library={library} onClose={() => setEditor(null)}
       onDelete={setEditor} save={save}/>}
   </aside>

@@ -535,6 +535,8 @@
   color: var(--text);
 }
 .workrail-widget-heading h3 { font-size: 14px; }
+.workrail-favorites-heading { display: flex; align-items: center; }
+.workrail-favorites-heading svg { color: var(--accent); }
 .workrail-widget-heading .workrail-muted { font-weight: 650; }
 .workrail-widget-role {
   border: 1px solid var(--border);

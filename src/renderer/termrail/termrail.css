@@ -25,7 +25,7 @@
 }
 .termrail-side-head { display: flex; align-items: center; justify-content: space-between; gap: 1px; padding: 5px 6px; color: var(--muted); font-size: 11px; font-weight: 600; }
 .termrail-servers button, .termrail-layouts button, .termrail-tabs button,
-.termrail-caption button, .termrail-menu button, .termrail-notice button {
+.termrail-caption button, .termrail-notice button {
   border: 0; border-radius: 0; background: transparent; box-shadow: none; color: var(--text); font: inherit;
 }
 .termrail-sidebar { container-type: inline-size; }
@@ -76,10 +76,7 @@
 .termrail-drop.right { left: 50%; }
 .termrail-drop.top { bottom: 50%; }
 .termrail-drop.bottom { top: 50%; }
-.termrail-menu, .termrail-dialog { border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--surface); box-shadow: var(--popup-shadow); }
-.termrail-menu { position: fixed; z-index: 20; padding: 3px; min-width: 125px; max-height: 50vh; overflow: auto; }
-.termrail-menu button { display: block; width: 100%; padding: 4px 7px; font-size: 12px; text-align: left; }
-.termrail-dialog { width: min(275px, 95vw); padding: 14px; }
+.termrail-dialog { width: min(275px, 95vw); padding: 14px; border: 1px solid var(--border); border-radius: 5px; color: var(--text); background: var(--surface); box-shadow: var(--popup-shadow); }
 .termrail-dialog::backdrop { background: #14191f66; }
 .termrail-dialog h3 { margin: 0 0 12px; font-size: 15px; }
 .termrail-dialog label { display: grid; gap: 4px; margin-top: 8px; font-size: 12px; }

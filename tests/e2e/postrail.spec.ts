@@ -2,10 +2,21 @@ import {once} from 'node:events'
 import {writeFile, rm} from 'node:fs/promises'
 import {createServer, type ServerResponse} from 'node:http'
 import type {AddressInfo} from 'node:net'
-import type {ElectronApplication} from 'playwright'
+import type {ElectronApplication, Locator, Page} from 'playwright'
 import {expect, test} from './fixture'
 
 test.use({initialTool:'home'})
+
+async function openSidebarMenu(page: Page, button: Locator) {
+  await button.click()
+  const menu = page.getByRole('menu')
+  await expect(menu).toBeVisible()
+  const anchor = (await button.boundingBox())!
+  const popup = (await menu.boundingBox())!
+  expect(popup.x).toBeCloseTo(anchor.x, 0)
+  expect(popup.y).toBeCloseTo(anchor.y + anchor.height, 0)
+  return menu
+}
 
 // Only the native confirmation is simulated. Both login and API calls use the product transport.
 function observeConsent(app:ElectronApplication, allowed:string[]) {
@@ -54,13 +65,21 @@ test('sends a saved indexed POST from the editor and Home to a loopback server',
       await environment.getByLabel('환경 이름').fill('로컬')
       await environment.getByRole('button', {name:'저장', exact:true}).click()
       await expect(environment).toBeHidden()
-      await page.getByRole('button', {name:'추가 메뉴', exact:true}).click()
-      await page.getByRole('menuitem', {name:'요청 추가', exact:true}).click()
+      const groupMenu = page.getByRole('button', {name:'미분류 그룹 메뉴', exact:true})
+      await openSidebarMenu(page, groupMenu)
+      await page.keyboard.press('Escape')
+      await expect(groupMenu).toBeFocused()
+      const addMenu = await openSidebarMenu(page, page.getByRole('button', {name:'추가 메뉴', exact:true}))
+      await addMenu.getByRole('menuitem', {name:'요청 추가', exact:true}).click()
       const form = page.getByRole('dialog', {name:'요청 추가', exact:true})
       const name = '로컬 샘플 등록'
       await form.getByLabel('요청 이름').fill(name)
       await form.getByLabel('URL', {exact:true}).fill(endpoint)
       await form.getByRole('button', {name:'저장', exact:true}).click()
+      const requestMenu = page.getByRole('button', {name:name + ' 요청 메뉴', exact:true})
+      await openSidebarMenu(page, requestMenu)
+      await page.keyboard.press('Escape')
+      await expect(requestMenu).toBeFocused()
       await page.getByRole('combobox', {name:'HTTP 메서드'}).click()
       await page.getByRole('option', {name:'POST', exact:true}).click()
       const splitter=page.getByRole('separator',{name:'요청과 응답 영역 크기'})
