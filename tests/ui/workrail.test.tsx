@@ -949,9 +949,14 @@ it('offers Install for a configured WSL default missing from the completed inven
   const target = { ...ubuntu, running: true, user: info.user }
   const wsl = createWslService({ environment: target, runner: { probe: async () => info, verifiedFolder: vi.fn(), change: vi.fn(), isStopped: vi.fn() },
     loadCatalog: async () => nodeState.catalog.releases, changed: vi.fn() })
-  const fixture = nodeFixture({ ...await wsl.refreshCatalog(), environments: { status: 'ready', items: [target], selectedId: target.id, error: null } })
+  const ready = { ...await wsl.refreshCatalog(), environments: { status: 'ready' as const, items: [target], selectedId: target.id, error: null } }
+  const fixture = nodeFixture(ready)
+  let finishCatalog!: (result: NodeManagementResult) => void
+  fixture.api.refreshCatalog.mockImplementationOnce(() => new Promise(resolve => { finishCatalog = resolve }))
   render(<App initialTool="node" api={memoryApi().api} />)
   const action = await within(node()).findByRole('button', { name: version + ' 설치' })
+  await waitFor(() => expect(action).toBeDisabled())
+  await act(async () => finishCatalog({ ok: true, data: ready }))
   expect(action).toBeEnabled()
   expect(within(node()).getByRole('region', { name: '기본 버전' })).toHaveTextContent(version + ' 미설치')
   await act(async () => fireEvent.click(action))
