@@ -1,6 +1,6 @@
 # DeviceRail 서버 목록·상세와 Home 위젯
 
-2026-11-28 · 대상 버전 **WorkRail 1.2.0** · 설계 검토본. 대화에서 선택한 화면과 동작을 기준 커밋 `42d28ca`의 구현과 대조했다. [목록·Home 즐겨찾기 조작 시안](../../design/mockups/device-monitor/favorites.html) · [기존 DeviceRail 설계](../../design/device-monitor.md) · [장비별 알림 정책](2026-11-25-devicerail-alerts-design.md)
+2026-11-28 · 대상 버전 **WorkRail 1.2.0** · 설계 확정. 대화에서 선택한 화면과 동작을 기준 커밋 `42d28ca`의 구현과 대조했다. [목록·Home 즐겨찾기 조작 시안](../../design/mockups/device-monitor/favorites.html) · [기존 DeviceRail 설계](../../design/device-monitor.md) · [장비별 알림 정책](2026-11-25-devicerail-alerts-design.md)
 
 ## 화면 선택
 
@@ -63,7 +63,7 @@
 
 서버 이름·주소는 실행 당시 값을 쓴다. 두 출력 영역을 각각 표시하고 줄바꿈, 부분 출력, 기존 잘림 안내를 보존한다. 명령 실행 후 실패면 실제 종료 코드나 종료 신호를 표시한다. SSH 연결·인증 단계에서 끝난 경우 숫자 종료 코드를 만들어 내지 않는다. 실행 도중 연결이 끊겨 종료를 확인할 수 없으면 **결과 확인 필요**와 수신한 출력을 보여준다. 서버 검사 결과로 명령의 성공 여부를 추정하지 않는다.
 
-**기록 보관 범위.** 현재 앱은 서버별·매크로별 마지막 실행을 메모리에 보관하고 같은 매크로를 다시 실행하면 그 기록을 교체한다. 최신 결과 펼침은 이 범위 안에서 구현할 수 있다. 같은 매크로의 반복 실행까지 보관할지는 별도 선택 사항이다.
+서버마다 **각 매크로의 마지막 실행 한 건**을 앱 메모리에 보관한다. 같은 서버에서 같은 매크로를 다시 시작하면 해당 기록을 새 실행으로 교체한다. 다른 매크로나 다른 서버의 기록은 각각 유지되며, 앱을 종료하면 실행 기록이 비워진다.
 
 ### 매크로 추가 팝업
 
@@ -90,6 +90,7 @@
 | [서버 목록·상세](../../../src/renderer/devicerail/DeviceRail.tsx) · [저장 제어](../../../src/renderer/devicerail/useDeviceRail.ts) | QA-03을 선택한 채 DEV-API의 별·수정·삭제를 각각 누른다. 동작 대상은 DEV-API이고 별과 삭제 취소는 선택·상세를 이동시키지 않는다. 삭제한 서버가 선택 중이었다면 남은 첫 서버 또는 빈 화면으로 간다. |
 | [편집기](../../../src/renderer/devicerail/DeviceEditors.tsx) · [공용 장비 창](../../../src/renderer/devicerail/DeviceDialog.tsx) · [Select](../../../src/renderer/components/Select.tsx) | 등록 초안을 쓰고 배경과 열린 옵션을 클릭한다. 저장·취소, 키보드 탐색과 포커스 복귀를 확인한다. 기존 위치가 있는 장비의 이름만 수정한 뒤 다시 읽어 위치·알림·매크로 값이 보존되는지 확인한다. |
 | [장비 위젯](../../../src/renderer/devicerail/DeviceWidget.tsx) · [PostRail 위젯](../../../src/renderer/workrail/PostRailWidget.tsx) · [요청 즐겨찾기](../../../src/renderer/postrail/Sidebar.tsx) | 0·5·6대와 저장 실패를 확인한다. 빈 안내는 서버 이름 왼쪽 별을 가리킨다. Home의 요약·오류도 표시하고, 밝은·어두운 테마에서 두 도구의 노란 별과 키보드 포커스를 식별할 수 있어야 한다. |
-| [관측 상태](../../../src/renderer/devicerail/DeviceStatus.tsx) · [실행 결과](../../../src/renderer/devicerail/DeviceMacros.tsx) · [실행 수명](../../../src/main/devicerail/macros.ts) | SSH 가능·HTTP 503·서로 다른 검사 시각을 동시에 표시한다. 성공, 명령 실패, 접속 실패, 종료 미확인, 빈 출력·긴 출력을 각각 재현한다. 새 실행 완료, 수동 접기, 반복 갱신, 다른 서버 선택에서 올바른 기록이 열리는지 확인한다. |
+| [관측 상태](../../../src/renderer/devicerail/DeviceStatus.tsx) · [실행 결과](../../../src/renderer/devicerail/DeviceMacros.tsx) | SSH 가능·HTTP 503·서로 다른 검사 시각을 동시에 표시한다. 성공, 명령 실패, 접속 실패, 종료 미확인, 빈 출력·긴 출력을 각각 재현한다. 새 실행 완료, 수동 접기, 반복 갱신, 다른 서버 선택에서 올바른 기록이 열리는지 확인한다. |
+| [매크로 실행 기록](../../../src/main/devicerail/macros.ts) | QA-03에서 ‘상태 확인’을 한 번, 이어서 ‘버전 확인’을 세 번 실행한다. 결과 목록에는 ‘상태 확인’ 한 건과 ‘버전 확인’의 세 번째 실행만 있고, 세 번째 실행이 자동으로 펼쳐진다. DEV-API에서 ‘버전 확인’을 실행해도 QA-03의 두 기록은 유지된다. 앱 재시작 후에는 두 서버 모두 기록이 비어 있다. |
 
 조작 시안은 예시 데이터로 별과 Home 목록의 연동을 보여준다. 제품 구현 때는 기존 UI·Electron 검사에서 위젯의 접근 가능한 이름을 ‘서버 상태’로 갱신하고, 저장 경로·시각·매크로 출력은 일회성 프로필로 검증한다. 이번 단계의 산출물은 설계와 시안이다.

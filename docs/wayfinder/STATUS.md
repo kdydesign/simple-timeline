@@ -1,6 +1,6 @@
 # 진행 상태
 
-2026-11-28 **WorkRail 1.2.0 · DeviceRail UI 후속 설계.** 서버 이름 왼쪽의 즐겨찾기 토글, 수정 A안의 두 상태 카드, 매크로 실행 결과, Home 최대 5대 표시를 정리했다. [설계와 인수 기준](../superpowers/specs/2026-11-28-devicerail-server-ui-design.md) · [목록·Home 조작 시안](../design/mockups/device-monitor/favorites.html)
+2026-11-28 **WorkRail 1.2.0 · DeviceRail UI 후속 설계 확정.** 서버 이름 왼쪽의 즐겨찾기 토글, 수정 A안의 두 상태 카드, Home 최대 5대 표시를 정했다. 매크로 결과는 서버마다 각 매크로의 마지막 실행 한 건을 보관하고, 선택한 서버에서 가장 최근에 실행한 결과를 자동으로 펼친다. [설계와 인수 기준](../superpowers/specs/2026-11-28-devicerail-server-ui-design.md) · [목록·Home 조작 시안](../design/mockups/device-monitor/favorites.html)
 
 2026-11-25 **WorkRail 1.2.0 · 장비 이상 알림.** 장비별 선택, 두 회차 연속 실패 판정, 트레이 전체 무음과 재시작 후 중복 방지를 추가했다. [승인 설계와 검증 사례](../superpowers/specs/2026-11-25-devicerail-alerts-design.md)
 
