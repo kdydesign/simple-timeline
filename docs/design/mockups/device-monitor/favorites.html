@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WorkRail · 서버 즐겨찾기 시안</title>
+<style>
+  :root {color-scheme:dark;font:15px/1.45 "Malgun Gothic","Noto Sans CJK KR",sans-serif;color:#e9edf3;background:#1f2630}
+  * {box-sizing:border-box}
+  body {margin:0;min-height:100vh;display:grid;align-items:center;background:radial-gradient(ellipse at 75% 0%,#33445b,transparent 58%),linear-gradient(135deg,#252b31,#171d28)}
+  main {width:min(1150px,100%);margin:auto;padding:14px;display:grid;grid-template-columns:minmax(0,1.65fr) minmax(310px,1fr);gap:12px}
+  section {border:1px solid #647181;border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0;background:linear-gradient(125deg,#303942dd,#202630ee);box-shadow:inset 0 1px #ffffff15}
+  header, footer {display:flex;align-items:center;padding:14px 16px}
+  header {justify-content:space-between;min-height:65px}
+  footer {margin-top:auto;justify-content:flex-end;border-top:1px solid #64718166}
+  h2 {font-weight:650;font-size:22px;margin:0}
+  button {font:inherit;color:inherit;cursor:pointer}
+  button:focus-visible {outline:2px solid #9ed5ff;outline-offset:2px}
+  .sample-button,.icon-tile {display:inline-flex;align-items:center;justify-content:center;border:1px solid #627181;border-radius:6px;background:linear-gradient(#475361,#333c48)}
+  .sample-button {padding:5px 11px;color:#f1f8ff;background:linear-gradient(#34648c,#284a69);border-color:#82b4da}
+  .well {margin:0 7px 8px;border:1px solid #4c5867;border-radius:6px;overflow:auto}
+  .server-well {max-height:204px;scrollbar-width:thin}
+  table {width:100%;border-spacing:0;text-align:left;white-space:nowrap}
+  th {position:sticky;top:0;z-index:1;background:#343e4a;color:#d6dce4;font-size:13px;font-weight:550;height:36px;padding:4px 8px}
+  td {height:54px;padding:6px 8px;border-top:1px solid #4c5763}
+  tr.selected {background:#3e597455}
+  .identity,.tools {display:flex;align-items:center;gap:6px}
+  .tools {justify-content:flex-end;gap:5px}
+  .icon-tile {width:27px;height:27px;color:#d1d8e0}
+  .star,.name,.link {border:0;background:transparent;padding:0}
+  .star {display:grid;place-items:center;flex:none;width:30px;height:30px;border-radius:5px;color:#bec6ce}
+  .star:hover {background:#ffffff12}
+  svg {width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+  .star svg {width:22px;height:22px}
+  .star[aria-pressed="true"] {color:#ffd24e}
+  .star[aria-pressed="true"] svg,.bell {fill:currentColor}
+  .bell {color:#81c6fa;width:15px;height:15px}
+  .name:hover,.link:hover {color:#abd8ff;text-decoration:underline;text-underline-offset:4px}
+  .ok {color:#93df9e}
+  .bad {color:#f29a97}
+  .dot {display:inline-block;width:10px;height:10px;border-radius:100%;background:currentColor}
+  .home td:not(:first-child),.home th:not(:first-child) {text-align:center}
+  .empty {font-size:14px;color:#c9d1db;text-align:center}
+  @media(max-width:850px) {main{grid-template-columns:1fr;max-width:690px}.server-well{max-height:204px}}
+</style>
+<svg width="0" height="0" aria-hidden="true" style="position:absolute;width:0;height:0">
+  <symbol id="star" viewBox="0 0 24 24"><path d="m12 2.5 2.9 6.1 6.6.9-4.8 4.7 1.2 6.6-5.9-3.1-5.9 3.1 1.2-6.6-4.8-4.7 6.6-.9z"/></symbol>
+  <symbol id="bell" viewBox="0 0 24 24"><path d="M4 17h16l-2-3V9a6 6 0 0 0-12 0v5zM10 20a2 2 0 0 0 4 0"/></symbol>
+  <symbol id="edit" viewBox="0 0 24 24"><path d="m4 20 4.8-1.2 12-12-3.6-3.6-12 12zM15.7 4.9l3.5 3.5"/></symbol>
+  <symbol id="trash" viewBox="0 0 24 24"><path d="M4 6h16M9 6V3h6v3M6 7l1 14h10l1-14M10 10v7m4-7v7"/></symbol>
+</svg>
+<main>
+  <section aria-labelledby="servers"><header><h2 id="servers" tabindex="-1">서버 목록</h2><span class="sample-button">장비 등록</span></header>
+    <div class="well server-well"><table><thead><tr><th>서버 이름</th><th>SSH</th><th>제품 서비스</th><th aria-label="행 도구"></th></tr></thead><tbody id="rows"></tbody></table></div>
+  </section>
+  <section aria-labelledby="favorites"><header><h2 id="favorites">서버 상태</h2></header>
+    <div class="well"><table class="home"><thead><tr><th>서버 이름</th><th>SSH</th><th>서비스</th></tr></thead><tbody id="home"></tbody></table></div>
+    <footer><button class="link" id="open-list" type="button">DeviceRail 열기 ›</button></footer>
+  </section>
+</main>
+<script>
+  const devices = ['QA-03','DEV-API','QA-02','WEB-01','BUILD-02','QA-04'];
+  const favorite = new Set(['QA-03','WEB-01','BUILD-02']);
+  const alerts = new Set(['QA-03','DEV-API']);
+  const rows = document.getElementById('rows');
+  const home = document.getElementById('home');
+  const icon = (kind,cls='') => '<svg class="'+cls+'" aria-hidden="true" viewBox="0 0 24 24"><use href="#'+kind+'"/></svg>';
+
+  function updateFavorite(button, name) {
+    const saved = favorite.has(name);
+    const label = name+' 즐겨찾기 '+(saved?'해제':'추가');
+    button.setAttribute('aria-pressed',String(saved));
+    button.setAttribute('aria-label',label);
+    button.title = label;
+  }
+  function select(name) {
+    for (const row of rows.rows) row.classList.toggle('selected',row.dataset.name===name);
+  }
+  function refreshHome() {
+    home.replaceChildren();
+    for (const name of devices.filter(name => favorite.has(name)).slice(0,5)) {
+      const tr = home.insertRow();
+      const healthy = name!=='QA-03';
+      tr.innerHTML = '<td><button type="button" class="name">'+name+'</button></td><td><span role="img" aria-label="SSH 가능" title="SSH 가능" class="dot ok"></span></td><td><span role="img" aria-label="'+(healthy?'제품 서비스 가능':'HTTP 503')+'" title="'+(healthy?'제품 서비스 가능':'HTTP 503')+'" class="dot '+(healthy?'ok':'bad')+'"></span></td>';
+      tr.querySelector('.name').onclick = () => {
+        select(name);
+        rows.querySelector('tr.selected .name').focus();
+      };
+    }
+    if (home.rows.length===0) {
+      home.innerHTML='<tr><td colspan="3" class="empty">즐겨찾기한 서버가 없습니다.</td></tr>';
+    }
+  }
+  for (const name of devices) {
+    const tr = rows.insertRow();
+    tr.dataset.name=name;
+    tr.innerHTML='<td><div class="identity"><button type="button" class="star">'+icon('star')+'</button><button type="button" class="name">'+name+'</button>'+(alerts.has(name)?'<span title="장비 이상 알림 켜짐" role="img" aria-label="장비 이상 알림 켜짐">'+icon('bell','bell')+'</span>':'')+'</div></td><td class="ok">가능</td>'+(name==='QA-03'?'<td class="bad">HTTP 503</td>':'<td class="ok">가능</td>')+'<td><div class="tools"><span class="icon-tile" title="수정">'+icon('edit')+'</span><span class="icon-tile" title="삭제">'+icon('trash')+'</span></div></td>';
+    const star = tr.querySelector('.star');
+    updateFavorite(star,name);
+    star.onclick = () => {
+      if (favorite.has(name)) favorite.delete(name);
+      else favorite.add(name);
+      updateFavorite(star,name);
+      refreshHome();
+    };
+    tr.querySelector('.name').onclick = () => select(name);
+  }
+  select(devices[0]);
+  refreshHome();
+  document.getElementById('open-list').onclick = () => document.getElementById('servers').focus();
+</script>
+</html>

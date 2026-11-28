@@ -2,6 +2,8 @@
 
 **1차 설계 확정.** 구현 상태와 확인 범위는 [1.2.0 구현 기록](../implementation/2026-11-24-devicerail.md)에서 확인한다. 승인된 화면은 [DeviceRail A안](mockups/device-monitor/index.html#page-1)과 [Home B안](mockups/device-monitor/index.html#home-2)이다. [장비 화면 4안](mockups/device-monitor/page.png) · [Home 위젯 4안](mockups/device-monitor/home.png) · [조작 시안](mockups/device-monitor/index.html)
 
+목록·상세·매크로 결과·Home의 후속 화면 결정은 [DeviceRail 서버 UI 설계](../superpowers/specs/2026-11-28-devicerail-server-ui-design.md)에 정리했다.
+
 ## 요청과 합의
 
 새 메뉴 이름은 **DeviceRail**로 확정했다. 장비 메뉴는 **A · 장비 표와 상세**로 확정했다. 왼쪽 표에서 SSH와 제품 서비스 상태를 비교하고, 행을 선택하면 오른쪽에 해당 장비의 정보와 SSH 열기·매크로 버튼을 표시한다. Home 위젯은 **B · 즐겨찾는 장비**로 확정했다. 즐겨찾는 장비별로 SSH 상태와 제품 서비스 상태를 한 행에서 확인한다. [선택한 Home 시안](mockups/device-monitor/index.html#home-2)

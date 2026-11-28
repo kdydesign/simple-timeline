@@ -1,5 +1,7 @@
 # 진행 상태
 
+2026-11-28 **WorkRail 1.2.0 · DeviceRail UI 후속 설계.** 서버 이름 왼쪽의 즐겨찾기 토글, 수정 A안의 두 상태 카드, 매크로 실행 결과, Home 최대 5대 표시를 정리했다. [설계와 인수 기준](../superpowers/specs/2026-11-28-devicerail-server-ui-design.md) · [목록·Home 조작 시안](../design/mockups/device-monitor/favorites.html)
+
 2026-11-25 **WorkRail 1.2.0 · 장비 이상 알림.** 장비별 선택, 두 회차 연속 실패 판정, 트레이 전체 무음과 재시작 후 중복 방지를 추가했다. [승인 설계와 검증 사례](../superpowers/specs/2026-11-25-devicerail-alerts-design.md)
 
 2026-11-24 **WorkRail 1.2.0 · DeviceRail 구현.** 장비 표와 상세, Home 즐겨찾기, SSH·서비스 관측, TermRail 연결과 Linux 매크로를 추가했다. 장비 등록부터 Home 즐겨찾기·임시 탭까지 일회성 Electron 프로필에서 검증했다. 검사 범위와 남은 확인은 [구현 기록](../implementation/2026-11-24-devicerail.md)을 따른다. [확정 설계와 시안](../design/device-monitor.md)
